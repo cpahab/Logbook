@@ -5,8 +5,8 @@ class TrackingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: Text('Tracking')),
+    return const Center(
+      child: Text('Tracking Screen', style: TextStyle(fontSize: 24)),
     );
   }
 }
