@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app/routes.dart';
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
+import 'package:my_app/app.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final Map<int, Set<int>> expandedMonths = {};
 
   Future<void> _createNewEntry() async {
-    final repo = context.read<HomeRepository>();   // <-- correct
+    final repo = context.read<HomeRepository>();
     final now = DateTime.now();
 
     final picked = await showDatePicker(
@@ -44,14 +45,18 @@ class _HomeScreenState extends State<HomeScreen> {
     expandedYears.add(picked.year);
     expandedMonths.putIfAbsent(picked.year, () => {}).add(picked.month);
 
-    // Navigate directly to day detail
-    context.push("/day/${picked.year}/${picked.month}/${picked.day}");
+    // ⭐ Correct navigation
+    final router = GoRouter.of(context);
+    router.push('/day/${picked.year}/${picked.month}/${picked.day}');
   }
 
   @override
   Widget build(BuildContext context) {
-    final repo = context.watch<HomeRepository>();   // <-- correct
+    final repo = context.watch<HomeRepository>();
     final entries = repo.entries;
+
+    // ⭐ Capture router from the correct context
+    final router = GoRouter.of(context);
 
     if (entries.isEmpty) {
       return Scaffold(
@@ -79,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: ListView(
         padding: const EdgeInsets.all(12),
-        children: _buildYearMonthDayList(grouped),
+        children: _buildYearMonthDayList(grouped, router),
       ),
     );
   }
@@ -107,7 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _buildYearMonthDayList(
-      Map<int, Map<int, List<DayEntry>>> grouped) {
+    Map<int, Map<int, List<DayEntry>>> grouped,
+    GoRouter router,
+  ) {
     final years = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return years.map((year) {
@@ -181,9 +188,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: ListTile(
                           title: Text("Day $day"),
                           trailing: const Icon(Icons.chevron_right),
+
+                          // ⭐ Correct navigation using router
                           onTap: () {
-                            context.push(
-                                "/day/${entry.date.year}/$month/$day");
+                            router.push(
+                              "/day/${entry.date.year}/$month/$day",
+                            );
                           },
                         ),
                       );

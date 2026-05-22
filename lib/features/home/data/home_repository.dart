@@ -1,157 +1,127 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+
 import '../domain/day_entry.dart';
 import '../domain/timeline_entry.dart';
-import 'dart:io';
-import 'dart:math';
+import '../domain/daily_track.dart';
+import '../domain/track_point.dart';
 import '../utils/gpx_parser.dart';
 
 class HomeRepository extends ChangeNotifier {
-  final List<DayEntry> entries = [];
+  // Hive boxes
+  late Box<DayEntry> _dayBox;
+  late Box<DailyTrack> _trackBox;
 
-  /// Add a new day entry if it doesn't exist yet
+  // In‑memory caches
+  final Map<DateTime, DayEntry> _entries = {};
+  final Map<DateTime, DailyTrack> dailyTracks = {};
+
+  // Public getter
+  List<DayEntry> get entries =>
+      _entries.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+
+  // ------------------------------------------------------------
+  // INITIALIZATION
+  // ------------------------------------------------------------
+  Future<void> init() async {
+    _dayBox = await Hive.openBox<DayEntry>('daily_entries');
+    _trackBox = await Hive.openBox<DailyTrack>('daily_tracks');
+
+    // Load entries
+    for (final e in _dayBox.values) {
+      _entries[e.date] = e;
+    }
+
+    // Load tracks
+    for (final t in _trackBox.values) {
+      dailyTracks[t.day] = t;
+    }
+
+    notifyListeners();
+  }
+
+  // ------------------------------------------------------------
+  // DAY ENTRY MANAGEMENT
+  // ------------------------------------------------------------
   void addEntry(DateTime date) {
-    final exists = entries.any((e) =>
-        e.date.year == date.year &&
-        e.date.month == date.month &&
-        e.date.day == date.day);
+    final normalized = DateTime(date.year, date.month, date.day);
 
-    if (!exists) {
-      entries.add(DayEntry(date: date));
-      _sortEntries();
-      notifyListeners();
-    }
-  }
+    if (_entries.containsKey(normalized)) return;
 
-  /// Add a timeline entry to a specific day
-  void addTimelineEntry(DateTime date, TimelineEntry entry) {
-    final day = entries.firstWhere(
-      (e) =>
-          e.date.year == date.year &&
-          e.date.month == date.month &&
-          e.date.day == date.day,
-      orElse: () => throw Exception("DayEntry not found for $date"),
-    );
-
-    day.timeline.add(entry);
-    day.timeline.sort((a, b) => a.time.compareTo(b.time));
+    final entry = DayEntry(date: normalized, timeline: []);
+    _entries[normalized] = entry;
+    _dayBox.put(normalized.toIso8601String(), entry);
 
     notifyListeners();
   }
 
-  /// Sort entries by date (descending)
-  void _sortEntries() {
-    entries.sort((a, b) => b.date.compareTo(a.date));
+  DayEntry? getEntry(DateTime date) {
+    final normalized = DateTime(date.year, date.month, date.day);
+    return _entries[normalized];
   }
 
-  /// Import GPX and compute statistics
-  Future<void> importGpx(DateTime date, File file) async {
-    final day = entries.firstWhere(
-      (e) =>
-          e.date.year == date.year &&
-          e.date.month == date.month &&
-          e.date.day == date.day,
+  // ------------------------------------------------------------
+  // TIMELINE MANAGEMENT
+  // ------------------------------------------------------------
+  void addTimelineEntry(DateTime day, TimelineEntry entry) {
+    final normalized = DateTime(day.year, day.month, day.day);
+
+    final d = _entries[normalized];
+    if (d == null) return;
+
+    d.timeline.add(entry);
+    d.timeline.sort((a, b) => a.time.compareTo(b.time));
+
+    _dayBox.put(normalized.toIso8601String(), d);
+    notifyListeners();
+  }
+
+  // ------------------------------------------------------------
+  // GPX IMPORT
+  // ------------------------------------------------------------
+  Future<void> importGpx(DateTime day, File file) async {
+    final normalized = DateTime(day.year, day.month, day.day);
+
+    final parser = GpxParser();
+    final points = await parser.parse(file);
+
+    if (points.isEmpty) return;
+
+    // Sort by time
+    points.sort((a, b) => a.time.compareTo(b.time));
+
+    final track = DailyTrack(
+      day: normalized,
+      fileName: file.path.split('/').last,
+      points: points,
     );
 
-    // Parse all GPX points
-    final points = await GpxParser.parse(file);
-
-    // Convert timestamps to local time and filter
-    final filtered = points.where((p) {
-      final t = p.time.toLocal();
-      return t.year == date.year &&
-            t.month == date.month &&
-            t.day == date.day;
-    }).toList();
-
-    // Sort by time (important for speed/distance)
-    filtered.sort((a, b) => a.time.compareTo(b.time));
-
-    day.track
-      ..clear()
-      ..addAll(filtered);
-
-    day.hasGpx = filtered.isNotEmpty;
-
-    // Compute statistics
-    _computeStatistics(day);
-
+    dailyTracks[normalized] = track;
+    await _trackBox.put(normalized.toIso8601String(), track);
 
     notifyListeners();
   }
 
   // ------------------------------------------------------------
-  // STATISTICS ENGINE
+  // CROSS‑CORRELATION: FIND CLOSEST TRACK POINT
   // ------------------------------------------------------------
+  TrackPoint? findClosestPoint(DateTime day, DateTime time) {
+    final normalized = DateTime(day.year, day.month, day.day);
+    final track = dailyTracks[normalized];
+    if (track == null || track.points.isEmpty) return null;
 
-  void _computeStatistics(DayEntry day) {
-    final pts = day.track;
-    if (pts.length < 2) {
-    day.distanceNm = 0;
-    day.totalDuration = Duration.zero;
-    day.movingDuration = Duration.zero;
-    day.avgSpeedKnots = 0;
-    day.maxSpeedKnots = 0;
-    return;
-  }
+    TrackPoint? best;
+    Duration bestDiff = const Duration(days: 9999);
 
-  double totalMeters = 0.0;
-  double movingMeters = 0.0;
-  double maxSpeed = 0.0;
-  Duration moving = Duration.zero;
-
-  for (int i = 1; i < pts.length; i++) {
-    final p1 = pts[i - 1];
-    final p2 = pts[i];
-
-    final dt = p2.time.difference(p1.time).inSeconds;
-    if (dt <= 0) continue;
-
-    final dMeters = _haversineMeters(p1.lat, p1.lon, p2.lat, p2.lon);
-    totalMeters += dMeters;
-
-    final speedMps = dMeters / dt;
-    final speedKnots = speedMps * 1.94384;
-
-    if (speedKnots > maxSpeed) maxSpeed = speedKnots;
-
-    // Movement threshold: > 0.5 knots
-    if (speedKnots > 0.5) {
-      moving += Duration(seconds: dt);
-      movingMeters += dMeters;
+    for (final p in track.points) {
+      final diff = p.time.difference(time).abs();
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        best = p;
+      }
     }
+
+    return best;
   }
-
-  final totalDuration = pts.last.time.difference(pts.first.time);
-
-  day.distanceNm = totalMeters / 1852.0;
-  day.totalDuration = totalDuration;
-  day.movingDuration = moving;
-
-  // NEW: average speed only from moving segments
-  day.avgSpeedKnots =
-      moving.inSeconds > 0
-          ? (movingMeters / 1852.0) / (moving.inSeconds / 3600)
-          : 0.0;
-
-  day.maxSpeedKnots = maxSpeed;
 }
-
-double _haversineMeters(double lat1, double lon1, double lat2, double lon2) {
-  const R = 6371000.0; // Earth radius in meters
-  final dLat = _degToRad(lat2 - lat1);
-  final dLon = _degToRad(lon2 - lon1);
-
-  final a = sin(dLat / 2) * sin(dLat / 2) +
-      cos(_degToRad(lat1)) *
-          cos(_degToRad(lat2)) *
-          sin(dLon / 2) *
-          sin(dLon / 2);
-
-  final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-  return R * c;
-}
-
-double _degToRad(double deg) => deg * pi / 180.0;
-
-}
-
