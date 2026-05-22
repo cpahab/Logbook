@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../app/routes.dart';
 import '../data/home_repository.dart';
@@ -13,13 +14,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final repo = homeRepository;
-
   // Track expanded years and months
   final Set<int> expandedYears = {};
   final Map<int, Set<int>> expandedMonths = {};
 
   Future<void> _createNewEntry() async {
+    final repo = context.read<HomeRepository>();   // <-- correct
     final now = DateTime.now();
 
     final picked = await showDatePicker(
@@ -38,7 +38,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!exists) {
       repo.addEntry(picked);
-      setState(() {});
     }
 
     // Auto-expand year + month
@@ -51,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final repo = context.watch<HomeRepository>();   // <-- correct
     final entries = repo.entries;
 
     if (entries.isEmpty) {
@@ -183,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
                             context.push(
-                                "/day/${entry.date.year}/${month}/${day}");
+                                "/day/${entry.date.year}/$month/$day");
                           },
                         ),
                       );
