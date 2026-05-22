@@ -1,16 +1,20 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
+import '../domain/daily_track.dart';
 import '../domain/timeline_entry.dart';
+import '../domain/track_point.dart';
+
+import '../widgets/add_timeline_entry_dialog.dart';
+import '../utils/gpx_parser.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../utils/compute_daily_stats.dart';
 
 class DayDetailScreen extends StatefulWidget {
   final int year;
@@ -31,409 +35,278 @@ class DayDetailScreen extends StatefulWidget {
 class _DayDetailScreenState extends State<DayDetailScreen> {
   @override
   Widget build(BuildContext context) {
-    final homeRepository = context.watch<HomeRepository>();
-    homeRepository.addEntry(DateTime(widget.year, widget.month, widget.day)); // Ensure entry exists
-    final entry = homeRepository.entries.firstWhere(
-      (e) =>
-          e.date.year == widget.year &&
-          e.date.month == widget.month &&
-          e.date.day == widget.day,
-      orElse: () => DayEntry.empty(
-        DateTime(widget.year, widget.month, widget.day),
-      ),
-    );
+    final repo = context.watch<HomeRepository>();
 
-    final date = DateTime(widget.year, widget.month, widget.day);
-    final formatted = DateFormat('d MMMM yyyy').format(date);
-    final weekday = DateFormat('EEEE').format(date);
+    final day = DateTime(widget.year, widget.month, widget.day);
+    final entry = repo.getEntry(day);
+    final track = repo.dailyTracks[day];
+
+    // ⭐ NEW: compute stats
+    DailyStats? stats;
+    if (track != null && track.points.isNotEmpty) {
+      stats = computeDailyStats(track.points);
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Day ${widget.day}"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        title: Text("${widget.year}-${widget.month}-${widget.day}"),
         actions: [
           IconButton(
-            icon: Icon(
-              entry.hasGpx ? Icons.route : Icons.route_outlined,
-              color: entry.hasGpx ? Colors.green : Colors.grey,
-            ),
-            tooltip: entry.hasGpx ? "GPX file loaded" : "Import GPX file",
-            onPressed: _importGpxFile,
+            icon: const Icon(Icons.upload_file),
+            tooltip: "Import GPX",
+            onPressed: _importGpx,
           ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  formatted,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  weekday,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                if (entry.hasGpx) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Icon(Icons.check_circle, color: Colors.green, size: 18),
-                      SizedBox(width: 6),
-                      Text(
-                        "GPX track available",
-                        style: TextStyle(color: Colors.green),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          if (entry.hasGpx) ...[
-            const SizedBox(height: 24),
-            _buildMap(entry),
-            const SizedBox(height: 24),
-            _buildStatisticsPlaceholder(entry),
-          ],
-
-          const SizedBox(height: 24),
-
-          const Text(
-            "Timeline",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          _buildTimeline(entry),
-
-          const SizedBox(height: 80),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addTimelineEntry(context),
         child: const Icon(Icons.add),
       ),
+      body: entry == null
+          ? const Center(child: Text("No entry for this day"))
+          : _buildContent(entry, track, repo, stats),
     );
   }
 
-  // ---------------- MAP ----------------
-
-  Widget _buildMap(DayEntry entry) {
-    if (entry.track.isEmpty) {
-      return Container(
-        height: 300,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(12),
+  // ------------------------------------------------------------
+  // MAIN LAYOUT
+  // ------------------------------------------------------------
+  Widget _buildContent(
+      DayEntry entry, DailyTrack? track, HomeRepository repo, DailyStats? stats) {
+    return Column(
+      children: [
+        _buildHeader(entry, track, stats),
+        Expanded(
+          flex: 2,
+          child: _buildMap(entry, track, repo),
         ),
-        child: const Center(
-          child: Text(
-            "No track data",
-            style: TextStyle(color: Colors.grey),
-          ),
+        Expanded(
+          flex: 3,
+          child: _buildTimeline(entry),
         ),
-      );
-    }
-
-    final points = entry.track.map((p) => LatLng(p.lat, p.lon)).toList();
-    final bounds = LatLngBounds.fromPoints(points);
-
-    return SizedBox(
-      height: 300,
-      child: FlutterMap(
-        options: MapOptions(
-          initialCameraFit: CameraFit.bounds(
-            bounds: bounds,
-            padding: const EdgeInsets.all(20),
-          ),
-        ),
-        children: [
-          TileLayer(
-            urlTemplate: "https://tile.openstreetmap.de/{z}/{x}/{y}.png",
-            userAgentPackageName: 'com.logbook.app',
-          ),
-          PolylineLayer(
-            polylines: [
-              Polyline(
-                points: points,
-                strokeWidth: 4,
-                color: Colors.blue,
-              ),
-            ],
-          ),
-        ],
-      ),
+      ],
     );
   }
 
-  // ---------------- STATISTICS ----------------
-
-  Widget _buildStatisticsPlaceholder(DayEntry entry) {
+  // ------------------------------------------------------------
+  // HEADER WITH STATS 
+  // ------------------------------------------------------------
+  Widget _buildHeader(DayEntry entry, DailyTrack? track, DailyStats? stats) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.transparent,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey.shade400),
+        ),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
-            "Daily Summary",
+            "Statistics",
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
-          Text("• Distance: ${entry.distanceNm.toStringAsFixed(1)} NM"),
-          Text("• Total: ${_formatDuration(entry.totalDuration)}"),
-          Text("• Moving: ${_formatDuration(entry.movingDuration)}"),
-          Text("• Avg speed: ${entry.avgSpeedKnots.toStringAsFixed(1)} kn"),
-          Text("• Max speed: ${entry.maxSpeedKnots.toStringAsFixed(1)} kn"),
+
+          const SizedBox(height: 6),
+
+          if (stats != null)
+            Text(
+              "${stats.distanceNm.toStringAsFixed(2)} nm   •   "
+              "${_formatDuration(stats.duration)}   •   "
+              "${stats.avgSpeed.toStringAsFixed(2)} kn avg   •   "
+              "${stats.maxSpeed.toStringAsFixed(2)} kn max",
+              style: const TextStyle(fontSize: 16, color: Colors.blue,
+              fontWeight: FontWeight.w600),
+            ),
+
+
+          const SizedBox(height: 10),
         ],
       ),
     );
   }
 
-  String _formatDuration(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60);
-    return "${h}h ${m}m";
-  }
+  // ------------------------------------------------------------
+  // MAP WITH POLYLINE + MARKERS
+  // ------------------------------------------------------------
+  Widget _buildMap(
+      DayEntry entry, DailyTrack? track, HomeRepository repo) {
+    if (track == null || track.points.isEmpty) {
+      return const Center(child: Text("No GPX track for this day"));
+    }
 
-  // ---------------- TIMELINE ----------------
+    final polylinePoints =
+        track.points.map((p) => LatLng(p.lat, p.lon)).toList();
 
-  Widget _buildTimeline(DayEntry entry) {
-    if (entry.timeline.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Text(
-          "No timeline entries yet.\nTap + to add notes, weather, events...",
-          style: TextStyle(color: Colors.grey),
+    final markers = <Marker>[];
+
+    for (final t in entry.timeline) {
+      final p = repo.findClosestPoint(entry.date, t.time);
+      if (p == null) continue;
+
+      markers.add(
+        Marker(
+          point: LatLng(p.lat, p.lon),
+          width: 40,
+          height: 40,
+          child: GestureDetector(
+            onTap: () => _showTimelinePopup(t),
+            child: const Icon(Icons.location_on, color: Colors.red, size: 32),
+          ),
         ),
       );
     }
 
-    return Column(
-      children: entry.timeline.map((t) {
-        final timeStr = TimeOfDay.fromDateTime(t.time).format(context);
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: polylinePoints.first,
+        initialZoom: 13,
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+          userAgentPackageName: 'com.logbook.app',
+          tileProvider: NetworkTileProvider(),
+        ),
 
-        final List<String> details = [];
+        PolylineLayer(
+          polylines: [
+            Polyline(
+              points: polylinePoints,
+              strokeWidth: 4,
+              color: Colors.blue,
+            ),
+          ],
+        ),
 
-        if (t.course != null) details.add("Course: ${t.course}°");
-        if (t.speed != null) details.add("Speed: ${t.speed} kn");
-        if (t.wind != null) details.add("Wind: ${t.wind}");
-        if (t.sea != null) details.add("Sea: ${t.sea}");
+        MarkerLayer(markers: markers),
 
-        final detailStr = details.join(" • ");
-
-        return ListTile(
-          leading: const Icon(Icons.circle, size: 12, color: Colors.blue),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (detailStr.isNotEmpty)
-                Text(detailStr, style: const TextStyle(fontSize: 14)),
-              if (t.remarks != null)
-                Text(t.remarks!, style: const TextStyle(fontSize: 14)),
-            ],
-          ),
-          subtitle: Text(timeStr),
-        );
-      }).toList(),
+        RichAttributionWidget(
+          attributions: [
+            TextSourceAttribution(
+              '© OpenStreetMap contributors',
+              onTap: () => launchUrl(
+                Uri.parse('https://www.openstreetmap.org/copyright'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
+  // ------------------------------------------------------------
+  // TIMELINE LIST
+  // ------------------------------------------------------------
+  Widget _buildTimeline(DayEntry entry) {
+    if (entry.timeline.isEmpty) {
+      return const Center(child: Text("No timeline entries yet"));
+    }
 
-  // ---------------- ADD TIMELINE ENTRY ----------------
+    return ListView.builder(
+      itemCount: entry.timeline.length,
+      itemBuilder: (context, index) {
+        final t = entry.timeline[index];
+        final timeStr =
+            TimeOfDay.fromDateTime(t.time).format(context);
 
-  Future<void> _addTimelineEntry(BuildContext context) async {
-    final homeRepository = context.read<HomeRepository>();
-
-    final remarksController = TextEditingController();
-    final courseController = TextEditingController();
-    final speedController = TextEditingController();
-    final windController = TextEditingController();
-    final seaController = TextEditingController();
-
-    TimeOfDay selectedTime = TimeOfDay.now();
-
-    final result = await showDialog<Map<String, dynamic>?>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Add Timeline Entry"),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Time picker
-                ElevatedButton(
-                  onPressed: () async {
-                    final t = await showTimePicker(
-                      context: context,
-                      initialTime: selectedTime,
-                    );
-                    if (t != null) selectedTime = t;
-                  },
-                  child: const Text("Pick Time"),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Course
-                TextField(
-                  controller: courseController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: "Course (°)",
-                  ),
-                ),
-
-                // Speed
-                TextField(
-                  controller: speedController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: "Speed (kn)",
-                  ),
-                ),
-
-                // Wind
-                TextField(
-                  controller: windController,
-                  decoration: const InputDecoration(
-                    labelText: "Wind",
-                  ),
-                ),
-
-                // Sea
-                TextField(
-                  controller: seaController,
-                  decoration: const InputDecoration(
-                    labelText: "Sea",
-                  ),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Remarks (last field)
-                TextField(
-                  controller: remarksController,
-                  decoration: const InputDecoration(
-                    labelText: "Remarks",
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, {
-                  "time": selectedTime,
-                  "course": courseController.text,
-                  "speed": speedController.text,
-                  "wind": windController.text,
-                  "sea": seaController.text,
-                  "remarks": remarksController.text,
-                });
-              },
-              child: const Text("Add"),
-            ),
-          ],
+        return ListTile(
+          leading: const Icon(Icons.schedule),
+          title: Text(timeStr),
+          subtitle: Text(_formatTimelineEntry(t)),
+          onTap: () => _showTimelinePopup(t),
         );
       },
     );
-
-    if (result == null) return;
-
-    final time = result["time"] as TimeOfDay;
-
-    final dateTime = DateTime(
-      widget.year,
-      widget.month,
-      widget.day,
-      time.hour,
-      time.minute,
-    );
-
-    homeRepository.addTimelineEntry(
-      DateTime(widget.year, widget.month, widget.day),
-      TimelineEntry(
-        time: dateTime,
-        course: double.tryParse(result["course"] ?? ""),
-        speed: double.tryParse(result["speed"] ?? ""),
-        wind: (result["wind"] as String).isEmpty ? null : result["wind"],
-        sea: (result["sea"] as String).isEmpty ? null : result["sea"],
-        remarks: (result["remarks"] as String).isEmpty ? null : result["remarks"],
-      ),
-    );
-
-    setState(() {});
   }
 
-  // ---------------- GPX IMPORT ----------------
+  // ------------------------------------------------------------
+  // POPUP DIALOG
+  // ------------------------------------------------------------
+  void _showTimelinePopup(TimelineEntry t) {
+    final timeStr = TimeOfDay.fromDateTime(t.time).format(context);
 
-  Future<void> _importGpxFile() async {
-    final homeRepository = context.read<HomeRepository>();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Timeline $timeStr"),
+        content: Text(_formatTimelineEntry(t)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
 
-    //final result = await FilePicker.pickFiles(
-     // type: FileType.custom,
-      //allowedExtensions: ['gpx'],
-    //);
+  // ------------------------------------------------------------
+  // FORMAT TIMELINE ENTRY
+  // ------------------------------------------------------------
+  String _formatTimelineEntry(TimelineEntry t) {
+    final parts = <String>[];
+
+    if (t.course != null) parts.add("Course: ${t.course}°");
+    if (t.speed != null) parts.add("Speed: ${t.speed} kn");
+    if (t.wind != null) parts.add("Wind: ${t.wind}");
+    if (t.sea != null) parts.add("Sea: ${t.sea}");
+    if (t.weather != null) parts.add("Weather: ${t.weather}");
+    if (t.remarks != null) parts.add("Remarks: ${t.remarks}");
+
+    return parts.join("\n");
+  }
+
+  // ------------------------------------------------------------
+  // ADD TIMELINE ENTRY
+  // ------------------------------------------------------------
+  void _addTimelineEntry(BuildContext context) async {
+    final newEntry = await showDialog<TimelineEntry>(
+      context: context,
+      builder: (_) => const AddTimelineEntryDialog(),
+    );
+
+    if (newEntry == null) return;
+
+    final repo = context.read<HomeRepository>();
+    final day = DateTime(widget.year, widget.month, widget.day);
+
+    repo.addTimelineEntry(day, newEntry);
+  }
+
+  // ------------------------------------------------------------
+  // IMPORT GPX
+  // ------------------------------------------------------------
+  void _importGpx() async {
+    final repo = context.read<HomeRepository>();
+    final day = DateTime(widget.year, widget.month, widget.day);
+
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['gpx'],
-      allowMultiple: false,
-      withData: false,
-      withReadStream: false,
-      lockParentWindow: true,
     );
 
-    if (result == null) return;
+    if (result == null || result.files.isEmpty) return;
 
     final file = File(result.files.single.path!);
 
-    await homeRepository.importGpx(
-      DateTime(widget.year, widget.month, widget.day),
-      file,
-    );
+    await repo.importGpx(day, file);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("GPX file imported successfully"),
-        duration: Duration(seconds: 2),
-      ),
+      SnackBar(content: Text("Imported GPX track for ${day.toIso8601String()}")),
     );
+  }
 
-    setState(() {});
+  // ------------------------------------------------------------
+  // UTILS
+  // ------------------------------------------------------------
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    return "${h}h ${m}m";
   }
 }

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/day_detail_screen.dart';
 
-final GoRouter appRouter = GoRouter(
+final GoRouter router = GoRouter(
   routes: [
     GoRoute(
       path: '/',

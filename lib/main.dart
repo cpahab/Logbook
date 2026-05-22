@@ -1,30 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
-import 'app/router.dart';
+
 import 'features/home/data/home_repository.dart';
+import 'features/home/domain/day_entry.dart';
+import 'features/home/domain/timeline_entry.dart';
+import 'features/home/domain/daily_track.dart';
+import 'features/home/domain/track_point.dart';
 
-void main() {
+import 'app.dart'; // falls du eine eigene MyApp() Datei hast
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // ------------------------------------------------------------
+  // HIVE INITIALIZATION
+  // ------------------------------------------------------------
+  await Hive.initFlutter();
+
+  // Register all adapters
+  Hive.registerAdapter(DayEntryAdapter());
+  Hive.registerAdapter(TimelineEntryAdapter());
+  Hive.registerAdapter(DailyTrackAdapter());
+  Hive.registerAdapter(TrackPointAdapter());
+
+  // ------------------------------------------------------------
+  // REPOSITORY INITIALIZATION
+  // ------------------------------------------------------------
+  final repo = HomeRepository();
+  await repo.init(); // ⭐ WICHTIG: Boxen öffnen + Daten laden
+
+  // ------------------------------------------------------------
+  // RUN APP
+  // ------------------------------------------------------------
   runApp(
-    ChangeNotifierProvider<HomeRepository>(
-      create: (_) => HomeRepository(),
+    ChangeNotifierProvider.value(
+      value: repo,
       child: const MyApp(),
-)
+    ),
   );
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      title: 'Logbook',
-      routerConfig: appRouter,
-      theme: ThemeData(
-        colorSchemeSeed: Colors.blue,
-        useMaterial3: true,
-      ),
-    );
-  }
 }
