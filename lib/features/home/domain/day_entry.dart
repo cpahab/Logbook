@@ -39,6 +39,7 @@ class DayEntry extends HiveObject {
 
   @HiveField(10)
   double maxSpeedKnots;
+  
 
   DayEntry({
     required this.date,
