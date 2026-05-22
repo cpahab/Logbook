@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import '../domain/timeline_entry.dart';
 
 class AddTimelineEntryDialog extends StatefulWidget {
-  const AddTimelineEntryDialog({super.key});
+  final DateTime day;
+  const AddTimelineEntryDialog({super.key, required this.day});
 
   @override
   State<AddTimelineEntryDialog> createState() => _AddTimelineEntryDialogState();
@@ -81,9 +82,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
           onPressed: () {
             final now = DateTime.now();
             final dt = DateTime(
-              now.year,
-              now.month,
-              now.day,
+              widget.day.year,
+              widget.day.month,
+              widget.day.day,
               selectedTime.hour,
               selectedTime.minute,
             );
