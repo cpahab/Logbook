@@ -4,17 +4,17 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
 import '../domain/daily_track.dart';
 import '../domain/timeline_entry.dart';
-import '../domain/track_point.dart';
+//import '../domain/track_point.dart';
 
 import '../widgets/add_timeline_entry_dialog.dart';
-import '../utils/gpx_parser.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../utils/compute_daily_stats.dart';
+import '../utils/track_correlation.dart';
 
 class DayDetailScreen extends StatefulWidget {
   final int year;
@@ -41,7 +41,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final entry = repo.getEntry(day);
     final track = repo.dailyTracks[day];
 
-    // ⭐ NEW: compute stats
     DailyStats? stats;
     if (track != null && track.points.isNotEmpty) {
       stats = computeDailyStats(track.points);
@@ -68,62 +67,84 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  // ------------------------------------------------------------
-  // MAIN LAYOUT
-  // ------------------------------------------------------------
   Widget _buildContent(
       DayEntry entry, DailyTrack? track, HomeRepository repo, DailyStats? stats) {
     return Column(
       children: [
-        _buildHeader(entry, track, stats),
-        Expanded(
-          flex: 2,
-          child: _buildMap(entry, track, repo),
-        ),
-        Expanded(
-          flex: 3,
-          child: _buildTimeline(entry),
-        ),
+        _buildHeader(stats, entry),
+        Expanded(flex: 2, child: _buildMap(entry, track)),
+        Expanded(flex: 3, child: _buildTimeline(entry)),
       ],
     );
   }
 
   // ------------------------------------------------------------
-  // HEADER WITH STATS 
+  // HEADER
   // ------------------------------------------------------------
-  Widget _buildHeader(DayEntry entry, DailyTrack? track, DailyStats? stats) {
+  Widget _buildHeader(DailyStats? stats, DayEntry entry) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade400),
-        ),
-      ),
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Text(
-            "Statistics",
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: entry.fromHarbor ?? "")
+                    ..selection = TextSelection.collapsed(
+                        offset: (entry.fromHarbor ?? "").length),
+                  decoration: const InputDecoration(
+                    labelText: "Start",
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onChanged: (value) {
+                    entry.fromHarbor = value;
+                    entry.save();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: TextEditingController(text: entry.toHarbor ?? "")
+                    ..selection = TextSelection.collapsed(
+                        offset: (entry.toHarbor ?? "").length),
+                  decoration: const InputDecoration(
+                    labelText: "Destination",
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onChanged: (value) {
+                    entry.toHarbor = value;
+                    entry.save();
+                  },
+                ),
+              ),
+            ],
           ),
 
+          const SizedBox(height: 16),
+          const Text(
+            "Statistics",
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 6),
-
           if (stats != null)
             Text(
               "${stats.distanceNm.toStringAsFixed(2)} nm   •   "
               "${_formatDuration(stats.duration)}   •   "
               "${stats.avgSpeed.toStringAsFixed(2)} kn avg   •   "
               "${stats.maxSpeed.toStringAsFixed(2)} kn max",
-              style: const TextStyle(fontSize: 16, color: Colors.blue,
-              fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.blue,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
             ),
-
-
           const SizedBox(height: 10),
         ],
       ),
@@ -131,10 +152,25 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ------------------------------------------------------------
-  // MAP WITH POLYLINE + MARKERS
+  // TOOLTIP FORMATTER
   // ------------------------------------------------------------
-  Widget _buildMap(
-      DayEntry entry, DailyTrack? track, HomeRepository repo) {
+  String _timelineTooltip(TimelineEntry t) {
+    final parts = <String>[];
+
+    if (t.course != null) parts.add("Course: ${t.course}°");
+    if (t.speed != null) parts.add("Speed: ${t.speed} kn");
+    if (t.wind != null) parts.add("Wind: ${t.wind}");
+    if (t.sea != null) parts.add("Sea: ${t.sea}");
+    if (t.weather != null) parts.add("Weather: ${t.weather}");
+    if (t.remarks != null) parts.add("Remarks: ${t.remarks}");
+
+    return parts.join("\n");
+  }
+
+  // ------------------------------------------------------------
+  // MAP WITH CORRELATED MARKERS
+  // ------------------------------------------------------------
+  Widget _buildMap(DayEntry entry, DailyTrack? track) {
     if (track == null || track.points.isEmpty) {
       return const Center(child: Text("No GPX track for this day"));
     }
@@ -142,29 +178,43 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final polylinePoints =
         track.points.map((p) => LatLng(p.lat, p.lon)).toList();
 
-    final markers = <Marker>[];
+    final correlated =
+        correlateTimelineWithTrack(entry.timeline, track.points);
 
-    for (final t in entry.timeline) {
-      final p = repo.findClosestPoint(entry.date, t.time);
-      if (p == null) continue;
+    final markers = correlated.map((pair) {
+      final t = pair.$1;
+      final p = pair.$2;
 
-      markers.add(
-        Marker(
-          point: LatLng(p.lat, p.lon),
-          width: 40,
-          height: 40,
+      return Marker(
+        point: LatLng(p.lat, p.lon),
+        width: 40,
+        height: 40,
+        child: Tooltip(
+          message: _timelineTooltip(t),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          textStyle: const TextStyle(color: Colors.white),
           child: GestureDetector(
             onTap: () => _showTimelinePopup(t),
-            child: const Icon(Icons.location_on, color: Colors.red, size: 32),
+            child: const Icon(
+              Icons.location_on,
+              color: Color.fromARGB(255, 133, 5, 5),
+              size: 20,
+            ),
           ),
         ),
       );
-    }
+    }).toList();
 
     return FlutterMap(
       options: MapOptions(
-        initialCenter: polylinePoints.first,
-        initialZoom: 13,
+        initialCameraFit: CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints(polylinePoints),
+          padding: const EdgeInsets.all(40),
+        ),
       ),
       children: [
         TileLayer(
@@ -177,13 +227,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           polylines: [
             Polyline(
               points: polylinePoints,
-              strokeWidth: 4,
+              strokeWidth: 2,
               color: Colors.blue,
             ),
           ],
         ),
 
-        MarkerLayer(markers: markers),
+        if (markers.isNotEmpty) MarkerLayer(markers: markers),
 
         RichAttributionWidget(
           attributions: [
@@ -197,6 +247,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         ),
       ],
     );
+
   }
 
   // ------------------------------------------------------------
@@ -211,21 +262,39 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       itemCount: entry.timeline.length,
       itemBuilder: (context, index) {
         final t = entry.timeline[index];
-        final timeStr =
-            TimeOfDay.fromDateTime(t.time).format(context);
+        final timeStr = TimeOfDay.fromDateTime(t.time).format(context);
 
         return ListTile(
           leading: const Icon(Icons.schedule),
           title: Text(timeStr),
           subtitle: Text(_formatTimelineEntry(t)),
           onTap: () => _showTimelinePopup(t),
+          trailing: SizedBox(
+            width: 40,
+            child: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert), // ⭐ sichtbar in Material 3
+              onSelected: (value) {
+                if (value == "delete") {
+                  _deleteTimelineEntry(entry, t);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: "delete",
+                  child: Text("Delete"),
+                ),
+              ],
+            ),
+          ),
         );
+
+
       },
     );
   }
 
   // ------------------------------------------------------------
-  // POPUP DIALOG
+  // POPUP
   // ------------------------------------------------------------
   void _showTimelinePopup(TimelineEntry t) {
     final timeStr = TimeOfDay.fromDateTime(t.time).format(context);
@@ -245,9 +314,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  // ------------------------------------------------------------
-  // FORMAT TIMELINE ENTRY
-  // ------------------------------------------------------------
   String _formatTimelineEntry(TimelineEntry t) {
     final parts = <String>[];
 
@@ -265,21 +331,34 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   // ADD TIMELINE ENTRY
   // ------------------------------------------------------------
   void _addTimelineEntry(BuildContext context) async {
+    final repo = context.read<HomeRepository>();
+    final day = DateTime(widget.year, widget.month, widget.day);
     final newEntry = await showDialog<TimelineEntry>(
       context: context,
-      builder: (_) => const AddTimelineEntryDialog(),
+      builder: (_) => AddTimelineEntryDialog(day: day),
     );
 
     if (newEntry == null) return;
 
-    final repo = context.read<HomeRepository>();
-    final day = DateTime(widget.year, widget.month, widget.day);
 
     repo.addTimelineEntry(day, newEntry);
   }
+  //
+  //Delete timeline entry
+  //
+  void _deleteTimelineEntry(DayEntry entry, TimelineEntry t) {
+    setState(() {
+      entry.timeline.remove(t);
+      entry.save(); // Hive speichert Änderungen
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Timeline entry deleted")),
+    );
+  }
 
   // ------------------------------------------------------------
-  // IMPORT GPX
+  // FILE PICKER (FIXED)
   // ------------------------------------------------------------
   void _importGpx() async {
     final repo = context.read<HomeRepository>();
@@ -288,6 +367,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['gpx'],
+      allowMultiple: false,
+      withData: false,
     );
 
     if (result == null || result.files.isEmpty) return;
