@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -45,7 +47,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   static const _controlledItems = [
     'Engine oil checked',
-    'Bilge pump tested',
+    'Gasoline checked',
     'Safety gear verified',
   ];
 
@@ -73,16 +75,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         title: Text("${widget.year}-${widget.month}-${widget.day}"),
         actions: [
           IconButton(
-            icon: _gpxUploadIcon(),
-            tooltip: "Import GPX",
-            onPressed: _importGpx,
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
           ),
-          if (track != null)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              tooltip: "Remove GPX",
-              onPressed: _removeGpx,
-            ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -268,30 +264,40 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     ],
                   ),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: _gpxUploadIcon(),
-                      tooltip: 'Import GPX',
-                      onPressed: _importGpx,
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value) {
+                    if (value == 'import_gpx') _importGpx();
+                    if (value == 'delete_gpx') _removeGpx();
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'import_gpx',
+                      child: Row(
+                        children: [
+                          _gpxUploadIcon(),
+                          const SizedBox(width: 12),
+                          const Text('Import GPX'),
+                        ],
+                      ),
                     ),
                     if (track != null)
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        tooltip: 'Delete GPX',
-                        onPressed: _removeGpx,
-                      ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert),
-                      itemBuilder: (context) => const [
-                        PopupMenuItem<String>(
-                          value: 'none',
-                          enabled: false,
-                          child: Text('No options yet'),
+                      PopupMenuItem<String>(
+                        value: 'delete_gpx',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete_outline,
+                                color: Theme.of(context).colorScheme.error),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Delete GPX',
+                              style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.error),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
                   ],
                 ),
               ],
@@ -412,13 +418,88 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+
+  // ------------------------------------------------------------
+  // HOURLY MARKERS
+  // ------------------------------------------------------------
+  List<Marker> _buildHourlyMarkers(List<TrackPoint> points) {
+    if (points.length < 2) return [];
+
+    final first = points.first.time.toLocal();
+    final last = points.last.time.toLocal();
+
+    var hour = DateTime(first.year, first.month, first.day, first.hour)
+        .add(const Duration(hours: 1));
+
+    if (hour.isAfter(last)) return [];
+
+    final result = <Marker>[];
+
+    while (!hour.isAfter(last)) {
+      final hourUtc = hour.toUtc();
+      TrackPoint? closest;
+      var bestMs = const Duration(minutes: 30).inMilliseconds;
+
+      for (final p in points) {
+        final diff = p.time.difference(hourUtc).abs().inMilliseconds;
+        if (diff < bestMs) {
+          bestMs = diff;
+          closest = p;
+        }
+      }
+
+      if (closest != null) {
+        final label = '${hour.hour.toString().padLeft(2, '0')}:00';
+        result.add(
+          Marker(
+            point: LatLng(closest.lat, closest.lon),
+            width: 16,
+            height: 16,
+            child: Tooltip(
+              excludeFromSemantics: true,
+              message: label,
+              child: Center(
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Theme.of(context).colorScheme.surface,
+                    border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.7),
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      hour = hour.add(const Duration(hours: 1));
+    }
+
+    return result;
+  }
+
   // ------------------------------------------------------------
   // TOOLTIP FORMATTER
   // ------------------------------------------------------------
   String _timelineTooltip(TimelineEntry t) {
-    final timeStr = '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
-    final title = t.remarks?.isNotEmpty == true ? t.remarks! : 'Timeline entry';
-    return '$title\n$timeStr';
+    final timeStr =
+        '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
+    final lines = <String>[timeStr];
+    if (t.remarks?.isNotEmpty == true) lines.add(t.remarks!);
+    if (t.course != null) lines.add('Course  ${t.course!.toStringAsFixed(0)}°');
+    if (t.speed != null) lines.add('Speed  ${t.speed!.toStringAsFixed(1)} kn');
+    if (t.wind != null) lines.add('Wind  ${t.wind!}');
+    if (t.sea != null) lines.add('Sea  ${t.sea!}');
+    if (t.weather != null) lines.add('Weather  ${t.weather!}');
+    return lines.join('\n');
   }
 
   // ------------------------------------------------------------
@@ -466,33 +547,35 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
       return Marker(
         point: LatLng(p.lat, p.lon),
-        width: 24,
-        height: 24,
+        width: 20,
+        height: 20,
         child: Tooltip(
           excludeFromSemantics: true,
           message: _timelineTooltip(t),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color.fromARGB(221, 77, 27, 27),
-            borderRadius: BorderRadius.circular(6),
+            color: Theme.of(context).colorScheme.inverseSurface,
+            borderRadius: BorderRadius.circular(8),
           ),
-          textStyle: const TextStyle(color: Colors.white),
+          textStyle: TextStyle(
+            color: Theme.of(context).colorScheme.onInverseSurface,
+            fontSize: 12,
+            height: 1.4,
+          ),
           child: GestureDetector(
             onTap: () => _showEntryDetail(t),
-            child: Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+            child: Icon(
+              Icons.location_on,
+              size: 20,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ),
       );
     }).toList();
 
-    final markers = <Marker>[...timelineMarkers];
+    final hourlyMarkers = _buildHourlyMarkers(track.points);
+    final markers = <Marker>[...hourlyMarkers, ...timelineMarkers];
 
     markers.add(
       Marker(
@@ -548,7 +631,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         height: 340,
         child: Stack(
           children: [
-            FlutterMap(
+            ExcludeSemantics(
+            child: FlutterMap(
               mapController: _mapController,
               options: MapOptions(
                 initialCameraFit: CameraFit.bounds(
@@ -576,14 +660,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   attributions: [
                     TextSourceAttribution(
                       '© OpenStreetMap contributors',
-                      onTap: () => launchUrl(
-                        Uri.parse('https://www.openstreetmap.org/copyright'),
-                      ),
+                      onTap: () async {
+                        final uri = Uri.parse(
+                            'https://www.openstreetmap.org/copyright');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
                     ),
                   ],
                 ),
               ],
             ),
+            ),  // ExcludeSemantics
             Positioned(
               right: 12,
               bottom: 12,
@@ -1171,19 +1261,25 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       type: FileType.custom,
       allowedExtensions: ['gpx'],
       allowMultiple: false,
-      withData: false,
+      withData: kIsWeb,
     );
 
     if (result == null || result.files.isEmpty) return;
 
-    final file = File(result.files.single.path!);
+    final picked = result.files.single;
 
-    await repo.importGpx(day, file);
+    if (kIsWeb) {
+      final bytes = picked.bytes;
+      if (bytes == null) return;
+      await repo.importGpxFromBytes(day, bytes, picked.name);
+    } else {
+      await repo.importGpx(day, File(picked.path!));
+    }
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Imported GPX track for ${day.toIso8601String()}")),
+      SnackBar(content: Text('Imported GPX track for ${day.toIso8601String()}')),
     );
   }
 

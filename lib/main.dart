@@ -7,35 +7,32 @@ import 'features/home/domain/day_entry.dart';
 import 'features/home/domain/timeline_entry.dart';
 import 'features/home/domain/daily_track.dart';
 import 'features/home/domain/track_point.dart';
+import 'features/settings/domain/theme_provider.dart';
 
-import 'app.dart'; // falls du eine eigene MyApp() Datei hast
+import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ------------------------------------------------------------
-  // HIVE INITIALIZATION
-  // ------------------------------------------------------------
   await Hive.initFlutter();
 
-  // Register all adapters
   Hive.registerAdapter(DayEntryAdapter());
   Hive.registerAdapter(TimelineEntryAdapter());
   Hive.registerAdapter(DailyTrackAdapter());
   Hive.registerAdapter(TrackPointAdapter());
 
-  // ------------------------------------------------------------
-  // REPOSITORY INITIALIZATION
-  // ------------------------------------------------------------
   final repo = HomeRepository();
-  await repo.init(); // ⭐ WICHTIG: Boxen öffnen + Daten laden
+  await repo.init();
 
-  // ------------------------------------------------------------
-  // RUN APP
-  // ------------------------------------------------------------
+  final themeProvider = ThemeProvider();
+  await themeProvider.init();
+
   runApp(
-    ChangeNotifierProvider.value(
-      value: repo,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: repo),
+        ChangeNotifierProvider.value(value: themeProvider),
+      ],
       child: const MyApp(),
     ),
   );

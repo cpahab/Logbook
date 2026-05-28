@@ -82,24 +82,26 @@ class HomeRepository extends ChangeNotifier {
   // ------------------------------------------------------------
   Future<void> importGpx(DateTime day, File file) async {
     final normalized = DateTime(day.year, day.month, day.day);
-
-    final parser = GpxParser();
-    final points = await parser.parse(file);
-
+    final points = await GpxParser().parse(file);
     if (points.isEmpty) return;
-
-    // Sort by time
     points.sort((a, b) => a.time.compareTo(b.time));
+    await _saveTrack(normalized, file.uri.pathSegments.last, points);
+  }
 
-    final track = DailyTrack(
-      day: normalized,
-      fileName: file.path.split('/').last,
-      points: points,
-    );
+  Future<void> importGpxFromBytes(
+      DateTime day, Uint8List bytes, String fileName) async {
+    final normalized = DateTime(day.year, day.month, day.day);
+    final points = GpxParser().parseBytes(bytes);
+    if (points.isEmpty) return;
+    points.sort((a, b) => a.time.compareTo(b.time));
+    await _saveTrack(normalized, fileName, points);
+  }
 
+  Future<void> _saveTrack(
+      DateTime normalized, String fileName, List<TrackPoint> points) async {
+    final track = DailyTrack(day: normalized, fileName: fileName, points: points);
     dailyTracks[normalized] = track;
     await _trackBox.put(normalized.toIso8601String(), track);
-
     notifyListeners();
   }
 
