@@ -30,13 +30,16 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       maxSpeedKnots: fields[10] as double,
       participants: fields[11] as String?,
       controlled: fields[12] as String?,
+      participantsList: (fields[13] as List?)?.cast<String>(),
+      checkedItems: (fields[14] as List?)?.cast<String>(),
+      notes: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DayEntry obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.date)
       ..writeByte(1)
@@ -62,7 +65,13 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       ..writeByte(11)
       ..write(obj.participants)
       ..writeByte(12)
-      ..write(obj.controlled);
+      ..write(obj.controlled)
+      ..writeByte(13)
+      ..write(obj.participantsList)
+      ..writeByte(14)
+      ..write(obj.checkedItems)
+      ..writeByte(15)
+      ..write(obj.notes);
   }
 
   @override
