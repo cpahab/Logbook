@@ -71,7 +71,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (entries.isEmpty) {
       return Scaffold(
-        appBar: AppBar(title: const Text("Logbook")),
+        appBar: AppBar(
+        title: const Text('Logbook'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
         floatingActionButton: FloatingActionButton(
           onPressed: _createNewEntry,
           child: const Icon(Icons.add),
@@ -92,7 +101,16 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Logbook")),
+      appBar: AppBar(
+        title: const Text('Logbook'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _createNewEntry,
         child: const Icon(Icons.add),
@@ -237,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                           child: Material(
                             elevation: 1,
-                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
