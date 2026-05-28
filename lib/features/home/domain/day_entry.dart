@@ -46,6 +46,15 @@ class DayEntry extends HiveObject {
   @HiveField(12)
   String? controlled;
 
+  @HiveField(13)
+  List<String> participantsList;
+
+  @HiveField(14)
+  List<String> checkedItems;
+
+  @HiveField(15)
+  String? notes;
+
   DayEntry({
     required this.date,
     this.timeline = const [],
@@ -60,7 +69,11 @@ class DayEntry extends HiveObject {
     this.maxSpeedKnots = 0.0,
     this.participants,
     this.controlled,
-  });
+    List<String>? participantsList,
+    List<String>? checkedItems,
+    this.notes,
+  })  : participantsList = participantsList ?? <String>[],
+        checkedItems = checkedItems ?? <String>[];
 
   // Convenience getters
   Duration get totalDuration => Duration(seconds: totalDurationSeconds);

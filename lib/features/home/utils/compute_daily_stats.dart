@@ -26,8 +26,10 @@ DailyStats computeDailyStats(List<TrackPoint> points) {
     return DailyStats(
       distanceNm: 0,
       duration: Duration.zero,
+      movingDuration: Duration.zero,
       avgSpeed: 0,
       maxSpeed: 0,
+      stopCount: 0,
     );
   }
 
