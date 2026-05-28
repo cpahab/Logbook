@@ -21,7 +21,7 @@ class GpxParser {
             TrackPoint(
               lat: pt.lat!.toDouble(),
               lon: pt.lon!.toDouble(),
-              time: pt.time!,
+              time: pt.time!.toLocal(),
             ),
           );
         }

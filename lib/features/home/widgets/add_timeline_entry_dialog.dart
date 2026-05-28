@@ -3,14 +3,20 @@ import '../domain/timeline_entry.dart';
 
 class AddTimelineEntryDialog extends StatefulWidget {
   final DateTime day;
-  const AddTimelineEntryDialog({super.key, required this.day});
+  final TimelineEntry? initialEntry;
+
+  const AddTimelineEntryDialog({
+    super.key,
+    required this.day,
+    this.initialEntry,
+  });
 
   @override
   State<AddTimelineEntryDialog> createState() => _AddTimelineEntryDialogState();
 }
 
 class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
-  TimeOfDay selectedTime = TimeOfDay.now();
+  late TimeOfDay selectedTime;
 
   final courseCtrl = TextEditingController();
   final speedCtrl = TextEditingController();
@@ -20,9 +26,37 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   final remarksCtrl = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialEntry;
+    if (initial != null) {
+      selectedTime = TimeOfDay.fromDateTime(initial.time);
+      courseCtrl.text = initial.course?.toString() ?? '';
+      speedCtrl.text = initial.speed?.toString() ?? '';
+      windCtrl.text = initial.wind ?? '';
+      seaCtrl.text = initial.sea ?? '';
+      weatherCtrl.text = initial.weather ?? '';
+      remarksCtrl.text = initial.remarks ?? '';
+    } else {
+      selectedTime = TimeOfDay.now();
+    }
+  }
+
+  @override
+  void dispose() {
+    courseCtrl.dispose();
+    speedCtrl.dispose();
+    windCtrl.dispose();
+    seaCtrl.dispose();
+    weatherCtrl.dispose();
+    remarksCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text("Add Timeline Entry"),
+      title: Text(widget.initialEntry == null ? "Add Timeline Entry" : "Edit Timeline Entry"),
       content: SingleChildScrollView(
         child: Column(
           children: [
@@ -80,7 +114,6 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         ),
         ElevatedButton(
           onPressed: () {
-            final now = DateTime.now();
             final dt = DateTime(
               widget.day.year,
               widget.day.month,
@@ -101,7 +134,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
 
             Navigator.pop(context, entry);
           },
-          child: const Text("Add"),
+          child: Text(widget.initialEntry == null ? "Add" : "Save"),
         ),
       ],
     );
