@@ -103,6 +103,21 @@ class HomeRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> removeGpx(DateTime day) async {
+    final normalized = DateTime(day.year, day.month, day.day);
+
+    dailyTracks.remove(normalized);
+    await _trackBox.delete(normalized.toIso8601String());
+
+    final entry = _entries[normalized];
+    if (entry != null) {
+      entry.hasGpx = false;
+      await _dayBox.put(normalized.toIso8601String(), entry);
+    }
+
+    notifyListeners();
+  }
+
   // ------------------------------------------------------------
   // CROSS‑CORRELATION: FIND CLOSEST TRACK POINT
   // ------------------------------------------------------------
@@ -115,7 +130,7 @@ class HomeRepository extends ChangeNotifier {
     Duration bestDiff = const Duration(days: 9999);
 
     for (final p in track.points) {
-      final diff = p.time.difference(time).abs();
+      final diff = p.time.toLocal().difference(time).abs();
       if (diff < bestDiff) {
         bestDiff = diff;
         best = p;

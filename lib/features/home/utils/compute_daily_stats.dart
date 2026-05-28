@@ -4,14 +4,20 @@ import '../domain/track_point.dart';
 class DailyStats {
   final double distanceNm;     // Nautical miles
   final Duration duration;     // Total duration
+  final Duration movingDuration;
   final double avgSpeed;       // Knots
-  final double maxSpeed;       // km/h
+  final double maxSpeed;       // Knots
+  final double? elevationGainMeters;
+  final int stopCount;
 
   DailyStats({
     required this.distanceNm,
     required this.duration,
+    required this.movingDuration,
     required this.avgSpeed,
     required this.maxSpeed,
+    this.elevationGainMeters,
+    required this.stopCount,
   });
 }
 
@@ -28,6 +34,9 @@ DailyStats computeDailyStats(List<TrackPoint> points) {
   final distance = Distance();
   double totalMeters = 0;
   double maxSpeed = 0;
+  int movingSeconds = 0;
+  int stopCount = 0;
+  bool wasMoving = false;
 
   for (int i = 1; i < points.length; i++) {
     final p1 = points[i - 1];
@@ -38,23 +47,25 @@ DailyStats computeDailyStats(List<TrackPoint> points) {
       LatLng(p2.lat, p2.lon),
     );
 
-    totalMeters += d;
-
     final dt = p2.time.difference(p1.time).inSeconds;
+    final movingSegment = dt > 0 && d > 0 && (d / dt * 1.943844) >= 0.2;
+
+    if (movingSegment) {
+      totalMeters += d;
+      movingSeconds += dt;
+    }
+
     if (dt > 0) {
       final speedMps = d / dt;                 // m/s
       final speedKn = speedMps * 1.943844;     // kn
-
-      // Filter: ignore speeds below 0.2 kn
-      if (speedKn >= 0.2) {
-        totalMeters += d;
-      }
-
-      // Max speed in kn
       if (speedKn > maxSpeed) maxSpeed = speedKn;
+
+      if (!movingSegment && wasMoving) {
+        stopCount += 1;
+      }
     }
 
-
+    wasMoving = movingSegment;
   }
 
   final totalDuration =
@@ -69,8 +80,11 @@ DailyStats computeDailyStats(List<TrackPoint> points) {
   return DailyStats(
     distanceNm: distanceNm.toDouble(),
     duration: totalDuration,
+    movingDuration: Duration(seconds: movingSeconds),
     avgSpeed: avgSpeed.toDouble(),
     maxSpeed: maxSpeed.toDouble(),
+    elevationGainMeters: null,
+    stopCount: stopCount,
   );
 }
 

@@ -38,9 +38,9 @@ List<(TimelineEntry, TrackPoint)> correlateTimelineWithTrack(
     Duration bestDiff = const Duration(days: 9999);
 
     for (final p in trackPoints) {
-      final diff = p.time.difference(target).abs();
+      final diff = p.time.toLocal().difference(target).abs();
 
-      //print("  • GPX point: ${p.time}  → diff: ${diff.inSeconds}s");
+      //print("  • GPX point: ${p.time.toLocal()}  → diff: ${diff.inSeconds}s");
 
       if (diff < bestDiff) {
         bestDiff = diff;

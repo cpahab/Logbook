@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
-import '../../../app/routes.dart';
 import '../data/home_repository.dart';
 
 class MonthScreen extends StatelessWidget {
@@ -11,7 +11,8 @@ class MonthScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = homeRepository.entries;
+    final repo = context.watch<HomeRepository>();
+    final entries = repo.entries;
 
     // Filter entries for this month
     final monthEntries = entries
@@ -43,7 +44,7 @@ class MonthScreen extends StatelessWidget {
                     title: Text("Day $day"),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      context.go("${AppRoutes.home}/$month/$day");
+                      context.go("/day/${entry.date.year}/$month/$day");
                     },
                   ),
                 );
