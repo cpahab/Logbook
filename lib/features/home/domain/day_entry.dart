@@ -39,7 +39,12 @@ class DayEntry extends HiveObject {
 
   @HiveField(10)
   double maxSpeedKnots;
-  
+
+  @HiveField(11)
+  String? participants;
+
+  @HiveField(12)
+  String? controlled;
 
   DayEntry({
     required this.date,
@@ -53,6 +58,8 @@ class DayEntry extends HiveObject {
     this.movingDurationSeconds = 0,
     this.avgSpeedKnots = 0.0,
     this.maxSpeedKnots = 0.0,
+    this.participants,
+    this.controlled,
   });
 
   // Convenience getters

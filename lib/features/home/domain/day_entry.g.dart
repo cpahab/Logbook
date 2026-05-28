@@ -28,13 +28,15 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       movingDurationSeconds: fields[8] as int,
       avgSpeedKnots: fields[9] as double,
       maxSpeedKnots: fields[10] as double,
+      participants: fields[11] as String?,
+      controlled: fields[12] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DayEntry obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.date)
       ..writeByte(1)
@@ -56,7 +58,11 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       ..writeByte(9)
       ..write(obj.avgSpeedKnots)
       ..writeByte(10)
-      ..write(obj.maxSpeedKnots);
+      ..write(obj.maxSpeedKnots)
+      ..writeByte(11)
+      ..write(obj.participants)
+      ..writeByte(12)
+      ..write(obj.controlled);
   }
 
   @override
