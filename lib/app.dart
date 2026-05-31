@@ -5,8 +5,8 @@ import 'app/theme/light_theme.dart';
 import 'app/theme/dark_theme.dart';
 import 'features/settings/domain/theme_provider.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class Logbook extends StatelessWidget {
+  const Logbook({super.key});
 
   @override
   Widget build(BuildContext context) {
