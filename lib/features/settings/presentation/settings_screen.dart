@@ -3,8 +3,28 @@ import 'package:provider/provider.dart';
 
 import '../domain/theme_provider.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  late TextEditingController _titleController;
+
+  @override
+  void initState() {
+    super.initState();
+    final title = context.read<ThemeProvider>().logbuchTitle;
+    _titleController = TextEditingController(text: title);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,11 +32,11 @@ class SettingsScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: const Text('Einstellungen')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _sectionLabel(context, 'Appearance'),
+          _sectionLabel(context, 'Allgemein'),
           const SizedBox(height: 8),
           Card(
             color: scheme.surfaceContainerHigh,
@@ -26,7 +46,42 @@ class SettingsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Theme',
+                    'Titel',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _titleController,
+                    decoration: InputDecoration(
+                      hintText: 'Logbuch',
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                    ),
+                    textInputAction: TextInputAction.done,
+                    onChanged: (v) => themeProvider.setLogbuchTitle(v),
+                    onSubmitted: (v) => FocusScope.of(context).unfocus(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _sectionLabel(context, 'Erscheinungsbild'),
+          const SizedBox(height: 8),
+          Card(
+            color: scheme.surfaceContainerHigh,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Design',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: scheme.onSurfaceVariant,
                         ),
@@ -43,12 +98,12 @@ class SettingsScreen extends StatelessWidget {
                         ),
                         ButtonSegment(
                           value: ThemeMode.light,
-                          label: Text('Light'),
+                          label: Text('Hell'),
                           icon: Icon(Icons.light_mode_outlined),
                         ),
                         ButtonSegment(
                           value: ThemeMode.dark,
-                          label: Text('Dark'),
+                          label: Text('Dunkel'),
                           icon: Icon(Icons.dark_mode_outlined),
                         ),
                       ],

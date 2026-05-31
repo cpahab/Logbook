@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
+import '../../settings/domain/theme_provider.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -65,31 +67,41 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final repo = context.watch<HomeRepository>();
     final entries = repo.entries;
-
-    // ⭐ Capture router from the correct context
     final router = GoRouter.of(context);
+    final title = context.watch<ThemeProvider>().logbuchTitle;
+
+    final actions = [
+      IconButton(
+        icon: const Icon(Icons.settings_outlined),
+        tooltip: 'Einstellungen',
+        onPressed: () => context.push('/settings'),
+      ),
+    ];
+
+    final fab = FloatingActionButton(
+      onPressed: _createNewEntry,
+      tooltip: 'Neuen Tag hinzufügen',
+      child: const Icon(Icons.add),
+    );
 
     if (entries.isEmpty) {
       return Scaffold(
-        appBar: AppBar(
-        title: const Text('Logbook'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
-      ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _createNewEntry,
-          child: const Icon(Icons.add),
-        ),
-        body: const Center(
-          child: Text(
-            "Your logbook is empty",
-            style: TextStyle(fontSize: 18),
-          ),
+        floatingActionButton: fab,
+        body: CustomScrollView(
+          slivers: [
+            SliverAppBar.large(
+              title: Text(title),
+              actions: actions,
+            ),
+            SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  'Logbuch ist leer',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ),
+          ],
         ),
       );
     }
@@ -101,24 +113,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Logbook'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => context.push('/settings'),
+      floatingActionButton: fab,
+      body: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverAppBar.large(
+            title: Text(title),
+            actions: actions,
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate(
+                _buildYearMonthDayList(grouped, router),
+              ),
+            ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createNewEntry,
-        child: const Icon(Icons.add),
-      ),
-      body: ListView(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(12),
-        children: _buildYearMonthDayList(grouped, router),
       ),
     );
   }
@@ -318,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       return ListTile(
                                         key: key,
                                         dense: true,
-                                        title: Text('Day $day'),
+                                        title: Text(DateFormat('EEEE, d.', 'de_CH').format(entry.date)),
                                         trailing:
                                             const Icon(Icons.chevron_right),
                                         onTap: () {
@@ -344,11 +355,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  String _monthName(int month) {
-    const names = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
-    ];
-    return names[month - 1];
-  }
+  String _monthName(int month) =>
+      DateFormat('MMMM', 'de_CH').format(DateTime(2000, month));
 }
