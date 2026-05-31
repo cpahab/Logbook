@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(# Check if there are any device crash logs or console logs *)",
+      "Read(//Users/ursziegler/Library/Logs/**)",
+      "Read(//Users/ursziegler/Library/Logs/CrashReporter/**)",
+      "Read(//Users/ursziegler/Library/Logs/CrashReporter/MobileDevice/**)",
+      "Bash(plutil -p \"/Users/ursziegler/Library/Developer/Xcode/DerivedData/Runner-apobgothdbwxrzebctvqucpmijov/Build/Products/Debug-iphoneos/Runner.app/Info.plist\")",
+      "Bash(codesign -d --entitlements :- \"/Users/ursziegler/Library/Developer/Xcode/DerivedData/Runner-apobgothdbwxrzebctvqucpmijov/Build/Products/Debug-iphoneos/Runner.app\")"
+    ]
+  }
+}
