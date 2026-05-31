@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'features/home/data/home_repository.dart';
@@ -13,6 +14,7 @@ import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('de_CH');
 
   await Hive.initFlutter();
 
@@ -33,7 +35,7 @@ void main() async {
         ChangeNotifierProvider.value(value: repo),
         ChangeNotifierProvider.value(value: themeProvider),
       ],
-      child: const MyApp(),
+      child: const Logbook(),
     ),
   );
 }

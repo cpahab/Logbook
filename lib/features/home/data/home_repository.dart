@@ -61,6 +61,21 @@ class HomeRepository extends ChangeNotifier {
     return _entries[normalized];
   }
 
+  Future<void> removeEntry(DateTime date) async {
+    final normalized = DateTime(date.year, date.month, date.day);
+
+    _entries.remove(normalized);
+    await _dayBox.delete(normalized.toIso8601String());
+
+    // Also remove associated GPX track if present
+    if (dailyTracks.containsKey(normalized)) {
+      dailyTracks.remove(normalized);
+      await _trackBox.delete(normalized.toIso8601String());
+    }
+
+    notifyListeners();
+  }
+
   // ------------------------------------------------------------
   // TIMELINE MANAGEMENT
   // ------------------------------------------------------------

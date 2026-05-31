@@ -16,6 +16,7 @@ import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import '../widgets/add_timeline_entry_dialog.dart';
 import '../utils/compute_daily_stats.dart';
+import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
 
 class _StatsItem {
@@ -44,11 +45,14 @@ class DayDetailScreen extends StatefulWidget {
 class _DayDetailScreenState extends State<DayDetailScreen> {
   final MapController _mapController = MapController();
   TextEditingController? _notesController;
+  TrackPoint? _hoveredTrackPoint;
+  Offset? _hoverPosition;
+  bool _satelliteView = false;
 
   static const _controlledItems = [
-    'Engine oil checked',
-    'Gasoline checked',
-    'Safety gear verified',
+    'Motoröl geprüft',
+    'Benzin geprüft',
+    'Sicherheitsausrüstung kontrolliert',
   ];
 
   @override
@@ -70,23 +74,99 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       stats = computeDailyStats(track.points);
     }
 
+    final entries = repo.entries; // sorted ascending by date
+    final currentIndex = entries.indexWhere(
+      (e) => e.date.year == widget.year &&
+             e.date.month == widget.month &&
+             e.date.day == widget.day,
+    );
+    final prevEntry = currentIndex > 0 ? entries[currentIndex - 1] : null;
+    final nextEntry = currentIndex >= 0 && currentIndex < entries.length - 1
+        ? entries[currentIndex + 1]
+        : null;
+
+    void goToDay(DateTime d) =>
+        context.pushReplacement('/day/${d.year}/${d.month}/${d.day}');
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("${widget.year}-${widget.month}-${widget.day}"),
+        title: Text(
+          DateFormat('EEEE, d. MMMM yyyy', 'de_CH')
+              .format(DateTime(widget.year, widget.month, widget.day)),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => context.push('/settings'),
+            icon: const Icon(Icons.chevron_left),
+            tooltip: 'Vorheriger Tag',
+            onPressed: prevEntry != null ? () => goToDay(prevEntry.date) : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            tooltip: 'Nächster Tag',
+            onPressed: nextEntry != null ? () => goToDay(nextEntry.date) : null,
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Optionen',
+            icon: const Icon(Icons.more_vert),
+            onSelected: (value) {
+              if (value == 'import_gpx') _importGpx();
+              if (value == 'delete_gpx') _removeGpx();
+              if (value == 'delete_day') _deleteDay();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem<String>(
+                value: 'import_gpx',
+                child: Row(
+                  children: [
+                    _gpxUploadIcon(),
+                    const SizedBox(width: 12),
+                    const Text('GPX importieren'),
+                  ],
+                ),
+              ),
+              if (track != null)
+                PopupMenuItem<String>(
+                  value: 'delete_gpx',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error),
+                      const SizedBox(width: 12),
+                      Text(
+                        'GPX löschen',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
+                      ),
+                    ],
+                  ),
+                ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'delete_day',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_forever_outlined,
+                        color: Theme.of(context).colorScheme.error),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Tag löschen',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addTimelineEntry(context),
+        tooltip: 'Neuen Logeintrag hinzufügen',
         child: const Icon(Icons.add),
       ),
       body: entry == null
-          ? const Center(child: Text("No entry for this day"))
+          ? const Center(child: Text('Kein Eintrag für diesen Tag'))
           : _buildContent(entry, track, repo, stats),
     );
   }
@@ -113,7 +193,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               Expanded(
                 child: CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(child: _buildHeader(entry, track)),
                     SliverToBoxAdapter(child: _buildAnimatedStats(stats)),
                     SliverToBoxAdapter(
                         child: _buildAnimatedMap(entry, track)),
@@ -130,7 +209,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
         return CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _buildHeader(entry, track)),
             SliverToBoxAdapter(child: _buildAnimatedStats(stats)),
             SliverToBoxAdapter(child: _buildAnimatedMap(entry, track)),
             SliverToBoxAdapter(child: _buildAdditionalInfoCard(entry)),
@@ -200,7 +278,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     size: 40,
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
                 const SizedBox(height: 8),
-                Text('No entries yet — tap + to add one',
+                Text('Noch keine Einträge — + tippen zum Hinzufügen',
                     style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
@@ -226,97 +304,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     ];
   }
 
-  // ------------------------------------------------------------
-  // HEADER
-  // ------------------------------------------------------------
-  Widget _buildHeader(DayEntry entry, DailyTrack? track) {
-    final dateLabel = DateFormat('EEEE, d MMMM yyyy').format(entry.date);
-
-    return Card(
-      elevation: 2,
-      margin: EdgeInsets.zero,
-      color: Theme.of(context).colorScheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        dateLabel,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Logbook details for the selected day',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (value) {
-                    if (value == 'import_gpx') _importGpx();
-                    if (value == 'delete_gpx') _removeGpx();
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem<String>(
-                      value: 'import_gpx',
-                      child: Row(
-                        children: [
-                          _gpxUploadIcon(),
-                          const SizedBox(width: 12),
-                          const Text('Import GPX'),
-                        ],
-                      ),
-                    ),
-                    if (track != null)
-                      PopupMenuItem<String>(
-                        value: 'delete_gpx',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline,
-                                color: Theme.of(context).colorScheme.error),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Delete GPX',
-                              style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.error),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatisticsCard(DailyStats stats) {
     final statItems = <_StatsItem>[
-      _StatsItem(label: 'Distance', value: '${stats.distanceNm.toStringAsFixed(2)} nm'),
-      _StatsItem(label: 'Moving time', value: _formatDuration(stats.movingDuration)),
-      _StatsItem(label: 'Avg speed', value: '${stats.avgSpeed.toStringAsFixed(1)} kn'),
-      _StatsItem(label: 'Max speed', value: '${stats.maxSpeed.toStringAsFixed(1)} kn'),
+      _StatsItem(label: 'Distanz', value: '${stats.distanceNm.toStringAsFixed(2)} nm'),
+      _StatsItem(label: 'Fahrzeit', value: _formatDuration(stats.movingDuration)),
+      _StatsItem(label: 'Ø Geschw.', value: '${stats.avgSpeed.toStringAsFixed(1)} kn'),
+      _StatsItem(label: 'Max. Geschw.', value: '${stats.maxSpeed.toStringAsFixed(1)} kn'),
       if (stats.elevationGainMeters != null && stats.elevationGainMeters! > 0)
         _StatsItem(
-          label: 'Elevation gain',
+          label: 'Höhengewinn',
           value: '${stats.elevationGainMeters!.toStringAsFixed(0)} m',
         ),
     ];
@@ -332,7 +328,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Statistics',
+              'Statistiken',
               style: Theme.of(context)
                   .textTheme
                   .titleMedium
@@ -433,72 +429,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
 
   // ------------------------------------------------------------
-  // HOURLY MARKERS
-  // ------------------------------------------------------------
-  List<Marker> _buildHourlyMarkers(List<TrackPoint> points) {
-    if (points.length < 2) return [];
-
-    final first = points.first.time.toLocal();
-    final last = points.last.time.toLocal();
-
-    var hour = DateTime(first.year, first.month, first.day, first.hour)
-        .add(const Duration(hours: 1));
-
-    if (hour.isAfter(last)) return [];
-
-    final result = <Marker>[];
-
-    while (!hour.isAfter(last)) {
-      final hourUtc = hour.toUtc();
-      TrackPoint? closest;
-      var bestMs = const Duration(minutes: 30).inMilliseconds;
-
-      for (final p in points) {
-        final diff = p.time.difference(hourUtc).abs().inMilliseconds;
-        if (diff < bestMs) {
-          bestMs = diff;
-          closest = p;
-        }
-      }
-
-      if (closest != null) {
-        final label = '${hour.hour.toString().padLeft(2, '0')}:00';
-        result.add(
-          Marker(
-            point: LatLng(closest.lat, closest.lon),
-            width: 16,
-            height: 16,
-            child: Tooltip(
-              excludeFromSemantics: true,
-              message: label,
-              child: Center(
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context).colorScheme.surface,
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.7),
-                      width: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-
-      hour = hour.add(const Duration(hours: 1));
-    }
-
-    return result;
-  }
-
   // ------------------------------------------------------------
   // TOOLTIP FORMATTER
   // ------------------------------------------------------------
@@ -507,16 +437,43 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
     final lines = <String>[timeStr];
     if (t.remarks?.isNotEmpty == true) lines.add(t.remarks!);
-    if (t.course != null) lines.add('Course  ${t.course!.toStringAsFixed(0)}°');
-    if (t.speed != null) lines.add('Speed  ${t.speed!.toStringAsFixed(1)} kn');
+    if (t.course != null) lines.add('Kurs  ${t.course!.toStringAsFixed(0)}°');
+    if (t.speed != null) lines.add('Geschw.  ${t.speed!.toStringAsFixed(1)} kn');
     if (t.wind != null) lines.add('Wind  ${t.wind!}');
-    if (t.sea != null) lines.add('Sea  ${t.sea!}');
-    if (t.weather != null) lines.add('Weather  ${t.weather!}');
+    if (t.sea != null) lines.add('See  ${t.sea!}');
+    if (t.weather != null) lines.add('Wetter  ${t.weather!}');
     return lines.join('\n');
   }
 
   // ------------------------------------------------------------
   // MAP WITH CORRELATED MARKERS
+  // ------------------------------------------------------------
+  void _onMapHover(Offset mousePos, List<TrackPoint> points) {
+    TrackPoint? nearest;
+    double minDistSq = double.infinity;
+    const double thresholdSq = 15.0 * 15.0;
+
+    for (final point in points) {
+      final screenPt = _mapController.camera
+          .latLngToScreenPoint(LatLng(point.lat, point.lon));
+      final dx = screenPt.x - mousePos.dx;
+      final dy = screenPt.y - mousePos.dy;
+      final distSq = dx * dx + dy * dy;
+      if (distSq < minDistSq) {
+        minDistSq = distSq;
+        nearest = point;
+      }
+    }
+
+    final hit = minDistSq <= thresholdSq ? nearest : null;
+    if (hit != _hoveredTrackPoint) {
+      setState(() {
+        _hoveredTrackPoint = hit;
+        _hoverPosition = hit != null ? mousePos : null;
+      });
+    }
+  }
+
   // ------------------------------------------------------------
   Widget _buildMap(DayEntry entry, DailyTrack? track) {
     if (track == null || track.points.isEmpty) {
@@ -525,23 +482,34 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         margin: const EdgeInsets.only(top: 12),
         color: Theme.of(context).colorScheme.surfaceContainerHigh,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: SizedBox(
-          height: 340,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.map_outlined,
-                  size: 40,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'No GPX track for this day',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: _importGpx,
+          child: SizedBox(
+            height: 340,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.file_upload_outlined,
+                    size: 40,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Kein GPX-Track für diesen Tag',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tippen zum Importieren',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -579,7 +547,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             onTap: () => _showEntryDetail(t),
             child: Icon(
               Icons.location_on,
-              size: 20,
+              size: 25,
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
@@ -587,8 +555,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       );
     }).toList();
 
-    final hourlyMarkers = _buildHourlyMarkers(track.points);
-    final markers = <Marker>[...hourlyMarkers, ...timelineMarkers];
+    final markers = <Marker>[...timelineMarkers];
 
     markers.add(
       Marker(
@@ -644,7 +611,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         height: 340,
         child: Stack(
           children: [
-            ExcludeSemantics(
+            MouseRegion(
+              onHover: (e) => _onMapHover(e.localPosition, track.points),
+              onExit: (_) => setState(() {
+                _hoveredTrackPoint = null;
+                _hoverPosition = null;
+              }),
+              child: ExcludeSemantics(
             child: FlutterMap(
               mapController: _mapController,
               options: MapOptions(
@@ -655,7 +628,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: _satelliteView
+                      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.logbook.app',
                   tileProvider: NetworkTileProvider(),
                 ),
@@ -671,22 +646,56 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 MarkerLayer(markers: markers),
                 RichAttributionWidget(
                   attributions: [
-                    TextSourceAttribution(
-                      '© OpenStreetMap contributors',
-                      onTap: () async {
-                        final uri = Uri.parse(
-                            'https://www.openstreetmap.org/copyright');
-                        if (await canLaunchUrl(uri)) {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
-                        }
-                      },
-                    ),
+                    if (_satelliteView)
+                      TextSourceAttribution(
+                        '© Esri World Imagery',
+                        onTap: () async {
+                          final uri = Uri.parse('https://www.esri.com');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        },
+                      )
+                    else
+                      TextSourceAttribution(
+                        '© OpenStreetMap contributors',
+                        onTap: () async {
+                          final uri = Uri.parse(
+                              'https://www.openstreetmap.org/copyright');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
+                          }
+                        },
+                      ),
                   ],
                 ),
               ],
             ),
             ),  // ExcludeSemantics
+            ),  // MouseRegion
+            if (_hoveredTrackPoint != null && _hoverPosition != null)
+              Positioned(
+                left: _hoverPosition!.dx + 12,
+                top: (_hoverPosition!.dy - 40).clamp(4.0, 296.0),
+                child: IgnorePointer(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.inverseSurface,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      DateFormat('HH:mm').format(_hoveredTrackPoint!.time.toLocal()),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onInverseSurface,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             Positioned(
               right: 12,
               bottom: 12,
@@ -703,21 +712,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                         ),
                       );
                     },
-                    tooltip: 'Recenter',
+                    tooltip: 'Zentrieren',
                     child: const Icon(Icons.my_location),
                   ),
                   const SizedBox(height: 8),
                   FloatingActionButton.small(
                     heroTag: 'satellite_button',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Satellite view coming soon'),
-                        ),
-                      );
-                    },
-                    tooltip: 'Satellite view',
-                    child: const Icon(Icons.satellite_alt),
+                    onPressed: () =>
+                        setState(() => _satelliteView = !_satelliteView),
+                    tooltip: _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
+                    child: Icon(_satelliteView ? Icons.map_outlined : Icons.satellite_alt),
                   ),
                 ],
               ),
@@ -741,7 +745,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       child: ExpansionTile(
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         title: Text(
-          'Additional Info',
+          'Weitere Informationen',
           style: Theme.of(context)
               .textTheme
               .titleMedium
@@ -771,7 +775,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Participants',
+          'Teilnehmer',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -790,7 +794,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
             ActionChip(
               avatar: const Icon(Icons.person_add_outlined, size: 16),
-              label: const Text('Add'),
+              label: const Text('Hinzufügen'),
               onPressed: () => _addParticipant(entry),
             ),
           ],
@@ -804,7 +808,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Controlled Items',
+          'Checkliste',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -832,7 +836,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Notes',
+          'Notizen',
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -841,7 +845,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         TextField(
           controller: _notesController,
           decoration: InputDecoration(
-            hintText: 'Add notes for this day…',
+            hintText: 'Notizen für diesen Tag…',
             border:
                 OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             isDense: true,
@@ -866,7 +870,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Add Participant'),
+        title: const Text('Teilnehmer hinzufügen'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
@@ -877,11 +881,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Abbrechen'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-            child: const Text('Add'),
+            child: const Text('Hinzufügen'),
           ),
         ],
       ),
@@ -986,7 +990,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                               child: Text(
                                 t.remarks?.isNotEmpty == true
                                     ? t.remarks!
-                                    : 'Log entry',
+                                    : 'Logeintrag',
                                 style: Theme.of(context)
                                     .textTheme
                                     .bodyMedium
@@ -1000,7 +1004,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                 visualDensity: VisualDensity.compact,
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
-                                tooltip: 'Show on map',
+                                tooltip: 'Auf Karte zeigen',
                                 color: Theme.of(context).colorScheme.primary,
                                 onPressed: () => _mapController.move(
                                   LatLng(trackedPoint.lat, trackedPoint.lon),
@@ -1184,7 +1188,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             const SizedBox(height: 8),
             ListTile(
               leading: const Icon(Icons.edit_outlined),
-              title: const Text('Edit'),
+              title: const Text('Bearbeiten'),
               onTap: () {
                 Navigator.pop(context);
                 _editTimelineEntry(entry, t);
@@ -1193,7 +1197,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ListTile(
               leading: Icon(Icons.delete_outline,
                   color: Theme.of(context).colorScheme.error),
-              title: Text('Delete',
+              title: Text('Löschen',
                   style:
                       TextStyle(color: Theme.of(context).colorScheme.error)),
               onTap: () {
@@ -1232,7 +1236,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Timeline entry deleted")),
+      const SnackBar(content: Text('Logeintrag gelöscht')),
     );
   }
 
@@ -1259,7 +1263,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Timeline entry updated")),
+      const SnackBar(content: Text('Logeintrag aktualisiert')),
     );
   }
 
@@ -1281,6 +1285,60 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     final picked = result.files.single;
 
+    // Parse first for date validation
+    final List<TrackPoint> preview;
+    if (kIsWeb) {
+      final bytes = picked.bytes;
+      if (bytes == null) return;
+      preview = GpxParser().parseBytes(bytes);
+    } else {
+      preview = await GpxParser().parse(File(picked.path!));
+    }
+
+    if (!mounted) return;
+
+    if (preview.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('GPX-File enthält keine Wegpunkte mit Zeitstempel')),
+      );
+      return;
+    }
+
+    // Find the date that appears most in the track
+    final counts = <DateTime, int>{};
+    for (final p in preview) {
+      final d = DateTime(p.time.toLocal().year, p.time.toLocal().month, p.time.toLocal().day);
+      counts[d] = (counts[d] ?? 0) + 1;
+    }
+    final dominantDate = counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    final targetDate = DateTime(day.year, day.month, day.day);
+
+    if (dominantDate != targetDate) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Falsches Datum?'),
+          content: Text(
+            'Das GPX-File enthält hauptsächlich Daten vom '
+            '${DateFormat('d. MMMM yyyy', 'de_CH').format(dominantDate)}, '
+            'nicht vom ${DateFormat('d. MMMM yyyy', 'de_CH').format(targetDate)}.\n\n'
+            'Trotzdem importieren?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Abbrechen'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Trotzdem importieren'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || proceed != true) return;
+    }
+
     if (kIsWeb) {
       final bytes = picked.bytes;
       if (bytes == null) return;
@@ -1292,7 +1350,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Imported GPX track for ${day.toIso8601String()}')),
+      SnackBar(content: Text('GPX-Track importiert für ${DateFormat('d. MMMM yyyy', 'de_CH').format(day)}')),
     );
   }
 
@@ -1303,16 +1361,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Remove GPX track?'),
-        content: const Text('Delete the GPX track for this day?'),
+        title: const Text('GPX-Track entfernen?'),
+        content: const Text('GPX-Track für diesen Tag löschen?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Abbrechen'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete'),
+            child: const Text('Löschen'),
           ),
         ],
       ),
@@ -1325,8 +1383,45 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('GPX track removed')),
+      const SnackBar(content: Text('GPX-Track entfernt')),
     );
+  }
+
+  void _deleteDay() async {
+    final repo = context.read<HomeRepository>();
+    final day = DateTime(widget.year, widget.month, widget.day);
+    final dateLabel = DateFormat('d. MMMM yyyy', 'de_CH').format(day);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Tag löschen?'),
+        content: Text(
+          'Alle Daten für den $dateLabel werden unwiderruflich gelöscht, '
+          'inklusive Logeinträge und GPX-Track.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Löschen',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) return;
+
+    await repo.removeEntry(day);
+
+    if (!mounted) return;
+    context.go('/');
   }
 
   // ------------------------------------------------------------
