@@ -74,8 +74,10 @@ class AppBottomNav extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _tab(context, cs, NavTab.logbook, Icons.sailing, 'Logbook'),
-                  // Maps tab hidden — reserved for future use
-                  if (withCompass) const SizedBox(width: 56),
+                  if (withCompass)
+                    const SizedBox(width: 56)
+                  else
+                    _tab(context, cs, NavTab.maps, Icons.map, 'Karte'),
                   _tab(context, cs, NavTab.weather, Icons.air, 'Wetter'),
                   _tab(context, cs, NavTab.settings,
                       Icons.settings_outlined, 'Einstell.'),

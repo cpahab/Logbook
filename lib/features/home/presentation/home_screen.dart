@@ -149,6 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: AppBottomNav(
         active: NavTab.logbook,
         onSelect: (tab) {
+          if (tab == NavTab.maps) context.push('/tracks');
           if (tab == NavTab.weather) _openWeather(context);
           if (tab == NavTab.settings) context.push('/settings');
         },
