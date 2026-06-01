@@ -257,6 +257,53 @@ class HomeRepository extends ChangeNotifier {
   }
 
   // ------------------------------------------------------------
+  // SYNC
+  // ------------------------------------------------------------
+
+  /// Uploads all local entries then pulls every remote entry, with remote
+  /// winning for conflicting dates. Throws if no Firestore service is attached.
+  Future<void> forceSync() async {
+    final fs = _firestore;
+    if (fs == null) throw Exception('Cloud-Sync nicht verfügbar.');
+
+    for (final e in _entries.values) {
+      await fs.saveEntry(e);
+    }
+
+    final all = await fs.fetchAllEntries();
+    var changed = false;
+    for (final e in all) {
+      _entries[e.date] = e;
+      await _dayBox.put(e.date.toIso8601String(), e);
+      changed = true;
+    }
+    if (changed) notifyListeners();
+
+    final st = _storage;
+    if (st != null) {
+      final cloudDates = await st.listTrackDates();
+      final missingDates = cloudDates.where((d) => !dailyTracks.containsKey(d)).toList();
+      for (final date in missingDates) {
+        final bytes = await st.downloadTrack(date);
+        if (bytes == null || bytes.isEmpty) continue;
+        final points = GpxParser().parseBytes(bytes);
+        if (points.isEmpty) continue;
+        await _saveTrack(date, '$date.gpx', points);
+      }
+    }
+  }
+
+  /// Switches to new cloud services and runs a full bidirectional sync.
+  Future<void> reattachAndSync(
+      FirestoreService firestoreService, StorageService storageService) async {
+    for (final t in _syncTimers.values) t.cancel();
+    _syncTimers.clear();
+    _firestore = firestoreService;
+    _storage = storageService;
+    await forceSync();
+  }
+
+  // ------------------------------------------------------------
   // PRIVATE FIRESTORE HELPERS
   // ------------------------------------------------------------
 
