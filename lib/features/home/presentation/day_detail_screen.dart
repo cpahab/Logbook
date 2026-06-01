@@ -1,6 +1,9 @@
 import 'dart:io';
+import 'dart:math' show Point;
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -15,15 +18,19 @@ import '../domain/daily_track.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import '../widgets/add_timeline_entry_dialog.dart';
+import '../widgets/nav_bar.dart';
 import '../utils/compute_daily_stats.dart';
+import '../../settings/domain/theme_provider.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
 
 class _StatsItem {
   final String label;
   final String value;
+  final IconData icon;
 
-  const _StatsItem({required this.label, required this.value});
+  const _StatsItem(
+      {required this.label, required this.value, required this.icon});
 }
 
 class DayDetailScreen extends StatefulWidget {
@@ -45,8 +52,9 @@ class DayDetailScreen extends StatefulWidget {
 class _DayDetailScreenState extends State<DayDetailScreen> {
   final MapController _mapController = MapController();
   TextEditingController? _notesController;
-  TrackPoint? _hoveredTrackPoint;
-  Offset? _hoverPosition;
+  TextEditingController? _fromHarborController;
+  TextEditingController? _toHarborController;
+  LatLng? _droppedMarkerLatLng;
   bool _satelliteView = false;
 
   static const _controlledItems = [
@@ -58,6 +66,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   @override
   void dispose() {
     _notesController?.dispose();
+    _fromHarborController?.dispose();
+    _toHarborController?.dispose();
     super.dispose();
   }
 
@@ -88,82 +98,135 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     void goToDay(DateTime d) =>
         context.pushReplacement('/day/${d.year}/${d.month}/${d.day}');
 
+    final cs = Theme.of(context).colorScheme;
+    final dayTitle = DateFormat('EEEE', 'de_CH').format(day);
+    final dateSubtitle =
+        DateFormat('d. MMM yyyy', 'de_CH').format(day).toUpperCase();
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          DateFormat('EEEE, d. MMMM yyyy', 'de_CH')
-              .format(DateTime(widget.year, widget.month, widget.day)),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            tooltip: 'Vorheriger Tag',
-            onPressed: prevEntry != null ? () => goToDay(prevEntry.date) : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            tooltip: 'Nächster Tag',
-            onPressed: nextEntry != null ? () => goToDay(nextEntry.date) : null,
-          ),
-          PopupMenuButton<String>(
-            tooltip: 'Optionen',
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              if (value == 'import_gpx') _importGpx();
-              if (value == 'delete_gpx') _removeGpx();
-              if (value == 'delete_day') _deleteDay();
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'import_gpx',
-                child: Row(
-                  children: [
-                    _gpxUploadIcon(),
-                    const SizedBox(width: 12),
-                    const Text('GPX importieren'),
-                  ],
-                ),
+      backgroundColor: cs.surface,
+      // ── Light glass AppBar ──────────────────────────────────────
+      extendBodyBehindAppBar: false,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(64),
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: cs.surface.withValues(alpha: 0.88),
+                border: Border(
+                    bottom: BorderSide(
+                        color: cs.outlineVariant, width: 0.5)),
               ),
-              if (track != null)
-                PopupMenuItem<String>(
-                  value: 'delete_gpx',
+              child: SafeArea(
+                bottom: false,
+                child: SizedBox(
+                  height: 56,
                   child: Row(
                     children: [
-                      Icon(Icons.delete_outline,
-                          color: Theme.of(context).colorScheme.error),
-                      const SizedBox(width: 12),
-                      Text(
-                        'GPX löschen',
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.error),
+                      const SizedBox(width: 8),
+                      // Title + date
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              dayTitle,
+                              style: GoogleFonts.newsreader(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w500,
+                                color: cs.primary,
+                                height: 1.1,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              dateSubtitle,
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.5,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Prev / next
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        color: cs.primary,
+                        onPressed: prevEntry != null
+                            ? () => goToDay(prevEntry.date)
+                            : null,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        color: cs.primary,
+                        onPressed: nextEntry != null
+                            ? () => goToDay(nextEntry.date)
+                            : null,
+                      ),
+                      // Options menu
+                      PopupMenuButton<String>(
+                        tooltip: 'Optionen',
+                        icon: Icon(Icons.more_vert, color: cs.primary),
+                        onSelected: (value) {
+                          if (value == 'import_gpx') _importGpx();
+                          if (value == 'delete_gpx') _removeGpx();
+                          if (value == 'delete_day') _deleteDay();
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem<String>(
+                            value: 'import_gpx',
+                            child: Row(children: [
+                              _gpxUploadIcon(),
+                              const SizedBox(width: 12),
+                              const Text('GPX importieren'),
+                            ]),
+                          ),
+                          if (track != null)
+                            PopupMenuItem<String>(
+                              value: 'delete_gpx',
+                              child: Row(children: [
+                                Icon(Icons.delete_outline,
+                                    color: cs.error),
+                                const SizedBox(width: 12),
+                                Text('GPX löschen',
+                                    style: TextStyle(color: cs.error)),
+                              ]),
+                            ),
+                          const PopupMenuDivider(),
+                          PopupMenuItem<String>(
+                            value: 'delete_day',
+                            child: Row(children: [
+                              Icon(Icons.delete_forever_outlined,
+                                  color: cs.error),
+                              const SizedBox(width: 12),
+                              Text('Tag löschen',
+                                  style: TextStyle(color: cs.error)),
+                            ]),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              const PopupMenuDivider(),
-              PopupMenuItem<String>(
-                value: 'delete_day',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_forever_outlined,
-                        color: Theme.of(context).colorScheme.error),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Tag löschen',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.error),
-                    ),
-                  ],
-                ),
               ),
-            ],
+            ),
           ),
-        ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addTimelineEntry(context),
-        tooltip: 'Neuen Logeintrag hinzufügen',
-        child: const Icon(Icons.add),
+      // ── Bottom nav with raised compass ──────────────────────────
+      bottomNavigationBar: AppBottomNav(
+        active: NavTab.logbook,
+        onSelect: (tab) {
+          if (tab == NavTab.logbook) context.go('/');
+          if (tab == NavTab.weather) _openWeatherUrl(context);
+          if (tab == NavTab.settings) context.push('/settings');
+        },
       ),
       body: entry == null
           ? const Center(child: Text('Kein Eintrag für diesen Tag'))
@@ -174,6 +237,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   Widget _buildContent(
       DayEntry entry, DailyTrack? track, HomeRepository repo, DailyStats? stats) {
     _notesController ??= TextEditingController(text: entry.notes ?? '');
+    _fromHarborController ??= TextEditingController(text: entry.fromHarbor ?? '');
+    _toHarborController ??= TextEditingController(text: entry.toHarbor ?? '');
 
     final correlatedMap = track != null
         ? Map<TimelineEntry, TrackPoint>.fromEntries(
@@ -193,9 +258,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               Expanded(
                 child: CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(child: _buildAnimatedStats(stats)),
                     SliverToBoxAdapter(
-                        child: _buildAnimatedMap(entry, track)),
+                        child: _buildMapSection(entry, track, stats)),
                   ],
                 ),
               ),
@@ -209,8 +273,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
         return CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: _buildAnimatedStats(stats)),
-            SliverToBoxAdapter(child: _buildAnimatedMap(entry, track)),
+            SliverToBoxAdapter(
+                child: _buildMapSection(entry, track, stats)),
             SliverToBoxAdapter(child: _buildAdditionalInfoCard(entry)),
             ..._timelineSlivers(entry, correlatedMap),
           ],
@@ -219,37 +283,39 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  Widget _buildAnimatedStats(DailyStats? stats) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 350),
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, -0.15),
-            end: Offset.zero,
-          ).animate(
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
-          child: child,
-        ),
-      ),
-      child: stats != null
-          ? KeyedSubtree(
-              key: const ValueKey('stats'), child: _buildStatisticsCard(stats))
-          : const SizedBox.shrink(key: ValueKey('no-stats')),
-    );
-  }
+  // ------------------------------------------------------------
+  // MAP + STATS PILL + STATS GRID (combined section)
+  // ------------------------------------------------------------
+  Widget _buildMapSection(DayEntry entry, DailyTrack? track, DailyStats? stats) {
+    final hasTrack = track != null && track.points.isNotEmpty;
 
-  Widget _buildAnimatedMap(DayEntry entry, DailyTrack? track) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 400),
-      transitionBuilder: (child, animation) => FadeTransition(
-        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-        child: child,
-      ),
-      child: KeyedSubtree(
-        key: ValueKey<bool>(track != null && track.points.isNotEmpty),
-        child: _buildMap(entry, track),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Map
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: CurvedAnimation(
+                  parent: animation, curve: Curves.easeOut),
+              child: child,
+            ),
+            child: KeyedSubtree(
+              key: ValueKey<bool>(hasTrack),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: _buildMap(entry, track),
+              ),
+            ),
+          ),
+          // Stats grid directly below map
+          if (hasTrack && stats != null) ...[
+            const SizedBox(height: 16),
+            _buildStatisticsCard(stats),
+          ],
+        ],
       ),
     );
   }
@@ -287,17 +353,52 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ];
     }
     return [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-        sliver: SliverList(
-          delegate: SliverChildBuilderDelegate(
-            (ctx, index) {
-              final t = entry.timeline[index];
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Logbucheinträge',
+                style: GoogleFonts.newsreader(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _addTimelineEntry(context),
+                icon: Icon(Icons.add_circle_outline,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.tertiary),
+                label: Text(
+                  'EINTRAG',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+          child: Column(
+            children: entry.timeline.asMap().entries.map((e) {
               return _buildTimelineItem(
-                entry, t, correlatedMap[t], index, entry.timeline.length,
+                entry,
+                e.value,
+                correlatedMap[e.value],
+                e.key,
+                entry.timeline.length,
               );
-            },
-            childCount: entry.timeline.length,
+            }).toList(),
           ),
         ),
       ),
@@ -305,90 +406,103 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   Widget _buildStatisticsCard(DailyStats stats) {
-    final statItems = <_StatsItem>[
-      _StatsItem(label: 'Distanz', value: '${stats.distanceNm.toStringAsFixed(2)} nm'),
-      _StatsItem(label: 'Fahrzeit', value: _formatDuration(stats.movingDuration)),
-      _StatsItem(label: 'Ø Geschw.', value: '${stats.avgSpeed.toStringAsFixed(1)} kn'),
-      _StatsItem(label: 'Max. Geschw.', value: '${stats.maxSpeed.toStringAsFixed(1)} kn'),
+    final cs = Theme.of(context).colorScheme;
+    final items = <_StatsItem>[
+      _StatsItem(
+          icon: Icons.straighten,
+          label: 'DISTANZ',
+          value: '${stats.distanceNm.toStringAsFixed(2)} nm'),
+      _StatsItem(
+          icon: Icons.schedule,
+          label: 'FAHRZEIT',
+          value: _formatDuration(stats.movingDuration)),
+      _StatsItem(
+          icon: Icons.speed,
+          label: 'Ø GESCHW.',
+          value: '${stats.avgSpeed.toStringAsFixed(1)} kn'),
+      _StatsItem(
+          icon: Icons.bolt,
+          label: 'MAX. GESCHW.',
+          value: '${stats.maxSpeed.toStringAsFixed(1)} kn'),
       if (stats.elevationGainMeters != null && stats.elevationGainMeters! > 0)
         _StatsItem(
-          label: 'Höhengewinn',
-          value: '${stats.elevationGainMeters!.toStringAsFixed(0)} m',
-        ),
+            icon: Icons.trending_up,
+            label: 'HÖHENGEWINN',
+            value: '${stats.elevationGainMeters!.toStringAsFixed(0)} m'),
     ];
 
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.only(top: 12),
-      color: Theme.of(context).colorScheme.surfaceContainerHigh,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Statistiken',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                const spacing = 8.0;
-                final tileWidth = (constraints.maxWidth - spacing) / 2;
-                return Wrap(
-                  spacing: spacing,
-                  runSpacing: 6,
-                  children: statItems.map((item) {
-                    return SizedBox(
-                      width: tileWidth,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .secondaryContainer,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              item.value,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelLarge
-                                  ?.copyWith(fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              item.label,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSecondaryContainer
-                                        .withValues(alpha: 0.7),
-                                  ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const spacing = 8.0;
+          final tileW = (constraints.maxWidth - spacing) / 2;
+          return Wrap(
+            spacing: spacing,
+            runSpacing: spacing,
+            children: items.map((item) {
+              return SizedBox(
+                width: tileW,
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerLowest,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: cs.outlineVariant.withValues(alpha: 0.6)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ],
-        ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(item.icon,
+                                size: 16, color: cs.tertiary),
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              item.label,
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.5,
+                                color: cs.onSurfaceVariant,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        item.value,
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineSmall
+                            ?.copyWith(color: cs.primary),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          );
+        },
       ),
     );
   }
@@ -429,49 +543,65 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
 
   // ------------------------------------------------------------
+  // MAP HELPERS
   // ------------------------------------------------------------
-  // TOOLTIP FORMATTER
-  // ------------------------------------------------------------
-  String _timelineTooltip(TimelineEntry t) {
-    final timeStr =
-        '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
-    final lines = <String>[timeStr];
-    if (t.remarks?.isNotEmpty == true) lines.add(t.remarks!);
-    if (t.course != null) lines.add('Kurs  ${t.course!.toStringAsFixed(0)}°');
-    if (t.speed != null) lines.add('Geschw.  ${t.speed!.toStringAsFixed(1)} kn');
-    if (t.wind != null) lines.add('Wind  ${t.wind!}');
-    if (t.sea != null) lines.add('See  ${t.sea!}');
-    if (t.weather != null) lines.add('Wetter  ${t.weather!}');
-    return lines.join('\n');
-  }
-
-  // ------------------------------------------------------------
-  // MAP WITH CORRELATED MARKERS
-  // ------------------------------------------------------------
-  void _onMapHover(Offset mousePos, List<TrackPoint> points) {
+  TrackPoint? _findNearestTrackPoint(LatLng latLng, List<TrackPoint> points) {
+    if (points.isEmpty) return null;
     TrackPoint? nearest;
     double minDistSq = double.infinity;
-    const double thresholdSq = 15.0 * 15.0;
-
-    for (final point in points) {
-      final screenPt = _mapController.camera
-          .latLngToScreenPoint(LatLng(point.lat, point.lon));
-      final dx = screenPt.x - mousePos.dx;
-      final dy = screenPt.y - mousePos.dy;
-      final distSq = dx * dx + dy * dy;
+    for (final p in points) {
+      final dlat = p.lat - latLng.latitude;
+      final dlng = p.lon - latLng.longitude;
+      final distSq = dlat * dlat + dlng * dlng;
       if (distSq < minDistSq) {
         minDistSq = distSq;
-        nearest = point;
+        nearest = p;
       }
     }
+    return nearest;
+  }
 
-    final hit = minDistSq <= thresholdSq ? nearest : null;
-    if (hit != _hoveredTrackPoint) {
-      setState(() {
-        _hoveredTrackPoint = hit;
-        _hoverPosition = hit != null ? mousePos : null;
-      });
-    }
+  void _showTrackPointBottomSheet(TrackPoint point) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              DateFormat('HH:mm').format(point.time.toLocal()),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('dd. MMMM yyyy', 'de_CH').format(point.time.toLocal()),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
   }
 
   // ------------------------------------------------------------
@@ -528,28 +658,19 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
       return Marker(
         point: LatLng(p.lat, p.lon),
-        width: 20,
-        height: 20,
-        child: Tooltip(
-          excludeFromSemantics: true,
-          message: _timelineTooltip(t),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.inverseSurface,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          textStyle: TextStyle(
-            color: Theme.of(context).colorScheme.onInverseSurface,
-            fontSize: 12,
-            height: 1.4,
-          ),
-          child: GestureDetector(
-            onTap: () => _showEntryDetail(t),
-            child: Icon(
-              Icons.location_on,
-              size: 25,
-              color: Theme.of(context).colorScheme.primary,
-            ),
+        width: 28,
+        height: 28,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _showEntryDetail(t),
+          onLongPress: () {
+            setState(() => _droppedMarkerLatLng = LatLng(p.lat, p.lon));
+            _showEntryDetail(t);
+          },
+          child: Icon(
+            Icons.location_on,
+            size: 28,
+            color: Theme.of(context).colorScheme.primary,
           ),
         ),
       );
@@ -601,6 +722,35 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ),
     );
 
+    if (_droppedMarkerLatLng != null) {
+      markers.add(
+        Marker(
+          point: _droppedMarkerLatLng!,
+          width: 44,
+          height: 44,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => setState(() => _droppedMarkerLatLng = null),
+            onPanUpdate: (details) {
+              final camera = _mapController.camera;
+              final screenPt = camera.latLngToScreenPoint(_droppedMarkerLatLng!);
+              final newPt = Point<num>(
+                screenPt.x + details.delta.dx,
+                screenPt.y + details.delta.dy,
+              );
+              setState(() => _droppedMarkerLatLng = camera.pointToLatLng(newPt));
+            },
+            onPanEnd: (_) {
+              final nearest =
+                  _findNearestTrackPoint(_droppedMarkerLatLng!, track.points);
+              if (nearest != null) _showTrackPointBottomSheet(nearest);
+            },
+            child: const Icon(Icons.place, color: Colors.deepOrange, size: 40),
+          ),
+        ),
+      );
+    }
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(top: 12),
@@ -611,91 +761,70 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         height: 340,
         child: Stack(
           children: [
-            MouseRegion(
-              onHover: (e) => _onMapHover(e.localPosition, track.points),
-              onExit: (_) => setState(() {
-                _hoveredTrackPoint = null;
-                _hoverPosition = null;
-              }),
-              child: ExcludeSemantics(
-            child: FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCameraFit: CameraFit.bounds(
-                  bounds: LatLngBounds.fromPoints(polylinePoints),
-                  padding: const EdgeInsets.all(40),
-                ),
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: _satelliteView
-                      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.logbook.app',
-                  tileProvider: NetworkTileProvider(),
-                ),
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: polylinePoints,
-                      strokeWidth: 4,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ],
-                ),
-                MarkerLayer(markers: markers),
-                RichAttributionWidget(
-                  attributions: [
-                    if (_satelliteView)
-                      TextSourceAttribution(
-                        '© Esri World Imagery',
-                        onTap: () async {
-                          final uri = Uri.parse('https://www.esri.com');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri,
-                                mode: LaunchMode.externalApplication);
-                          }
-                        },
-                      )
-                    else
-                      TextSourceAttribution(
-                        '© OpenStreetMap contributors',
-                        onTap: () async {
-                          final uri = Uri.parse(
-                              'https://www.openstreetmap.org/copyright');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri,
-                                mode: LaunchMode.externalApplication);
-                          }
-                        },
-                      ),
-                  ],
-                ),
-              ],
-            ),
-            ),  // ExcludeSemantics
-            ),  // MouseRegion
-            if (_hoveredTrackPoint != null && _hoverPosition != null)
-              Positioned(
-                left: _hoverPosition!.dx + 12,
-                top: (_hoverPosition!.dy - 40).clamp(4.0, 296.0),
-                child: IgnorePointer(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.inverseSurface,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      DateFormat('HH:mm').format(_hoveredTrackPoint!.time.toLocal()),
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onInverseSurface,
-                        fontSize: 12,
-                      ),
-                    ),
+            ExcludeSemantics(
+              child: FlutterMap(
+                mapController: _mapController,
+                options: MapOptions(
+                  initialCameraFit: CameraFit.bounds(
+                    bounds: LatLngBounds.fromPoints(polylinePoints),
+                    padding: const EdgeInsets.all(40),
                   ),
+                  onTap: (_, _) =>
+                      setState(() => _droppedMarkerLatLng = null),
+                  onLongPress: (tapPosition, latLng) {
+                    final nearest = _findNearestTrackPoint(latLng, track.points);
+                    setState(() => _droppedMarkerLatLng = latLng);
+                    if (nearest != null) _showTrackPointBottomSheet(nearest);
+                  },
                 ),
+                children: [
+                  TileLayer(
+                    urlTemplate: _satelliteView
+                        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                        : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.logbook.app',
+                    tileProvider: NetworkTileProvider(),
+                  ),
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: polylinePoints,
+                        strokeWidth: 4,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                  MarkerLayer(markers: markers),
+                  RichAttributionWidget(
+                    attributions: [
+                      if (_satelliteView)
+                        TextSourceAttribution(
+                          '© Esri World Imagery',
+                          onTap: () async {
+                            final uri = Uri.parse('https://www.esri.com');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
+                            }
+                          },
+                        )
+                      else
+                        TextSourceAttribution(
+                          '© OpenStreetMap contributors',
+                          onTap: () async {
+                            final uri = Uri.parse(
+                                'https://www.openstreetmap.org/copyright');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
+                            }
+                          },
+                        ),
+                    ],
+                  ),
+                ],
               ),
+            ),
             Positioned(
               right: 12,
               bottom: 12,
@@ -746,10 +875,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         title: Text(
           'Weitere Informationen',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: GoogleFonts.newsreader(
+            fontSize: 28,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
         children: [
           Padding(
@@ -757,6 +887,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildHarborSection(entry),
+                const Divider(height: 28),
                 _buildParticipantsSection(entry),
                 const Divider(height: 28),
                 _buildControlledSection(entry),
@@ -767,6 +899,75 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildHarborSection(DayEntry entry) {
+    final cs = Theme.of(context).colorScheme;
+    final labelStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: cs.onSurfaceVariant,
+        );
+    final inputDecoration = InputDecoration(
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      isDense: true,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Route', style: labelStyle),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Von', style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _fromHarborController,
+                    decoration:
+                        inputDecoration.copyWith(hintText: 'Starthafen'),
+                    textInputAction: TextInputAction.next,
+                    onChanged: (v) {
+                      entry.fromHarbor = v.trim().isEmpty ? null : v.trim();
+                      entry.save();
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 20, left: 8, right: 8),
+              child: Icon(Icons.arrow_forward,
+                  size: 18, color: cs.onSurfaceVariant),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Nach', style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: _toHarborController,
+                    decoration:
+                        inputDecoration.copyWith(hintText: 'Zielhafen'),
+                    textInputAction: TextInputAction.done,
+                    onChanged: (v) {
+                      entry.toHarbor = v.trim().isEmpty ? null : v.trim();
+                      entry.save();
+                    },
+                    onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -788,13 +989,27 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ...entry.participantsList.map(
               (name) => Chip(
                 label: Text(name),
-                deleteIcon: const Icon(Icons.close, size: 16),
+                deleteIcon: Icon(Icons.close,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
                 onDeleted: () => _removeParticipant(entry, name),
+                backgroundColor:
+                    Theme.of(context).colorScheme.surfaceContainerHigh,
+                labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary),
+                side: BorderSide.none,
               ),
             ),
             ActionChip(
-              avatar: const Icon(Icons.person_add_outlined, size: 16),
-              label: const Text('Hinzufügen'),
+              avatar: Icon(Icons.person_add_outlined,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary),
+              label: Text('Hinzufügen',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary)),
+              backgroundColor:
+                  Theme.of(context).colorScheme.surfaceContainerHigh,
+              side: BorderSide.none,
               onPressed: () => _addParticipant(entry),
             ),
           ],
@@ -925,124 +1140,127 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     int index,
     int total,
   ) {
+    final cs = Theme.of(context).colorScheme;
     final timeStr =
         '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
     final isLast = index == total - 1;
+    final title = t.remarks?.isNotEmpty == true ? t.remarks! : 'Logeintrag';
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Timeline spine
-          SizedBox(
-            width: 52,
-            child: Column(
-              children: [
-                Text(
-                  timeStr,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
+    return GestureDetector(
+      onTap: () => _showEntryDetail(t),
+      onLongPress: () => _showTimelineActions(entry, t),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Left spine: dot + line that stretches into gap ─────
+            SizedBox(
+              width: 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  // Dot
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: cs.primary, width: 2),
+                      color: cs.surface,
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: cs.primary,
+                        ),
                       ),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      margin: const EdgeInsets.only(top: 4),
-                      color: Theme.of(context).colorScheme.outlineVariant,
                     ),
                   ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Entry card
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-              child: GestureDetector(
-                onTap: () => _showEntryDetail(t),
-                onLongPress: () => _showTimelineActions(entry, t),
-                child: Card(
-                  elevation: 1,
-                  margin: EdgeInsets.zero,
-                  color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                t.remarks?.isNotEmpty == true
-                                    ? t.remarks!
-                                    : 'Logeintrag',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                            if (trackedPoint != null)
-                              IconButton(
-                                icon: const Icon(Icons.location_on_outlined),
-                                iconSize: 18,
-                                visualDensity: VisualDensity.compact,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                tooltip: 'Auf Karte zeigen',
-                                color: Theme.of(context).colorScheme.primary,
-                                onPressed: () => _mapController.move(
-                                  LatLng(trackedPoint.lat, trackedPoint.lon),
-                                  14,
-                                ),
-                              ),
-                          ],
+                  // Line — fills all remaining height including bottom gap
+                  if (!isLast)
+                    Expanded(
+                      child: Center(
+                        child: Container(
+                          width: 2,
+                          color: cs.outlineVariant,
                         ),
-                        if (_hasChipData(t)) ...[
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: [
-                              if (t.course != null)
-                                _infoChip(Icons.navigation,
-                                    '${t.course!.toStringAsFixed(0)}°'),
-                              if (t.speed != null)
-                                _infoChip(Icons.speed,
-                                    '${t.speed!.toStringAsFixed(1)} kn'),
-                              if (t.weather != null)
-                                _infoChip(
-                                    Icons.wb_sunny_outlined, t.weather!),
-                              if (t.wind != null)
-                                _infoChip(Icons.air, t.wind!),
-                              if (t.sea != null)
-                                _infoChip(Icons.waves, t.sea!),
-                            ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            // ── Content — bottom padding creates the gap the line fills ──
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: isLast ? 0 : 28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Time + map pin
+                    Row(
+                      children: [
+                        Text(
+                          timeStr,
+                          style: Theme.of(context)
+                              .textTheme
+                              .labelLarge
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                        if (trackedPoint != null) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () => _mapController.move(
+                              LatLng(trackedPoint.lat, trackedPoint.lon),
+                              14,
+                            ),
+                            child: Icon(Icons.location_on_outlined,
+                                size: 18, color: cs.primary),
                           ),
                         ],
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    // Title
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: cs.primary,
+                      ),
+                    ),
+                    // Data chips
+                    if (_hasChipData(t)) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          if (t.course != null)
+                            _infoChip(Icons.navigation,
+                                '${t.course!.toStringAsFixed(0)}°'),
+                          if (t.speed != null)
+                            _infoChip(Icons.speed,
+                                '${t.speed!.toStringAsFixed(1)} kn'),
+                          if (t.weather != null)
+                            _infoChip(Icons.wb_sunny_outlined, t.weather!),
+                          if (t.wind != null)
+                            _infoChip(Icons.air, t.wind!),
+                          if (t.sea != null)
+                            _infoChip(Icons.waves, t.sea!),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1056,10 +1274,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   Widget _infoChip(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(20),
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(50),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1214,6 +1432,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   // ------------------------------------------------------------
   // ADD TIMELINE ENTRY
   // ------------------------------------------------------------
+  Future<void> _openWeatherUrl(BuildContext context) async {
+    final url = context.read<ThemeProvider>().weatherUrl;
+    if (url.isEmpty) return;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   void _addTimelineEntry(BuildContext context) async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);

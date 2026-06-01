@@ -12,17 +12,20 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _titleController;
+  late TextEditingController _weatherController;
 
   @override
   void initState() {
     super.initState();
-    final title = context.read<ThemeProvider>().logbuchTitle;
-    _titleController = TextEditingController(text: title);
+    final p = context.read<ThemeProvider>();
+    _titleController = TextEditingController(text: p.logbuchTitle);
+    _weatherController = TextEditingController(text: p.weatherUrl);
   }
 
   @override
   void dispose() {
     _titleController.dispose();
+    _weatherController.dispose();
     super.dispose();
   }
 
@@ -45,12 +48,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Titel',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
+                  Text('Titel',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          )),
                   const SizedBox(height: 12),
                   TextField(
                     controller: _titleController,
@@ -64,7 +65,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     textInputAction: TextInputAction.done,
                     onChanged: (v) => themeProvider.setLogbuchTitle(v),
-                    onSubmitted: (v) => FocusScope.of(context).unfocus(),
+                    onSubmitted: (_) => FocusScope.of(context).unfocus(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _sectionLabel(context, 'Wetter'),
+          const SizedBox(height: 8),
+          Card(
+            color: scheme.surfaceContainerHigh,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Wetter-URL',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          )),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Wird beim Tippen auf "Wetter" in der Navigation geöffnet.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _weatherController,
+                    decoration: InputDecoration(
+                      hintText: 'https://www.windy.com',
+                      prefixIcon: const Icon(Icons.language_outlined),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                    ),
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.done,
+                    onChanged: (v) => themeProvider.setWeatherUrl(v),
+                    onSubmitted: (_) => FocusScope.of(context).unfocus(),
                   ),
                 ],
               ),
@@ -80,12 +123,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Design',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
+                  Text('Design',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          )),
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
