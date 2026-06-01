@@ -269,9 +269,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final hasTimeline = entry.timeline.isNotEmpty;
     final key =
         _dayKeys.putIfAbsent(_entryKey(entry.date), () => GlobalKey());
-    final dateLabel = DateFormat('MMM d', 'de_CH')
-        .format(entry.date)
-        .toUpperCase();
+    final dayDateLabel = DateFormat('EEEE, d. MMMM', 'de_CH').format(entry.date);
+    final routeLabel = [
+      if (entry.fromHarbor?.isNotEmpty ?? false) entry.fromHarbor!,
+      if (entry.toHarbor?.isNotEmpty ?? false) entry.toHarbor!,
+    ].join(' → ');
 
     // Empty entry: dashed border, no accent, italic
     if (!hasTimeline && stats == null) {
@@ -298,13 +300,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        dateLabel,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
-                          color: cs.onSurfaceVariant
-                              .withValues(alpha: 0.8),
+                        dayDateLabel,
+                        style: GoogleFonts.newsreader(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -328,7 +328,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Active card: seafoam left accent, shadow, watermark
-    final weekday = DateFormat('EEEE', 'de_CH').format(entry.date);
     final hasRoute = (entry.fromHarbor?.isNotEmpty ?? false) ||
         (entry.toHarbor?.isNotEmpty ?? false);
     return Container(
@@ -381,59 +380,28 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      dateLabel,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 1.5,
-                                        color: cs.onSurfaceVariant
-                                            .withValues(alpha: 0.8),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      weekday,
-                                      style: GoogleFonts.newsreader(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w600,
-                                        color: cs.primary,
-                                      ),
-                                    ),
-                                  ],
+                                child: Text(
+                                  dayDateLabel,
+                                  style: GoogleFonts.newsreader(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.primary,
+                                  ),
                                 ),
                               ),
                               Icon(Icons.sailing,
                                   color: cs.tertiary, size: 22),
                             ],
                           ),
-                          if (stats != null || hasRoute) ...[
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                if (stats != null)
-                                  _statPair(Icons.straighten,
-                                      '${stats.distanceNm.toStringAsFixed(1)} nm',
-                                      cs),
-                                if (stats != null && hasRoute)
-                                  const SizedBox(width: 16),
-                                if (hasRoute)
-                                  _statPair(
-                                    Icons.route,
-                                    [
-                                      if (entry.fromHarbor?.isNotEmpty ?? false)
-                                        entry.fromHarbor!,
-                                      if (entry.toHarbor?.isNotEmpty ?? false)
-                                        entry.toHarbor!,
-                                    ].join(' → '),
-                                    cs,
-                                  ),
-                              ],
-                            ),
+                          if (stats != null) ...[
+                            const SizedBox(height: 8),
+                            _statPair(Icons.straighten,
+                                '${stats.distanceNm.toStringAsFixed(1)} nm',
+                                cs),
+                          ],
+                          if (hasRoute) ...[
+                            const SizedBox(height: 4),
+                            _statPair(Icons.route, routeLabel, cs),
                           ],
                         ],
                       ),

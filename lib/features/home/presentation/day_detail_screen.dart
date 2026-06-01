@@ -1294,9 +1294,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                           if (t.sea != null)
                             _infoChip(Icons.waves, t.sea!),
                           if (t.grossState != null)
-                            _infoChip(Icons.flag, 'Gross: ${t.grossState!}'),
+                            _infoChip(Icons.sailing, 'Gross: ${t.grossState!}'),
                           if (t.fockState != null)
-                            _infoChip(Icons.flag, 'Fock: ${t.fockState!}'),
+                            _infoChip(Icons.sailing, 'Fock: ${t.fockState!}'),
                           if (t.motorOn != null)
                             _infoChip(Icons.directions_boat,
                                 'Motor ${t.motorOn! ? 'An' : 'Aus'}'),
@@ -1401,9 +1401,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             if (t.weather != null)
               _detailRow(Icons.wb_sunny_outlined, 'Wetter', t.weather!),
             if (t.grossState != null)
-              _detailRow(Icons.flag, 'Gross', t.grossState!),
+              _detailRow(Icons.sailing, 'Gross', t.grossState!),
             if (t.fockState != null)
-              _detailRow(Icons.flag, 'Fock', t.fockState!),
+              _detailRow(Icons.sailing, 'Fock', t.fockState!),
             if (t.motorOn != null)
               _detailRow(Icons.directions_boat, 'Motor',
                   t.motorOn! ? 'An' : 'Aus'),
