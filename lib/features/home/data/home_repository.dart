@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:gpx/gpx.dart';
 import 'package:hive/hive.dart';
 
 import '../domain/day_entry.dart';
@@ -7,19 +10,38 @@ import '../domain/timeline_entry.dart';
 import '../domain/daily_track.dart';
 import '../domain/track_point.dart';
 import '../utils/gpx_parser.dart';
+import '../../../core/services/firestore_service.dart';
+import '../../../core/services/storage_service.dart';
 
 class HomeRepository extends ChangeNotifier {
   // Hive boxes
   late Box<DayEntry> _dayBox;
   late Box<DailyTrack> _trackBox;
 
-  // In‑memory caches
+  // In-memory caches
   final Map<DateTime, DayEntry> _entries = {};
   final Map<DateTime, DailyTrack> dailyTracks = {};
+
+  // Cloud services (null until attach* is called)
+  FirestoreService? _firestore;
+  StorageService? _storage;
+
+  // Debounce timers keyed by entry date — avoids flooding Firestore on rapid typing
+  final Map<DateTime, Timer> _syncTimers = {};
 
   // Public getter
   List<DayEntry> get entries =>
       _entries.values.toList()..sort((a, b) => a.date.compareTo(b.date));
+
+  /// Participants from the most recent entry that has any, used as prefill.
+  List<String> get lastParticipants {
+    for (final e in entries.reversed) {
+      if (e.participantsList.isNotEmpty) {
+        return List<String>.from(e.participantsList);
+      }
+    }
+    return [];
+  }
 
   // ------------------------------------------------------------
   // INITIALIZATION
@@ -28,12 +50,9 @@ class HomeRepository extends ChangeNotifier {
     _dayBox = await Hive.openBox<DayEntry>('daily_entries');
     _trackBox = await Hive.openBox<DailyTrack>('daily_tracks');
 
-    // Load entries
     for (final e in _dayBox.values) {
       _entries[e.date] = e;
     }
-
-    // Load tracks
     for (final t in _trackBox.values) {
       dailyTracks[t.day] = t;
     }
@@ -41,18 +60,82 @@ class HomeRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Attaches Firestore. When [initialSync] is true (first launch after the
+  /// cloud feature was introduced) all local Hive entries are pushed up first,
+  /// then any cloud-only entries are pulled down.
+  Future<void> attachFirestore(FirestoreService service,
+      {bool initialSync = false}) async {
+    _firestore = service;
+    try {
+      if (initialSync) {
+        for (final e in _entries.values) {
+          await service.saveEntry(e);
+        }
+      }
+      final missing =
+          await service.fetchMissingEntries(_entries.keys.toSet());
+      for (final e in missing) {
+        _entries[e.date] = e;
+        await _dayBox.put(e.date.toIso8601String(), e);
+      }
+      if (missing.isNotEmpty) notifyListeners();
+    } catch (_) {
+      // Offline or timeout — continue with local data.
+    }
+  }
+
+  /// Attaches Storage. When [initialSync] is true all local Hive tracks are
+  /// reconstructed as GPX and uploaded, then cloud-only tracks are downloaded.
+  Future<void> attachStorage(StorageService service,
+      {bool initialSync = false}) async {
+    _storage = service;
+    try {
+      if (initialSync) {
+        for (final entry in dailyTracks.entries) {
+          final bytes = _trackToGpxBytes(entry.value);
+          await service.uploadTrack(entry.key, bytes);
+        }
+      }
+      final cloudDates = await service.listTrackDates();
+      final missing =
+          cloudDates.where((d) => !dailyTracks.containsKey(d)).toList();
+      for (final date in missing) {
+        final bytes = await service.downloadTrack(date);
+        if (bytes == null || bytes.isEmpty) continue;
+        final points = GpxParser().parseBytes(bytes);
+        if (points.isEmpty) continue;
+        await _saveTrack(date, '$date.gpx', points);
+      }
+    } catch (_) {
+      // Offline or timeout — continue with local data.
+    }
+  }
+
+  static Uint8List _trackToGpxBytes(DailyTrack track) {
+    final gpx = Gpx();
+    gpx.trks = [
+      Trk(trksegs: [
+        Trkseg(
+          trkpts: track.points
+              .map((p) => Wpt(lat: p.lat, lon: p.lon, time: p.time.toUtc()))
+              .toList(),
+        ),
+      ]),
+    ];
+    return Uint8List.fromList(utf8.encode(GpxWriter().asString(gpx)));
+  }
+
   // ------------------------------------------------------------
   // DAY ENTRY MANAGEMENT
   // ------------------------------------------------------------
   void addEntry(DateTime date) {
     final normalized = DateTime(date.year, date.month, date.day);
-
     if (_entries.containsKey(normalized)) return;
 
-    final entry = DayEntry(date: normalized, timeline: []);
+    final entry = DayEntry(date: normalized, timeline: [], participantsList: lastParticipants);
     _entries[normalized] = entry;
     _dayBox.put(normalized.toIso8601String(), entry);
-
+    _syncToFirestore(entry);
     notifyListeners();
   }
 
@@ -67,13 +150,25 @@ class HomeRepository extends ChangeNotifier {
     _entries.remove(normalized);
     await _dayBox.delete(normalized.toIso8601String());
 
-    // Also remove associated GPX track if present
     if (dailyTracks.containsKey(normalized)) {
       dailyTracks.remove(normalized);
       await _trackBox.delete(normalized.toIso8601String());
     }
 
+    _firestore?.deleteEntry(normalized).catchError((_) {});
     notifyListeners();
+  }
+
+  // ------------------------------------------------------------
+  // SAVE (field edits from the UI call this instead of entry.save())
+  // ------------------------------------------------------------
+
+  /// Persists [entry] to Hive immediately, then syncs to Firestore with a
+  /// 2-second debounce so rapid text-field changes don't flood Firestore.
+  void saveEntry(DayEntry entry) {
+    entry.save();
+    notifyListeners();
+    _debouncedSync(entry);
   }
 
   // ------------------------------------------------------------
@@ -81,26 +176,26 @@ class HomeRepository extends ChangeNotifier {
   // ------------------------------------------------------------
   void addTimelineEntry(DateTime day, TimelineEntry entry) {
     final normalized = DateTime(day.year, day.month, day.day);
-
     final d = _entries[normalized];
     if (d == null) return;
 
     d.timeline.add(entry);
     d.timeline.sort((a, b) => a.time.compareTo(b.time));
-
     _dayBox.put(normalized.toIso8601String(), d);
+    _syncToFirestore(d);
     notifyListeners();
   }
 
   // ------------------------------------------------------------
-  // GPX IMPORT
+  // GPX IMPORT (tracks stay local-only)
   // ------------------------------------------------------------
   Future<void> importGpx(DateTime day, File file) async {
     final normalized = DateTime(day.year, day.month, day.day);
-    final points = await GpxParser().parse(file);
+    final bytes = await file.readAsBytes();
+    final points = GpxParser().parseBytes(bytes);
     if (points.isEmpty) return;
-    points.sort((a, b) => a.time.compareTo(b.time));
     await _saveTrack(normalized, file.uri.pathSegments.last, points);
+    _storage?.uploadTrack(normalized, bytes).catchError((_) {});
   }
 
   Future<void> importGpxFromBytes(
@@ -108,13 +203,14 @@ class HomeRepository extends ChangeNotifier {
     final normalized = DateTime(day.year, day.month, day.day);
     final points = GpxParser().parseBytes(bytes);
     if (points.isEmpty) return;
-    points.sort((a, b) => a.time.compareTo(b.time));
     await _saveTrack(normalized, fileName, points);
+    _storage?.uploadTrack(normalized, bytes).catchError((_) {});
   }
 
   Future<void> _saveTrack(
       DateTime normalized, String fileName, List<TrackPoint> points) async {
-    final track = DailyTrack(day: normalized, fileName: fileName, points: points);
+    final track =
+        DailyTrack(day: normalized, fileName: fileName, points: points);
     dailyTracks[normalized] = track;
     await _trackBox.put(normalized.toIso8601String(), track);
     notifyListeners();
@@ -126,17 +222,20 @@ class HomeRepository extends ChangeNotifier {
     dailyTracks.remove(normalized);
     await _trackBox.delete(normalized.toIso8601String());
 
+    _storage?.deleteTrack(normalized).catchError((_) {});
+
     final entry = _entries[normalized];
     if (entry != null) {
       entry.hasGpx = false;
       await _dayBox.put(normalized.toIso8601String(), entry);
+      _syncToFirestore(entry);
     }
 
     notifyListeners();
   }
 
   // ------------------------------------------------------------
-  // CROSS‑CORRELATION: FIND CLOSEST TRACK POINT
+  // CROSS-CORRELATION: FIND CLOSEST TRACK POINT
   // ------------------------------------------------------------
   TrackPoint? findClosestPoint(DateTime day, DateTime time) {
     final normalized = DateTime(day.year, day.month, day.day);
@@ -155,5 +254,29 @@ class HomeRepository extends ChangeNotifier {
     }
 
     return best;
+  }
+
+  // ------------------------------------------------------------
+  // PRIVATE FIRESTORE HELPERS
+  // ------------------------------------------------------------
+
+  void _debouncedSync(DayEntry entry) {
+    _syncTimers[entry.date]?.cancel();
+    _syncTimers[entry.date] = Timer(const Duration(seconds: 2), () {
+      _syncToFirestore(entry);
+      _syncTimers.remove(entry.date);
+    });
+  }
+
+  void _syncToFirestore(DayEntry entry) {
+    _firestore?.saveEntry(entry).catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    for (final t in _syncTimers.values) {
+      t.cancel();
+    }
+    super.dispose();
   }
 }
