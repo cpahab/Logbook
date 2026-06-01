@@ -56,6 +56,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   TextEditingController? _toHarborController;
   LatLng? _droppedMarkerLatLng;
   bool _satelliteView = false;
+  bool _isMarkerSheetOpen = false;
 
   static const _controlledItems = [
     'Motoröl geprüft',
@@ -344,8 +345,24 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     size: 40,
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
                 const SizedBox(height: 8),
-                Text('Noch keine Einträge — + tippen zum Hinzufügen',
+                Text('Noch keine Einträge',
                     style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: () => _addTimelineEntry(context),
+                  icon: Icon(Icons.add_circle_outline,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.tertiary),
+                  label: Text(
+                    'EINTRAG',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1,
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -562,6 +579,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   void _showTrackPointBottomSheet(TrackPoint point) {
+    setState(() => _isMarkerSheetOpen = true);
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -601,7 +619,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           ],
         ),
       ),
-    );
+    ).whenComplete(() => setState(() => _isMarkerSheetOpen = false));
   }
 
   // ------------------------------------------------------------
@@ -730,7 +748,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           height: 44,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: () => setState(() => _droppedMarkerLatLng = null),
+            onTap: () {
+              if (_isMarkerSheetOpen) Navigator.of(context).pop();
+              setState(() => _droppedMarkerLatLng = null);
+            },
             onPanUpdate: (details) {
               final camera = _mapController.camera;
               final screenPt = camera.latLngToScreenPoint(_droppedMarkerLatLng!);
@@ -769,8 +790,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     bounds: LatLngBounds.fromPoints(polylinePoints),
                     padding: const EdgeInsets.all(40),
                   ),
-                  onTap: (_, _) =>
-                      setState(() => _droppedMarkerLatLng = null),
+                  onTap: (_, _) {
+                    if (_isMarkerSheetOpen) Navigator.of(context).pop();
+                    setState(() => _droppedMarkerLatLng = null);
+                  },
                   onLongPress: (tapPosition, latLng) {
                     final nearest = _findNearestTrackPoint(latLng, track.points);
                     setState(() => _droppedMarkerLatLng = latLng);

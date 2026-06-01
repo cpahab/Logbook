@@ -453,14 +453,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: cs.onPrimaryContainer),
-        const SizedBox(width: 4),
+        Icon(icon, size: 20, color: cs.primary),
+        const SizedBox(width: 6),
         Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.3,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
             color: cs.onSurface,
           ),
         ),
