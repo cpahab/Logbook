@@ -241,6 +241,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           if (tab == NavTab.logbook) context.go('/');
           if (tab == NavTab.weather) _openWeatherUrl(context);
           if (tab == NavTab.settings) context.push('/settings');
+          if (tab == NavTab.maps) context.push('/tracks');
         },
       ),
       body: entry == null

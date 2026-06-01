@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/day_detail_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/tracks/presentation/tracks_screen.dart';
 
 GoRouter buildRouter(String initialLocation) => GoRouter(
       initialLocation: initialLocation,
@@ -23,6 +24,10 @@ GoRouter buildRouter(String initialLocation) => GoRouter(
         GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
+        ),
+        GoRoute(
+          path: '/tracks',
+          builder: (context, state) => const TracksScreen(),
         ),
       ],
     );
