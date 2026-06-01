@@ -1,13 +1,14 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
-import 'package:uuid/uuid.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const _boxName = 'settings';
   static const _themeKey = 'theme_mode';
   static const _titleKey = 'logbuch_title';
   static const _weatherKey = 'weather_url';
-  static const _installationIdKey = 'installation_id';
+  static const _logbookCodeKey = 'logbook_code';
   static const _initialSyncDoneKey = 'initial_cloud_sync_done';
   static const _lastRouteKey = 'last_route';
   static const _lastRouteDateKey = 'last_route_date';
@@ -16,12 +17,14 @@ class ThemeProvider extends ChangeNotifier {
   ThemeMode _mode = ThemeMode.system;
   String _title = 'Logbuch';
   String _weatherUrl = '';
-  late String _installationId;
+  late String _logbookCode;
 
   ThemeMode get themeMode => _mode;
   String get logbuchTitle => _title;
   String get weatherUrl => _weatherUrl;
-  String get installationId => _installationId;
+  String get logbookCode => _logbookCode;
+  // Alias used by FirestoreService / StorageService.
+  String get installationId => _logbookCode;
 
   /// True on first launch after the cloud sync feature was introduced.
   bool get needsInitialSync =>
@@ -52,13 +55,28 @@ class ThemeProvider extends ChangeNotifier {
     _title = _box.get(_titleKey, defaultValue: 'Logbuch')!;
     _weatherUrl = _box.get(_weatherKey, defaultValue: '')!;
 
-    final existing = _box.get(_installationIdKey);
+    final existing = _box.get(_logbookCodeKey);
     if (existing != null && existing.isNotEmpty) {
-      _installationId = existing;
+      _logbookCode = existing;
     } else {
-      _installationId = const Uuid().v4();
-      _box.put(_installationIdKey, _installationId);
+      _logbookCode = _generateCode();
+      _box.put(_logbookCodeKey, _logbookCode);
     }
+  }
+
+  void setLogbookCode(String code) {
+    final normalized = code.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (normalized.isEmpty || normalized == _logbookCode) return;
+    _logbookCode = normalized;
+    _box.put(_logbookCodeKey, normalized);
+    _box.delete(_initialSyncDoneKey);
+    notifyListeners();
+  }
+
+  static String _generateCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rand = Random.secure();
+    return List.generate(8, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
   void setThemeMode(ThemeMode mode) {
