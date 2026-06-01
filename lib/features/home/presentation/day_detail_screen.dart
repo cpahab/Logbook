@@ -3,6 +3,7 @@ import 'dart:math' show Point;
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -23,6 +24,19 @@ import '../utils/compute_daily_stats.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
+
+class _CapitalizeWordsFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue;
+    final words = newValue.text.split(' ');
+    final capitalized = words
+        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
+        .join(' ');
+    return newValue.copyWith(text: capitalized);
+  }
+}
 
 class _StatsItem {
   final String label;
@@ -955,9 +969,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     decoration:
                         inputDecoration.copyWith(hintText: 'Starthafen'),
                     textInputAction: TextInputAction.next,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [_CapitalizeWordsFormatter()],
                     onChanged: (v) {
                       entry.fromHarbor = v.trim().isEmpty ? null : v.trim();
-                      entry.save();
+                      context.read<HomeRepository>().saveEntry(entry);
                     },
                   ),
                 ],
@@ -979,9 +995,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     decoration:
                         inputDecoration.copyWith(hintText: 'Zielhafen'),
                     textInputAction: TextInputAction.done,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [_CapitalizeWordsFormatter()],
                     onChanged: (v) {
                       entry.toHarbor = v.trim().isEmpty ? null : v.trim();
-                      entry.save();
+                      context.read<HomeRepository>().saveEntry(entry);
                     },
                     onSubmitted: (_) => FocusScope.of(context).unfocus(),
                   ),
@@ -1096,7 +1114,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           textInputAction: TextInputAction.newline,
           onChanged: (v) {
             entry.notes = v.isEmpty ? null : v;
-            entry.save();
+            context.read<HomeRepository>().saveEntry(entry);
           },
         ),
       ],
@@ -1131,14 +1149,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted || name == null || name.isEmpty) return;
     setState(() {
       entry.participantsList.add(name);
-      entry.save();
+      context.read<HomeRepository>().saveEntry(entry);
     });
   }
 
   void _removeParticipant(DayEntry entry, String name) {
     setState(() {
       entry.participantsList.remove(name);
-      entry.save();
+      context.read<HomeRepository>().saveEntry(entry);
     });
   }
 
@@ -1149,7 +1167,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       } else {
         entry.checkedItems.remove(item);
       }
-      entry.save();
+      context.read<HomeRepository>().saveEntry(entry);
     });
   }
 
@@ -1275,6 +1293,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                             _infoChip(Icons.air, t.wind!),
                           if (t.sea != null)
                             _infoChip(Icons.waves, t.sea!),
+                          if (t.grossState != null)
+                            _infoChip(Icons.flag, 'Gross: ${t.grossState!}'),
+                          if (t.fockState != null)
+                            _infoChip(Icons.flag, 'Fock: ${t.fockState!}'),
+                          if (t.motorOn != null)
+                            _infoChip(Icons.directions_boat,
+                                'Motor ${t.motorOn! ? 'An' : 'Aus'}'),
                         ],
                       ),
                     ],
@@ -1293,7 +1318,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       t.speed != null ||
       t.weather != null ||
       t.wind != null ||
-      t.sea != null;
+      t.sea != null ||
+      t.grossState != null ||
+      t.fockState != null ||
+      t.motorOn != null;
 
   Widget _infoChip(IconData icon, String label) {
     return Container(
@@ -1363,15 +1391,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ],
             const SizedBox(height: 16),
             if (t.course != null)
-              _detailRow(Icons.navigation, 'Course',
+              _detailRow(Icons.navigation, 'Kurs',
                   '${t.course!.toStringAsFixed(0)}°'),
             if (t.speed != null)
-              _detailRow(
-                  Icons.speed, 'Speed', '${t.speed!.toStringAsFixed(1)} kn'),
+              _detailRow(Icons.speed, 'Speed',
+                  '${t.speed!.toStringAsFixed(1)} kn'),
             if (t.wind != null) _detailRow(Icons.air, 'Wind', t.wind!),
-            if (t.sea != null) _detailRow(Icons.waves, 'Sea', t.sea!),
+            if (t.sea != null) _detailRow(Icons.waves, 'See', t.sea!),
             if (t.weather != null)
-              _detailRow(Icons.wb_sunny_outlined, 'Weather', t.weather!),
+              _detailRow(Icons.wb_sunny_outlined, 'Wetter', t.weather!),
+            if (t.grossState != null)
+              _detailRow(Icons.flag, 'Gross', t.grossState!),
+            if (t.fockState != null)
+              _detailRow(Icons.flag, 'Fock', t.fockState!),
+            if (t.motorOn != null)
+              _detailRow(Icons.directions_boat, 'Motor',
+                  t.motorOn! ? 'An' : 'Aus'),
           ],
         ),
       ),
@@ -1468,9 +1503,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _addTimelineEntry(BuildContext context) async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
+    final prefill = repo.getEntry(day)?.timeline.lastOrNull;
     final newEntry = await showDialog<TimelineEntry>(
       context: context,
-      builder: (_) => AddTimelineEntryDialog(day: day),
+      builder: (_) => AddTimelineEntryDialog(day: day, prefillEntry: prefill),
     );
 
     if (!mounted || newEntry == null) return;
@@ -1483,7 +1519,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _deleteTimelineEntry(DayEntry entry, TimelineEntry t) {
     setState(() {
       entry.timeline.remove(t);
-      entry.save(); // Hive speichert Änderungen
+      context.read<HomeRepository>().saveEntry(entry);
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1509,7 +1545,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (index != -1) {
         entry.timeline[index] = updated;
         entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-        entry.save();
+        context.read<HomeRepository>().saveEntry(entry);
       }
     });
 

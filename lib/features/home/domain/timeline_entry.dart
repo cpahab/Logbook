@@ -23,7 +23,37 @@ class TimelineEntry extends HiveObject {
   String? weather; // e.g. "Sunny", "Rain", "Overcast"
 
   @HiveField(6)
-  String? remarks; // optional, last field in UI
+  String? remarks;
+
+  // Sailing state — null means not recorded
+  @HiveField(7)
+  bool? fockUp;     // true = auf, false = unten
+
+  @HiveField(8)
+  bool? grossUp;    // true = auf, false = unten
+
+  @HiveField(9)
+  bool? reff1Fock;
+
+  @HiveField(10)
+  bool? reff1Gross;
+
+  @HiveField(11)
+  bool? reff2Fock;
+
+  @HiveField(12)
+  bool? reff2Gross;
+
+  @HiveField(13)
+  bool? motorOn;    // true = an, false = aus
+
+  // Replaces the old bool fockUp/grossUp + reff fields.
+  // Values: 'Voll Gesetzt' | '1. Reff' | '2. Reff' | 'Niedergeholt'/'Eingerollt' | null
+  @HiveField(14)
+  String? grossState;
+
+  @HiveField(15)
+  String? fockState;
 
   TimelineEntry({
     required this.time,
@@ -33,5 +63,14 @@ class TimelineEntry extends HiveObject {
     this.sea,
     this.weather,
     this.remarks,
+    this.fockUp,
+    this.grossUp,
+    this.reff1Fock,
+    this.reff1Gross,
+    this.reff2Fock,
+    this.reff2Gross,
+    this.motorOn,
+    this.grossState,
+    this.fockState,
   });
 }
