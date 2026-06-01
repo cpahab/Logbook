@@ -33,10 +33,29 @@ class FirestoreService {
       _entriesRef.doc(_dateKey(date)).delete();
 
   // ------------------------------------------------------------------
-  // Read — only fetches entries absent from the local set so that
-  // offline edits are never silently overwritten.
+  // Read
   // ------------------------------------------------------------------
 
+  /// Fetches every entry from Firestore regardless of local state.
+  Future<List<DayEntry>> fetchAllEntries() async {
+    final snapshot = await _entriesRef
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 10));
+
+    final result = <DayEntry>[];
+    for (final doc in snapshot.docs) {
+      final date = DateTime.tryParse(doc.id);
+      if (date == null) continue;
+      final normalized = DateTime(date.year, date.month, date.day);
+      try {
+        result.add(_fromMap(doc.data(), normalized));
+      } catch (_) {}
+    }
+    return result;
+  }
+
+  /// Fetches only entries absent from [localDates] so that offline edits
+  /// are never silently overwritten during a regular startup sync.
   Future<List<DayEntry>> fetchMissingEntries(Set<DateTime> localDates) async {
     final snapshot = await _entriesRef
         .get(const GetOptions(source: Source.server))
