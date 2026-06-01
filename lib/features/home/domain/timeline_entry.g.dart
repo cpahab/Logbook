@@ -24,13 +24,22 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       sea: fields[4] as String?,
       weather: fields[5] as String?,
       remarks: fields[6] as String?,
+      fockUp: fields[7] as bool?,
+      grossUp: fields[8] as bool?,
+      reff1Fock: fields[9] as bool?,
+      reff1Gross: fields[10] as bool?,
+      reff2Fock: fields[11] as bool?,
+      reff2Gross: fields[12] as bool?,
+      motorOn: fields[13] as bool?,
+      grossState: fields[14] as String?,
+      fockState: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TimelineEntry obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.time)
       ..writeByte(1)
@@ -44,7 +53,25 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       ..writeByte(5)
       ..write(obj.weather)
       ..writeByte(6)
-      ..write(obj.remarks);
+      ..write(obj.remarks)
+      ..writeByte(7)
+      ..write(obj.fockUp)
+      ..writeByte(8)
+      ..write(obj.grossUp)
+      ..writeByte(9)
+      ..write(obj.reff1Fock)
+      ..writeByte(10)
+      ..write(obj.reff1Gross)
+      ..writeByte(11)
+      ..write(obj.reff2Fock)
+      ..writeByte(12)
+      ..write(obj.reff2Gross)
+      ..writeByte(13)
+      ..write(obj.motorOn)
+      ..writeByte(14)
+      ..write(obj.grossState)
+      ..writeByte(15)
+      ..write(obj.fockState);
   }
 
   @override

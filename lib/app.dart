@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'app/router.dart';
 import 'app/theme/light_theme.dart';
 import 'app/theme/dark_theme.dart';
 import 'features/settings/domain/theme_provider.dart';
 
 class Logbook extends StatelessWidget {
-  const Logbook({super.key});
+  final GoRouter router;
+  const Logbook({super.key, required this.router});
 
   @override
   Widget build(BuildContext context) {
