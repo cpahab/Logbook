@@ -39,6 +39,7 @@ DailyStats computeDailyStats(List<TrackPoint> points) {
   int movingSeconds = 0;
   int stopCount = 0;
   bool wasMoving = false;
+  double prevSpeedKn = 0;
 
   for (int i = 1; i < points.length; i++) {
     final p1 = points[i - 1];
@@ -50,22 +51,31 @@ DailyStats computeDailyStats(List<TrackPoint> points) {
     );
 
     final dt = p2.time.difference(p1.time).inSeconds;
-    if (dt <= 0) continue;
+    if (dt <= 0) {
+      prevSpeedKn = 0;
+      continue;
+    }
 
     final speedKn = (d / dt) * 1.943844;
 
     // Discard GPS errors: cold-start position jumps and cross-segment
     // teleportations that exceed any plausible sailing speed.
-    if (speedKn > 20.0) continue;
+    if (speedKn > 20.0) {
+      prevSpeedKn = 0;
+      continue;
+    }
 
     final movingSegment = d > 0 && speedKn >= 0.2;
 
     if (movingSegment) {
       totalMeters += d;
       movingSeconds += dt;
-      // Require at least 5 s between points to guard against remaining
-      // high-frequency GPS jitter.
-      if (dt >= 5 && speedKn > maxSpeed) maxSpeed = speedKn;
+      // Require at least 5 s between points to guard against high-frequency
+      // GPS jitter, and that the previous segment was at least 30% as fast to
+      // filter single-point GPS position anomalies that pass the 20 kn cap.
+      if (dt >= 5 && speedKn > maxSpeed && prevSpeedKn >= speedKn * 0.3) {
+        maxSpeed = speedKn;
+      }
     }
 
     if (!movingSegment && wasMoving) {
@@ -73,6 +83,7 @@ DailyStats computeDailyStats(List<TrackPoint> points) {
     }
 
     wasMoving = movingSegment;
+    prevSpeedKn = movingSegment ? speedKn : 0;
   }
 
   final totalDuration =
