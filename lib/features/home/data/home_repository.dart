@@ -296,7 +296,7 @@ class HomeRepository extends ChangeNotifier {
   /// Switches to new cloud services and runs a full bidirectional sync.
   Future<void> reattachAndSync(
       FirestoreService firestoreService, StorageService storageService) async {
-    for (final t in _syncTimers.values) t.cancel();
+    for (final t in _syncTimers.values) { t.cancel(); }
     _syncTimers.clear();
     _firestore = firestoreService;
     _storage = storageService;

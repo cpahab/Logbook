@@ -12,7 +12,6 @@ import '../../home/data/home_repository.dart';
 import '../../home/domain/day_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
 import '../../home/widgets/nav_bar.dart';
-import '../../settings/domain/theme_provider.dart';
 
 enum _FilterPreset { all, months3, months6, year1, custom }
 
@@ -136,15 +135,6 @@ class _TracksScreenState extends State<TracksScreen> {
     }
   }
 
-  Future<void> _openWeather(BuildContext context) async {
-    final url = context.read<ThemeProvider>().weatherUrl;
-    if (url.isEmpty) return;
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -204,7 +194,7 @@ class _TracksScreenState extends State<TracksScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A3A5C),
+        backgroundColor: const Color(0xFF002444),
         foregroundColor: Colors.white,
         centerTitle: false,
         elevation: 0,
@@ -212,12 +202,12 @@ class _TracksScreenState extends State<TracksScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.map, color: cs.tertiaryFixed, size: 20),
+            Icon(Icons.map, color: cs.secondaryContainer, size: 20),
             const SizedBox(width: 8),
             Text(
               'TRACKS',
               style: GoogleFonts.newsreader(
-                color: cs.tertiaryFixed,
+                color: cs.secondaryContainer,
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 3,
@@ -227,14 +217,13 @@ class _TracksScreenState extends State<TracksScreen> {
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(0.5),
-          child: Container(height: 0.5, color: const Color(0xFF2A5080)),
+          child: Container(height: 0.5, color: const Color(0xFF0A3460)),
         ),
       ),
       bottomNavigationBar: AppBottomNav(
-        active: NavTab.maps,
+        active: NavTab.map,
         onSelect: (tab) {
-          if (tab == NavTab.logbook) context.go('/');
-          if (tab == NavTab.weather) _openWeather(context);
+          if (tab == NavTab.journal) context.go('/');
           if (tab == NavTab.settings) context.push('/settings');
         },
       ),
