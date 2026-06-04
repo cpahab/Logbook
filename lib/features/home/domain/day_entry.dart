@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 import 'timeline_entry.dart';
 import 'track_point.dart';
+import 'crew_member.dart';
 
 part 'day_entry.g.dart';
 
@@ -55,6 +56,18 @@ class DayEntry extends HiveObject {
   @HiveField(15)
   String? notes;
 
+  @HiveField(16)
+  int? oilLevel; // 0–100
+
+  @HiveField(17)
+  int? fuelLevel; // 0–100
+
+  @HiveField(18)
+  List<CrewMember> crew;
+
+  @HiveField(19)
+  String? freeText;
+
   DayEntry({
     required this.date,
     this.timeline = const [],
@@ -72,8 +85,13 @@ class DayEntry extends HiveObject {
     List<String>? participantsList,
     List<String>? checkedItems,
     this.notes,
+    this.oilLevel,
+    this.fuelLevel,
+    List<CrewMember>? crew,
+    this.freeText,
   })  : participantsList = participantsList ?? <String>[],
-        checkedItems = checkedItems ?? <String>[];
+        checkedItems = checkedItems ?? <String>[],
+        crew = crew ?? <CrewMember>[];
 
   // Convenience getters
   Duration get totalDuration => Duration(seconds: totalDurationSeconds);

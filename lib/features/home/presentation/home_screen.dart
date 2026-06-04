@@ -19,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int? _selectedYear;
+  bool _showAllYears = false;
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _dayKeys = {};
   DateTime? _pendingScrollDate;
@@ -56,6 +57,105 @@ class _HomeScreenState extends State<HomeScreen> {
         .push('/day/${picked.year}/${picked.month}/${picked.day}');
   }
 
+  void _createTimelineEntry() {
+    final entries = context.read<HomeRepository>().entries;
+    if (entries.isEmpty) {
+      _createNewEntry();
+      return;
+    }
+    final recent = entries.last;
+    context.push(
+        '/day/${recent.date.year}/${recent.date.month}/${recent.date.day}');
+  }
+
+  void _showAddMenu() {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      barrierColor: Colors.black.withValues(alpha: 0.4),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (ctx, _, _) {
+        final cs = Theme.of(ctx).colorScheme;
+        return Material(
+          type: MaterialType.transparency,
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: AppBottomNav.totalHeight(context) + 8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _menuPill(cs, Icons.calendar_today, 'Neuer Tag', () {
+                    Navigator.of(ctx).pop();
+                    _createNewEntry();
+                  }),
+                  const SizedBox(height: 12),
+                  _menuPill(cs, Icons.edit_square, 'Eintrag hinzufügen', () {
+                    Navigator.of(ctx).pop();
+                    _createTimelineEntry();
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (ctx, anim, _, child) => FadeTransition(
+        opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.12),
+            end: Offset.zero,
+          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget _menuPill(
+      ColorScheme cs, IconData icon, String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 220,
+        padding:
+            const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        decoration: BoxDecoration(
+          color: cs.primaryContainer,
+          borderRadius: BorderRadius.circular(999),
+          border:
+              Border.all(color: cs.outline.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: cs.onPrimary, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GoogleFonts.newsreader(
+                color: cs.onPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _entryKey(DateTime date) =>
       '${date.year}-${date.month}-${date.day}';
 
@@ -69,17 +169,6 @@ class _HomeScreenState extends State<HomeScreen> {
         curve: Curves.easeOut,
         alignment: 0.15);
     _pendingScrollDate = null;
-  }
-
-  String _entryTitle(DayEntry entry) {
-    final from = entry.fromHarbor;
-    final to = entry.toHarbor;
-    if ((from?.isNotEmpty ?? false) && (to?.isNotEmpty ?? false)) {
-      return '$from → $to';
-    }
-    if (from?.isNotEmpty ?? false) return from!;
-    if (to?.isNotEmpty ?? false) return to!;
-    return DateFormat('EEEE', 'de_CH').format(entry.date);
   }
 
   IconData _weatherIcon(String? weather) {
@@ -102,14 +191,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final repo = context.watch<HomeRepository>();
     final entries = repo.entries;
-    final title = context.watch<ThemeProvider>().logbuchTitle;
+    final vesselName = context.watch<ThemeProvider>().vesselName;
     final cs = Theme.of(context).colorScheme;
 
     final years = entries.map((e) => e.date.year).toSet().toList()
       ..sort((a, b) => b.compareTo(a));
 
-    final effectiveYear =
-        _selectedYear ?? (years.isNotEmpty ? years.first : null);
+    final effectiveYear = _showAllYears
+        ? null
+        : (_selectedYear ?? (years.isNotEmpty ? years.first : null));
 
     // Newest first for the timeline
     final filtered = ((effectiveYear == null)
@@ -142,48 +232,44 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          tooltip: 'Einstellungen',
-          onPressed: () => context.push('/settings'),
+        centerTitle: false,
+        automaticallyImplyLeading: false,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'LOGBUCH',
+              style: GoogleFonts.newsreader(
+                color: cs.primary,
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+                height: 1.0,
+              ),
+            ),
+            if (vesselName.isNotEmpty)
+              Text(
+                vesselName,
+                style: GoogleFonts.newsreader(
+                  color: cs.primary,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  fontStyle: FontStyle.italic,
+                  height: 1.1,
+                ),
+              ),
+          ],
         ),
-        title: Text(
-          title.toUpperCase(),
-          style: GoogleFonts.newsreader(
-            color: cs.primary,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Einstellungen',
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
       ),
-      // ── FAB: navy circle with gold border ──────────────────────
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createNewEntry,
-        tooltip: 'Neuen Tag hinzufügen',
-        backgroundColor: cs.primary,
-        foregroundColor: cs.onPrimary,
-        elevation: 8,
-        shape: CircleBorder(
-          side: BorderSide(color: cs.secondaryFixed, width: 2),
-        ),
-        child: const Icon(Icons.add, size: 28),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      // ── Bottom nav ─────────────────────────────────────────────
+      // ── Bottom nav with raised centre FAB ──────────────────────
       bottomNavigationBar: AppBottomNav(
         active: NavTab.journal,
+        onFabTap: _showAddMenu,
         onSelect: (tab) {
           if (tab == NavTab.map) context.push('/tracks');
           if (tab == NavTab.settings) context.push('/settings');
+          if (tab == NavTab.safety) context.push('/emergency');
         },
       ),
       body: entries.isEmpty
@@ -203,13 +289,38 @@ class _HomeScreenState extends State<HomeScreen> {
                           _buildStatsBento(totalNm, daysAtSea, cs),
                           const SizedBox(height: 24),
                         ],
-                        Text(
-                          'Einträge',
-                          style: GoogleFonts.newsreader(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: cs.primary,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              'Letzte Einträge',
+                              style: GoogleFonts.newsreader(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: cs.primary,
+                              ),
+                            ),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => setState(() => _showAllYears = true),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'ALLE',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1.5,
+                                      color: cs.secondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Icon(Icons.arrow_forward,
+                                      size: 14, color: cs.secondary),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -243,11 +354,11 @@ class _HomeScreenState extends State<HomeScreen> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: years.map((year) {
-          final active = year == effectiveYear;
+          final active = !_showAllYears && year == effectiveYear;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-              onTap: () => setState(() => _selectedYear = year),
+              onTap: () => setState(() { _showAllYears = false; _selectedYear = year; }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.symmetric(
@@ -426,131 +537,95 @@ class _HomeScreenState extends State<HomeScreen> {
         ? entry.notes
         : firstTl?.remarks;
 
-    return IntrinsicHeight(
+    // Stack-based layout: spine is Positioned so the card Column has no tight
+    // height constraint (avoids IntrinsicHeight rounding overflows).
+    return Stack(
       key: itemKey,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ── Node + spine ────────────────────────────────────────
-          SizedBox(
-            width: 24,
-            child: Column(
-              children: [
-                const SizedBox(height: 8),
-                Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(
-                      color: isActive ? cs.primary : cs.outlineVariant,
-                      width: 2,
+      clipBehavior: Clip.none,
+      children: [
+        // ── Card (determines Stack height) ──────────────────────
+        Padding(
+          padding: const EdgeInsets.only(left: 32, bottom: 16),
+          child: GestureDetector(
+            onTap: () => context.push(
+                '/day/${entry.date.year}/${entry.date.month}/${entry.date.day}'),
+            child: Opacity(
+              opacity: isActive ? 1.0 : (index == 1 ? 0.9 : 0.8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? cs.surfaceContainerLowest
+                      : cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border(
+                    left: BorderSide(
+                      color: isActive ? cs.secondaryFixed : cs.outlineVariant,
+                      width: 4,
                     ),
                   ),
-                  child: Center(
-                    child: Container(
-                      width: 5,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isActive ? cs.primary : cs.outlineVariant,
-                      ),
-                    ),
-                  ),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
-                if (index < total - 1)
-                  Expanded(
-                    child: Center(
-                      child: Container(width: 2, color: cs.outlineVariant),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // ── Card ────────────────────────────────────────────────
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: GestureDetector(
-                onTap: () => context.push(
-                    '/day/${entry.date.year}/${entry.date.month}/${entry.date.day}'),
-                child: Opacity(
-                  opacity: isActive
-                      ? 1.0
-                      : (index == 1 ? 0.9 : 0.8),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? cs.surfaceContainerLowest
-                          : cs.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border(
-                        left: BorderSide(
-                          color: isActive
-                              ? cs.secondaryFixed
-                              : cs.outlineVariant,
-                          width: 4,
-                        ),
-                      ),
-                      boxShadow: isActive
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Date + weather icon
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                        // Line 1: Day · Date + weather icon
                         Row(
                           children: [
                             Expanded(
                               child: Text(
-                                DateFormat('d. MMM yyyy', 'de_CH')
-                                    .format(entry.date)
-                                    .toUpperCase(),
+                                '${DateFormat('EEEE', 'de_CH').format(entry.date).toUpperCase()} · ${DateFormat('d. MMM yyyy', 'de_CH').format(entry.date).toUpperCase()}',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 1.5,
                                   color: cs.outline,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             Icon(
                               _weatherIcon(firstTl?.weather),
-                              size: 20,
-                              color: isActive
-                                  ? cs.secondary
-                                  : cs.outline,
+                              size: 18,
+                              color: isActive ? cs.secondary : cs.outline,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        // Route title
-                        Text(
-                          _entryTitle(entry),
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: isActive
-                                ? cs.primary
-                                : cs.onSurfaceVariant,
+                        // Line 2: Route (only if harbor info is available)
+                        if ((entry.fromHarbor?.isNotEmpty ?? false) ||
+                            (entry.toHarbor?.isNotEmpty ?? false)) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            [
+                              if (entry.fromHarbor?.isNotEmpty ?? false)
+                                entry.fromHarbor!,
+                              if (entry.toHarbor?.isNotEmpty ?? false)
+                                entry.toHarbor!,
+                            ].join(' → '),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: isActive ? cs.primary : cs.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        // Italic note
-                        if (note?.isNotEmpty ?? false) ...[
+                        ],
+                        // Line 3: Narrative
+                        if (note?.isNotEmpty == true) ...[
                           const SizedBox(height: 2),
                           Text(
                             note!,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.newsreader(
                               fontSize: 13,
                               fontStyle: FontStyle.italic,
                               color: cs.onSurfaceVariant,
@@ -559,44 +634,23 @@ class _HomeScreenState extends State<HomeScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
-                        // Data chips — only for the most recent active entry
-                        if (isActive) ...[
-                          if (stats != null ||
-                              firstTl?.course != null ||
-                              firstTl?.wind != null) ...[
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 6,
-                              children: [
-                                if (stats != null &&
-                                    stats.distanceNm > 0)
-                                  _chip(
-                                    Icons.straighten,
-                                    '${stats.distanceNm.toStringAsFixed(1)} nm',
-                                    cs,
-                                  ),
-                                if (stats != null && stats.maxSpeed > 0)
-                                  _chip(
-                                    Icons.speed,
-                                    '${stats.maxSpeed.toStringAsFixed(1)} kn',
-                                    cs,
-                                  ),
-                                if (firstTl?.course != null)
-                                  _chip(
-                                    Icons.navigation,
-                                    '${firstTl!.course!.toStringAsFixed(0)}°',
-                                    cs,
-                                  ),
-                                if (firstTl?.wind?.isNotEmpty ?? false)
-                                  _chip(
-                                    Icons.air,
-                                    firstTl!.wind!,
-                                    cs,
-                                  ),
-                              ],
+                        // Line 4: Stats (dist + avg speed, same italic style)
+                        if (stats != null &&
+                            (stats.distanceNm > 0 || stats.avgSpeed > 0)) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            [
+                              if (stats.distanceNm > 0)
+                                '${stats.distanceNm.toStringAsFixed(1)} nm',
+                              if (stats.avgSpeed > 0)
+                                'Ø ${stats.avgSpeed.toStringAsFixed(1)} kn',
+                            ].join(' · '),
+                            style: GoogleFonts.newsreader(
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
+                              color: cs.outline,
                             ),
-                          ],
+                          ),
                         ],
                       ],
                     ),
@@ -604,35 +658,47 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+        // ── Spine (Positioned overlay, fills card height) ────────
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 16,
+          width: 24,
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(
+                    color: isActive ? cs.primary : cs.outlineVariant,
+                    width: 2,
+                  ),
+                ),
+                child: Center(
+                  child: Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isActive ? cs.primary : cs.outlineVariant,
+                    ),
+                  ),
+                ),
+              ),
+              if (index < total - 1)
+                Expanded(
+                  child: Center(
+                    child: Container(width: 2, color: cs.outlineVariant),
+                  ),
+                ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(IconData icon, String label, ColorScheme cs) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: cs.onSurface),
-          const SizedBox(width: 4),
-          Text(
-            label.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.0,
-              color: cs.primary,
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

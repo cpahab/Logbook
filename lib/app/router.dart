@@ -4,6 +4,9 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/day_detail_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/tracks/presentation/tracks_screen.dart';
+import '../features/emergency/presentation/emergency_manifest_screen.dart';
+import '../features/emergency/presentation/emergency_screen.dart';
+import '../features/emergency/presentation/mayday_screen.dart';
 
 GoRouter buildRouter(String initialLocation) => GoRouter(
       initialLocation: initialLocation,
@@ -28,6 +31,18 @@ GoRouter buildRouter(String initialLocation) => GoRouter(
         GoRoute(
           path: '/tracks',
           builder: (context, state) => const TracksScreen(),
+        ),
+        GoRoute(
+          path: '/emergency',
+          builder: (context, state) => const EmergencyManifestScreen(),
+        ),
+        GoRoute(
+          path: '/emergency/mayday',
+          builder: (context, state) => const MaydayScreen(),
+        ),
+        GoRoute(
+          path: '/emergency/distress',
+          builder: (context, state) => const EmergencyScreen(),
         ),
       ],
     );
