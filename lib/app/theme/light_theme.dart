@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Maritime Journal — Stitch design system, light theme
+// Light theme
 const _primary            = Color(0xFF002444); // Deep Navy
 const _primaryContainer   = Color(0xFF1A3A5C);
 const _gold               = Color(0xFFFFE088); // Captain's Gold  (secondaryContainer)
@@ -60,6 +60,9 @@ final ThemeData lightTheme = ThemeData(
     shadow:             Color(0xFF000000),
     surfaceTint:        Color(0xFF436084),
   ).copyWith(
+    // ── Surface tonal ─────────────────────────────────────────────
+    surfaceDim:              const Color(0xFFDBDADB),
+    surfaceBright:           const Color(0xFFFAF9FA),
     // ── Surface containers ─────────────────────────────────────────
     surfaceContainerLowest: const Color(0xFFFFFFFF),
     surfaceContainerLow:    const Color(0xFFF5F3F4),

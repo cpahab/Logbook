@@ -34,9 +34,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   String? _fockState;
   bool?   _motorOn;
 
-  static const _windDirs    = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-  static const _grossOptions = ['Voll Gesetzt', '1. Reff', '2. Reff', 'Niedergeholt'];
-  static const _fockOptions  = ['Voll Gesetzt', '1. Reff', '2. Reff', 'Eingerollt'];
+  static const _windDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
   @override
   void initState() {
@@ -205,9 +203,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                   Row(
                     children: [
                       Expanded(
-                        child: _accentCard(
+                        child: _navCard(
                           label: 'KURS (°)',
-                          unit: '°',
+                          unit: 'deg',
                           controller: courseCtrl,
                           placeholder: '000',
                           keyboardType: TextInputType.number,
@@ -220,7 +218,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _accentCard(
+                        child: _navCard(
                           label: 'FAHRT (kn)',
                           unit: 'kts',
                           controller: speedCtrl,
@@ -385,33 +383,41 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                   _sectionHeader(Icons.sailing, 'Segel & Motor', cs),
                   const SizedBox(height: 12),
                   _plainCard(
+                    cs: cs,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _sailRow('Gross', _grossState, _grossOptions,
-                            (v) => setState(() => _grossState = v), cs),
-                        const SizedBox(height: 12),
-                        _sailRow('Fock', _fockState, _fockOptions,
-                            (v) => setState(() => _fockState = v), cs),
-                        const SizedBox(height: 12),
+                        _labelSm('GROSS', cs),
+                        const SizedBox(height: 8),
+                        _sailChips(
+                          options: const ['Voll gesetzt', '1. Reff', '2. Reff', 'Niedergeholt'],
+                          selected: _grossState,
+                          onSelect: (v) => setState(() => _grossState = v),
+                          cs: cs,
+                        ),
+                        const SizedBox(height: 14),
+                        _labelSm('FOCK', cs),
+                        const SizedBox(height: 8),
+                        _sailChips(
+                          options: const ['Voll gesetzt', '1. Reff', '2. Reff', 'Eingerollt'],
+                          selected: _fockState,
+                          onSelect: (v) => setState(() => _fockState = v),
+                          cs: cs,
+                        ),
+                        const SizedBox(height: 14),
                         _labelSm('MOTOR', cs),
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            _toggleChip('An', _motorOn == true,
-                                () => setState(() => _motorOn =
-                                    _motorOn == true ? null : true),
-                                cs),
+                            _stateChip('An',  _motorOn == true,
+                                () => setState(() => _motorOn = _motorOn == true  ? null : true),  cs),
                             const SizedBox(width: 8),
-                            _toggleChip('Aus', _motorOn == false,
-                                () => setState(() => _motorOn =
-                                    _motorOn == false ? null : false),
-                                cs),
+                            _stateChip('Aus', _motorOn == false,
+                                () => setState(() => _motorOn = _motorOn == false ? null : false), cs),
                           ],
                         ),
                       ],
                     ),
-                    cs: cs,
                   ),
 
                   const SizedBox(height: 24),
@@ -531,8 +537,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Accent card (left stripe + big number input) ──────────────────
-  Widget _accentCard({
+  // ── Nav card (plain card with headline-sm number input) ──────────
+  Widget _navCard({
     required String label,
     required String unit,
     required TextEditingController controller,
@@ -555,71 +561,51 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
           ),
         ],
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Left accent stripe — secondary (#725c10)
-            Container(
-              width: 3,
-              margin: const EdgeInsets.only(right: 10),
-              decoration: BoxDecoration(
-                color: cs.secondary,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _labelSm(label, cs),
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: controller,
-                          style: GoogleFonts.newsreader(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: cs.primary,
-                          ),
-                          decoration: InputDecoration(
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: EdgeInsets.zero,
-                            hintText: placeholder,
-                            hintStyle: GoogleFonts.newsreader(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: cs.primary.withValues(alpha: 0.15),
-                              ),
-                          ),
-                          keyboardType: keyboardType,
-                          inputFormatters: inputFormatters,
-                          textInputAction: TextInputAction.next,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          unit,
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: cs.outline,
-                          ),
-                        ),
-                      ),
-                    ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _labelSm(label, cs),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  style: GoogleFonts.newsreader(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
                   ),
-                ],
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    hintText: placeholder,
+                    hintStyle: GoogleFonts.newsreader(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.primary.withValues(alpha: 0.20),
+                    ),
+                  ),
+                  keyboardType: keyboardType,
+                  inputFormatters: inputFormatters,
+                  textInputAction: TextInputAction.next,
+                ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 4),
+              Text(
+                unit,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: cs.outline,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -643,79 +629,48 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Sail row ──────────────────────────────────────────────────────
-  Widget _sailRow(String label, String? current, List<String> options,
-      ValueChanged<String?> onChanged, ColorScheme cs) {
-    return Row(
-      children: [
-        _labelSm(label.toUpperCase(), cs),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerLow,
-              border: Border.all(color: cs.outlineVariant),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: current,
-                isExpanded: true,
-                hint: Text('—',
-                    style: GoogleFonts.inter(
-                        fontSize: 14, color: cs.onSurfaceVariant)),
-                style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: cs.onSurface,
-                    fontWeight: FontWeight.w500),
-                items: options
-                    .map((opt) => DropdownMenuItem(
-                          value: opt,
-                          child: Text(opt,
-                              style: GoogleFonts.inter(
-                                  fontSize: 14, color: cs.onSurface)),
-                        ))
-                    .toList(),
-                onChanged: onChanged,
-              ),
-            ),
-          ),
-        ),
-        if (current != null) ...[
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: () => onChanged(null),
-            child:
-                Icon(Icons.close, size: 18, color: cs.onSurfaceVariant),
-          ),
-        ] else
-          const SizedBox(width: 22),
-      ],
+  // ── Sail state chip row ───────────────────────────────────────────
+  Widget _sailChips({
+    required List<String> options,
+    required String? selected,
+    required ValueChanged<String?> onSelect,
+    required ColorScheme cs,
+  }) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options
+          .map((opt) => _stateChip(
+                opt,
+                selected == opt,
+                () => onSelect(selected == opt ? null : opt),
+                cs,
+              ))
+          .toList(),
     );
   }
 
-  // ── Toggle chip ───────────────────────────────────────────────────
-  Widget _toggleChip(
-      String label, bool selected, VoidCallback onTap, ColorScheme cs) {
+  // ── Single selectable chip ────────────────────────────────────────
+  Widget _stateChip(
+      String label, bool isSelected, VoidCallback onTap, ColorScheme cs) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 140),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? cs.primary : cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? cs.primary : cs.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(99),
+          border: Border.all(
+            color: isSelected ? cs.primary : cs.outlineVariant,
+          ),
         ),
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
-            color:
-                selected ? cs.onPrimary : cs.onSurfaceVariant,
+            color: isSelected ? cs.onPrimary : cs.onSurfaceVariant,
           ),
         ),
       ),

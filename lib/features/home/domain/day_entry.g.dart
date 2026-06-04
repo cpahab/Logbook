@@ -33,13 +33,17 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       participantsList: (fields[13] as List?)?.cast<String>(),
       checkedItems: (fields[14] as List?)?.cast<String>(),
       notes: fields[15] as String?,
+      oilLevel: fields[16] as int?,
+      fuelLevel: fields[17] as int?,
+      crew: (fields[18] as List?)?.cast<CrewMember>(),
+      freeText: fields[19] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DayEntry obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.date)
       ..writeByte(1)
@@ -71,7 +75,15 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       ..writeByte(14)
       ..write(obj.checkedItems)
       ..writeByte(15)
-      ..write(obj.notes);
+      ..write(obj.notes)
+      ..writeByte(16)
+      ..write(obj.oilLevel)
+      ..writeByte(17)
+      ..write(obj.fuelLevel)
+      ..writeByte(18)
+      ..write(obj.crew)
+      ..writeByte(19)
+      ..write(obj.freeText);
   }
 
   @override

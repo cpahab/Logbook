@@ -9,6 +9,9 @@ import 'features/home/domain/day_entry.dart';
 import 'features/home/domain/timeline_entry.dart';
 import 'features/home/domain/daily_track.dart';
 import 'features/home/domain/track_point.dart';
+import 'features/home/domain/crew_member.dart';
+import 'features/emergency/domain/emergency_contact.dart';
+import 'features/emergency/data/emergency_repository.dart';
 import 'features/settings/domain/theme_provider.dart';
 import 'core/services/firestore_service.dart';
 import 'core/services/storage_service.dart';
@@ -27,12 +30,21 @@ void main() async {
   Hive.registerAdapter(TimelineEntryAdapter());
   Hive.registerAdapter(DailyTrackAdapter());
   Hive.registerAdapter(TrackPointAdapter());
+  Hive.registerAdapter(CrewMemberAdapter());
+  Hive.registerAdapter(EmergencyContactAdapter());
 
   final repo = HomeRepository();
   await repo.init();
 
+  final emergencyRepo = EmergencyRepository();
+  await emergencyRepo.init();
+
   final themeProvider = ThemeProvider();
   await themeProvider.init();
+
+  // Enable Firestore offline persistence before Firebase initialises so that
+  // all writes made while offline are queued and retried automatically.
+  FirestoreService.configure();
 
   // Initialize Firebase and attach Firestore sync.
   // Runs after local data is ready so the app is usable even if Firebase fails.
@@ -47,6 +59,8 @@ void main() async {
       Future.wait([
         repo.attachFirestore(firestore, initialSync: initialSync),
         repo.attachStorage(storage, initialSync: initialSync),
+        themeProvider.attachFirestore(firestore, initialSync: initialSync),
+        emergencyRepo.attachFirestore(firestore, initialSync: initialSync),
       ]).then((_) {
         if (initialSync) themeProvider.markInitialSyncDone();
       }),
@@ -67,6 +81,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider.value(value: repo),
         ChangeNotifierProvider.value(value: themeProvider),
+        ChangeNotifierProvider.value(value: emergencyRepo),
       ],
       child: Logbook(router: router),
     ),

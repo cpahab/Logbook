@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:math' show Point;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -17,24 +16,14 @@ import '../domain/day_entry.dart';
 import '../domain/daily_track.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
+import '../domain/crew_member.dart';
 import '../widgets/add_timeline_entry_dialog.dart';
+import '../widgets/add_crew_member_dialog.dart';
 import '../widgets/nav_bar.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
 
-class _CapitalizeWordsFormatter extends TextInputFormatter {
-  @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
-    if (newValue.text.isEmpty) return newValue;
-    final words = newValue.text.split(' ');
-    final capitalized = words
-        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-        .join(' ');
-    return newValue.copyWith(text: capitalized);
-  }
-}
 
 class DayDetailScreen extends StatefulWidget {
   final int year;
@@ -54,62 +43,17 @@ class DayDetailScreen extends StatefulWidget {
 
 class _DayDetailScreenState extends State<DayDetailScreen> {
   final MapController _mapController = MapController();
-  TextEditingController? _notesController;
-  TextEditingController? _fromHarborController;
-  TextEditingController? _toHarborController;
-  LatLng? _droppedMarkerLatLng;
   bool _satelliteView = false;
+  LatLng? _droppedMarkerLatLng;
   bool _isMarkerSheetOpen = false;
-
-  static const _controlledItems = [
-    'Motoröl geprüft',
-    'Benzin geprüft',
-    'Sicherheitsausrüstung kontrolliert',
-  ];
 
   @override
   void dispose() {
-    _notesController?.dispose();
-    _fromHarborController?.dispose();
-    _toHarborController?.dispose();
     super.dispose();
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────
-  String _routeTitle(DayEntry entry) {
-    final from = entry.fromHarbor;
-    final to = entry.toHarbor;
-    if ((from?.isNotEmpty ?? false) && (to?.isNotEmpty ?? false)) {
-      return '$from → $to';
-    }
-    if (from?.isNotEmpty ?? false) return from!;
-    if (to?.isNotEmpty ?? false) return to!;
-    return DateFormat('EEEE', 'de_CH')
-        .format(DateTime(widget.year, widget.month, widget.day));
-  }
-
-  String? _timeRange(DayEntry entry, DailyTrack? track) {
-    DateTime? start, end;
-    if (track != null && track.points.isNotEmpty) {
-      start = track.points.first.time.toLocal();
-      end = track.points.last.time.toLocal();
-    } else if (entry.timeline.isNotEmpty) {
-      start = entry.timeline.first.time;
-      end = entry.timeline.last.time;
-    }
-    if (start == null) return null;
-    final fmt = DateFormat('HH:mm');
-    if (end == null || start == end) return fmt.format(start);
-    return '${fmt.format(start)} – ${fmt.format(end)}';
-  }
-
-  String _formatDuration(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes % 60;
-    return '${h}h ${m}m';
-  }
-
-  // ── Build ─────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────
+  // ── Build ──────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final repo = context.watch<HomeRepository>();
@@ -122,27 +66,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       stats = computeDailyStats(track.points);
     }
 
-    final entries = repo.entries;
-    final currentIndex = entries.indexWhere(
-      (e) =>
-          e.date.year == widget.year &&
-          e.date.month == widget.month &&
-          e.date.day == widget.day,
-    );
-    final prevEntry = currentIndex > 0 ? entries[currentIndex - 1] : null;
-    final nextEntry =
-        currentIndex >= 0 && currentIndex < entries.length - 1
-            ? entries[currentIndex + 1]
-            : null;
-
-    void goToDay(DateTime d) =>
-        context.pushReplacement('/day/${d.year}/${d.month}/${d.day}');
-
     final cs = Theme.of(context).colorScheme;
+    final dayName = DateFormat('EEEE', 'de_CH').format(day);
+    final dateStr = DateFormat('d. MMM yyyy', 'de_CH').format(day);
 
     return Scaffold(
       backgroundColor: cs.surface,
-      // ── App bar: light surface, back + title + options ───────────
       appBar: AppBar(
         backgroundColor: cs.surface,
         foregroundColor: cs.primary,
@@ -150,92 +79,79 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, color: cs.onSurface),
           onPressed: () => context.go('/'),
         ),
-        title: entry == null
-            ? null
-            : Text(
-                _routeTitle(entry),
-                style: GoogleFonts.newsreader(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
+        title: Text(
+          '$dayName · $dateStr · LOGBUCHEINTRAG',
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.0,
+            color: cs.primary,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
-          if (prevEntry != null)
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () => goToDay(prevEntry.date),
-              tooltip: 'Vorheriger Tag',
-            ),
-          if (nextEntry != null)
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () => goToDay(nextEntry.date),
-              tooltip: 'Nächster Tag',
-            ),
-          PopupMenuButton<String>(
-            tooltip: 'Optionen',
-            icon: const Icon(Icons.more_vert),
-            onSelected: (value) {
-              if (value == 'import_gpx') _importGpx();
-              if (value == 'delete_gpx') _removeGpx();
-              if (value == 'delete_day') _deleteDay();
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'import_gpx',
-                child: Row(children: [
-                  _gpxUploadIcon(),
-                  const SizedBox(width: 12),
-                  const Text('GPX importieren'),
-                ]),
-              ),
-              if (track != null)
+          if (entry != null)
+            PopupMenuButton<String>(
+              tooltip: 'Optionen',
+              icon: Icon(Icons.more_vert, color: cs.onSurface),
+              onSelected: (value) {
+                if (value == 'change_date') _changeDate(entry);
+                if (value == 'import_gpx') _importGpx();
+                if (value == 'delete_gpx') _removeGpx();
+                if (value == 'delete_day') _deleteDay();
+              },
+              itemBuilder: (context) => [
                 PopupMenuItem<String>(
-                  value: 'delete_gpx',
+                  value: 'change_date',
                   child: Row(children: [
-                    Icon(Icons.delete_outline, color: cs.error),
+                    const Icon(Icons.calendar_today_outlined),
                     const SizedBox(width: 12),
-                    Text('GPX löschen',
+                    const Text('Datum ändern'),
+                  ]),
+                ),
+                PopupMenuItem<String>(
+                  value: 'import_gpx',
+                  child: Row(children: [
+                    _gpxUploadIcon(),
+                    const SizedBox(width: 12),
+                    const Text('GPX importieren'),
+                  ]),
+                ),
+                if (track != null)
+                  PopupMenuItem<String>(
+                    value: 'delete_gpx',
+                    child: Row(children: [
+                      Icon(Icons.delete_outline, color: cs.error),
+                      const SizedBox(width: 12),
+                      Text('GPX löschen',
+                          style: TextStyle(color: cs.error)),
+                    ]),
+                  ),
+                const PopupMenuDivider(),
+                PopupMenuItem<String>(
+                  value: 'delete_day',
+                  child: Row(children: [
+                    Icon(Icons.delete_forever_outlined, color: cs.error),
+                    const SizedBox(width: 12),
+                    Text('Tag löschen',
                         style: TextStyle(color: cs.error)),
                   ]),
                 ),
-              const PopupMenuDivider(),
-              PopupMenuItem<String>(
-                value: 'delete_day',
-                child: Row(children: [
-                  Icon(Icons.delete_forever_outlined, color: cs.error),
-                  const SizedBox(width: 12),
-                  Text('Tag löschen',
-                      style: TextStyle(color: cs.error)),
-                ]),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
-      // ── FAB: add log entry ───────────────────────────────────────
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _addTimelineEntry(context),
-        tooltip: 'Logeintrag hinzufügen',
-        backgroundColor: cs.primary,
-        foregroundColor: cs.secondary,
-        shape: CircleBorder(
-          side: BorderSide(color: cs.secondary, width: 2),
-        ),
-        child: const Icon(Icons.add),
-      ),
-      // ── Bottom nav ───────────────────────────────────────────────
       bottomNavigationBar: AppBottomNav(
         active: NavTab.journal,
+        onFabTap: () => _addTimelineEntry(context),
         onSelect: (tab) {
           if (tab == NavTab.journal) context.go('/');
           if (tab == NavTab.map) context.push('/tracks');
           if (tab == NavTab.settings) context.push('/settings');
+          if (tab == NavTab.safety) context.push('/emergency');
         },
       ),
       body: entry == null
@@ -247,12 +163,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   // ── Body ──────────────────────────────────────────────────────────
   Widget _buildBody(
       DayEntry entry, DailyTrack? track, DailyStats? stats, ColorScheme cs) {
-    _notesController ??= TextEditingController(text: entry.notes ?? '');
-    _fromHarborController ??=
-        TextEditingController(text: entry.fromHarbor ?? '');
-    _toHarborController ??=
-        TextEditingController(text: entry.toHarbor ?? '');
-
     final correlatedMap = track != null
         ? Map<TimelineEntry, TrackPoint>.fromEntries(
             correlateTimelineWithTrack(entry.timeline, track.points)
@@ -260,532 +170,493 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           )
         : <TimelineEntry, TrackPoint>{};
 
-    final day = DateTime(widget.year, widget.month, widget.day);
-    final dateLabel =
-        DateFormat('d. MMMM yyyy', 'de_CH').format(day).toUpperCase();
-    final timeRange = _timeRange(entry, track);
-    final hasNotes = entry.notes?.isNotEmpty ?? false;
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildReflection(entry, cs),
+            _buildFreeText(entry, cs),
+            _buildCrewList(entry, cs),
+            _buildRouteMap(entry, track, stats, cs),
+            _buildLogSection(entry, correlatedMap, cs),
+            _buildVesselStatus(entry, cs),
+          ],
+        ),
+      ),
+    );
+  }
 
-    return CustomScrollView(
-      slivers: [
-        // ── Header ─────────────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'LOGBUCHEINTRAG',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    color: cs.secondary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  hasNotes
-                      ? entry.notes!
-                      : _routeTitle(entry),
-                  style: GoogleFonts.newsreader(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.24,
-                    color: cs.primary,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _headerChip(Icons.calendar_today, dateLabel, cs),
-                    if (timeRange != null) ...[
-                      const SizedBox(width: 8),
-                      _headerChip(Icons.schedule, timeRange, cs),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Divider(color: cs.outlineVariant, height: 1),
-              ],
-            ),
+  // ── Free Text ─────────────────────────────────────────────────────
+  Widget _buildFreeText(DayEntry entry, ColorScheme cs) {
+    final hasText = entry.freeText?.isNotEmpty ?? false;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'NOTIZEN',
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+            color: cs.secondary,
           ),
         ),
-
-        // ── Map ────────────────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: _buildMap(entry, track),
-            ),
-          ),
-        ),
-
-        // ── Stats (if track) ───────────────────────────────────────
-        if (stats != null)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: _buildPassageStats(stats, cs),
-            ),
-          ),
-
-        // ── Daily Narrative (notes) ────────────────────────────────
-        if (hasNotes)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: _buildNarrative(entry.notes!, cs),
-            ),
-          ),
-
-        // ── Log Entries ────────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'LOGBUCHEINTRÄGE',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
-                      color: cs.outline,
-                    ),
+        const SizedBox(height: 8),
+        if (hasText)
+          GestureDetector(
+            onTap: () => _editFreeText(entry),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLowest,
+                border: Border.all(
+                    color: cs.outlineVariant.withValues(alpha: 0.3)),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-                ),
-                TextButton.icon(
-                  onPressed: () => _addTimelineEntry(context),
-                  icon: Icon(Icons.add_circle_outlined,
-                      size: 18, color: cs.primary),
-                  label: Text(
-                    'EINTRAG',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.0,
-                      color: cs.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        if (entry.timeline.isEmpty)
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.5)),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.list_alt_outlined,
-                          size: 32, color: cs.onSurfaceVariant),
-                      const SizedBox(height: 8),
-                      Text('Noch keine Einträge',
-                          style: GoogleFonts.inter(
-                              fontSize: 14, color: cs.onSurfaceVariant)),
-                    ],
-                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                entry.freeText!,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: cs.onSurface,
+                  height: 1.5,
                 ),
               ),
             ),
           )
         else
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Column(
-                children: entry.timeline.asMap().entries.map((e) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _buildLogEntry(
-                        entry, e.value, correlatedMap[e.value], cs),
-                  );
-                }).toList(),
-              ),
-            ),
+          _emptyStateButton(
+            Icons.notes,
+            'Notizen hinzufügen…',
+            () => _editFreeText(entry),
+            cs,
           ),
-
-        // ── Additional info ────────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-            child: _buildAdditionalInfo(entry, cs),
-          ),
-        ),
-
-        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  // ── Header chip ───────────────────────────────────────────────────
-  Widget _headerChip(IconData icon, String label, ColorScheme cs) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: cs.onSurfaceVariant),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-              color: cs.onSurface,
-            ),
+  void _editFreeText(DayEntry entry) async {
+    final ctrl = TextEditingController(text: entry.freeText ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Notizen',
+          style: GoogleFonts.newsreader(
+              fontSize: 18, fontWeight: FontWeight.w600),
+        ),
+        content: TextField(
+          controller: ctrl,
+          maxLines: null,
+          keyboardType: TextInputType.multiline,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Freie Notizen für diesen Tag…',
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12)),
+            isDense: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text('Speichern'),
           ),
         ],
       ),
     );
+    ctrl.dispose();
+    if (!mounted || result == null) return;
+    setState(() {
+      entry.freeText = result.trim().isEmpty ? null : result.trim();
+      context.read<HomeRepository>().saveEntry(entry);
+    });
   }
 
-  // ── Daily Narrative ───────────────────────────────────────────────
-  Widget _buildNarrative(String notes, ColorScheme cs) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Accent stripe — tertiary-fixed (#d3e4fb)
-            Container(width: 4, color: cs.tertiaryFixed),
-            Expanded(
-              child: Container(
-                color: cs.surfaceContainerLow,
-                padding: const EdgeInsets.all(16),
-                child: Stack(
-                  children: [
-                    Positioned(
-                      right: -20,
-                      bottom: -20,
-                      child: Icon(Icons.description,
-                          size: 120,
-                          color: cs.primary.withValues(alpha: 0.04)),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'TAGEBUCH',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.5,
-                            color: cs.secondary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '"$notes"',
-                          style: GoogleFonts.newsreader(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            fontStyle: FontStyle.italic,
-                            color: cs.onSurfaceVariant,
-                            height: 1.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Log Entry Card (new Stitch format) ────────────────────────────
-  Widget _buildLogEntry(DayEntry entry, TimelineEntry t,
-      TrackPoint? trackedPoint, ColorScheme cs) {
-    final timeStr =
-        '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
-
-    final labelSm = GoogleFonts.inter(
-      fontSize: 9,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 1.0,
-      color: cs.outline,
-    );
-    final bodyBold = GoogleFonts.inter(
-      fontSize: 15,
-      fontWeight: FontWeight.w600,
-      color: cs.onSurface,
-    );
-
-    return GestureDetector(
-      onLongPress: () => _showTimelineActions(entry, t),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerLowest,
-          border: Border.all(color: cs.surfaceContainer),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Time + course | speed ──────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    timeStr,
-                    style: GoogleFonts.newsreader(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: cs.primary,
-                    ),
-                  ),
-                  if (trackedPoint != null) ...[
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => _mapController.move(
-                        LatLng(trackedPoint.lat, trackedPoint.lon),
-                        14,
-                      ),
-                      child: Icon(Icons.location_on_outlined,
-                          size: 18, color: cs.primary),
-                    ),
-                  ],
-                  if (t.course != null) ...[
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('KURS', style: labelSm),
-                        Text('${t.course!.toStringAsFixed(0)}°',
-                            style: bodyBold),
-                      ],
-                    ),
-                  ],
-                  const Spacer(),
-                  if (t.speed != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('FAHRT', style: labelSm),
-                        Text('${t.speed!.toStringAsFixed(1)} kn',
-                            style: bodyBold),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            Divider(
-                height: 1, thickness: 1, color: cs.outlineVariant),
-            // ── 3-col grid: wind, sea, weather ─────────────────────
-            if (t.wind != null || t.sea != null || t.weather != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                child: Row(
-                  children: [
-                    Expanded(child: _gridCell('WIND', t.wind, labelSm, cs)),
-                    Expanded(child: _gridCell('SEE', t.sea, labelSm, cs)),
-                    Expanded(
-                        child: _gridCell('WETTER', t.weather, labelSm, cs)),
-                  ],
-                ),
-              ),
-            // ── Sail / motor state chips ───────────────────────────
-            if (t.grossState != null ||
-                t.fockState != null ||
-                t.motorOn != null)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-                child: Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    if (t.grossState != null)
-                      _infoChip(Icons.sailing, 'Gross: ${t.grossState!}', cs),
-                    if (t.fockState != null)
-                      _infoChip(Icons.sailing, 'Fock: ${t.fockState!}', cs),
-                    if (t.motorOn != null)
-                      _infoChip(Icons.directions_boat,
-                          'Motor ${t.motorOn! ? 'An' : 'Aus'}', cs),
-                  ],
-                ),
-              ),
-            // ── Remarks ───────────────────────────────────────────
-            if (t.remarks?.isNotEmpty == true)
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  border: Border(
-                      top: BorderSide(color: cs.surfaceContainer)),
-                ),
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                child: Text(
-                  t.remarks!,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontStyle: FontStyle.italic,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _gridCell(String label, String? value, TextStyle labelStyle,
-      ColorScheme cs) {
-    if (value == null || value.isEmpty) return const SizedBox();
+  // ── Daily Reflection ──────────────────────────────────────────────
+  Widget _buildReflection(DayEntry entry, ColorScheme cs) {
+    final hasNotes = entry.notes?.isNotEmpty ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: labelStyle),
-        const SizedBox(height: 2),
         Text(
-          value,
-          style: GoogleFonts.inter(fontSize: 15, color: cs.onSurface),
+          'TAGEBUCH',
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+            color: cs.secondary,
+          ),
         ),
+        const SizedBox(height: 8),
+        if (hasNotes)
+          GestureDetector(
+            onTap: () => _editNotes(entry),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLowest,
+                border: Border.all(
+                    color: cs.outlineVariant.withValues(alpha: 0.3)),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -20,
+                    bottom: -20,
+                    child: Icon(Icons.description,
+                        size: 120,
+                        color: cs.primary.withValues(alpha: 0.04)),
+                  ),
+                  Text(
+                    '"${entry.notes!}"',
+                    style: GoogleFonts.newsreader(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurface,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          _emptyStateButton(
+            Icons.edit_note,
+            'Tagebucheintrag hinzufügen…',
+            () => _editNotes(entry),
+            cs,
+          ),
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  Widget _infoChip(IconData icon, String label, ColorScheme cs) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(50),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: cs.onSecondaryContainer),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: cs.onSecondaryContainer,
+  // ── Crew List ─────────────────────────────────────────────────────
+  Widget _buildCrewList(DayEntry entry, ColorScheme cs) {
+    final crew = entry.crew;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'BESATZUNG',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: cs.secondary,
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Passage Stats (dark tertiary card) ────────────────────────────
-  Widget _buildPassageStats(DailyStats stats, ColorScheme cs) {
-    // secondary-fixed (#ffe088 gold) for values, tertiary-container for bars
-    const valueFg = Color(0xFFFFE088);
-    const barBg = Color(0xFF2A3A4C); // tertiary-container
-    const barFg = Color(0xFFFFE088);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF142435), // tertiary
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Stack(
-        children: [
-          // Watermark
-          Positioned(
-            top: 0,
-            right: 0,
-            child: Opacity(
-              opacity: 0.15,
-              child: Icon(Icons.directions_boat,
-                  size: 64, color: valueFg),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'ÜBERFAHRT',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
-                  color: Colors.white.withValues(alpha: 0.7),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => _addCrewMember(entry),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surfaceContainer,
                 ),
+                child: Icon(Icons.person_add, size: 20, color: cs.secondary),
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _statsCell(
-                        'DISTANZ',
-                        '${stats.distanceNm.toStringAsFixed(1)} nm',
-                        (stats.distanceNm / 200).clamp(0.05, 1.0),
-                        valueFg, barBg, barFg),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (crew.isNotEmpty)
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLowest,
+              border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              children: crew.asMap().entries.map((e) {
+                final isFirst = e.key == 0;
+                final isLast = e.key == crew.length - 1;
+                final member = e.value;
+                return Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _editCrewMember(entry, e.key),
+                      onLongPress: () => _removeCrewMember(entry, member),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: cs.surfaceContainerHigh,
+                            ),
+                            child: Icon(Icons.person,
+                                color: cs.primary, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  member.name,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.onSurface,
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      isFirst ? 'SKIPPER' : 'BESATZUNG',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.5,
+                                        color: cs.outline,
+                                      ),
+                                    ),
+                                    if (member.bloodType != null) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 6, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: cs.errorContainer,
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: Text(
+                                          member.bloodType!,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.3,
+                                            color: cs.onErrorContainer,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right,
+                              size: 18, color: cs.outlineVariant),
+                        ],
+                      ),
+                    ),
+                    if (!isLast)
+                      Divider(
+                        color: cs.outlineVariant.withValues(alpha: 0.3),
+                        height: 16,
+                      ),
+                  ],
+                );
+              }).toList(),
+            ),
+          )
+        else
+          _emptyStateButton(
+            Icons.groups,
+            'Besatzung hinzufügen…',
+            () => _addCrewMember(entry),
+            cs,
+          ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  // ── Route & Map ───────────────────────────────────────────────────
+  Widget _buildRouteMap(
+      DayEntry entry, DailyTrack? track, DailyStats? stats, ColorScheme cs) {
+    final hasTrack = track != null && track.points.isNotEmpty;
+    final fromH = entry.fromHarbor?.isNotEmpty ?? false;
+    final toH = entry.toHarbor?.isNotEmpty ?? false;
+    final routeLabel = (fromH || toH)
+        ? [if (fromH) entry.fromHarbor!, if (toH) entry.toHarbor!].join(' → ')
+        : null;
+    final div = BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'ROUTE & PASSAGE',
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+            color: cs.secondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLowest,
+              border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                // ── Etappe row ──────────────────────────────────
+                InkWell(
+                  onTap: () => _editHarbor(entry),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.sailing,
+                            size: 18, color: cs.secondary),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: routeLabel != null
+                              ? Text(
+                                  routeLabel,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.onSurface,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                )
+                              : Text(
+                                  'Etappe erfassen…',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontStyle: FontStyle.italic,
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
+                        ),
+                        Icon(Icons.edit, size: 16, color: cs.secondary),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: _statsCell(
-                        'MAX. FAHRT',
-                        '${stats.maxSpeed.toStringAsFixed(1)} kn',
-                        (stats.maxSpeed / 15).clamp(0.05, 1.0),
-                        valueFg, barBg, barFg),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _statsCell(
-                        'FAHRZEIT',
-                        _formatDuration(stats.movingDuration),
-                        (stats.movingDuration.inMinutes / 720)
-                            .clamp(0.05, 1.0),
-                        valueFg, barBg, barFg),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: _statsCell(
-                        'Ø FAHRT',
-                        '${stats.avgSpeed.toStringAsFixed(1)} kn',
-                        (stats.avgSpeed / 10).clamp(0.05, 1.0),
-                        valueFg, barBg, barFg),
-                  ),
-                ],
-              ),
-            ],
+                ),
+                // ── Map or GPX prompt ────────────────────────────
+                Container(
+                  decoration: BoxDecoration(border: Border(top: div)),
+                  child: hasTrack
+                      ? Column(
+                          children: [
+                            SizedBox(
+                              height: 220,
+                              child: _buildMap(entry, track),
+                            ),
+                            if (stats != null) _buildStatsGrid(stats, cs),
+                          ],
+                        )
+                      : InkWell(
+                          onTap: _importGpx,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 20, horizontal: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.map_outlined,
+                                    color: cs.onSurfaceVariant),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'GPX Track hinzufügen…',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontStyle: FontStyle.italic,
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildStatsGrid(DailyStats stats, ColorScheme cs) {
+    final div = BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3));
+
+    return Container(
+      decoration: BoxDecoration(border: Border(top: div)),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(border: Border(right: div)),
+              padding: const EdgeInsets.all(12),
+              child: _statCell(
+                  'DISTANZ', '${stats.distanceNm.toStringAsFixed(1)} NM', cs),
+            ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: _statCell(
+                  'Ø FAHRT', '${stats.avgSpeed.toStringAsFixed(1)} kn', cs),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _statsCell(String label, String value, double progress,
-      Color valueFg, Color barBg, Color barFg) {
+  Widget _statCell(String label, String value, ColorScheme cs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -795,7 +666,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             fontSize: 9,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.0,
-            color: Colors.white.withValues(alpha: 0.7),
+            color: cs.outline,
           ),
         ),
         const SizedBox(height: 4),
@@ -804,18 +675,329 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           style: GoogleFonts.newsreader(
             fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: valueFg,
+            color: cs.primary,
           ),
         ),
+      ],
+    );
+  }
+
+  // ── Log Section ───────────────────────────────────────────────────
+  Widget _buildLogSection(DayEntry entry,
+      Map<TimelineEntry, TrackPoint> correlatedMap, ColorScheme cs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'CHRONOLOGISCHE EINTRÄGE',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: cs.secondary,
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => _addTimelineEntry(context),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surfaceContainer,
+                ),
+                child: Icon(Icons.add, size: 20, color: cs.secondary),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (entry.timeline.isEmpty)
+          _emptyStateButton(
+            Icons.add_circle_outline,
+            'Ersten Logeintrag hinzufügen…',
+            () => _addTimelineEntry(context),
+            cs,
+          )
+        else
+          Column(
+            children: entry.timeline.asMap().entries.map((e) {
+              return _buildLogEntryRow(
+                entry,
+                e.value,
+                e.key,
+                entry.timeline.length,
+                correlatedMap[e.value],
+                cs,
+              );
+            }).toList(),
+          ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildLogEntryRow(DayEntry entry, TimelineEntry t, int index,
+      int total, TrackPoint? trackedPoint, ColorScheme cs) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Spine + node
+          SizedBox(
+            width: 24,
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.primary,
+                    border: Border.all(color: cs.surface, width: 3),
+                  ),
+                ),
+                if (index < total - 1)
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                          width: 2,
+                          color: cs.surfaceContainerHighest),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Card
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildLogEntryCard(
+                  entry, t, index, total, trackedPoint, cs),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogEntryCard(DayEntry entry, TimelineEntry t, int index,
+      int total, TrackPoint? trackedPoint, ColorScheme cs) {
+    final timeStr =
+        '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
+
+    final bool isStatusEntry = t.vesselStatusNote != null;
+    final String entryLabel;
+    if (isStatusEntry) {
+      entryLabel = 'SCHIFFSSTATUS';
+    } else if (total == 1) {
+      entryLabel = 'EINTRAG';
+    } else if (index == 0) {
+      entryLabel = 'ABFAHRT';
+    } else if (index == total - 1) {
+      entryLabel = 'ANKUNFT';
+    } else {
+      entryLabel = 'VERLAUF';
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Time + label + action icons
+          Row(
+            children: [
+              Text(
+                timeStr,
+                style: GoogleFonts.newsreader(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
+              if (trackedPoint != null) ...[
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => _mapController.move(
+                    LatLng(trackedPoint.lat, trackedPoint.lon),
+                    14,
+                  ),
+                  child: Icon(Icons.location_on_outlined,
+                      size: 16, color: cs.primary),
+                ),
+              ],
+              const Spacer(),
+              Text(
+                entryLabel,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: cs.secondary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () => _editTimelineEntry(entry, t),
+                child: Icon(Icons.edit_outlined,
+                    size: 16, color: cs.outline),
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: () => _deleteTimelineEntry(entry, t),
+                child: Icon(Icons.close,
+                    size: 16, color: cs.outline),
+              ),
+            ],
+          ),
+            // Remarks
+            if (t.remarks?.isNotEmpty == true) ...[
+              const SizedBox(height: 8),
+              Text(
+                t.remarks!,
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+            ],
+            // Vessel status note (auto-generated)
+            if (t.vesselStatusNote != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                t.vesselStatusNote!,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+            ],
+            // Continuous data text
+            if (t.course != null ||
+                t.speed != null ||
+                t.wind != null ||
+                t.sea != null ||
+                t.weather != null ||
+                t.grossState != null ||
+                t.fockState != null ||
+                t.motorOn != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                [
+                  if (t.course != null)
+                    'Kurs: ${t.course!.toStringAsFixed(0)}°',
+                  if (t.speed != null)
+                    'Fahrt: ${t.speed!.toStringAsFixed(1)} kn',
+                  if (t.wind != null) 'Wind: ${t.wind!}',
+                  if (t.sea != null) 'See: ${t.sea!}',
+                  if (t.weather != null) 'Wetter: ${t.weather!}',
+                  if (t.grossState != null) 'Gross: ${t.grossState!}',
+                  if (t.fockState != null) 'Fock: ${t.fockState!}',
+                  if (t.motorOn != null)
+                    'Motor: ${t.motorOn! ? 'An' : 'Aus'}',
+                ].join(' · '),
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: cs.onSurfaceVariant,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ],
+        ),
+    );
+  }
+
+  // ── Vessel Status ─────────────────────────────────────────────────
+  Widget _buildVesselStatus(DayEntry entry, ColorScheme cs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'SCHIFFSSTATUS',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: cs.secondary,
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: () => _editVesselStatus(entry),
+              child: Row(
+                children: [
+                  Icon(Icons.edit, size: 16, color: cs.secondary),
+                  const SizedBox(width: 4),
+                  Text(
+                    'AKTUALISIEREN',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                      color: cs.secondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF142435),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          clipBehavior: Clip.antiAlias,
           child: Stack(
             children: [
-              Container(height: 6, color: barBg),
-              FractionallySizedBox(
-                widthFactor: progress,
-                child: Container(height: 6, color: barFg),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Opacity(
+                  opacity: 0.10,
+                  child: Icon(Icons.water_drop,
+                      size: 80, color: Colors.white),
+                ),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _vesselStatCell(
+                        'MOTORÖL', entry.oilLevel, Icons.check_circle, cs),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: _vesselStatCell('KRAFTSTOFF', entry.fuelLevel,
+                        Icons.local_gas_station, cs),
+                  ),
+                ],
               ),
             ],
           ),
@@ -824,85 +1006,115 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  // ── Additional Info (collapsible) ─────────────────────────────────
-  Widget _buildAdditionalInfo(DayEntry entry, ColorScheme cs) {
-    _notesController ??= TextEditingController(text: entry.notes ?? '');
-    _fromHarborController ??=
-        TextEditingController(text: entry.fromHarbor ?? '');
-    _toHarborController ??=
-        TextEditingController(text: entry.toHarbor ?? '');
+  Widget _vesselStatCell(
+      String label, int? level, IconData icon, ColorScheme cs) {
+    const gold = Color(0xFFFFE088);
+    const barBg = Color(0xFF2A3A4C);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        tilePadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        title: Text(
-          'Weitere Informationen',
-          style: GoogleFonts.newsreader(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: cs.primary,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+            color: Colors.white.withValues(alpha: 0.70),
           ),
         ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHarborSection(entry),
-                const Divider(height: 28),
-                _buildParticipantsSection(entry),
-                const Divider(height: 28),
-                _buildControlledSection(entry),
-                const Divider(height: 28),
-                _buildNotesSection(entry),
-              ],
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Icon(icon, color: gold, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              level != null ? '$level%' : '—',
+              style: GoogleFonts.newsreader(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: level != null ? Colors.white : Colors.white54,
+              ),
             ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(999),
+          child: Stack(
+            children: [
+              Container(height: 8, color: barBg),
+              if (level != null)
+                FractionallySizedBox(
+                  widthFactor: level / 100,
+                  child: Container(height: 8, color: gold),
+                ),
+            ],
           ),
-        ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label == 'KRAFTSTOFF' ? 'LEER' : 'MIN',
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: Colors.white.withValues(alpha: 0.50),
+              ),
+            ),
+            Text(
+              'VOLL',
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: Colors.white.withValues(alpha: 0.50),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ── Empty state helper ────────────────────────────────────────────
+  Widget _emptyStateButton(
+      IconData icon, String label, VoidCallback onTap, ColorScheme cs) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding:
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          border: Border.all(color: cs.outlineVariant, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: cs.onSurfaceVariant, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontStyle: FontStyle.italic,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   // ── Map ──────────────────────────────────────────────────────────
   Widget _buildMap(DayEntry entry, DailyTrack? track) {
-    if (track == null || track.points.isEmpty) {
-      return Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: InkWell(
-          onTap: _importGpx,
-          borderRadius: BorderRadius.circular(12),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.file_upload_outlined,
-                    size: 36,
-                    color:
-                        Theme.of(context).colorScheme.onSurfaceVariant),
-                const SizedBox(height: 8),
-                Text('Kein GPX-Track',
-                    style: Theme.of(context).textTheme.bodyMedium),
-                const SizedBox(height: 4),
-                Text('Tippen zum Importieren',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary)),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    if (track == null || track.points.isEmpty) return const SizedBox();
 
     final polylinePoints =
         track.points.map((p) => LatLng(p.lat, p.lon)).toList();
@@ -984,559 +1196,380 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 _droppedMarkerLatLng!, track.points);
             if (nearest != null) _showTrackPointBottomSheet(nearest);
           },
-          child:
-              const Icon(Icons.place, color: Colors.deepOrange, size: 40),
+          child: const Icon(Icons.place,
+              color: Colors.deepOrange, size: 40),
         ),
       ));
     }
 
-    return SizedBox(
-      height: 280,
-      child: Stack(
-        children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCameraFit: CameraFit.bounds(
-                bounds: LatLngBounds.fromPoints(polylinePoints),
-                padding: const EdgeInsets.all(40),
-              ),
-              onTap: (_, _) {
-                if (_isMarkerSheetOpen) Navigator.of(context).pop();
-                setState(() => _droppedMarkerLatLng = null);
-              },
-              onLongPress: (tapPosition, latLng) {
-                final nearest =
-                    _findNearestTrackPoint(latLng, track.points);
-                setState(() => _droppedMarkerLatLng = latLng);
-                if (nearest != null) _showTrackPointBottomSheet(nearest);
-              },
+    return Stack(
+      children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCameraFit: CameraFit.bounds(
+              bounds: LatLngBounds.fromPoints(polylinePoints),
+              padding: const EdgeInsets.all(40),
             ),
+            onTap: (_, _) {
+              if (_isMarkerSheetOpen) Navigator.of(context).pop();
+              setState(() => _droppedMarkerLatLng = null);
+            },
+            onLongPress: (tapPosition, latLng) {
+              final nearest =
+                  _findNearestTrackPoint(latLng, track.points);
+              setState(() => _droppedMarkerLatLng = latLng);
+              if (nearest != null) _showTrackPointBottomSheet(nearest);
+            },
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: _satelliteView
+                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.logbook.app',
+              tileProvider: NetworkTileProvider(),
+            ),
+            PolylineLayer(
+              polylines: [
+                Polyline(
+                  points: polylinePoints,
+                  strokeWidth: 4,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ],
+            ),
+            MarkerLayer(markers: markers),
+            RichAttributionWidget(
+              attributions: [
+                if (_satelliteView)
+                  TextSourceAttribution('© Esri World Imagery',
+                      onTap: () async {
+                    final uri = Uri.parse('https://www.esri.com');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  })
+                else
+                  TextSourceAttribution(
+                      '© OpenStreetMap contributors', onTap: () async {
+                    final uri = Uri.parse(
+                        'https://www.openstreetmap.org/copyright');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  }),
+              ],
+            ),
+          ],
+        ),
+        // Map controls — zoom + center on macOS, satellite always
+        Positioned(
+          right: 10,
+          bottom: 10,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              TileLayer(
-                urlTemplate: _satelliteView
-                    ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.logbook.app',
-                tileProvider: NetworkTileProvider(),
-              ),
-              PolylineLayer(
-                polylines: [
-                  Polyline(
-                    points: polylinePoints,
-                    strokeWidth: 4,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ],
-              ),
-              MarkerLayer(markers: markers),
-              RichAttributionWidget(
-                attributions: [
-                  if (_satelliteView)
-                    TextSourceAttribution('© Esri World Imagery',
-                        onTap: () async {
-                      final uri = Uri.parse('https://www.esri.com');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri,
-                            mode: LaunchMode.externalApplication);
-                      }
-                    })
-                  else
-                    TextSourceAttribution('© OpenStreetMap contributors',
-                        onTap: () async {
-                      final uri = Uri.parse(
-                          'https://www.openstreetmap.org/copyright');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri,
-                            mode: LaunchMode.externalApplication);
-                      }
-                    }),
-                ],
+              if (defaultTargetPlatform == TargetPlatform.macOS) ...[
+                _smallMapBtn(Icons.add, () => _mapController.move(
+                  _mapController.camera.center,
+                  _mapController.camera.zoom + 1,
+                )),
+                const SizedBox(height: 6),
+                _smallMapBtn(Icons.remove, () => _mapController.move(
+                  _mapController.camera.center,
+                  _mapController.camera.zoom - 1,
+                )),
+                const SizedBox(height: 6),
+                _smallMapBtn(Icons.explore, () {
+                  if (polylinePoints.isNotEmpty) {
+                    _mapController.fitCamera(CameraFit.bounds(
+                      bounds: LatLngBounds.fromPoints(polylinePoints),
+                      padding: const EdgeInsets.all(32),
+                    ));
+                  }
+                }),
+                const SizedBox(height: 6),
+              ],
+              FloatingActionButton.small(
+                heroTag: 'detail_satellite_button',
+                onPressed: () =>
+                    setState(() => _satelliteView = !_satelliteView),
+                tooltip:
+                    _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
+                child: Icon(_satelliteView
+                    ? Icons.map_outlined
+                    : Icons.satellite_alt),
               ),
             ],
           ),
-          // Satellite toggle
-          Positioned(
-            right: 10,
-            bottom: 10,
-            child: FloatingActionButton.small(
-              heroTag: 'detail_satellite_button',
-              onPressed: () =>
-                  setState(() => _satelliteView = !_satelliteView),
-              tooltip:
-                  _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
-              child: Icon(_satelliteView
-                  ? Icons.map_outlined
-                  : Icons.satellite_alt),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Harbor Section ────────────────────────────────────────────────
-  Widget _buildHarborSection(DayEntry entry) {
-    final cs = Theme.of(context).colorScheme;
-    final labelStyle = Theme.of(context)
-        .textTheme
-        .labelLarge
-        ?.copyWith(color: cs.onSurfaceVariant);
-    final inputDecoration = InputDecoration(
-      border:
-          OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-      isDense: true,
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Route', style: labelStyle),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Von',
-                      style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: _fromHarborController,
-                    decoration:
-                        inputDecoration.copyWith(hintText: 'Starthafen'),
-                    textInputAction: TextInputAction.next,
-                    textCapitalization: TextCapitalization.words,
-                    inputFormatters: [_CapitalizeWordsFormatter()],
-                    onChanged: (v) {
-                      entry.fromHarbor = v.trim().isEmpty ? null : v.trim();
-                      context.read<HomeRepository>().saveEntry(entry);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 20, left: 8, right: 8),
-              child: Icon(Icons.arrow_forward,
-                  size: 18, color: cs.onSurfaceVariant),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nach',
-                      style: Theme.of(context).textTheme.bodySmall),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: _toHarborController,
-                    decoration:
-                        inputDecoration.copyWith(hintText: 'Zielhafen'),
-                    textInputAction: TextInputAction.done,
-                    textCapitalization: TextCapitalization.words,
-                    inputFormatters: [_CapitalizeWordsFormatter()],
-                    onChanged: (v) {
-                      entry.toHarbor = v.trim().isEmpty ? null : v.trim();
-                      context.read<HomeRepository>().saveEntry(entry);
-                    },
-                    onSubmitted: (_) =>
-                        FocusScope.of(context).unfocus(),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ],
     );
   }
 
-  Widget _buildParticipantsSection(DayEntry entry) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Teilnehmer',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: [
-            ...entry.participantsList.map(
-              (name) => Chip(
-                label: Text(name),
-                deleteIcon: Icon(Icons.close,
-                    size: 16,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurfaceVariant),
-                onDeleted: () => _removeParticipant(entry, name),
-                backgroundColor: Theme.of(context)
-                    .colorScheme
-                    .surfaceContainerHigh,
-                labelStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary),
-                side: BorderSide.none,
-              ),
-            ),
-            ActionChip(
-              avatar: Icon(Icons.person_add_outlined,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary),
-              label: Text('Hinzufügen',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary)),
-              backgroundColor:
-                  Theme.of(context).colorScheme.surfaceContainerHigh,
-              side: BorderSide.none,
-              onPressed: () => _addParticipant(entry),
-            ),
-          ],
+  // ── Edit dialogs ──────────────────────────────────────────────────
+  void _editNotes(DayEntry entry) async {
+    final ctrl = TextEditingController(text: entry.notes ?? '');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Tagebucheintrag',
+          style: GoogleFonts.newsreader(
+              fontSize: 18, fontWeight: FontWeight.w600),
         ),
-      ],
-    );
-  }
-
-  Widget _buildControlledSection(DayEntry entry) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Checkliste',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 4),
-        ..._controlledItems.map((item) {
-          final checked = entry.checkedItems.contains(item);
-          return CheckboxListTile(
-            value: checked,
-            title: Text(item,
-                style: Theme.of(context).textTheme.bodyMedium),
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            onChanged: (v) =>
-                _toggleCheckedItem(entry, item, v ?? false),
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _buildNotesSection(DayEntry entry) {
-    _notesController ??= TextEditingController(text: entry.notes ?? '');
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Notizen',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _notesController,
+        content: TextField(
+          controller: ctrl,
+          maxLines: null,
+          keyboardType: TextInputType.multiline,
+          autofocus: true,
           decoration: InputDecoration(
             hintText: 'Notizen für diesen Tag…',
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12)),
             isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 10),
           ),
-          minLines: 1,
-          maxLines: null,
-          keyboardType: TextInputType.multiline,
-          textInputAction: TextInputAction.newline,
-          onChanged: (v) {
-            entry.notes = v.isEmpty ? null : v;
-            context.read<HomeRepository>().saveEntry(entry);
-          },
-        ),
-      ],
-    );
-  }
-
-  // ── Map helpers ───────────────────────────────────────────────────
-  TrackPoint? _findNearestTrackPoint(
-      LatLng latLng, List<TrackPoint> points) {
-    if (points.isEmpty) return null;
-    TrackPoint? nearest;
-    double minDistSq = double.infinity;
-    for (final p in points) {
-      final dlat = p.lat - latLng.latitude;
-      final dlng = p.lon - latLng.longitude;
-      final distSq = dlat * dlat + dlng * dlng;
-      if (distSq < minDistSq) {
-        minDistSq = distSq;
-        nearest = p;
-      }
-    }
-    return nearest;
-  }
-
-  void _showTrackPointBottomSheet(TrackPoint point) {
-    setState(() => _isMarkerSheetOpen = true);
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              DateFormat('HH:mm').format(point.time.toLocal()),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              DateFormat('dd. MMMM yyyy', 'de_CH')
-                  .format(point.time.toLocal()),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color:
-                        Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    ).whenComplete(
-        () => setState(() => _isMarkerSheetOpen = false));
-  }
-
-  Widget _gpxUploadIcon() {
-    return SizedBox(
-      width: 26,
-      height: 26,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          const Icon(Icons.file_upload_outlined, size: 22),
-          Positioned(
-            bottom: -3,
-            right: -6,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: Text(
-                'GPX',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontSize: 7,
-                  fontWeight: FontWeight.bold,
-                  height: 1,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── Entry Detail / Actions ────────────────────────────────────────
-  void _showEntryDetail(TimelineEntry t) {
-    final timeStr =
-        '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(timeStr,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    )),
-            if (t.remarks?.isNotEmpty == true) ...[
-              const SizedBox(height: 4),
-              Text(t.remarks!,
-                  style: Theme.of(context).textTheme.titleMedium),
-            ],
-            const SizedBox(height: 16),
-            if (t.course != null)
-              _detailRow(Icons.navigation, 'Kurs',
-                  '${t.course!.toStringAsFixed(0)}°'),
-            if (t.speed != null)
-              _detailRow(Icons.speed, 'Speed',
-                  '${t.speed!.toStringAsFixed(1)} kn'),
-            if (t.wind != null) _detailRow(Icons.air, 'Wind', t.wind!),
-            if (t.sea != null) _detailRow(Icons.waves, 'See', t.sea!),
-            if (t.weather != null)
-              _detailRow(Icons.wb_sunny_outlined, 'Wetter', t.weather!),
-            if (t.grossState != null)
-              _detailRow(Icons.sailing, 'Gross', t.grossState!),
-            if (t.fockState != null)
-              _detailRow(Icons.sailing, 'Fock', t.fockState!),
-            if (t.motorOn != null)
-              _detailRow(Icons.directions_boat, 'Motor',
-                  t.motorOn! ? 'An' : 'Aus'),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _detailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon,
-              size: 18,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
-          const SizedBox(width: 10),
-          Text('$label  ',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color:
-                      Theme.of(context).colorScheme.onSurfaceVariant)),
-          Text(value,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  void _showTimelineActions(DayEntry entry, TimelineEntry t) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: const Text('Bearbeiten'),
-              onTap: () {
-                Navigator.pop(context);
-                _editTimelineEntry(entry, t);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outline,
-                  color: Theme.of(context).colorScheme.error),
-              title: Text('Löschen',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.error)),
-              onTap: () {
-                Navigator.pop(context);
-                _deleteTimelineEntry(entry, t);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ── Participant / checklist helpers ───────────────────────────────
-  void _addParticipant(DayEntry entry) async {
-    final ctrl = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Teilnehmer hinzufügen'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Name'),
-          textCapitalization: TextCapitalization.words,
-          onSubmitted: (v) => Navigator.pop(context, v.trim()),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Abbrechen')),
-          TextButton(
-              onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-              child: const Text('Hinzufügen')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, ctrl.text),
+            child: const Text('Speichern'),
+          ),
         ],
       ),
     );
-    if (!mounted || name == null || name.isEmpty) return;
+    ctrl.dispose();
+    if (!mounted || result == null) return;
     setState(() {
-      entry.participantsList.add(name);
+      entry.notes = result.trim().isEmpty ? null : result.trim();
       context.read<HomeRepository>().saveEntry(entry);
     });
   }
 
-  void _removeParticipant(DayEntry entry, String name) {
-    setState(() {
-      entry.participantsList.remove(name);
-      context.read<HomeRepository>().saveEntry(entry);
-    });
+  void _changeDate(DayEntry entry) async {
+    final current = DateTime(widget.year, widget.month, widget.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      locale: const Locale('de', 'CH'),
+    );
+    if (!mounted || picked == null) return;
+    final newDate = DateTime(picked.year, picked.month, picked.day);
+    if (newDate == current) return;
+
+    final repo = context.read<HomeRepository>();
+    final ok = await repo.changeEntryDate(current, newDate);
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Für dieses Datum existiert bereits ein Eintrag.')));
+      return;
+    }
+    context.go('/day/${newDate.year}/${newDate.month}/${newDate.day}');
   }
 
-  void _toggleCheckedItem(DayEntry entry, String item, bool checked) {
+  void _editHarbor(DayEntry entry) async {
+    final fromCtrl =
+        TextEditingController(text: entry.fromHarbor ?? '');
+    final toCtrl =
+        TextEditingController(text: entry.toHarbor ?? '');
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Etappe bearbeiten'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: fromCtrl,
+              decoration: InputDecoration(
+                labelText: 'Von',
+                hintText: 'Starthafen',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+              ),
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: toCtrl,
+              decoration: InputDecoration(
+                labelText: 'Nach',
+                hintText: 'Zielhafen',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+              ),
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.done,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Speichern'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) {
+      fromCtrl.dispose();
+      toCtrl.dispose();
+      return;
+    }
+    if (saved == true) {
+      setState(() {
+        entry.fromHarbor = fromCtrl.text.trim().isEmpty
+            ? null
+            : fromCtrl.text.trim();
+        entry.toHarbor =
+            toCtrl.text.trim().isEmpty ? null : toCtrl.text.trim();
+        context.read<HomeRepository>().saveEntry(entry);
+      });
+    }
+    fromCtrl.dispose();
+    toCtrl.dispose();
+  }
+
+  void _editVesselStatus(DayEntry entry) async {
+    int oilVal = entry.oilLevel ?? 50;
+    int fuelVal = entry.fuelLevel ?? 50;
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: Text(
+            'Schiffsstatus',
+            style: GoogleFonts.newsreader(
+                fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Motoröl'),
+                  Text('$oilVal%',
+                      style:
+                          const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+              Slider(
+                value: oilVal.toDouble(),
+                min: 0,
+                max: 100,
+                divisions: 20,
+                onChanged: (v) => setS(() => oilVal = v.round()),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Kraftstoff'),
+                  Text('$fuelVal%',
+                      style:
+                          const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+              ),
+              Slider(
+                value: fuelVal.toDouble(),
+                min: 0,
+                max: 100,
+                divisions: 20,
+                onChanged: (v) => setS(() => fuelVal = v.round()),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Speichern'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || saved != true) return;
+    final oldOil = entry.oilLevel;
+    final oldFuel = entry.fuelLevel;
+    final changed = oilVal != oldOil || fuelVal != oldFuel;
     setState(() {
-      if (checked) {
-        entry.checkedItems.add(item);
-      } else {
-        entry.checkedItems.remove(item);
+      entry.oilLevel = oilVal;
+      entry.fuelLevel = fuelVal;
+      if (changed) {
+        final now = DateTime.now();
+        final note = 'Motoröl: $oilVal% · Kraftstoff: $fuelVal%';
+        final autoEntry = TimelineEntry(
+          time: DateTime(widget.year, widget.month, widget.day,
+              now.hour, now.minute),
+          vesselStatusNote: note,
+        );
+        entry.timeline.add(autoEntry);
+        entry.timeline.sort((a, b) => a.time.compareTo(b.time));
       }
       context.read<HomeRepository>().saveEntry(entry);
     });
   }
 
-  // ── Timeline entry mutations ──────────────────────────────────────
+  // ── Crew helpers ──────────────────────────────────────────────────
+  void _addCrewMember(DayEntry entry) async {
+    final member = await showDialog<CrewMember>(
+      context: context,
+      builder: (_) => const AddCrewMemberDialog(),
+    );
+    if (!mounted || member == null) return;
+    setState(() {
+      entry.crew.add(member);
+      context.read<HomeRepository>().saveEntry(entry);
+    });
+  }
+
+  void _editCrewMember(DayEntry entry, int index) async {
+    final updated = await showDialog<CrewMember>(
+      context: context,
+      builder: (_) =>
+          AddCrewMemberDialog(initialMember: entry.crew[index]),
+    );
+    if (!mounted || updated == null) return;
+    setState(() {
+      entry.crew[index] = updated;
+      context.read<HomeRepository>().saveEntry(entry);
+    });
+  }
+
+  void _removeCrewMember(DayEntry entry, CrewMember member) {
+    setState(() {
+      entry.crew.remove(member);
+      context.read<HomeRepository>().saveEntry(entry);
+    });
+  }
+
+  // ── Timeline mutations ────────────────────────────────────────────
   void _addTimelineEntry(BuildContext context) async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
@@ -1551,12 +1584,27 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   void _deleteTimelineEntry(DayEntry entry, TimelineEntry t) {
+    final index = entry.timeline.indexOf(t);
     setState(() {
       entry.timeline.remove(t);
       context.read<HomeRepository>().saveEntry(entry);
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logeintrag gelöscht')));
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(
+        content: const Text('Logeintrag gelöscht'),
+        action: SnackBarAction(
+          label: 'Rückgängig',
+          onPressed: () {
+            if (!mounted) return;
+            setState(() {
+              entry.timeline.insert(index.clamp(0, entry.timeline.length), t);
+              entry.timeline.sort((a, b) => a.time.compareTo(b.time));
+              context.read<HomeRepository>().saveEntry(entry);
+            });
+          },
+        ),
+      ));
   }
 
   void _editTimelineEntry(DayEntry entry, TimelineEntry t) async {
@@ -1578,7 +1626,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         const SnackBar(content: Text('Logeintrag aktualisiert')));
   }
 
-  // ── GPX import / delete / day delete ─────────────────────────────
+  // ── GPX ───────────────────────────────────────────────────────────
   void _importGpx() async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
@@ -1713,4 +1761,201 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted) return;
     context.go('/');
   }
+
+  // ── Map helpers ───────────────────────────────────────────────────
+  TrackPoint? _findNearestTrackPoint(
+      LatLng latLng, List<TrackPoint> points) {
+    if (points.isEmpty) return null;
+    TrackPoint? nearest;
+    double minDistSq = double.infinity;
+    for (final p in points) {
+      final dlat = p.lat - latLng.latitude;
+      final dlng = p.lon - latLng.longitude;
+      final distSq = dlat * dlat + dlng * dlng;
+      if (distSq < minDistSq) {
+        minDistSq = distSq;
+        nearest = p;
+      }
+    }
+    return nearest;
+  }
+
+  void _showTrackPointBottomSheet(TrackPoint point) {
+    setState(() => _isMarkerSheetOpen = true);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              DateFormat('HH:mm').format(point.time.toLocal()),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('dd. MMMM yyyy', 'de_CH')
+                  .format(point.time.toLocal()),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color:
+                        Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    ).whenComplete(() => setState(() => _isMarkerSheetOpen = false));
+  }
+
+  Widget _gpxUploadIcon() {
+    return SizedBox(
+      width: 26,
+      height: 26,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Icon(Icons.file_upload_outlined, size: 22),
+          Positioned(
+            bottom: -3,
+            right: -6,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(3),
+              ),
+              child: Text(
+                'GPX',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  fontSize: 7,
+                  fontWeight: FontWeight.bold,
+                  height: 1,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEntryDetail(TimelineEntry t) {
+    final timeStr =
+        '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(timeStr,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    )),
+            if (t.remarks?.isNotEmpty == true) ...[
+              const SizedBox(height: 4),
+              Text(t.remarks!,
+                  style: Theme.of(context).textTheme.titleMedium),
+            ],
+            const SizedBox(height: 16),
+            if (t.course != null)
+              _detailRow(Icons.navigation, 'Kurs',
+                  '${t.course!.toStringAsFixed(0)}°'),
+            if (t.speed != null)
+              _detailRow(Icons.speed, 'Fahrt',
+                  '${t.speed!.toStringAsFixed(1)} kn'),
+            if (t.wind != null) _detailRow(Icons.air, 'Wind', t.wind!),
+            if (t.sea != null)
+              _detailRow(Icons.waves, 'See', t.sea!),
+            if (t.weather != null)
+              _detailRow(
+                  Icons.wb_sunny_outlined, 'Wetter', t.weather!),
+            if (t.grossState != null)
+              _detailRow(Icons.sailing, 'Gross', t.grossState!),
+            if (t.fockState != null)
+              _detailRow(Icons.sailing, 'Fock', t.fockState!),
+            if (t.motorOn != null)
+              _detailRow(Icons.directions_boat, 'Motor',
+                  t.motorOn! ? 'An' : 'Aus'),
+          ],
+        ),
+        ),   // SingleChildScrollView
+      ),     // SafeArea
+    );
+  }
+
+  Widget _smallMapBtn(IconData icon, VoidCallback onTap) {
+    final cs = Theme.of(context).colorScheme;
+    return FloatingActionButton.small(
+      heroTag: icon.codePoint,
+      onPressed: onTap,
+      backgroundColor: cs.surfaceContainerLowest,
+      foregroundColor: cs.primary,
+      elevation: 2,
+      child: Icon(icon, size: 18),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon,
+              size: 18,
+              color: Theme.of(context).colorScheme.onSurfaceVariant),
+          const SizedBox(width: 10),
+          Text('$label  ',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          Text(value,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
 }

@@ -1,39 +1,84 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
+import '../../../core/services/firestore_service.dart';
+
 class ThemeProvider extends ChangeNotifier {
-  static const _boxName = 'settings';
-  static const _themeKey = 'theme_mode';
-  static const _titleKey = 'logbuch_title';
-  static const _weatherKey = 'weather_url';
-  static const _logbookCodeKey = 'logbook_code';
-  static const _initialSyncDoneKey = 'initial_cloud_sync_done';
-  static const _lastRouteKey = 'last_route';
-  static const _lastRouteDateKey = 'last_route_date';
+  static const _boxName             = 'settings';
+  static const _themeKey            = 'theme_mode';
+  static const _titleKey            = 'logbuch_title';
+  static const _weatherKey          = 'weather_url';
+  static const _logbookCodeKey      = 'logbook_code';
+  static const _initialSyncDoneKey  = 'initial_cloud_sync_done';
+  static const _lastRouteKey        = 'last_route';
+  static const _lastRouteDateKey    = 'last_route_date';
+  static const _vesselNameKey       = 'vessel_name';
+  static const _vesselMmsiKey       = 'vessel_mmsi';
+  static const _vesselCallSignKey   = 'vessel_call_sign';
+  static const _lifeRaftKey         = 'life_raft_info';
+  static const _epirbKey            = 'epirb_info';
+  static const _fireSuppKey         = 'fire_supp_info';
+  static const _vhf1LabelKey        = 'vhf_1_label';
+  static const _vhf1DescKey         = 'vhf_1_desc';
+  static const _vhf2LabelKey        = 'vhf_2_label';
+  static const _vhf2DescKey         = 'vhf_2_desc';
+  static const _vhf3LabelKey        = 'vhf_3_label';
+  static const _vhf3DescKey         = 'vhf_3_desc';
+  static const _vhf4LabelKey        = 'vhf_4_label';
+  static const _vhf4DescKey         = 'vhf_4_desc';
+  // Epoch-ms string: when settings were last changed on *this* device.
+  static const _settingsModifiedKey = 'settings_modified_at_epoch';
 
   late Box<String> _box;
+  FirestoreService? _firestore;
+  StreamSubscription<Map<String, String>?>? _settingsSub;
+
   ThemeMode _mode = ThemeMode.system;
   String _title = 'Logbuch';
   String _weatherUrl = '';
   late String _logbookCode;
+  String _vesselName = '';
+  String _vesselMmsi = '';
+  String _vesselCallSign = '';
+  String _lifeRaftInfo = '';
+  String _epirbInfo = '';
+  String _fireSuppInfo = '';
+  String _vhf1Label = 'Channel 16';
+  String _vhf1Desc  = 'Distress · 156.800 MHz';
+  String _vhf2Label = 'Channel 67';
+  String _vhf2Desc  = 'Ship to Ship · 156.375 MHz';
+  String _vhf3Label = 'Channel 06';
+  String _vhf3Desc  = 'Search & Rescue · 156.300 MHz';
+  String _vhf4Label = 'Channel 13';
+  String _vhf4Desc  = 'Bridge to Bridge · 156.650 MHz';
 
-  ThemeMode get themeMode => _mode;
-  String get logbuchTitle => _title;
-  String get weatherUrl => _weatherUrl;
-  String get logbookCode => _logbookCode;
-  // Alias used by FirestoreService / StorageService.
-  String get installationId => _logbookCode;
+  ThemeMode get themeMode       => _mode;
+  String get logbuchTitle       => _title;
+  String get weatherUrl         => _weatherUrl;
+  String get logbookCode        => _logbookCode;
+  String get vesselName         => _vesselName;
+  String get vesselMmsi         => _vesselMmsi;
+  String get vesselCallSign     => _vesselCallSign;
+  String get lifeRaftInfo       => _lifeRaftInfo;
+  String get epirbInfo          => _epirbInfo;
+  String get fireSuppInfo       => _fireSuppInfo;
+  String get vhf1Label          => _vhf1Label;
+  String get vhf1Desc           => _vhf1Desc;
+  String get vhf2Label          => _vhf2Label;
+  String get vhf2Desc           => _vhf2Desc;
+  String get vhf3Label          => _vhf3Label;
+  String get vhf3Desc           => _vhf3Desc;
+  String get vhf4Label          => _vhf4Label;
+  String get vhf4Desc           => _vhf4Desc;
+  String get installationId     => _logbookCode;
 
-  /// True on first launch after the cloud sync feature was introduced.
-  bool get needsInitialSync =>
-      _box.get(_initialSyncDoneKey) == null;
-
+  bool get needsInitialSync => _box.get(_initialSyncDoneKey) == null;
   void markInitialSyncDone() => _box.put(_initialSyncDoneKey, 'true');
-  void resetInitialSync() => _box.delete(_initialSyncDoneKey);
+  void resetInitialSync()    => _box.delete(_initialSyncDoneKey);
 
-  /// Returns the last visited route if it was saved today, otherwise '/'.
   String get lastRouteToday {
     if (_box.get(_lastRouteDateKey) != _todayStr()) return '/';
     return _box.get(_lastRouteKey) ?? '/';
@@ -49,11 +94,40 @@ class ThemeProvider extends ChangeNotifier {
     return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   }
 
+  // ── Local modification timestamp ───────────────────────────────────────────
+
+  /// When settings were last modified on this device (null = never modified locally).
+  DateTime? get _settingsModifiedAt {
+    final v = _box.get(_settingsModifiedKey);
+    if (v == null) return null;
+    final ms = int.tryParse(v);
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
+
+  void _markSettingsModified() =>
+      _box.put(_settingsModifiedKey, DateTime.now().millisecondsSinceEpoch.toString());
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+
   Future<void> init() async {
     _box = await Hive.openBox<String>(_boxName);
-    _mode = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
-    _title = _box.get(_titleKey, defaultValue: 'Logbuch')!;
-    _weatherUrl = _box.get(_weatherKey, defaultValue: '')!;
+    _mode        = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
+    _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
+    _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
+    _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
+    _vesselMmsi      = _box.get(_vesselMmsiKey,     defaultValue: '')!;
+    _vesselCallSign  = _box.get(_vesselCallSignKey,  defaultValue: '')!;
+    _lifeRaftInfo    = _box.get(_lifeRaftKey,        defaultValue: '')!;
+    _epirbInfo       = _box.get(_epirbKey,           defaultValue: '')!;
+    _fireSuppInfo    = _box.get(_fireSuppKey,         defaultValue: '')!;
+    _vhf1Label = _box.get(_vhf1LabelKey, defaultValue: 'Channel 16')!;
+    _vhf1Desc  = _box.get(_vhf1DescKey,  defaultValue: 'Distress · 156.800 MHz')!;
+    _vhf2Label = _box.get(_vhf2LabelKey, defaultValue: 'Channel 67')!;
+    _vhf2Desc  = _box.get(_vhf2DescKey,  defaultValue: 'Ship to Ship · 156.375 MHz')!;
+    _vhf3Label = _box.get(_vhf3LabelKey, defaultValue: 'Channel 06')!;
+    _vhf3Desc  = _box.get(_vhf3DescKey,  defaultValue: 'Search & Rescue · 156.300 MHz')!;
+    _vhf4Label = _box.get(_vhf4LabelKey, defaultValue: 'Channel 13')!;
+    _vhf4Desc  = _box.get(_vhf4DescKey,  defaultValue: 'Bridge to Bridge · 156.650 MHz')!;
 
     final existing = _box.get(_logbookCodeKey);
     if (existing != null && existing.isNotEmpty) {
@@ -63,6 +137,8 @@ class ThemeProvider extends ChangeNotifier {
       _box.put(_logbookCodeKey, _logbookCode);
     }
   }
+
+  // ── Logbook code ───────────────────────────────────────────────────────────
 
   void setLogbookCode(String code) {
     final normalized = code.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
@@ -78,6 +154,8 @@ class ThemeProvider extends ChangeNotifier {
     final rand = Random.secure();
     return List.generate(8, (_) => chars[rand.nextInt(chars.length)]).join();
   }
+
+  // ── Non-synced setters ─────────────────────────────────────────────────────
 
   void setThemeMode(ThemeMode mode) {
     if (_mode == mode) return;
@@ -102,15 +180,196 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Synced vessel / VHF setters ────────────────────────────────────────────
+
+  void setVesselName(String v) {
+    final t = v.trim();
+    if (_vesselName == t) return;
+    _vesselName = t;
+    _box.put(_vesselNameKey, t);
+    _pushSettings();
+    notifyListeners();
+  }
+
+  void setVesselMmsi(String v) {
+    final t = v.trim();
+    if (_vesselMmsi == t) return;
+    _vesselMmsi = t;
+    _box.put(_vesselMmsiKey, t);
+    _pushSettings();
+    notifyListeners();
+  }
+
+  void setVesselCallSign(String v) {
+    final t = v.trim();
+    if (_vesselCallSign == t) return;
+    _vesselCallSign = t;
+    _box.put(_vesselCallSignKey, t);
+    _pushSettings();
+    notifyListeners();
+  }
+
+  void setLifeRaftInfo(String v) {
+    final t = v.trim();
+    if (_lifeRaftInfo == t) return;
+    _lifeRaftInfo = t;
+    _box.put(_lifeRaftKey, t);
+    _pushSettings();
+    notifyListeners();
+  }
+
+  void setEpirbInfo(String v) {
+    final t = v.trim();
+    if (_epirbInfo == t) return;
+    _epirbInfo = t;
+    _box.put(_epirbKey, t);
+    _pushSettings();
+    notifyListeners();
+  }
+
+  void setFireSuppInfo(String v) {
+    final t = v.trim();
+    if (_fireSuppInfo == t) return;
+    _fireSuppInfo = t;
+    _box.put(_fireSuppKey, t);
+    _pushSettings();
+    notifyListeners();
+  }
+
+  void setVhfEntry(int idx, String label, String desc) {
+    final l = label.trim();
+    final d = desc.trim();
+    switch (idx) {
+      case 1: _vhf1Label = l; _vhf1Desc = d; _box.put(_vhf1LabelKey, l); _box.put(_vhf1DescKey, d);
+      case 2: _vhf2Label = l; _vhf2Desc = d; _box.put(_vhf2LabelKey, l); _box.put(_vhf2DescKey, d);
+      case 3: _vhf3Label = l; _vhf3Desc = d; _box.put(_vhf3LabelKey, l); _box.put(_vhf3DescKey, d);
+      case 4: _vhf4Label = l; _vhf4Desc = d; _box.put(_vhf4LabelKey, l); _box.put(_vhf4DescKey, d);
+    }
+    _pushSettings();
+    notifyListeners();
+  }
+
+  // ── Firestore sync ─────────────────────────────────────────────────────────
+
+  /// Attaches Firestore and starts syncing settings.
+  ///
+  /// Conflict resolution:
+  ///   • [initialSync] = true  → push local as migration, then pull remote.
+  ///   • Otherwise: compare the remote server `updatedAt` with the local
+  ///     modification timestamp.  Whichever is newer wins.  If no remote data
+  ///     exists yet, push local.
+  ///
+  /// A real-time stream listener is started so changes from another device
+  /// appear immediately while the app is running.
+  Future<void> attachFirestore(FirestoreService service,
+      {bool initialSync = false}) async {
+    _firestore = service;
+
+    await _settingsSub?.cancel();
+    _settingsSub = null;
+
+    try {
+      if (initialSync) {
+        // Migration: push everything we have, then pull (remote wins if newer).
+        await service.saveSettings(_toSettingsMap());
+        _markSettingsModified();
+      }
+
+      final (:data, :updatedAt) = await service.fetchSettingsWithMeta();
+
+      if (data == null) {
+        // Nothing on the server yet — push local.
+        await service.saveSettings(_toSettingsMap());
+        _markSettingsModified();
+      } else {
+        final localMod = _settingsModifiedAt;
+        final remoteIsNewer = localMod == null ||
+            (updatedAt != null && updatedAt.isAfter(localMod));
+
+        if (remoteIsNewer) {
+          _applyRemoteSettings(data);
+        } else {
+          // Local is newer — push it.
+          await service.saveSettings(_toSettingsMap());
+        }
+      }
+    } catch (_) {
+      // Offline — continue with local data.
+    }
+
+    // Real-time listener: apply remote changes while the app is running.
+    // Skip the echo that comes back from our own pushes by comparing values.
+    _settingsSub = service.settingsChanges().listen((remote) {
+      if (remote == null) return;
+      if (_mapsEqual(_toSettingsMap(), remote)) return;
+      _applyRemoteSettings(remote);
+    }, onError: (_) {});
+  }
+
+  // ── Private helpers ────────────────────────────────────────────────────────
+
+  Map<String, String> _toSettingsMap() => {
+        _vesselNameKey:      _vesselName,
+        _vesselMmsiKey:      _vesselMmsi,
+        _vesselCallSignKey:  _vesselCallSign,
+        _lifeRaftKey:        _lifeRaftInfo,
+        _epirbKey:           _epirbInfo,
+        _fireSuppKey:        _fireSuppInfo,
+        _vhf1LabelKey:       _vhf1Label,
+        _vhf1DescKey:        _vhf1Desc,
+        _vhf2LabelKey:       _vhf2Label,
+        _vhf2DescKey:        _vhf2Desc,
+        _vhf3LabelKey:       _vhf3Label,
+        _vhf3DescKey:        _vhf3Desc,
+        _vhf4LabelKey:       _vhf4Label,
+        _vhf4DescKey:        _vhf4Desc,
+      };
+
+  void _pushSettings() {
+    _markSettingsModified();
+    _firestore?.saveSettings(_toSettingsMap()).catchError((_) {});
+  }
+
+  void _applyRemoteSettings(Map<String, String> r) {
+    var changed = false;
+    void apply(String key, String current, void Function(String) set) {
+      final v = r[key];
+      if (v != null && v != current) { set(v); changed = true; }
+    }
+    apply(_vesselNameKey,     _vesselName,     (v) { _vesselName = v;     _box.put(_vesselNameKey, v); });
+    apply(_vesselMmsiKey,     _vesselMmsi,     (v) { _vesselMmsi = v;     _box.put(_vesselMmsiKey, v); });
+    apply(_vesselCallSignKey, _vesselCallSign, (v) { _vesselCallSign = v;  _box.put(_vesselCallSignKey, v); });
+    apply(_lifeRaftKey,       _lifeRaftInfo,   (v) { _lifeRaftInfo = v;    _box.put(_lifeRaftKey, v); });
+    apply(_epirbKey,          _epirbInfo,      (v) { _epirbInfo = v;       _box.put(_epirbKey, v); });
+    apply(_fireSuppKey,       _fireSuppInfo,   (v) { _fireSuppInfo = v;    _box.put(_fireSuppKey, v); });
+    apply(_vhf1LabelKey,      _vhf1Label,      (v) { _vhf1Label = v;       _box.put(_vhf1LabelKey, v); });
+    apply(_vhf1DescKey,       _vhf1Desc,       (v) { _vhf1Desc = v;        _box.put(_vhf1DescKey, v); });
+    apply(_vhf2LabelKey,      _vhf2Label,      (v) { _vhf2Label = v;       _box.put(_vhf2LabelKey, v); });
+    apply(_vhf2DescKey,       _vhf2Desc,       (v) { _vhf2Desc = v;        _box.put(_vhf2DescKey, v); });
+    apply(_vhf3LabelKey,      _vhf3Label,      (v) { _vhf3Label = v;       _box.put(_vhf3LabelKey, v); });
+    apply(_vhf3DescKey,       _vhf3Desc,       (v) { _vhf3Desc = v;        _box.put(_vhf3DescKey, v); });
+    apply(_vhf4LabelKey,      _vhf4Label,      (v) { _vhf4Label = v;       _box.put(_vhf4LabelKey, v); });
+    apply(_vhf4DescKey,       _vhf4Desc,       (v) { _vhf4Desc = v;        _box.put(_vhf4DescKey, v); });
+    if (changed) notifyListeners();
+  }
+
+  static bool _mapsEqual(Map<String, String> a, Map<String, String> b) {
+    if (a.length != b.length) return false;
+    for (final k in a.keys) {
+      if (a[k] != b[k]) return false;
+    }
+    return true;
+  }
+
   static ThemeMode _fromString(String v) => switch (v) {
         'light' => ThemeMode.light,
-        'dark' => ThemeMode.dark,
-        _ => ThemeMode.system,
+        'dark'  => ThemeMode.dark,
+        _       => ThemeMode.system,
       };
 
   static String _toString(ThemeMode m) => switch (m) {
         ThemeMode.light => 'light',
-        ThemeMode.dark => 'dark',
-        _ => 'system',
+        ThemeMode.dark  => 'dark',
+        _               => 'system',
       };
 }
