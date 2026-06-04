@@ -55,6 +55,11 @@ class TimelineEntry extends HiveObject {
   @HiveField(15)
   String? fockState;
 
+  /// Auto-populated when a system event (e.g. vessel status change) generates
+  /// this entry. Shown as clear text below the regular remarks.
+  @HiveField(16)
+  String? vesselStatusNote;
+
   TimelineEntry({
     required this.time,
     this.course,
@@ -72,5 +77,6 @@ class TimelineEntry extends HiveObject {
     this.motorOn,
     this.grossState,
     this.fockState,
+    this.vesselStatusNote,
   });
 }

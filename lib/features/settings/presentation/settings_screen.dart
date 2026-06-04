@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../home/data/home_repository.dart';
+import '../../home/widgets/nav_bar.dart';
 import '../domain/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,24 +18,27 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late TextEditingController _titleController;
-  late TextEditingController _weatherController;
-  final TextEditingController _codeController = TextEditingController();
+  late TextEditingController _vesselNameCtrl;
+  late TextEditingController _vesselMmsiCtrl;
+  late TextEditingController _vesselCallSignCtrl;
+  final TextEditingController _codeCtrl = TextEditingController();
   bool _syncing = false;
 
   @override
   void initState() {
     super.initState();
     final p = context.read<ThemeProvider>();
-    _titleController = TextEditingController(text: p.logbuchTitle);
-    _weatherController = TextEditingController(text: p.weatherUrl);
+    _vesselNameCtrl = TextEditingController(text: p.vesselName);
+    _vesselMmsiCtrl = TextEditingController(text: p.vesselMmsi);
+    _vesselCallSignCtrl = TextEditingController(text: p.vesselCallSign);
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _weatherController.dispose();
-    _codeController.dispose();
+    _vesselNameCtrl.dispose();
+    _vesselMmsiCtrl.dispose();
+    _vesselCallSignCtrl.dispose();
+    _codeCtrl.dispose();
     super.dispose();
   }
 
@@ -41,29 +47,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return code;
   }
 
-  Future<void> _forceSync() async {
-    setState(() => _syncing = true);
-    try {
-      await context.read<HomeRepository>().forceSync();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Synchronisierung abgeschlossen.')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
 
   Future<void> _connectCode() async {
-    final rawCode = _codeController.text;
-    final code = rawCode.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final raw = _codeCtrl.text;
+    final code = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (code.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ungültiger Code.')),
@@ -71,7 +58,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       return;
     }
 
-    // Read providers before the async gap.
     final themeProvider = context.read<ThemeProvider>();
     final repo = context.read<HomeRepository>();
 
@@ -81,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Logbuch verbinden'),
         content: Text(
           'Dieses Gerät wird mit dem Logbuch "$code" verbunden. '
-          'Lokale und entfernte Einträge werden zusammengeführt.',
+          'Alle lokalen Einträge werden gelöscht und durch die Cloud-Daten ersetzt.',
         ),
         actions: [
           TextButton(
@@ -98,7 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed != true) return;
 
     themeProvider.setLogbookCode(code);
-    _codeController.clear();
+    _codeCtrl.clear();
     if (mounted) FocusScope.of(context).unfocus();
 
     setState(() => _syncing = true);
@@ -125,258 +111,192 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    final scheme = Theme.of(context).colorScheme;
-    final code = themeProvider.logbookCode;
+    final p = context.watch<ThemeProvider>();
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Einstellungen')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      backgroundColor: cs.surface,
+      appBar: AppBar(
+        backgroundColor: cs.surface,
+        foregroundColor: cs.primary,
+        elevation: 0,
+        scrolledUnderElevation: 1,
+        shadowColor: Colors.black12,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
+        automaticallyImplyLeading: false,
+      ),
+      bottomNavigationBar: AppBottomNav(
+        active: NavTab.settings,
+        showFab: false,
+        onSelect: (tab) {
+          if (tab == NavTab.journal) context.go('/');
+          if (tab == NavTab.map) context.push('/tracks');
+          if (tab == NavTab.safety) context.push('/emergency');
+        },
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Page header ───────────────────────────────────────────
+            Text(
+              'Einstellungen',
+              style: GoogleFonts.newsreader(
+                fontSize: 24,
+                fontWeight: FontWeight.w500,
+                letterSpacing: -0.24,
+                color: cs.primary,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Navigationsumgebung konfigurieren',
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Vessel Information ────────────────────────────────────
+            _buildVesselSection(p, cs),
+            const SizedBox(height: 16),
+
+            // ── Display & Appearance ──────────────────────────────────
+            _buildDisplaySection(p, cs),
+            const SizedBox(height: 16),
+
+            // ── Synchronization ───────────────────────────────────────
+            _buildSyncSection(p, cs),
+            const SizedBox(height: 32),
+
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Vessel Information ──────────────────────────────────────────────
+  Widget _buildVesselSection(ThemeProvider p, ColorScheme cs) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0, top: 0, bottom: 0,
+              child: Container(width: 4, color: const Color(0xFF38485A)),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'SCHIFF',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                          color: cs.secondary,
+                        ),
+                      ),
+                      Icon(Icons.directions_boat_outlined,
+                          size: 20, color: cs.outlineVariant),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _vesselRow(
+                    label: 'Name',
+                    controller: _vesselNameCtrl,
+                    hint: 'z.B. S.V. Adventure',
+                    onChanged: p.setVesselName,
+                    cs: cs,
+                  ),
+                  _rowDivider(cs),
+                  _vesselRow(
+                    label: 'MMSI',
+                    controller: _vesselMmsiCtrl,
+                    hint: '123456789',
+                    onChanged: p.setVesselMmsi,
+                    keyboard: TextInputType.number,
+                    cs: cs,
+                  ),
+                  _rowDivider(cs),
+                  _vesselRow(
+                    label: 'Rufzeichen',
+                    controller: _vesselCallSignCtrl,
+                    hint: 'z.B. HB-9-XY',
+                    onChanged: p.setVesselCallSign,
+                    cs: cs,
+                    isLast: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _vesselRow({
+    required String label,
+    required TextEditingController controller,
+    required String hint,
+    required ValueChanged<String> onChanged,
+    required ColorScheme cs,
+    TextInputType keyboard = TextInputType.text,
+    bool isLast = false,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
+      child: Row(
         children: [
-          _sectionLabel(context, 'Allgemein'),
-          const SizedBox(height: 8),
-          Card(
-            color: scheme.surfaceContainerHigh,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Titel',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          )),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
-                      hintText: 'Logbuch',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                    ),
-                    textInputAction: TextInputAction.done,
-                    onChanged: (v) => themeProvider.setLogbuchTitle(v),
-                    onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                  ),
-                ],
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                color: cs.onSurfaceVariant,
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          _sectionLabel(context, 'Wetter'),
-          const SizedBox(height: 8),
-          Card(
-            color: scheme.surfaceContainerHigh,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Wetter-URL',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          )),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Wird beim Tippen auf "Wetter" in der Navigation geöffnet.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _weatherController,
-                    decoration: InputDecoration(
-                      hintText: 'https://www.windy.com',
-                      prefixIcon: const Icon(Icons.language_outlined),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 10),
-                    ),
-                    keyboardType: TextInputType.url,
-                    textInputAction: TextInputAction.done,
-                    onChanged: (v) => themeProvider.setWeatherUrl(v),
-                    onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                  ),
-                ],
+          Expanded(
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.right,
+              keyboardType: keyboard,
+              textInputAction: TextInputAction.next,
+              style: GoogleFonts.newsreader(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _sectionLabel(context, 'Erscheinungsbild'),
-          const SizedBox(height: 8),
-          Card(
-            color: scheme.surfaceContainerHigh,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Design',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          )),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: SegmentedButton<ThemeMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: ThemeMode.system,
-                          label: Text('System'),
-                          icon: Icon(Icons.brightness_auto_outlined),
-                        ),
-                        ButtonSegment(
-                          value: ThemeMode.light,
-                          label: Text('Hell'),
-                          icon: Icon(Icons.light_mode_outlined),
-                        ),
-                        ButtonSegment(
-                          value: ThemeMode.dark,
-                          label: Text('Dunkel'),
-                          icon: Icon(Icons.dark_mode_outlined),
-                        ),
-                      ],
-                      selected: {themeProvider.themeMode},
-                      onSelectionChanged: (selection) =>
-                          themeProvider.setThemeMode(selection.first),
-                    ),
-                  ),
-                ],
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                hintText: hint,
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 15,
+                  color: cs.outline.withValues(alpha: 0.5),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _sectionLabel(context, 'Cloud-Sync'),
-          const SizedBox(height: 8),
-          Card(
-            color: scheme.surfaceContainerHigh,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Logbuch-Code',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Gib diesen Code auf einem anderen Gerät ein, um dasselbe Logbuch zu verwenden.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: scheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _formatCode(code),
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: scheme.onPrimaryContainer,
-                              letterSpacing: 6,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filled(
-                        onPressed: () {
-                          Clipboard.setData(
-                              ClipboardData(text: _formatCode(code)));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Code kopiert.')),
-                          );
-                        },
-                        icon: const Icon(Icons.copy_outlined),
-                        tooltip: 'Kopieren',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Mit anderem Logbuch verbinden',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Gib den Code eines anderen Geräts ein.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _codeController,
-                          decoration: InputDecoration(
-                            hintText: 'XXXX-XXXX',
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                          ),
-                          textCapitalization: TextCapitalization.characters,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) => _connectCode(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: _syncing ? null : _connectCode,
-                        child: const Text('Verbinden'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.tonal(
-                      onPressed: _syncing ? null : _forceSync,
-                      child: _syncing
-                          ? const SizedBox(
-                              height: 16,
-                              width: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.sync_outlined, size: 18),
-                                SizedBox(width: 8),
-                                Text('Jetzt synchronisieren'),
-                              ],
-                            ),
-                    ),
-                  ),
-                ],
-              ),
+              onChanged: onChanged,
+              onSubmitted: (_) => FocusScope.of(context).unfocus(),
             ),
           ),
         ],
@@ -384,15 +304,270 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _sectionLabel(BuildContext context, String label) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 4),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
+  Widget _rowDivider(ColorScheme cs) => Divider(
+        color: cs.surfaceContainerHigh,
+        height: 16,
+        thickness: 1,
+      );
+
+  // ── Display & Appearance ────────────────────────────────────────────
+  Widget _buildDisplaySection(ThemeProvider p, ColorScheme cs) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'DARSTELLUNG',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: cs.secondary,
+                ),
+              ),
+              Icon(Icons.palette_outlined,
+                  size: 20, color: cs.outlineVariant),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'App-Design',
+            style: GoogleFonts.inter(
+              fontSize: 15,
               fontWeight: FontWeight.w600,
+              color: cs.onSurface,
             ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                _themeButton('System', ThemeMode.system, p, cs),
+                _themeButton('Hell', ThemeMode.light, p, cs),
+                _themeButton('Dunkel', ThemeMode.dark, p, cs),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _themeButton(
+      String label, ThemeMode mode, ThemeProvider p, ColorScheme cs) {
+    final isActive = p.themeMode == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => p.setThemeMode(mode),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? cs.surfaceContainerLowest : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              color: isActive ? cs.primary : cs.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Synchronization ─────────────────────────────────────────────────
+  Widget _buildSyncSection(ThemeProvider p, ColorScheme cs) {
+    final code = p.logbookCode;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'SYNCHRONISIERUNG',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: cs.secondary,
+                ),
+              ),
+              Icon(Icons.sync, size: 20, color: cs.outlineVariant),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Current code
+          Text(
+            'LOGBUCH-CODE',
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Gib diesen Code auf einem anderen Gerät ein, um dasselbe Logbuch zu teilen.',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: cs.primaryContainer,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    _formatCode(code),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: cs.onPrimaryContainer,
+                      letterSpacing: 6,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: _formatCode(code)));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Code kopiert.')),
+                  );
+                },
+                icon: const Icon(Icons.copy_outlined),
+                tooltip: 'Kopieren',
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Connect to new logbook
+          Text(
+            'LOGBOOK SYNC',
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Mit einem anderen Logbuch via Firebase verbinden.',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _codeCtrl,
+            decoration: InputDecoration(
+              hintText: 'Sync-Code eingeben',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: cs.outlineVariant),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: cs.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: cs.primary),
+              ),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 12),
+              filled: true,
+              fillColor: cs.surfaceContainerLow,
+            ),
+            textCapitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _connectCode(),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: _syncing ? null : _connectCode,
+              style: FilledButton.styleFrom(
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                textStyle: GoogleFonts.inter(
+                    fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              child: _syncing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Sync Now'),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,59 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../../settings/domain/theme_provider.dart';
+enum NavTab { journal, map, settings, safety }
 
-enum NavTab { journal, map, weather, settings }
-
-/// Bottom navigation bar — Maritime Journal design system.
-///
-/// [withCompass] — detail screen variant: raised compass button in the
-/// centre slot (replaces the Map tab).
 class AppBottomNav extends StatelessWidget {
   final NavTab active;
-  final bool withCompass;
-  final VoidCallback? onCompassTap;
+  final VoidCallback? onFabTap;
   final void Function(NavTab tab)? onSelect;
+  final bool showFab;
 
   const AppBottomNav({
     super.key,
     required this.active,
-    this.withCompass = false,
-    this.onCompassTap,
+    this.onFabTap,
     this.onSelect,
+    this.showFab = true,
   });
 
   static const double _navHeight = 64;
-  static const double _compassRise = 28;
-  static const Color _navBg = Color(0xFF142435); // tertiary
+  static const double _fabRise = 24;
+  static const Color _navBg = Color(0xFF2A3A4C);
 
   static double totalHeight(BuildContext context) =>
-      _navHeight + MediaQuery.viewPaddingOf(context).bottom;
-
-  Future<void> _launchWeather(BuildContext context) async {
-    final url = context.read<ThemeProvider>().weatherUrl;
-    if (url.isEmpty) return;
-    final uri = Uri.tryParse(url);
-    if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
-  }
+      _navHeight + _fabRise + MediaQuery.viewPaddingOf(context).bottom;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
-    final totalH = _navHeight + safeBottom + (withCompass ? _compassRise : 0);
+    final totalH = _navHeight + safeBottom + (showFab ? _fabRise : 0);
 
     return SizedBox(
       height: totalH,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // ── Nav bar container ─────────────────────────────────────
+          // ── Nav bar ───────────────────────────────────────────────
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: Container(
@@ -64,8 +46,8 @@ class AppBottomNav extends StatelessWidget {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0x1A000000),
-                    blurRadius: 12,
+                    color: Color(0x33000000),
+                    blurRadius: 16,
                     offset: Offset(0, -4),
                   ),
                 ],
@@ -74,29 +56,27 @@ class AppBottomNav extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _tab(context, cs, NavTab.journal, Icons.menu_book_rounded, 'Journal'),
-                  if (withCompass)
-                    const SizedBox(width: 56)
-                  else
-                    _tab(context, cs, NavTab.map, Icons.explore, 'Karte'),
-                  _tab(context, cs, NavTab.weather, Icons.cloud_outlined, 'Wetter'),
+                  _tab(context, cs, NavTab.journal, Icons.auto_stories, 'Journal'),
+                  _tab(context, cs, NavTab.map, Icons.explore, 'Karte'),
+                  const SizedBox(width: 64),
                   _tab(context, cs, NavTab.settings, Icons.settings_outlined, 'Einstellg.'),
+                  _tab(context, cs, NavTab.safety, Icons.health_and_safety, 'Sicherheit'),
                 ],
               ),
             ),
           ),
 
-          // ── Raised compass button (detail screen only) ────────────
-          if (withCompass)
+          // ── Raised centre FAB (journal & day-detail only) ─────────
+          if (showFab)
             Positioned(
               top: 0, left: 0, right: 0,
               child: Center(
                 child: GestureDetector(
-                  onTap: onCompassTap,
+                  onTap: onFabTap,
                   child: Container(
-                    width: 56, height: 56,
+                    width: 64, height: 64,
                     decoration: BoxDecoration(
-                      color: cs.primary,
+                      color: cs.primaryContainer,
                       shape: BoxShape.circle,
                       border: Border.all(color: _navBg, width: 4),
                       boxShadow: [
@@ -107,8 +87,7 @@ class AppBottomNav extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: Icon(Icons.explore,
-                        color: cs.secondaryContainer, size: 26),
+                    child: const Icon(Icons.add, color: Colors.white, size: 30),
                   ),
                 ),
               ),
@@ -123,14 +102,7 @@ class AppBottomNav extends StatelessWidget {
     final isActive = active == tab;
     const inactiveColor = Color(0xFF93A4B9); // on-tertiary-container
 
-    // Weather tap opens URL directly — no routing needed.
-    void handleTap() {
-      if (tab == NavTab.weather) {
-        _launchWeather(context);
-      } else {
-        onSelect?.call(tab);
-      }
-    }
+    void handleTap() => onSelect?.call(tab);
 
     if (isActive) {
       return GestureDetector(
@@ -138,13 +110,13 @@ class AppBottomNav extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: cs.primaryContainer,
+            color: cs.secondaryContainer,
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: cs.secondary, size: 22),
+              Icon(icon, color: cs.onSecondaryContainer, size: 22),
               const SizedBox(height: 2),
               Text(
                 label.toUpperCase(),
@@ -152,7 +124,7 @@ class AppBottomNav extends StatelessWidget {
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
-                  color: cs.secondary,
+                  color: cs.onSecondaryContainer,
                 ),
               ),
             ],
