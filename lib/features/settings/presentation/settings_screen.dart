@@ -564,7 +564,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white),
                     )
-                  : const Text('Sync Now'),
+                  : const Text('Synchronisieren'),
             ),
           ),
         ],

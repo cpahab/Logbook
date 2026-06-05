@@ -186,11 +186,25 @@ class _HomeScreenState extends State<HomeScreen> {
       if (w.contains('wolke') || w.contains('bewölkt') || w.contains('cloud')) {
         seen.add(Icons.cloud_outlined);
       }
-      if (w.contains('wind') || w.contains('sturm') || w.contains('storm')) {
+      if (w.contains('sturm') || w.contains('storm')) {
         seen.add(Icons.air);
       }
     }
     return seen.toList();
+  }
+
+  // Returns the highest wind speed in knots across all timeline entries, or null.
+  int? _maxWindKnots(List<dynamic> timeline) {
+    int? max;
+    for (final tl in timeline) {
+      final raw = tl.wind as String?;
+      if (raw == null || raw.isEmpty) continue;
+      final match = RegExp(r'\d+').firstMatch(raw);
+      if (match == null) continue;
+      final knots = int.tryParse(match.group(0)!);
+      if (knots != null && (max == null || knots > max)) max = knots;
+    }
+    return max;
   }
 
   @override
@@ -238,10 +252,11 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
-        centerTitle: false,
+        centerTitle: true,
         automaticallyImplyLeading: false,
+        toolbarHeight: 72,
         title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
@@ -607,6 +622,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               child: Icon(ic, size: 16,
                                   color: isActive ? cs.secondary : cs.outline),
                             )),
+                            Builder(builder: (context) {
+                              final wind = _maxWindKnots(entry.timeline);
+                              if (wind == null || wind <= 5) return const SizedBox.shrink();
+                              final strong = wind > 20;
+                              return Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Icon(
+                                  strong ? Icons.storm : Icons.air,
+                                  size: 16,
+                                  color: isActive ? cs.secondary : cs.outline,
+                                ),
+                              );
+                            }),
                           ],
                         ),
                         // Line 2: Route (only if harbor info is available)

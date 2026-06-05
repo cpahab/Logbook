@@ -227,7 +227,7 @@ class _TracksScreenState extends State<TracksScreen> {
         centerTitle: true,
         automaticallyImplyLeading: false,
         title: Text(
-          'Karte',
+          'Chronik',
           style: GoogleFonts.newsreader(
             fontSize: 24,
             fontWeight: FontWeight.w500,
@@ -393,6 +393,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   icon: Icons.add,
                   bgColor: cs.surfaceContainerLowest,
                   fgColor: cs.primary,
+                  tooltip: 'Vergrössern',
                   onTap: () => _mapController.move(
                     _mapController.camera.center,
                     _mapController.camera.zoom + 1,
@@ -403,6 +404,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   icon: Icons.remove,
                   bgColor: cs.surfaceContainerLowest,
                   fgColor: cs.primary,
+                  tooltip: 'Verkleinern',
                   onTap: () => _mapController.move(
                     _mapController.camera.center,
                     _mapController.camera.zoom - 1,
@@ -413,6 +415,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   icon: Icons.explore,
                   bgColor: cs.primary,
                   fgColor: const Color(0xFFFFE088),
+                  tooltip: 'Alle Tracks anzeigen',
                   onTap: () {
                     setState(() => _selectedIndex = null);
                     _refitToDisplayed();
@@ -424,6 +427,7 @@ class _TracksScreenState extends State<TracksScreen> {
                 icon: _satelliteView ? Icons.map_outlined : Icons.satellite_alt,
                 bgColor: cs.surfaceContainerLowest,
                 fgColor: cs.primary,
+                tooltip: _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
                 onTap: () => setState(() => _satelliteView = !_satelliteView),
               ),
             ],
@@ -438,24 +442,28 @@ class _TracksScreenState extends State<TracksScreen> {
     required Color bgColor,
     required Color fgColor,
     required VoidCallback onTap,
+    String? tooltip,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.12),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
+    return Tooltip(
+      message: tooltip ?? '',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Icon(icon, size: 20, color: fgColor),
         ),
-        child: Icon(icon, size: 20, color: fgColor),
       ),
     );
   }

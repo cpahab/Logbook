@@ -72,10 +72,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
           scrolledUnderElevation: 1,
           shadowColor: Colors.black12,
           centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context, null),
-          ),
+          automaticallyImplyLeading: false,
           title: Text(
             isEdit ? 'Besatzung bearbeiten' : 'Besatzung hinzufügen',
             style: GoogleFonts.newsreader(
