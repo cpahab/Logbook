@@ -19,7 +19,6 @@ class AppBottomNav extends StatelessWidget {
 
   static const double _navHeight = 64;
   static const double _fabRise = 24;
-  static const Color _navBg = Color(0xFF2A3A4C);
 
   static double totalHeight(BuildContext context) =>
       _navHeight + _fabRise + MediaQuery.viewPaddingOf(context).bottom;
@@ -41,10 +40,10 @@ class AppBottomNav extends StatelessWidget {
             child: Container(
               height: _navHeight + safeBottom,
               padding: EdgeInsets.only(bottom: safeBottom),
-              decoration: const BoxDecoration(
-                color: _navBg,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-                boxShadow: [
+              decoration: BoxDecoration(
+                color: cs.tertiaryContainer,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                boxShadow: const [
                   BoxShadow(
                     color: Color(0x33000000),
                     blurRadius: 16,
@@ -77,7 +76,7 @@ class AppBottomNav extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: cs.primaryContainer,
                       shape: BoxShape.circle,
-                      border: Border.all(color: _navBg, width: 4),
+                      border: Border.all(color: cs.tertiaryContainer, width: 4),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.25),
@@ -99,7 +98,7 @@ class AppBottomNav extends StatelessWidget {
   Widget _tab(BuildContext context, ColorScheme cs, NavTab tab,
       IconData icon, String label) {
     final isActive = active == tab;
-    const inactiveColor = Color(0xFF93A4B9); // on-tertiary-container
+    final inactiveColor = cs.onTertiaryContainer;
 
     void handleTap() => onSelect?.call(tab);
 

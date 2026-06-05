@@ -55,9 +55,11 @@ class MonthScreen extends StatelessWidget {
 
   String _monthName(int month) {
     const names = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
+      'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+      'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
     ];
-    return names[month - 1];
+    final i = month - 1;
+    if (i < 0 || i >= names.length) return month.toString();
+    return names[i];
   }
 }
