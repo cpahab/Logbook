@@ -13,7 +13,9 @@
       "Read(//Users/ursziegler/Library/Application Support/Google/**)",
       "Bash(cat ~/.zshrc)",
       "Read(//Users/ursziegler/**)",
-      "Bash(rm -rf \"/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358\")"
+      "Bash(rm -rf \"/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358\")",
+      "Bash(python3 -c ' *)",
+      "Bash(xargs cat)"
     ],
     "additionalDirectories": [
       "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358"

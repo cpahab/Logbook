@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../home/data/home_repository.dart';
+import '../../home/domain/crew_member.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../data/emergency_repository.dart';
@@ -317,16 +318,19 @@ class _AddIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 24,
-        height: 24,
-        decoration: BoxDecoration(
-          color: cs.primaryContainer,
-          shape: BoxShape.circle,
+    return Tooltip(
+      message: 'Hinzufügen',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: cs.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.add, size: 16, color: cs.onPrimaryContainer),
         ),
-        child: Icon(Icons.add, size: 16, color: cs.onPrimaryContainer),
       ),
     );
   }
@@ -524,7 +528,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return AlertDialog(
-      title: Text('Add Emergency Contact',
+      title: Text('Notfallkontakt hinzufügen',
           style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -537,13 +541,13 @@ class _AddContactDialogState extends State<_AddContactDialog> {
           const SizedBox(height: 8),
           TextField(
             controller: _roleCtrl,
-            decoration: const InputDecoration(labelText: 'Role (e.g. Spouse, Doctor)'),
+            decoration: const InputDecoration(labelText: 'Rolle (z.B. Partner, Arzt)'),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
-            decoration: const InputDecoration(labelText: 'Phone number'),
+            decoration: const InputDecoration(labelText: 'Telefonnummer'),
             keyboardType: TextInputType.phone,
           ),
         ],
@@ -551,9 +555,9 @@ class _AddContactDialogState extends State<_AddContactDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
+          child: Text('Abbrechen', style: TextStyle(color: cs.onSurfaceVariant)),
         ),
-        FilledButton(
+        FilledButton.icon(
           onPressed: () {
             if (_nameCtrl.text.trim().isEmpty) return;
             Navigator.pop(
@@ -565,7 +569,8 @@ class _AddContactDialogState extends State<_AddContactDialog> {
               ),
             );
           },
-          child: const Text('Add'),
+          icon: const Icon(Icons.anchor, size: 18),
+          label: const Text('Hinzufügen'),
         ),
       ],
     );
@@ -1130,15 +1135,15 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
 // ─── Crew Medical Overview Card ───────────────────────────────────────────────
 
 class _CrewMedicalCard extends StatelessWidget {
-  final dynamic member;
+  final CrewMember member;
   const _CrewMedicalCard({required this.member});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bloodType = (member.bloodType as String?) ?? '';
-    final allergies = (member.allergies as String?) ?? '';
-    final conditions = (member.conditions as String?) ?? '';
+    final bloodType = member.bloodType ?? '';
+    final allergies = member.allergies ?? '';
+    final conditions = member.conditions ?? '';
 
     return Container(
       decoration: BoxDecoration(
@@ -1186,13 +1191,13 @@ class _CrewMedicalCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                member.name as String,
+                                member.name,
                                 style: GoogleFonts.newsreader(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
                                     color: cs.primary),
                               ),
-                              if ((member.remarks as String?)?.isNotEmpty == true)
+                              if (member.remarks?.isNotEmpty == true)
                                 Container(
                                   margin: const EdgeInsets.only(top: 4),
                                   padding: const EdgeInsets.symmetric(

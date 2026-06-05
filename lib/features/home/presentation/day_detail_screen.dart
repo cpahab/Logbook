@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' show Point;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -79,7 +78,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: cs.onSurface),
+          icon: Icon(Icons.arrow_back, color: cs.primary),
           onPressed: () => context.go('/'),
         ),
         title: Text(
@@ -96,7 +95,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           if (entry != null)
             PopupMenuButton<String>(
               tooltip: 'Optionen',
-              icon: Icon(Icons.more_vert, color: cs.onSurface),
+              icon: Icon(Icons.more_vert, color: cs.primary),
               onSelected: (value) {
                 if (value == 'change_date') _changeDate(entry);
                 if (value == 'import_gpx') _importGpx();
@@ -255,16 +254,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           style: GoogleFonts.newsreader(
               fontSize: 18, fontWeight: FontWeight.w600),
         ),
-        content: TextField(
-          controller: ctrl,
-          maxLines: null,
-          keyboardType: TextInputType.multiline,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Freie Notizen für diesen Tag…',
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12)),
-            isDense: true,
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: ctrl,
+            minLines: 8,
+            maxLines: 14,
+            keyboardType: TextInputType.multiline,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Freie Notizen für diesen Tag…',
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              contentPadding: const EdgeInsets.all(12),
+            ),
           ),
         ),
         actions: [
@@ -272,9 +275,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Abbrechen'),
           ),
-          FilledButton(
+          FilledButton.icon(
             onPressed: () => Navigator.pop(ctx, ctrl.text),
-            child: const Text('Speichern'),
+            icon: const Icon(Icons.anchor, size: 18),
+            label: const Text('Speichern'),
           ),
         ],
       ),
@@ -322,26 +326,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 ],
               ),
               padding: const EdgeInsets.all(16),
-              child: Stack(
-                children: [
-                  Positioned(
-                    right: -20,
-                    bottom: -20,
-                    child: Icon(Icons.description,
-                        size: 120,
-                        color: cs.primary.withValues(alpha: 0.04)),
-                  ),
-                  Text(
-                    '"${entry.notes!}"',
-                    style: GoogleFonts.newsreader(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      fontStyle: FontStyle.italic,
-                      color: cs.onSurface,
-                      height: 1.5,
-                    ),
-                  ),
-                ],
+              child: Text(
+                '"${entry.notes!}"',
+                style: GoogleFonts.newsreader(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  fontStyle: FontStyle.italic,
+                  color: cs.onSurface,
+                  height: 1.5,
+                ),
               ),
             ),
           )
@@ -700,15 +693,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: () => _addTimelineEntry(context),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cs.surfaceContainer,
+            Tooltip(
+              message: 'Eintrag hinzufügen',
+              child: GestureDetector(
+                onTap: () => _addTimelineEntry(context),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.surfaceContainer,
+                  ),
+                  child: Icon(Icons.add, size: 20, color: cs.secondary),
                 ),
-                child: Icon(Icons.add, size: 20, color: cs.secondary),
               ),
             ),
           ],
@@ -970,7 +966,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(0xFF142435),
+            color: cs.tertiary,
             borderRadius: BorderRadius.circular(12),
           ),
           clipBehavior: Clip.antiAlias,
@@ -1182,14 +1178,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           },
           onPanUpdate: (details) {
             final camera = _mapController.camera;
-            final screenPt =
-                camera.latLngToScreenPoint(_droppedMarkerLatLng!);
-            final newPt = Point<num>(
-              screenPt.x + details.delta.dx,
-              screenPt.y + details.delta.dy,
-            );
+            final screenOffset = camera.latLngToScreenOffset(_droppedMarkerLatLng!);
+            final newOffset = screenOffset + details.delta;
             setState(
-                () => _droppedMarkerLatLng = camera.pointToLatLng(newPt));
+                () => _droppedMarkerLatLng = camera.screenOffsetToLatLng(newOffset));
           },
           onPanEnd: (_) {
             final nearest = _findNearestTrackPoint(
@@ -1321,16 +1313,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           style: GoogleFonts.newsreader(
               fontSize: 18, fontWeight: FontWeight.w600),
         ),
-        content: TextField(
-          controller: ctrl,
-          maxLines: null,
-          keyboardType: TextInputType.multiline,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Notizen für diesen Tag…',
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12)),
-            isDense: true,
+        content: SizedBox(
+          width: double.maxFinite,
+          child: TextField(
+            controller: ctrl,
+            minLines: 8,
+            maxLines: 14,
+            keyboardType: TextInputType.multiline,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Notizen für diesen Tag…',
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              contentPadding: const EdgeInsets.all(12),
+            ),
           ),
         ),
         actions: [
@@ -1338,9 +1334,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Abbrechen'),
           ),
-          FilledButton(
+          FilledButton.icon(
             onPressed: () => Navigator.pop(ctx, ctrl.text),
-            child: const Text('Speichern'),
+            icon: const Icon(Icons.anchor, size: 18),
+            label: const Text('Speichern'),
           ),
         ],
       ),
@@ -1425,9 +1422,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Abbrechen'),
           ),
-          FilledButton(
+          FilledButton.icon(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Speichern'),
+            icon: const Icon(Icons.anchor, size: 18),
+            label: const Text('Speichern'),
           ),
         ],
       ),
@@ -1506,9 +1504,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Abbrechen'),
             ),
-            FilledButton(
+            FilledButton.icon(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Speichern'),
+              icon: const Icon(Icons.anchor, size: 18),
+              label: const Text('Speichern'),
             ),
           ],
         ),
@@ -1646,7 +1645,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (bytes == null) return;
       preview = GpxParser().parseBytes(bytes);
     } else {
-      preview = await GpxParser().parse(File(picked.path!));
+      final path = picked.path;
+      if (path == null) return;
+      preview = await GpxParser().parse(File(path));
     }
 
     if (!mounted) return;
