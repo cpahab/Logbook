@@ -85,8 +85,9 @@ class _MaydayScreenState extends State<MaydayScreen>
     final cs = Theme.of(context).colorScheme;
     final vessel = context.watch<ThemeProvider>();
     final today = DateTime.now();
-    final entry = context.read<HomeRepository>().getEntry(today);
-    final crewCount = entry?.crew.length ?? 0;
+    final homeRepo = context.read<HomeRepository>();
+    final todayCrew = homeRepo.getEntry(today)?.crew ?? [];
+    final crewCount = todayCrew.isNotEmpty ? todayCrew.length : homeRepo.lastCrew.length;
 
     final vesselName = vessel.vesselName.isNotEmpty ? vessel.vesselName : '—';
     final callSign = vessel.vesselCallSign.isNotEmpty ? vessel.vesselCallSign : '—';
@@ -134,6 +135,11 @@ class _MaydayScreenState extends State<MaydayScreen>
           const SizedBox(height: 16),
 
           // Steps
+          AnimatedBuilder(
+            animation: _pulseAnim,
+            builder: (context, _) => _StepDsc(pulseValue: _pulseAnim.value),
+          ),
+          const SizedBox(height: 12),
           AnimatedBuilder(
             animation: _pulseAnim,
             builder: (context, _) => _StepSignal(pulseValue: _pulseAnim.value),
@@ -291,6 +297,160 @@ class _ProcedureHeader extends StatelessWidget {
 
 // ─── Step helpers ─────────────────────────────────────────────────────────────
 
+class _StepDsc extends StatelessWidget {
+  final double pulseValue;
+  const _StepDsc({required this.pulseValue});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final borderOpacity = 0.3 + 0.7 * (1 - pulseValue);
+    final shadowBlur = 10 * (1 - pulseValue);
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: cs.error.withValues(alpha: borderOpacity),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: cs.error.withValues(alpha: 0.2 * (1 - pulseValue)),
+            blurRadius: shadowBlur,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0, top: 0, bottom: 0,
+              child: Container(width: 6, color: cs.error),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 16, 16, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: cs.error,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.crisis_alert, color: cs.onError, size: 22),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'STEP 1: DSC DISTRESS ALERT',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                            color: cs.error,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _DscAction(
+                          number: '1',
+                          text: 'Lift the red flap over the distress button',
+                        ),
+                        const SizedBox(height: 6),
+                        _DscAction(
+                          number: '2',
+                          text: 'Press and hold (3–5 seconds, varies by radio) until the alert is sent',
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: cs.secondaryContainer.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.arrow_forward,
+                                  size: 14, color: cs.secondary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Wait for the radio to switch automatically to Channel 16',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: cs.onSecondaryContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DscAction extends StatelessWidget {
+  final String number;
+  final String text;
+  const _DscAction({required this.number, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(
+            color: cs.error.withValues(alpha: 0.15),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: cs.error,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            text,
+            style: GoogleFonts.newsreader(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _StepSignal extends StatelessWidget {
   final double pulseValue;
   const _StepSignal({required this.pulseValue});
@@ -341,7 +501,7 @@ class _StepSignal extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'STEP 1: SIGNAL',
+                          'STEP 2: SIGNAL',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -387,7 +547,7 @@ class _StepIdentification extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return _StepCard(
-      step: 2,
+      step: 3,
       label: 'IDENTIFICATION',
       icon: Icons.sailing,
       iconBg: cs.secondaryContainer,
@@ -412,22 +572,55 @@ class _StepIdentification extends StatelessWidget {
                 color: cs.onSurface,
               ),
               children: [
-                const TextSpan(text: 'THIS IS '),
+                const TextSpan(text: 'THIS IS YACHT '),
                 _underlinedSpan(vesselName, cs),
                 const TextSpan(text: ' '),
-                _underlinedSpan(callSign, cs),
+                _underlinedSpan(vesselName, cs),
                 const TextSpan(text: ' '),
+                _underlinedSpan(vesselName, cs),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text.rich(
+            TextSpan(
+              style: GoogleFonts.newsreader(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
+              ),
+              children: [
+                const TextSpan(text: 'CALLSIGN '),
+                _underlinedSpan(callSign, cs),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text.rich(
+            TextSpan(
+              style: GoogleFonts.newsreader(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
+              ),
+              children: [
+                const TextSpan(text: 'MMSI '),
                 _underlinedSpan(mmsi, cs),
               ],
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            'MAYDAY $vesselName',
-            style: GoogleFonts.newsreader(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: cs.onSurface,
+          Text.rich(
+            TextSpan(
+              style: GoogleFonts.newsreader(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
+              ),
+              children: [
+                const TextSpan(text: 'MAYDAY '),
+                _underlinedSpan(vesselName, cs),
+              ],
             ),
           ),
         ],
@@ -517,7 +710,7 @@ class _StepPosition extends StatelessWidget {
     }
 
     return _StepCard(
-      step: 3,
+      step: 4,
       label: 'POSITION',
       icon: Icons.location_on,
       iconBg: cs.secondaryContainer,
@@ -618,7 +811,7 @@ class _StepDistress extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'STEP 4: NATURE OF DISTRESS',
+                          'STEP 5: NATURE OF DISTRESS',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -683,7 +876,7 @@ class _StepCrew extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return _StepCard(
-      step: 5,
+      step: 6,
       label: 'CREW STATUS',
       icon: Icons.groups,
       iconBg: cs.secondaryContainer,
@@ -753,7 +946,7 @@ class _StepClosing extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'STEP 6: CLOSING',
+                'STEP 7: CLOSING',
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,

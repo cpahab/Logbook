@@ -10,91 +10,37 @@ import '../../settings/domain/theme_provider.dart';
 import '../data/emergency_repository.dart';
 import '../domain/emergency_contact.dart';
 
-class EmergencyManifestScreen extends StatelessWidget {
+class EmergencyManifestScreen extends StatefulWidget {
   const EmergencyManifestScreen({super.key});
 
-  static Future<void> _editFrequencies(
-      BuildContext context, ThemeProvider vessel) async {
-    final ctrls = List.generate(
-      4,
-      (i) => [
-        TextEditingController(
-            text: [vessel.vhf1Label, vessel.vhf2Label, vessel.vhf3Label, vessel.vhf4Label][i]),
-        TextEditingController(
-            text: [vessel.vhf1Desc, vessel.vhf2Desc, vessel.vhf3Desc, vessel.vhf4Desc][i]),
-      ],
-    );
-    final saved = await showDialog<bool>(
+  @override
+  State<EmergencyManifestScreen> createState() => _EmergencyManifestScreenState();
+}
+
+class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
+  bool _editMode = false;
+
+  void _showAddContactDialog() {
+    final repo = context.read<EmergencyRepository>();
+    showDialog<EmergencyContact>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Coast Guard Frequencies',
-            style: GoogleFonts.newsreader(
-                fontSize: 18, fontWeight: FontWeight.w600)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: List.generate(4, (i) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Channel ${i + 1}',
-                      style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
-                          color: Theme.of(ctx).colorScheme.outline)),
-                  const SizedBox(height: 4),
-                  TextField(
-                    controller: ctrls[i][0],
-                    decoration: InputDecoration(
-                      labelText: 'Channel',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                    ),
-                    textInputAction: TextInputAction.next,
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    controller: ctrls[i][1],
-                    decoration: InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 8),
-                    ),
-                    textInputAction: i < 3
-                        ? TextInputAction.next
-                        : TextInputAction.done,
-                  ),
-                ],
-              ),
-            )),
-          ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Abbrechen')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Speichern')),
-        ],
-      ),
-    );
-    if (saved == true) {
-      for (int i = 0; i < 4; i++) {
-        vessel.setVhfEntry(i + 1, ctrls[i][0].text, ctrls[i][1].text);
-      }
-    }
-    for (final pair in ctrls) {
-      for (final c in pair) { c.dispose(); }
-    }
+      builder: (_) => const _AddContactDialog(),
+    ).then((contact) {
+      if (contact != null) repo.addContact(contact);
+    });
+  }
+
+  void _showAddFrequencyDialog() {
+    final vessel = context.read<ThemeProvider>();
+    final labels = [vessel.vhf1Label, vessel.vhf2Label, vessel.vhf3Label, vessel.vhf4Label];
+    final nextSlot = labels.indexWhere((l) => l.isEmpty) + 1;
+    if (nextSlot == 0) return;
+    showDialog<({String label, String desc})?>(
+      context: context,
+      builder: (_) => const _AddFrequencyDialog(),
+    ).then((result) {
+      if (result != null) vessel.setVhfEntry(nextSlot, result.label, result.desc);
+    });
   }
 
   @override
@@ -103,8 +49,12 @@ class EmergencyManifestScreen extends StatelessWidget {
     final vessel = context.watch<ThemeProvider>();
     final emergency = context.watch<EmergencyRepository>();
     final today = DateTime.now();
-    final entry = context.read<HomeRepository>().getEntry(today);
-    final crew = entry?.crew ?? [];
+    final homeRepo = context.read<HomeRepository>();
+    final todayCrew = homeRepo.getEntry(today)?.crew ?? [];
+    final crew = todayCrew.isNotEmpty ? todayCrew : homeRepo.lastCrew;
+
+    final vhfLabels = [vessel.vhf1Label, vessel.vhf2Label, vessel.vhf3Label, vessel.vhf4Label];
+    final canAddFrequency = vhfLabels.any((l) => l.isEmpty);
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -125,6 +75,16 @@ class EmergencyManifestScreen extends StatelessWidget {
             letterSpacing: 1.5,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _editMode ? Icons.check_rounded : Icons.edit_outlined,
+              color: _editMode ? cs.primary : cs.onSurfaceVariant,
+            ),
+            tooltip: _editMode ? 'Done' : 'Edit page',
+            onPressed: () => setState(() => _editMode = !_editMode),
+          ),
+        ],
       ),
       bottomNavigationBar: AppBottomNav(
         active: NavTab.safety,
@@ -138,7 +98,7 @@ class EmergencyManifestScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
-          // ── Quick Actions ─────────────────────────────────────────────
+          // ── Quick Actions ───────────────────────────────────────────────────
           Row(
             children: [
               Expanded(child: _QuickActionCard(
@@ -170,37 +130,46 @@ class EmergencyManifestScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // ── Emergency Contacts ────────────────────────────────────────
-          _SectionHeader(icon: Icons.contact_emergency, label: 'EMERGENCY CONTACTS'),
+          // ── Emergency Contacts ──────────────────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _SectionHeader(icon: Icons.contact_emergency, label: 'EMERGENCY CONTACTS'),
+              if (_editMode)
+                _AddIconButton(onTap: _showAddContactDialog),
+            ],
+          ),
           const SizedBox(height: 8),
-          _ContactsCard(contacts: emergency.contacts),
+          _ContactsCard(contacts: emergency.contacts, editMode: _editMode),
           const SizedBox(height: 20),
 
-          // ── Vessel Safety Info ────────────────────────────────────────
+          // ── Vessel Safety Info ──────────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _SectionHeader(icon: Icons.directions_boat, label: 'VESSEL SAFETY INFO'),
-              _EditButton(onTap: () => context.push('/settings')),
+              if (_editMode)
+                _EditButton(onTap: () => context.push('/settings')),
             ],
           ),
           const SizedBox(height: 8),
           _VesselSafetyCard(vessel: vessel),
           const SizedBox(height: 20),
 
-          // ── Coast Guard Frequencies ───────────────────────────────────
+          // ── Coast Guard Frequencies ─────────────────────────────────────────
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _SectionHeader(icon: Icons.settings_input_antenna, label: 'COAST GUARD FREQUENCIES'),
-              _EditButton(onTap: () => _editFrequencies(context, vessel)),
+              if (_editMode && canAddFrequency)
+                _AddIconButton(onTap: _showAddFrequencyDialog),
             ],
           ),
           const SizedBox(height: 8),
-          _FrequenciesCard(vessel: vessel),
+          _FrequenciesCard(vessel: vessel, editMode: _editMode),
           const SizedBox(height: 20),
 
-          // ── Crew Medical Overview ─────────────────────────────────────
+          // ── Crew Medical Overview ───────────────────────────────────────────
           _SectionHeader(icon: Icons.medical_services, label: 'CREW MEDICAL OVERVIEW'),
           const SizedBox(height: 8),
           if (crew.isEmpty)
@@ -341,6 +310,28 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+class _AddIconButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddIconButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          color: cs.primaryContainer,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(Icons.add, size: 16, color: cs.onPrimaryContainer),
+      ),
+    );
+  }
+}
+
 class _EditButton extends StatelessWidget {
   final VoidCallback onTap;
   const _EditButton({required this.onTap});
@@ -373,7 +364,8 @@ class _EditButton extends StatelessWidget {
 
 class _ContactsCard extends StatelessWidget {
   final List<EmergencyContact> contacts;
-  const _ContactsCard({required this.contacts});
+  final bool editMode;
+  const _ContactsCard({required this.contacts, required this.editMode});
 
   Future<void> _call(String phone) async {
     final digits = phone.replaceAll(RegExp(r'[^\d+]'), '');
@@ -390,10 +382,8 @@ class _ContactsCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant),
       ),
-      child: Column(
-        children: [
-          if (contacts.isEmpty)
-            Padding(
+      child: contacts.isEmpty
+          ? Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
                 'No emergency contacts added.',
@@ -404,49 +394,17 @@ class _ContactsCard extends StatelessWidget {
                 ),
               ),
             )
-          else
-            ...contacts.map((c) => _ContactRow(
-              contact: c,
-              onCall: () => _call(c.phone),
-              onEdit: () => _showEditContactDialog(context, c),
-            )),
-          Divider(height: 1, color: cs.outlineVariant),
-          InkWell(
-            onTap: () => _showAddContactDialog(context),
-            borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add, size: 16, color: cs.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    'ADD CONTACT',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
-                      color: cs.primary,
-                    ),
-                  ),
-                ],
-              ),
+          : Column(
+              children: contacts
+                  .map((c) => _ContactRow(
+                        contact: c,
+                        editMode: editMode,
+                        onCall: () => _call(c.phone),
+                        onEdit: () => _showEditContactDialog(context, c),
+                      ))
+                  .toList(),
             ),
-          ),
-        ],
-      ),
     );
-  }
-
-  void _showAddContactDialog(BuildContext context) {
-    final repo = context.read<EmergencyRepository>();
-    showDialog<EmergencyContact>(
-      context: context,
-      builder: (_) => const _AddContactDialog(),
-    ).then((contact) {
-      if (contact != null) repo.addContact(contact);
-    });
   }
 
   void _showEditContactDialog(BuildContext context, EmergencyContact contact) {
@@ -465,10 +423,12 @@ class _ContactsCard extends StatelessWidget {
 
 class _ContactRow extends StatelessWidget {
   final EmergencyContact contact;
+  final bool editMode;
   final VoidCallback onCall;
   final VoidCallback onEdit;
   const _ContactRow({
     required this.contact,
+    required this.editMode,
     required this.onCall,
     required this.onEdit,
   });
@@ -528,8 +488,10 @@ class _ContactRow extends StatelessWidget {
                 child: Icon(Icons.call, color: cs.onPrimaryContainer, size: 16),
               ),
             ),
-          const SizedBox(width: 10),
-          _EditButton(onTap: onEdit),
+          if (editMode) ...[
+            const SizedBox(width: 10),
+            _EditButton(onTap: onEdit),
+          ],
         ],
       ),
     );
@@ -873,17 +835,20 @@ class _SafetyItem extends StatelessWidget {
 
 class _FrequenciesCard extends StatelessWidget {
   final ThemeProvider vessel;
-  const _FrequenciesCard({required this.vessel});
+  final bool editMode;
+  const _FrequenciesCard({required this.vessel, required this.editMode});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final entries = [
-      (ch: vessel.vhf1Label, desc: vessel.vhf1Desc, urgent: true),
-      (ch: vessel.vhf2Label, desc: vessel.vhf2Desc, urgent: false),
-      (ch: vessel.vhf3Label, desc: vessel.vhf3Desc, urgent: false),
-      (ch: vessel.vhf4Label, desc: vessel.vhf4Desc, urgent: false),
+    final allEntries = [
+      (ch: vessel.vhf1Label, desc: vessel.vhf1Desc, urgent: true, slot: 1),
+      (ch: vessel.vhf2Label, desc: vessel.vhf2Desc, urgent: false, slot: 2),
+      (ch: vessel.vhf3Label, desc: vessel.vhf3Desc, urgent: false, slot: 3),
+      (ch: vessel.vhf4Label, desc: vessel.vhf4Desc, urgent: false, slot: 4),
     ];
+    final entries = allEntries.where((f) => f.ch.isNotEmpty).toList();
+
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -891,54 +856,273 @@ class _FrequenciesCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant),
       ),
-      child: Column(
-        children: entries
-            .map((f) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: f.urgent
-                          ? cs.errorContainer
-                          : cs.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border(
-                        left: BorderSide(
-                          color: f.urgent ? cs.error : cs.primary,
-                          width: 4,
+      child: entries.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.all(6),
+              child: Text(
+                'No frequencies configured.',
+                style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: cs.onSurfaceVariant,
+                    fontStyle: FontStyle.italic),
+              ),
+            )
+          : Column(
+              children: entries
+                  .map((f) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _FrequencyRow(
+                          label: f.ch,
+                          desc: f.desc,
+                          urgent: f.urgent,
+                          editMode: editMode,
+                          onEdit: () => _showEditDialog(context, f.slot),
                         ),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(f.ch,
-                                  style: GoogleFonts.newsreader(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: f.urgent ? cs.error : cs.primary)),
-                              Text(f.desc,
-                                  style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: f.urgent
-                                          ? cs.onErrorContainer
-                                          : cs.onSurfaceVariant)),
-                            ],
-                          ),
-                        ),
-                        if (f.urgent)
-                          Icon(Icons.warning_rounded, color: cs.error, size: 20),
-                      ],
-                    ),
-                  ),
-                ))
-            .toList(),
+                      ))
+                  .toList(),
+            ),
+    );
+  }
+
+  void _showEditDialog(BuildContext context, int slot) {
+    final v = context.read<ThemeProvider>();
+    final labels = [v.vhf1Label, v.vhf2Label, v.vhf3Label, v.vhf4Label];
+    final descs = [v.vhf1Desc, v.vhf2Desc, v.vhf3Desc, v.vhf4Desc];
+
+    showDialog<({String label, String desc})?>(
+      context: context,
+      builder: (_) => _EditFrequencyDialog(
+        initialLabel: labels[slot - 1],
+        initialDesc: descs[slot - 1],
+        onDelete: () => _deleteFrequency(v, slot),
       ),
+    ).then((result) {
+      if (result != null) v.setVhfEntry(slot, result.label, result.desc);
+    });
+  }
+
+  void _deleteFrequency(ThemeProvider v, int slot) {
+    final labels = [v.vhf1Label, v.vhf2Label, v.vhf3Label, v.vhf4Label];
+    final descs = [v.vhf1Desc, v.vhf2Desc, v.vhf3Desc, v.vhf4Desc];
+    labels.removeAt(slot - 1);
+    descs.removeAt(slot - 1);
+    labels.add('');
+    descs.add('');
+    for (int i = 0; i < 4; i++) {
+      v.setVhfEntry(i + 1, labels[i], descs[i]);
+    }
+  }
+}
+
+class _FrequencyRow extends StatelessWidget {
+  final String label;
+  final String desc;
+  final bool urgent;
+  final bool editMode;
+  final VoidCallback onEdit;
+
+  const _FrequencyRow({
+    required this.label,
+    required this.desc,
+    required this.urgent,
+    required this.editMode,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: urgent ? cs.errorContainer : cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: urgent ? cs.error : cs.primary, width: 4),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: GoogleFonts.newsreader(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: urgent ? cs.error : cs.primary)),
+                Text(desc,
+                    style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: urgent ? cs.onErrorContainer : cs.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          if (urgent && !editMode)
+            Icon(Icons.warning_rounded, color: cs.error, size: 20),
+          if (editMode)
+            _EditButton(onTap: onEdit),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Add Frequency Dialog ─────────────────────────────────────────────────────
+
+class _AddFrequencyDialog extends StatefulWidget {
+  const _AddFrequencyDialog();
+
+  @override
+  State<_AddFrequencyDialog> createState() => _AddFrequencyDialogState();
+}
+
+class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
+  final _labelCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _labelCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AlertDialog(
+      title: Text('Add Frequency',
+          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _labelCtrl,
+            decoration: const InputDecoration(labelText: 'Channel'),
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _descCtrl,
+            decoration: const InputDecoration(labelText: 'Description'),
+            textInputAction: TextInputAction.done,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_labelCtrl.text.trim().isEmpty) return;
+            Navigator.pop(context,
+                (label: _labelCtrl.text.trim(), desc: _descCtrl.text.trim()));
+          },
+          child: const Text('Add'),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Edit Frequency Dialog ────────────────────────────────────────────────────
+
+class _EditFrequencyDialog extends StatefulWidget {
+  final String initialLabel;
+  final String initialDesc;
+  final VoidCallback onDelete;
+
+  const _EditFrequencyDialog({
+    required this.initialLabel,
+    required this.initialDesc,
+    required this.onDelete,
+  });
+
+  @override
+  State<_EditFrequencyDialog> createState() => _EditFrequencyDialogState();
+}
+
+class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
+  late final TextEditingController _labelCtrl;
+  late final TextEditingController _descCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _labelCtrl = TextEditingController(text: widget.initialLabel);
+    _descCtrl = TextEditingController(text: widget.initialDesc);
+  }
+
+  @override
+  void dispose() {
+    _labelCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AlertDialog(
+      title: Text('Frequenz bearbeiten',
+          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _labelCtrl,
+            decoration: const InputDecoration(labelText: 'Channel'),
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _descCtrl,
+            decoration: const InputDecoration(labelText: 'Description'),
+            textInputAction: TextInputAction.done,
+          ),
+        ],
+      ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            widget.onDelete();
+          },
+          style: TextButton.styleFrom(foregroundColor: cs.error),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.delete_outline, size: 16, color: cs.error),
+              const SizedBox(width: 4),
+              const Text('Löschen'),
+            ],
+          ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Abbrechen', style: TextStyle(color: cs.onSurfaceVariant)),
+            ),
+            const SizedBox(width: 4),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(context,
+                    (label: _labelCtrl.text.trim(), desc: _descCtrl.text.trim()));
+              },
+              child: const Text('Speichern'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -975,7 +1159,6 @@ class _CrewMedicalCard extends StatelessWidget {
          child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Nautical stripe
             Container(
               width: 6,
               decoration: const BoxDecoration(
@@ -1071,7 +1254,7 @@ class _CrewMedicalCard extends StatelessWidget {
             ),
           ],
         ),
-       ),  // IntrinsicHeight
+       ),
       ),
     );
   }
