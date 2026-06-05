@@ -171,20 +171,26 @@ class _HomeScreenState extends State<HomeScreen> {
     _pendingScrollDate = null;
   }
 
-  IconData _weatherIcon(String? weather) {
-    if (weather == null) return Icons.wb_sunny_outlined;
-    final w = weather.toLowerCase();
-    if (w.contains('sonn') || w.contains('klar') || w.contains('sun')) {
-      return Icons.wb_sunny;
+  List<IconData> _weatherIcons(List<dynamic> timeline) {
+    final seen = <IconData>{};
+    for (final tl in timeline) {
+      final raw = tl.weather as String?;
+      if (raw == null || raw.isEmpty) continue;
+      final w = raw.toLowerCase();
+      if (w.contains('sonn') || w.contains('klar') || w.contains('sun')) {
+        seen.add(Icons.wb_sunny);
+      }
+      if (w.contains('regen') || w.contains('rain')) {
+        seen.add(Icons.water_drop_outlined);
+      }
+      if (w.contains('wolke') || w.contains('bewölkt') || w.contains('cloud')) {
+        seen.add(Icons.cloud_outlined);
+      }
+      if (w.contains('wind') || w.contains('sturm') || w.contains('storm')) {
+        seen.add(Icons.air);
+      }
     }
-    if (w.contains('regen') || w.contains('rain')) return Icons.water_drop_outlined;
-    if (w.contains('wolke') || w.contains('bewölkt') || w.contains('cloud')) {
-      return Icons.cloud_outlined;
-    }
-    if (w.contains('wind') || w.contains('sturm') || w.contains('storm')) {
-      return Icons.air;
-    }
-    return Icons.wb_sunny_outlined;
+    return seen.toList();
   }
 
   @override
@@ -414,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _statCard(
             icon: Icons.straighten,
             iconBg: cs.primaryContainer,
-            iconColor: const Color(0xFF87A4CC),
+            iconColor: cs.onPrimaryContainer,
             label: 'Distanz',
             value: totalNm >= 1000
                 ? '${(totalNm / 1000).toStringAsFixed(1)}k'
@@ -427,8 +433,8 @@ class _HomeScreenState extends State<HomeScreen> {
         Expanded(
           child: _statCard(
             icon: Icons.calendar_today,
-            iconBg: cs.secondaryContainer,
-            iconColor: cs.onSecondaryContainer,
+            iconBg: cs.primaryContainer,
+            iconColor: cs.onPrimaryContainer,
             label: 'Seetage',
             value: '$daysAtSea',
             unit: 'Tage',
@@ -449,8 +455,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required ColorScheme cs,
   }) {
     return Container(
-      height: 128,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
@@ -463,13 +468,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          // Icon box — rounded-lg per spec
           Container(
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: iconBg,
               borderRadius: BorderRadius.circular(8),
@@ -477,38 +480,44 @@ class _HomeScreenState extends State<HomeScreen> {
             alignment: Alignment.center,
             child: Icon(icon, color: iconColor, size: 18),
           ),
-          const Spacer(),
-          Text(
-            label.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-              color: cs.outline,
-            ),
-          ),
-          const SizedBox(height: 2),
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: value,
-                  style: GoogleFonts.newsreader(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w500,
-                    color: cs.primary,
-                    height: 1.1,
-                  ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: cs.outline,
                 ),
-                TextSpan(
-                  text: ' $unit',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: cs.onSurfaceVariant,
-                  ),
+              ),
+              const SizedBox(height: 2),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: value,
+                      style: GoogleFonts.newsreader(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w500,
+                        color: cs.primary,
+                        height: 1.1,
+                      ),
+                    ),
+                    TextSpan(
+                      text: ' $unit',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
@@ -593,11 +602,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            Icon(
-                              _weatherIcon(firstTl?.weather),
-                              size: 18,
-                              color: isActive ? cs.secondary : cs.outline,
-                            ),
+                            ..._weatherIcons(entry.timeline).map((ic) => Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(ic, size: 16,
+                                  color: isActive ? cs.secondary : cs.outline),
+                            )),
                           ],
                         ),
                         // Line 2: Route (only if harbor info is available)

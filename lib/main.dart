@@ -42,15 +42,14 @@ void main() async {
   final themeProvider = ThemeProvider();
   await themeProvider.init();
 
-  // Enable Firestore offline persistence before Firebase initialises so that
-  // all writes made while offline are queued and retried automatically.
-  FirestoreService.configure();
-
   // Initialize Firebase and attach Firestore sync.
   // Runs after local data is ready so the app is usable even if Firebase fails.
   try {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
+    // Configure offline persistence immediately after Firebase is ready,
+    // before the first Firestore access.
+    FirestoreService.configure();
     final id = themeProvider.installationId;
     final initialSync = themeProvider.needsInitialSync;
     final firestore = FirestoreService(installationId: id);
