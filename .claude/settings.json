@@ -6,7 +6,17 @@
       "Read(//Users/ursziegler/Library/Logs/CrashReporter/**)",
       "Read(//Users/ursziegler/Library/Logs/CrashReporter/MobileDevice/**)",
       "Bash(plutil -p \"/Users/ursziegler/Library/Developer/Xcode/DerivedData/Runner-apobgothdbwxrzebctvqucpmijov/Build/Products/Debug-iphoneos/Runner.app/Info.plist\")",
-      "Bash(codesign -d --entitlements :- \"/Users/ursziegler/Library/Developer/Xcode/DerivedData/Runner-apobgothdbwxrzebctvqucpmijov/Build/Products/Debug-iphoneos/Runner.app\")"
+      "Bash(codesign -d --entitlements :- \"/Users/ursziegler/Library/Developer/Xcode/DerivedData/Runner-apobgothdbwxrzebctvqucpmijov/Build/Products/Debug-iphoneos/Runner.app\")",
+      "Bash(ls ~/Library/Android/sdk 2>/dev/null && echo \"SDK found\" || echo \"No SDK at ~/Library/Android/sdk\")",
+      "Read(//Users/ursziegler/Library/Android/**)",
+      "Bash(ls -la \"/Users/ursziegler/Library/Application Support/Google/\" 2>/dev/null || echo \"Directory does not exist\")",
+      "Read(//Users/ursziegler/Library/Application Support/Google/**)",
+      "Bash(cat ~/.zshrc)",
+      "Read(//Users/ursziegler/**)",
+      "Bash(rm -rf \"/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358\")"
+    ],
+    "additionalDirectories": [
+      "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358"
     ]
   }
 }

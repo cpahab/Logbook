@@ -62,13 +62,15 @@ class EmergencyScreen extends StatelessWidget {
           const SizedBox(height: 20),
           const _SectionHeader(title: 'Visual Signals'),
           const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Expanded(child: _PyrotechnicCard()),
-              SizedBox(width: 12),
-              Expanded(child: _HandSignalCard()),
-            ],
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: const [
+                Expanded(child: _PyrotechnicCard()),
+                SizedBox(width: 12),
+                Expanded(child: _HandSignalCard()),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           const _FlagSignalCard(),
@@ -166,18 +168,29 @@ class _PyrotechnicCard extends StatelessWidget {
       badgeFg: cs.onErrorContainer,
       title: 'Pyrotechnic Signals',
       subtitle: 'Red flare (handheld/parachute) or Orange smoke.',
-      child: Container(
-        height: 100,
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Center(
-          child: Icon(
-            Icons.local_fire_department,
-            size: 40,
-            color: cs.error.withValues(alpha: 0.35),
-          ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          children: [
+            Image.asset(
+              'assets/images/distress/pyrotechnic.png',
+              height: 100,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+            Positioned(
+              bottom: 4,
+              right: 6,
+              child: Text(
+                'edtech.com.sg',
+                style: TextStyle(
+                  fontSize: 7,
+                  color: Colors.white.withValues(alpha: 0.75),
+                  shadows: const [Shadow(blurRadius: 2, color: Colors.black54)],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -196,15 +209,13 @@ class _HandSignalCard extends StatelessWidget {
       iconColor: cs.primary,
       title: 'Hand Signals',
       subtitle: 'Slowly and repeatedly raising and lowering arms outstretched to each side.',
-      child: Container(
-        height: 100,
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: cs.outlineVariant),
-        ),
-        child: Center(
-          child: Icon(Icons.pan_tool, size: 40, color: cs.outlineVariant),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.asset(
+          'assets/images/distress/hand_signal.png',
+          height: 100,
+          width: double.infinity,
+          fit: BoxFit.cover,
         ),
       ),
     );
@@ -305,6 +316,7 @@ class _SignalCard extends StatelessWidget {
                       height: 1.4,
                     ),
                   ),
+                  const Spacer(),
                   const SizedBox(height: 8),
                   child,
                 ],
@@ -393,12 +405,14 @@ class _FlagSignalCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Row(
-                        children: [
-                          _FlagTile(letter: 'N', bg: Color(0xFF1A237E), fg: Colors.white),
-                          SizedBox(width: 6),
-                          _FlagTile(letter: 'C', bg: Colors.white, fg: Color(0xFF1A237E)),
-                        ],
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.asset(
+                          'assets/images/distress/flag_nc.png',
+                          height: 64,
+                          width: 80,
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ],
                   ),
@@ -412,29 +426,6 @@ class _FlagSignalCard extends StatelessWidget {
   }
 }
 
-class _FlagTile extends StatelessWidget {
-  final String letter;
-  final Color bg;
-  final Color fg;
-  const _FlagTile({required this.letter, required this.bg, required this.fg});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 36,
-      decoration: BoxDecoration(
-        color: bg,
-        border: Border.all(color: const Color(0xFF73777F)),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        letter,
-        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: fg),
-      ),
-    );
-  }
-}
 
 class _SoundCard extends StatelessWidget {
   final IconData icon;
@@ -564,7 +555,6 @@ class _ElectronicItem extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: cs.outlineVariant),
         ],
       ),
     );
