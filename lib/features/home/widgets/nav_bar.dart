@@ -53,14 +53,13 @@ class AppBottomNav extends StatelessWidget {
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _tab(context, cs, NavTab.journal, Icons.auto_stories, 'Journal'),
-                  _tab(context, cs, NavTab.map, Icons.explore, 'Karte'),
+                  Expanded(child: Center(child: _tab(context, cs, NavTab.journal, Icons.auto_stories, 'Journal'))),
+                  Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, 'Karte'))),
                   const SizedBox(width: 64),
-                  _tab(context, cs, NavTab.settings, Icons.settings_outlined, 'Einstellg.'),
-                  _tab(context, cs, NavTab.safety, Icons.health_and_safety, 'Sicherheit'),
+                  Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, 'Einstellg.'))),
+                  Expanded(child: Center(child: _tab(context, cs, NavTab.safety, Icons.health_and_safety, 'Sicherheit'))),
                 ],
               ),
             ),
@@ -113,21 +112,25 @@ class AppBottomNav extends StatelessWidget {
             color: cs.secondaryContainer,
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: cs.onSecondaryContainer, size: 22),
-              const SizedBox(height: 2),
-              Text(
-                label.toUpperCase(),
-                style: GoogleFonts.inter(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  color: cs.onSecondaryContainer,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: cs.onSecondaryContainer, size: 22),
+                const SizedBox(height: 2),
+                Text(
+                  label.toUpperCase(),
+                  maxLines: 1,
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: cs.onSecondaryContainer,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
@@ -138,21 +141,25 @@ class AppBottomNav extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: inactiveColor, size: 22),
-            const SizedBox(height: 2),
-            Text(
-              label.toUpperCase(),
-              style: GoogleFonts.inter(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                color: inactiveColor,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: inactiveColor, size: 22),
+              const SizedBox(height: 2),
+              Text(
+                label.toUpperCase(),
+                maxLines: 1,
+                style: GoogleFonts.inter(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: inactiveColor,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

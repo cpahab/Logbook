@@ -226,11 +226,6 @@ class _TracksScreenState extends State<TracksScreen> {
         shadowColor: Colors.black12,
         centerTitle: true,
         automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.anchor),
-          tooltip: 'Journal',
-          onPressed: () => context.go('/'),
-        ),
         title: Text(
           'Karte',
           style: GoogleFonts.newsreader(
@@ -240,13 +235,6 @@ class _TracksScreenState extends State<TracksScreen> {
             color: cs.primary,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Einstellungen',
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
       ),
       bottomNavigationBar: AppBottomNav(
         active: NavTab.map,
@@ -484,11 +472,11 @@ class _TracksScreenState extends State<TracksScreen> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
           child: Row(
             children: [
-              Expanded(child: _statSummaryBox('${displayed.length}', 'ETAPPEN', cs)),
+              Expanded(child: _statSummaryBox('${displayed.length}', 'ETAPPEN', Icons.route, cs)),
               const SizedBox(width: 10),
               Expanded(
                 child: _statSummaryBox(
-                  totalNm.toStringAsFixed(1), 'NM GESAMT', cs),
+                  totalNm.toStringAsFixed(1), 'NM GESAMT', Icons.straighten, cs),
               ),
             ],
           ),
@@ -509,34 +497,51 @@ class _TracksScreenState extends State<TracksScreen> {
     );
   }
 
-  Widget _statSummaryBox(String value, String label, ColorScheme cs) {
+  Widget _statSummaryBox(String value, String label, IconData icon, ColorScheme cs) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            value,
-            style: GoogleFonts.newsreader(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: cs.primary,
-              height: 1.1,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
             ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: cs.onPrimaryContainer, size: 18),
           ),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-              color: cs.outline,
-            ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: cs.outline,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: GoogleFonts.newsreader(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w500,
+                  color: cs.primary,
+                  height: 1.1,
+                ),
+              ),
+            ],
           ),
         ],
       ),
