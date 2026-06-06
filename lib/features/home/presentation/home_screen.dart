@@ -145,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               label,
               style: GoogleFonts.newsreader(
-                color: cs.onPrimary,
+                color: cs.onSurface,
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -247,7 +247,8 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: cs.surface,
       // ── Light app bar ──────────────────────────────────────────
       appBar: AppBar(
-        foregroundColor: cs.primary,
+        backgroundColor: cs.surface,
+        foregroundColor: cs.primary, // overrides default primary color for text/icons
         elevation: 0,
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
@@ -708,7 +709,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 14,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.white,
+                  color: cs.surfaceContainerLowest,
                   border: Border.all(
                     color: isActive ? cs.primary : cs.outlineVariant,
                     width: 2,

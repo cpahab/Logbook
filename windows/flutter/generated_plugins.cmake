@@ -7,7 +7,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_core
   firebase_storage
   geolocator_windows
-  objectbox_flutter_libs
   url_launcher_windows
 )
 
