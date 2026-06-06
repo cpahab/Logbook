@@ -696,13 +696,15 @@ class _StepPosition extends StatelessWidget {
         children: [
           Icon(Icons.gps_fixed, size: 16, color: cs.primary),
           const SizedBox(width: 8),
-          Text(
-            positionText!,
-            style: GoogleFonts.newsreader(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: cs.onSurface,
-              letterSpacing: 0.5,
+          Flexible(
+            child: Text(
+              positionText!,
+              style: GoogleFonts.newsreader(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ],

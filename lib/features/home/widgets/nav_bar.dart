@@ -55,9 +55,9 @@ class AppBottomNav extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(child: Center(child: _tab(context, cs, NavTab.journal, Icons.auto_stories, 'Journal'))),
-                  Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, 'Karte'))),
+                  Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, 'Chronik - Karte'))),
                   const SizedBox(width: 64),
-                  Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, 'Einstellg.'))),
+                  Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, 'Einstellungen'))),
                   Expanded(child: Center(child: _tab(context, cs, NavTab.safety, Icons.health_and_safety, 'Sicherheit'))),
                 ],
               ),

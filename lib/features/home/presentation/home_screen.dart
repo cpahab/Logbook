@@ -247,7 +247,6 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: cs.surface,
       // ── Light app bar ──────────────────────────────────────────
       appBar: AppBar(
-        backgroundColor: cs.surface,
         foregroundColor: cs.primary,
         elevation: 0,
         scrolledUnderElevation: 1,
