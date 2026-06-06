@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../home/data/home_repository.dart';
+import '../../home/utils/filter_settings.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../domain/theme_provider.dart';
 
@@ -117,7 +118,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
         foregroundColor: cs.primary,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -168,6 +168,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // ── Display & Appearance ──────────────────────────────────
             _buildDisplaySection(p, cs),
+            const SizedBox(height: 16),
+
+            // ── Track Filter ──────────────────────────────────────────
+            _buildTrackFilterSection(p, cs),
             const SizedBox(height: 16),
 
             // ── Synchronization ───────────────────────────────────────
@@ -400,6 +404,139 @@ class _SettingsScreenState extends State<SettingsScreen> {
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 14,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              color: isActive ? cs.primary : cs.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Track Filter ────────────────────────────────────────────────────
+  Widget _buildTrackFilterSection(ThemeProvider p, ColorScheme cs) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'TRACKFILTER',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: cs.secondary,
+                ),
+              ),
+              Icon(Icons.route, size: 20, color: cs.outlineVariant),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Stationäre Erkennung',
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Bestimmt, wie ruhende Positionen am Anfang und Ende des Tracks erkannt und zu einem Ankerpunkt zusammengefasst werden.',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                _filterModeButton(
+                  label: 'Liegeplatz & Anker',
+                  mode: StationaryMode.speed,
+                  current: p.filterMode,
+                  onTap: () => p.setFilterMode(StationaryMode.speed),
+                  cs: cs,
+                ),
+                _filterModeButton(
+                  label: 'Genaue Position',
+                  mode: StationaryMode.both,
+                  current: p.filterMode,
+                  onTap: () => p.setFilterMode(StationaryMode.both),
+                  cs: cs,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            p.filterMode == StationaryMode.speed
+                ? 'Liegeplatz und Ankerpositionen werden als einzelner Punkt dargestellt. Auch ein weitausholender Ankerkreis wird zu einem Punkt zusammengefasst.'
+                : 'Nur eng geclusterte Positionen gelten als stationär. Breite Ankerkreise bleiben sichtbar – besser für Ankerwache.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterModeButton({
+    required String label,
+    required StationaryMode mode,
+    required StationaryMode current,
+    required VoidCallback onTap,
+    required ColorScheme cs,
+  }) {
+    final isActive = current == mode;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? cs.surfaceContainerLowest : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 13,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               color: isActive ? cs.primary : cs.onSurfaceVariant,
             ),

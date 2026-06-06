@@ -12,8 +12,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/domain/day_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
-import '../../home/utils/trim_track.dart';
+import '../../home/utils/trim_track.dart'
+    show trimStationaryEnds, trimTrackWithAnchors;
 import '../../home/widgets/nav_bar.dart';
+import '../../settings/domain/theme_provider.dart';
 
 enum _FilterPreset { year1, months6, months3, custom }
 
@@ -48,6 +50,49 @@ class _TracksScreenState extends State<TracksScreen> {
     final y = sin(dLon) * cos(lat2);
     final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
     return atan2(y, x);
+  }
+
+  // Haversine distance in metres between two LatLng points.
+  static double _distanceM(LatLng a, LatLng b) {
+    const r = 6371000.0;
+    final lat1 = a.latitude * pi / 180;
+    final lat2 = b.latitude * pi / 180;
+    final dLat = (b.latitude - a.latitude) * pi / 180;
+    final dLon = (b.longitude - a.longitude) * pi / 180;
+    final s = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    return r * 2 * atan2(sqrt(s), sqrt(1 - s));
+  }
+
+  // Bearing for the departure arrow: bearing from the start to the first
+  // point that is ≥ 2 nm NET displacement from the start.
+  //
+  // Net displacement (not cumulative path length) is critical: GPS jitter at
+  // rest produces many short random-walk steps that sum quickly to large
+  // cumulative distances while the boat never actually leaves the berth.
+  // Net displacement stays near zero until real movement begins.
+  //
+  // Falls back to the farthest point if the whole track is shorter than 2 nm.
+  static double _departureBearing(List<LatLng> pts) {
+    if (pts.length < 2) return 0;
+    const targetM = 2.0 * 1852.0; // 2 nm in metres
+    for (int i = 1; i < pts.length; i++) {
+      if (_distanceM(pts[0], pts[i]) >= targetM) {
+        return _trackBearing(pts[0], pts[i]);
+      }
+    }
+    // Entire track shorter than 2 nm net: aim at the farthest point from
+    // start so we always get the dominant direction of travel.
+    double maxDist = 0;
+    int farIdx = 1;
+    for (int i = 1; i < pts.length; i++) {
+      final d = _distanceM(pts[0], pts[i]);
+      if (d > maxDist) {
+        maxDist = d;
+        farIdx = i;
+      }
+    }
+    return _trackBearing(pts[0], pts[farIdx]);
   }
 
   DateTimeRange? get _effectiveRange {
@@ -95,14 +140,15 @@ class _TracksScreenState extends State<TracksScreen> {
   }
 
   void _refitToDisplayed() {
-    final repo = context.read<HomeRepository>();
-    final range = _effectiveRange;
+    final repo      = context.read<HomeRepository>();
+    final settings  = context.read<ThemeProvider>().filterSettings;
+    final range     = _effectiveRange;
     final pts = repo.dailyTracks.entries
         .where((e) =>
             range == null ||
             (!e.key.isBefore(range.start) && !e.key.isAfter(range.end)))
         .expand((e) {
-          final trimmed = trimStationaryEnds(e.value.points);
+          final trimmed = trimStationaryEnds(e.value.points, settings: settings);
           return trimmed.map((p) => LatLng(p.lat, p.lon));
         })
         .toList();
@@ -138,8 +184,9 @@ class _TracksScreenState extends State<TracksScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repo = context.watch<HomeRepository>();
-    final cs = Theme.of(context).colorScheme;
+    final repo           = context.watch<HomeRepository>();
+    final filterSettings = context.watch<ThemeProvider>().filterSettings;
+    final cs             = Theme.of(context).colorScheme;
 
     final trackedDays = repo.dailyTracks.keys.toList()..sort();
     final totalTracks =
@@ -150,7 +197,8 @@ class _TracksScreenState extends State<TracksScreen> {
     for (final day in trackedDays) {
       final track = repo.dailyTracks[day]!;
       if (track.points.isEmpty) continue;
-      final trimmed = trimStationaryEnds(track.points);
+      final result = trimTrackWithAnchors(track.points, settings: filterSettings);
+      final trimmed = result.points;
       final pts = trimmed.map((p) => LatLng(p.lat, p.lon)).toList();
       trackData.add(_DayTrackData(
         day: day,
@@ -159,6 +207,14 @@ class _TracksScreenState extends State<TracksScreen> {
         entry: repo.getEntry(day),
         stats: computeDailyStats(trimmed),
         startTime: trimmed.first.time.toLocal(),
+        startAnchor: result.startAnchor != null
+            ? LatLng(result.startAnchor!.lat, result.startAnchor!.lon)
+            : null,
+        startAnchorRadiusM: result.startAnchor?.radiusM ?? 30,
+        endAnchor: result.endAnchor != null
+            ? LatLng(result.endAnchor!.lat, result.endAnchor!.lon)
+            : null,
+        endAnchorRadiusM: result.endAnchor?.radiusM ?? 30,
       ));
       trackIdx++;
     }
@@ -190,7 +246,7 @@ class _TracksScreenState extends State<TracksScreen> {
     final arrowMarkers = <Marker>[];
     for (final d in displayed) {
       if (d.points.length < 2) continue;
-      final bearing = _trackBearing(d.points[0], d.points[1]);
+      final bearing = _departureBearing(d.points);
       arrowMarkers.add(Marker(
         point: d.points[0],
         width: 13,
@@ -213,13 +269,41 @@ class _TracksScreenState extends State<TracksScreen> {
       ));
     }
 
+    // Anchor halos for trimmed-away stationary clusters at track ends.
+    // Two concentric semi-transparent circles simulate a position "glow"
+    // so the mooring position is visible without showing the raw noise points.
+    final anchorCircles = <CircleMarker>[];
+    for (final d in displayed) {
+      for (final pair in [
+        (d.startAnchor, d.startAnchorRadiusM),
+        (d.endAnchor, d.endAnchorRadiusM),
+      ]) {
+        final anchor = pair.$1;
+        final r = pair.$2;
+        if (anchor == null) continue;
+        anchorCircles.add(CircleMarker(
+          point: anchor,
+          radius: r * 2.8,
+          useRadiusInMeter: true,
+          color: d.color.withValues(alpha: 0.07),
+        ));
+        anchorCircles.add(CircleMarker(
+          point: anchor,
+          radius: r,
+          useRadiusInMeter: true,
+          color: d.color.withValues(alpha: 0.22),
+          borderStrokeWidth: 1.5,
+          borderColor: d.color.withValues(alpha: 0.50),
+        ));
+      }
+    }
+
     final initialBounds =
         _boundsFor(displayed.expand((d) => d.points).toList());
 
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
         foregroundColor: cs.primary,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -255,7 +339,8 @@ class _TracksScreenState extends State<TracksScreen> {
                 Expanded(
                   flex: 3,
                   child: _buildMapSection(
-                      displayed, initialBounds, polylines, arrowMarkers, cs),
+                      displayed, initialBounds, polylines,
+                      anchorCircles, arrowMarkers, cs),
                 ),
                 // ── List ───────────────────────────────────────────────
                 Expanded(
@@ -328,6 +413,7 @@ class _TracksScreenState extends State<TracksScreen> {
     List<_DayTrackData> displayed,
     LatLngBounds? initialBounds,
     List<Polyline> polylines,
+    List<CircleMarker> anchorCircles,
     List<Marker> arrowMarkers,
     ColorScheme cs,
   ) {
@@ -352,8 +438,8 @@ class _TracksScreenState extends State<TracksScreen> {
                   ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
-              tileProvider: NetworkTileProvider(),
             ),
+            CircleLayer(circles: anchorCircles),
             PolylineLayer(polylines: polylines),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(
@@ -823,6 +909,10 @@ class _DayTrackData {
   final DayEntry? entry;
   final DailyStats? stats;
   final DateTime? startTime;
+  final LatLng? startAnchor;
+  final double startAnchorRadiusM;
+  final LatLng? endAnchor;
+  final double endAnchorRadiusM;
 
   const _DayTrackData({
     required this.day,
@@ -831,5 +921,9 @@ class _DayTrackData {
     required this.entry,
     required this.stats,
     required this.startTime,
+    this.startAnchor,
+    this.startAnchorRadiusM = 30,
+    this.endAnchor,
+    this.endAnchorRadiusM = 30,
   });
 }

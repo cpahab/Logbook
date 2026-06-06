@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 import '../../../core/services/firestore_service.dart';
+import '../../home/utils/filter_settings.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const _boxName             = 'settings';
@@ -31,12 +32,15 @@ class ThemeProvider extends ChangeNotifier {
   static const _vhf4DescKey         = 'vhf_4_desc';
   // Epoch-ms string: when settings were last changed on *this* device.
   static const _settingsModifiedKey = 'settings_modified_at_epoch';
+  // Local-only (not cloud-synced) filter preference.
+  static const _filterModeKey = 'filter_stationary_mode';
 
   late Box<String> _box;
   FirestoreService? _firestore;
   StreamSubscription<Map<String, String>?>? _settingsSub;
 
   ThemeMode _mode = ThemeMode.system;
+  StationaryMode _filterMode = StationaryMode.speed;
   String _title = 'Logbuch';
   String _weatherUrl = '';
   late String _logbookCode;
@@ -55,8 +59,10 @@ class ThemeProvider extends ChangeNotifier {
   String _vhf4Label = 'Channel 13';
   String _vhf4Desc  = 'Bridge to Bridge · 156.650 MHz';
 
-  ThemeMode get themeMode       => _mode;
-  String get logbuchTitle       => _title;
+  ThemeMode get themeMode          => _mode;
+  StationaryMode get filterMode    => _filterMode;
+  FilterSettings get filterSettings => FilterSettings(stationaryMode: _filterMode);
+  String get logbuchTitle          => _title;
   String get weatherUrl         => _weatherUrl;
   String get logbookCode        => _logbookCode;
   String get vesselName         => _vesselName;
@@ -112,6 +118,7 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> init() async {
     _box = await Hive.openBox<String>(_boxName);
     _mode        = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
+    _filterMode  = _parseFilterMode(_box.get(_filterModeKey, defaultValue: 'speed')!);
     _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
     _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
     _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
@@ -161,6 +168,13 @@ class ThemeProvider extends ChangeNotifier {
     if (_mode == mode) return;
     _mode = mode;
     _box.put(_themeKey, _toString(mode));
+    notifyListeners();
+  }
+
+  void setFilterMode(StationaryMode mode) {
+    if (_filterMode == mode) return;
+    _filterMode = mode;
+    _box.put(_filterModeKey, mode.name);
     notifyListeners();
   }
 
@@ -372,4 +386,10 @@ class ThemeProvider extends ChangeNotifier {
         ThemeMode.dark  => 'dark',
         _               => 'system',
       };
+
+  static StationaryMode _parseFilterMode(String v) =>
+      StationaryMode.values.firstWhere(
+        (m) => m.name == v,
+        orElse: () => StationaryMode.speed,
+      );
 }
