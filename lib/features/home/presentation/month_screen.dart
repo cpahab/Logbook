@@ -27,10 +27,12 @@ class MonthScreen extends StatelessWidget {
       ),
 
       body: monthEntries.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 "No entries for this month",
-                style: TextStyle(fontSize: 18, color: Colors.grey),
+                style: TextStyle(
+                    fontSize: 18,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             )
           : ListView.builder(

@@ -118,6 +118,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
+        backgroundColor: cs.surface,
         foregroundColor: cs.primary,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -149,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 fontSize: 24,
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.24,
-                color: cs.primary,
+                color: cs.onSurface,
               ),
             ),
             const SizedBox(height: 2),
@@ -197,7 +198,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Positioned(
               left: 0, top: 0, bottom: 0,
-              child: Container(width: 4, color: const Color(0xFF38485A)),
+              child: Container(width: 4, color: cs.onTertiaryFixedVariant),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
@@ -695,11 +696,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontSize: 15, fontWeight: FontWeight.w600),
               ),
               child: _syncing
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2, color: cs.onPrimary),
                     )
                   : const Text('Synchronisieren'),
             ),
