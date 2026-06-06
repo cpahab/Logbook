@@ -60,6 +60,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
+        backgroundColor: cs.surface,
         foregroundColor: cs.primary,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -1165,12 +1166,12 @@ class _CrewMedicalCard extends StatelessWidget {
           children: [
             Container(
               width: 6,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [Color(0xFF142435), Color(0xFF1A3A5C)],
-                  stops: [0.5, 0.5],
+                  colors: [cs.tertiary, cs.primaryContainer],
+                  stops: const [0.5, 0.5],
                   tileMode: TileMode.repeated,
                 ),
               ),

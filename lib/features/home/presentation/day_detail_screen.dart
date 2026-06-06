@@ -22,6 +22,7 @@ import '../widgets/nav_bar.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
+import '../utils/trim_track.dart';
 
 
 class DayDetailScreen extends StatefulWidget {
@@ -78,6 +79,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
+        backgroundColor: cs.surface,
         foregroundColor: cs.primary,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -1065,7 +1067,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 child: Opacity(
                   opacity: 0.10,
                   child: Icon(Icons.water_drop,
-                      size: 80, color: Colors.white),
+                      size: 80, color: cs.onTertiary),
                 ),
               ),
               Row(
@@ -1091,9 +1093,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   Widget _vesselStatCell(
       String label, int? level, IconData icon, ColorScheme cs) {
-    const gold = Color(0xFFFFE088);
-    const barBg = Color(0xFF2A3A4C);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1103,20 +1102,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
-            color: Colors.white.withValues(alpha: 0.70),
+            color: cs.onTertiary.withValues(alpha: 0.70),
           ),
         ),
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(icon, color: gold, size: 20),
+            Icon(icon, color: cs.secondaryFixed, size: 20),
             const SizedBox(width: 8),
             Text(
               level != null ? '$level%' : '—',
               style: GoogleFonts.newsreader(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: level != null ? Colors.white : Colors.white54,
+                color: level != null ? cs.onTertiary : cs.onTertiary.withValues(alpha: 0.54),
               ),
             ),
           ],
@@ -1126,11 +1125,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           borderRadius: BorderRadius.circular(999),
           child: Stack(
             children: [
-              Container(height: 8, color: barBg),
+              Container(height: 8, color: cs.tertiaryContainer),
               if (level != null)
                 FractionallySizedBox(
                   widthFactor: level / 100,
-                  child: Container(height: 8, color: gold),
+                  child: Container(height: 8, color: cs.secondaryFixed),
                 ),
             ],
           ),
@@ -1145,7 +1144,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
-                color: Colors.white.withValues(alpha: 0.50),
+                color: cs.onTertiary.withValues(alpha: 0.50),
               ),
             ),
             Text(
@@ -1154,7 +1153,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
-                color: Colors.white.withValues(alpha: 0.50),
+                color: cs.onTertiary.withValues(alpha: 0.50),
               ),
             ),
           ],
@@ -1199,12 +1198,33 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   Widget _buildMap(DayEntry entry, DailyTrack? track) {
     if (track == null || track.points.isEmpty) return const SizedBox();
 
+    final cs = Theme.of(context).colorScheme;
+    final trimResult = trimTrackWithAnchors(track.points);
     final polylinePoints =
         track.points.map((p) => LatLng(p.lat, p.lon)).toList();
     final correlated =
         correlateTimelineWithTrack(entry.timeline, track.points);
     final startPoint = track.points.first;
     final endPoint = track.points.last;
+
+    final anchorCircles = <CircleMarker>[];
+    for (final anchor in [trimResult.startAnchor, trimResult.endAnchor]) {
+      if (anchor == null) continue;
+      anchorCircles.add(CircleMarker(
+        point: LatLng(anchor.lat, anchor.lon),
+        radius: anchor.radiusM * 2.8,
+        useRadiusInMeter: true,
+        color: cs.primary.withValues(alpha: 0.07),
+      ));
+      anchorCircles.add(CircleMarker(
+        point: LatLng(anchor.lat, anchor.lon),
+        radius: anchor.radiusM,
+        useRadiusInMeter: true,
+        color: cs.primary.withValues(alpha: 0.22),
+        borderStrokeWidth: 1.5,
+        borderColor: cs.primary.withValues(alpha: 0.50),
+      ));
+    }
 
     final timelineMarkers = correlated.map((pair) {
       final t = pair.$1;
@@ -1232,22 +1252,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ...timelineMarkers,
       Marker(
         point: LatLng(startPoint.lat, startPoint.lon),
-        width: 32,
-        height: 32,
+        width: 20,
+        height: 20,
         child: Container(
           decoration: const BoxDecoration(
               shape: BoxShape.circle, color: Colors.green),
-          child: const Icon(Icons.flag, color: Colors.white, size: 18),
+          child: const Icon(Icons.flag, color: Colors.white, size: 12),
         ),
       ),
       Marker(
         point: LatLng(endPoint.lat, endPoint.lon),
-        width: 32,
-        height: 32,
+        width: 20,
+        height: 20,
         child: Container(
           decoration: const BoxDecoration(
               shape: BoxShape.circle, color: Colors.red),
-          child: const Icon(Icons.flag, color: Colors.white, size: 18),
+          child: const Icon(Icons.flag, color: Colors.white, size: 12),
         ),
       ),
     ];
@@ -1308,12 +1328,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
+            CircleLayer(circles: anchorCircles),
             PolylineLayer(
               polylines: [
                 Polyline(
                   points: polylinePoints,
                   strokeWidth: 4,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: cs.primary,
                 ),
               ],
             ),

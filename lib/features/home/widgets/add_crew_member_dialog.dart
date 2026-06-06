@@ -67,6 +67,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
       child: Scaffold(
         backgroundColor: cs.surface,
         appBar: AppBar(
+          backgroundColor: cs.surface,
           foregroundColor: cs.primary,
           elevation: 0,
           scrolledUnderElevation: 1,

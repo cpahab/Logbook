@@ -304,6 +304,7 @@ class _TracksScreenState extends State<TracksScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
+        backgroundColor: cs.surface,
         foregroundColor: cs.primary,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -316,7 +317,7 @@ class _TracksScreenState extends State<TracksScreen> {
             fontSize: 24,
             fontWeight: FontWeight.w500,
             letterSpacing: -0.24,
-            color: cs.primary,
+            color: cs.onSurface,
           ),
         ),
       ),
@@ -500,7 +501,7 @@ class _TracksScreenState extends State<TracksScreen> {
                 _mapButton(
                   icon: Icons.explore,
                   bgColor: cs.primary,
-                  fgColor: const Color(0xFFFFE088),
+                  fgColor: cs.onPrimary,
                   tooltip: 'Alle Tracks anzeigen',
                   onTap: () {
                     setState(() => _selectedIndex = null);
