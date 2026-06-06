@@ -5,8 +5,9 @@ import '../domain/crew_member.dart';
 
 class AddCrewMemberDialog extends StatefulWidget {
   final CrewMember? initialMember;
+  final VoidCallback? onDelete;
 
-  const AddCrewMemberDialog({super.key, this.initialMember});
+  const AddCrewMemberDialog({super.key, this.initialMember, this.onDelete});
 
   @override
   State<AddCrewMemberDialog> createState() => _AddCrewMemberDialogState();
@@ -66,7 +67,6 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
       child: Scaffold(
         backgroundColor: cs.surface,
         appBar: AppBar(
-          backgroundColor: cs.surface,
           foregroundColor: cs.primary,
           elevation: 0,
           scrolledUnderElevation: 1,
@@ -228,6 +228,31 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                       child: const Text('Abbrechen'),
                     ),
                   ),
+                  if (isEdit && widget.onDelete != null) ...[
+                    const SizedBox(height: 32),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          widget.onDelete!();
+                          Navigator.pop(context, null);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: cs.error,
+                          side: BorderSide(
+                              color: cs.error.withValues(alpha: 0.4)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          textStyle: GoogleFonts.inter(
+                              fontSize: 15, fontWeight: FontWeight.w600),
+                        ),
+                        icon: const Icon(Icons.person_remove_outlined,
+                            size: 20),
+                        label: const Text('Besatzung entfernen'),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

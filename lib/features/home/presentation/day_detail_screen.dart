@@ -45,9 +45,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   bool _satelliteView = false;
   LatLng? _droppedMarkerLatLng;
   bool _isMarkerSheetOpen = false;
+  bool _editingRoute = false;
+  final _fromHarborCtrl = TextEditingController();
+  final _toHarborCtrl = TextEditingController();
 
   @override
   void dispose() {
+    _fromHarborCtrl.dispose();
+    _toHarborCtrl.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
@@ -72,7 +78,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
         foregroundColor: cs.primary,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -408,7 +413,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   children: [
                     GestureDetector(
                       onTap: () => _editCrewMember(entry, e.key),
-                      onLongPress: () => _removeCrewMember(entry, member),
                       child: Row(
                         children: [
                           Container(
@@ -541,41 +545,124 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             child: Column(
               children: [
                 // ── Etappe row ──────────────────────────────────
-                InkWell(
-                  onTap: () => _editHarbor(entry),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.sailing,
-                            size: 18, color: cs.secondary),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: routeLabel != null
-                              ? Text(
-                                  routeLabel,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: cs.onSurface,
+                _editingRoute
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Icon(Icons.sailing,
+                                size: 18, color: cs.secondary),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  TextField(
+                                    controller: _fromHarborCtrl,
+                                    autofocus: true,
+                                    decoration: InputDecoration(
+                                      hintText: 'Starthafen',
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                      hintStyle: GoogleFonts.inter(
+                                        fontSize: 15,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: cs.onSurface,
+                                    ),
+                                    textCapitalization:
+                                        TextCapitalization.words,
+                                    textInputAction: TextInputAction.next,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                              : Text(
-                                  'Etappe erfassen…',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 15,
-                                    fontStyle: FontStyle.italic,
-                                    color: cs.onSurfaceVariant,
+                                  Divider(
+                                    height: 12,
+                                    color: cs.outlineVariant
+                                        .withValues(alpha: 0.4),
                                   ),
+                                  TextField(
+                                    controller: _toHarborCtrl,
+                                    decoration: InputDecoration(
+                                      hintText: 'Zielhafen',
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.zero,
+                                      hintStyle: GoogleFonts.inter(
+                                        fontSize: 15,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: cs.onSurface,
+                                    ),
+                                    textCapitalization:
+                                        TextCapitalization.words,
+                                    textInputAction: TextInputAction.done,
+                                    onSubmitted: (_) =>
+                                        _saveRoute(entry),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => _saveRoute(entry),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.check_circle_outline,
+                                  size: 22,
+                                  color: cs.primary,
                                 ),
+                              ),
+                            ),
+                          ],
                         ),
-                        Icon(Icons.edit, size: 16, color: cs.secondary),
-                      ],
-                    ),
-                  ),
-                ),
+                      )
+                    : InkWell(
+                        onTap: () => _startEditRoute(entry),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          child: Row(
+                            children: [
+                              Icon(Icons.sailing,
+                                  size: 18, color: cs.secondary),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: routeLabel != null
+                                    ? Text(
+                                        routeLabel,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: cs.onSurface,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      )
+                                    : Text(
+                                        'Etappe erfassen…',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontStyle: FontStyle.italic,
+                                          color: cs.onSurfaceVariant,
+                                        ),
+                                      ),
+                              ),
+                              Icon(Icons.edit,
+                                  size: 16, color: cs.secondary),
+                            ],
+                          ),
+                        ),
+                      ),
                 // ── Map or GPX prompt ────────────────────────────
                 Container(
                   decoration: BoxDecoration(border: Border(top: div)),
@@ -1220,7 +1307,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
-              tileProvider: NetworkTileProvider(),
             ),
             PolylineLayer(
               polylines: [
@@ -1374,79 +1460,23 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     context.go('/day/${newDate.year}/${newDate.month}/${newDate.day}');
   }
 
-  void _editHarbor(DayEntry entry) async {
-    final fromCtrl =
-        TextEditingController(text: entry.fromHarbor ?? '');
-    final toCtrl =
-        TextEditingController(text: entry.toHarbor ?? '');
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Etappe bearbeiten'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: fromCtrl,
-              decoration: InputDecoration(
-                labelText: 'Von',
-                hintText: 'Starthafen',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
-              ),
-              textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: toCtrl,
-              decoration: InputDecoration(
-                labelText: 'Nach',
-                hintText: 'Zielhafen',
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
-              ),
-              textCapitalization: TextCapitalization.words,
-              textInputAction: TextInputAction.done,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(ctx, true),
-            icon: const Icon(Icons.anchor, size: 18),
-            label: const Text('Speichern'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted) {
-      fromCtrl.dispose();
-      toCtrl.dispose();
-      return;
-    }
-    if (saved == true) {
-      setState(() {
-        entry.fromHarbor = fromCtrl.text.trim().isEmpty
-            ? null
-            : fromCtrl.text.trim();
-        entry.toHarbor =
-            toCtrl.text.trim().isEmpty ? null : toCtrl.text.trim();
-        context.read<HomeRepository>().saveEntry(entry);
-      });
-    }
-    fromCtrl.dispose();
-    toCtrl.dispose();
+  void _startEditRoute(DayEntry entry) {
+    _fromHarborCtrl.text = entry.fromHarbor ?? '';
+    _toHarborCtrl.text = entry.toHarbor ?? '';
+    setState(() => _editingRoute = true);
+  }
+
+  void _saveRoute(DayEntry entry) {
+    setState(() {
+      entry.fromHarbor = _fromHarborCtrl.text.trim().isEmpty
+          ? null
+          : _fromHarborCtrl.text.trim();
+      entry.toHarbor = _toHarborCtrl.text.trim().isEmpty
+          ? null
+          : _toHarborCtrl.text.trim();
+      context.read<HomeRepository>().saveEntry(entry);
+      _editingRoute = false;
+    });
   }
 
   void _editVesselStatus(DayEntry entry) async {
@@ -1549,14 +1579,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   void _editCrewMember(DayEntry entry, int index) async {
+    final member = entry.crew[index];
     final updated = await showDialog<CrewMember>(
       context: context,
-      builder: (_) =>
-          AddCrewMemberDialog(initialMember: entry.crew[index]),
+      builder: (_) => AddCrewMemberDialog(
+        initialMember: member,
+        onDelete: () => _removeCrewMember(entry, member),
+      ),
     );
     if (!mounted || updated == null) return;
     setState(() {
-      entry.crew[index] = updated;
+      final i = entry.crew.indexOf(member);
+      if (i != -1) entry.crew[i] = updated;
       context.read<HomeRepository>().saveEntry(entry);
     });
   }

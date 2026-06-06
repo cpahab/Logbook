@@ -15,7 +15,8 @@
       "Read(//Users/ursziegler/**)",
       "Bash(rm -rf \"/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358\")",
       "Bash(python3 -c ' *)",
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(adb --version)"
     ],
     "additionalDirectories": [
       "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358"
