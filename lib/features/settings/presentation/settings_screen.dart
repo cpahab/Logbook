@@ -458,7 +458,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Bestimmt, wie ruhende Positionen am Anfang und Ende des Tracks erkannt und zu einem Ankerpunkt zusammengefasst werden.',
+            'Bestimmt, wie Liegeplätze, Ankerstopps und Hafenbesuche erkannt und als Ankerpunkt dargestellt werden – am Anfang, Ende und unterwegs.',
             style: GoogleFonts.inter(
               fontSize: 13,
               color: cs.onSurfaceVariant,
@@ -495,6 +495,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
             p.filterMode == StationaryMode.speed
                 ? 'Liegeplatz und Ankerpositionen werden als einzelner Punkt dargestellt. Auch ein weitausholender Ankerkreis wird zu einem Punkt zusammengefasst.'
                 : 'Nur eng geclusterte Positionen gelten als stationär. Breite Ankerkreise bleiben sichtbar – besser für Ankerwache.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          _rowDivider(cs),
+          // ── Min. stop duration ────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Min. Stopp-Dauer',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              Text(
+                '${p.minStopMinutes.round()} min',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: p.minStopMinutes,
+            min: 1,
+            max: 30,
+            divisions: 29,
+            onChanged: p.setMinStopMinutes,
+          ),
+          Text(
+            'Mindestdauer eines echten Stopps (Anker, Hafen). Kurze Langsamfahrten (Wende, Flaute) werden ignoriert.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          _rowDivider(cs),
+          // ── Max anchor swing ──────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Max. Ankerschwung',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              Text(
+                '${p.maxStopSpreadM.round()} m',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: p.maxStopSpreadM,
+            min: 10,
+            max: 100,
+            divisions: 18,
+            onChanged: p.setMaxStopSpreadM,
+          ),
+          Text(
+            'Maximale Ausdehnung eines Stopps. Erhöhen bei weitem Ankerschwung über Nacht (Standard: 30 m).',
             style: GoogleFonts.inter(
               fontSize: 12,
               fontStyle: FontStyle.italic,

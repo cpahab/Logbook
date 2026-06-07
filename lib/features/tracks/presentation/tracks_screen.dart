@@ -13,7 +13,7 @@ import '../../home/data/home_repository.dart';
 import '../../home/domain/day_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
 import '../../home/utils/trim_track.dart'
-    show trimStationaryEnds, trimTrackWithAnchors;
+    show trimStationaryEnds, trimTrackWithAnchors, TrackAnchor;
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 
@@ -205,16 +205,9 @@ class _TracksScreenState extends State<TracksScreen> {
         points: pts,
         color: _colorForIndex(trackIdx, totalTracks),
         entry: repo.getEntry(day),
-        stats: computeDailyStats(trimmed),
-        startTime: trimmed.first.time.toLocal(),
-        startAnchor: result.startAnchor != null
-            ? LatLng(result.startAnchor!.lat, result.startAnchor!.lon)
-            : null,
-        startAnchorRadiusM: result.startAnchor?.radiusM ?? 30,
-        endAnchor: result.endAnchor != null
-            ? LatLng(result.endAnchor!.lat, result.endAnchor!.lon)
-            : null,
-        endAnchorRadiusM: result.endAnchor?.radiusM ?? 30,
+        stats: computeDailyStats(track.points, settings: filterSettings),
+        startTime: trimmed.isNotEmpty ? trimmed.first.time.toLocal() : null,
+        anchors: result.anchors,
       ));
       trackIdx++;
     }
@@ -274,22 +267,16 @@ class _TracksScreenState extends State<TracksScreen> {
     // so the mooring position is visible without showing the raw noise points.
     final anchorCircles = <CircleMarker>[];
     for (final d in displayed) {
-      for (final pair in [
-        (d.startAnchor, d.startAnchorRadiusM),
-        (d.endAnchor, d.endAnchorRadiusM),
-      ]) {
-        final anchor = pair.$1;
-        final r = pair.$2;
-        if (anchor == null) continue;
+      for (final anchor in d.anchors) {
         anchorCircles.add(CircleMarker(
-          point: anchor,
-          radius: r * 2.8,
+          point: LatLng(anchor.lat, anchor.lon),
+          radius: anchor.r95M,
           useRadiusInMeter: true,
           color: d.color.withValues(alpha: 0.07),
         ));
         anchorCircles.add(CircleMarker(
-          point: anchor,
-          radius: r,
+          point: LatLng(anchor.lat, anchor.lon),
+          radius: anchor.cep50M,
           useRadiusInMeter: true,
           color: d.color.withValues(alpha: 0.22),
           borderStrokeWidth: 1.5,
@@ -557,8 +544,11 @@ class _TracksScreenState extends State<TracksScreen> {
 
   // ── List section ──────────────────────────────────────────────────
   Widget _buildListSection(List<_DayTrackData> displayed, ColorScheme cs) {
+    // Only count legs and distance where actual movement was detected —
+    // mirrors the dashboard's gate so both screens report consistent numbers.
+    final movingLegs = displayed.where((d) => (d.stats?.distanceNm ?? 0) > 0).toList();
     final totalNm =
-        displayed.fold<double>(0, (s, d) => s + (d.stats?.distanceNm ?? 0));
+        movingLegs.fold<double>(0, (s, d) => s + d.stats!.distanceNm);
 
     return Column(
       children: [
@@ -567,11 +557,11 @@ class _TracksScreenState extends State<TracksScreen> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
           child: Row(
             children: [
-              Expanded(child: _statSummaryBox('${displayed.length}', 'ETAPPEN', Icons.route, cs)),
+              Expanded(child: _statSummaryBox('${movingLegs.length}', 'Segeltage', Icons.route, cs, unit: 'Tage')),
               const SizedBox(width: 10),
               Expanded(
                 child: _statSummaryBox(
-                  totalNm.toStringAsFixed(1), 'NM GESAMT', Icons.straighten, cs),
+                  totalNm.toStringAsFixed(0), 'Distanz', Icons.straighten, cs, unit: 'nm'),
               ),
             ],
           ),
@@ -592,7 +582,7 @@ class _TracksScreenState extends State<TracksScreen> {
     );
   }
 
-  Widget _statSummaryBox(String value, String label, IconData icon, ColorScheme cs) {
+  Widget _statSummaryBox(String value, String label, IconData icon, ColorScheme cs, {String unit = ''}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -627,13 +617,27 @@ class _TracksScreenState extends State<TracksScreen> {
                 ),
               ),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: GoogleFonts.newsreader(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                  color: cs.primary,
-                  height: 1.1,
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: value,
+                      style: GoogleFonts.newsreader(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w500,
+                        color: cs.primary,
+                        height: 1.1,
+                      ),
+                    ),
+                    if (unit.isNotEmpty)
+                      TextSpan(
+                        text: ' $unit',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -648,10 +652,7 @@ class _TracksScreenState extends State<TracksScreen> {
     const cardHeight = 110.0;
 
     final isSelected = _selectedIndex == index;
-    final timeLabel = d.startTime != null
-        ? DateFormat('HH:mm').format(d.startTime!)
-        : DateFormat('d. MMM', 'de_CH').format(d.day);
-    final dateLabel = DateFormat('d. MMM yyyy', 'de_CH').format(d.day);
+    final dateLabel = DateFormat('EEEE, d. MMM yyyy', 'de_CH').format(d.day);
     final fromHarbor = d.entry?.fromHarbor;
     final toHarbor = d.entry?.toHarbor;
     final routeTitle = (fromHarbor?.isNotEmpty ?? false) ||
@@ -750,26 +751,16 @@ class _TracksScreenState extends State<TracksScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Time + date
+                            // Date
                             Row(
                               children: [
-                                Text(
-                                  timeLabel,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.5,
-                                    color: cs.secondary,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
                                     dateLabel.toUpperCase(),
                                     style: GoogleFonts.inter(
-                                      fontSize: 9,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
+                                      letterSpacing: 1.5,
                                       color: cs.outline,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -910,10 +901,7 @@ class _DayTrackData {
   final DayEntry? entry;
   final DailyStats? stats;
   final DateTime? startTime;
-  final LatLng? startAnchor;
-  final double startAnchorRadiusM;
-  final LatLng? endAnchor;
-  final double endAnchorRadiusM;
+  final List<TrackAnchor> anchors;
 
   const _DayTrackData({
     required this.day,
@@ -922,9 +910,6 @@ class _DayTrackData {
     required this.entry,
     required this.stats,
     required this.startTime,
-    this.startAnchor,
-    this.startAnchorRadiusM = 30,
-    this.endAnchor,
-    this.endAnchorRadiusM = 30,
+    this.anchors = const [],
   });
 }
