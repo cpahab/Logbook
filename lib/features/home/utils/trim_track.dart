@@ -1,13 +1,15 @@
-/// GPS track cleaning pipeline — Dart port of gpx_filter_reference_v2.py.
+/// GPS track cleaning pipeline — Dart port of gpx_filter_reference_v3.py.
+///
+/// v3 upgrade: detects ALL stationary segments (dock, anchor, harbor stops
+/// mid-track) rather than trimming only the leading/trailing ends.  A genuine
+/// stop must last ≥ [FilterSettings.minStopMinutes] AND stay within
+/// [FilterSettings.maxStopSpreadM] of its centroid.
 ///
 /// Four passes in order:
 ///   1. Annotate  — windowed speed + positional spread for every fix.
-///   2. Trim      — find first/last moving fix using the chosen mode.
+///   2. Detect    — find ALL stationary segments (start, mid, end).
 ///   3. Spikes    — flag physically implausible moving fixes.
 ///   4. Smooth    — sliding-median on the kept track.
-///
-/// The trimmed-away clusters at each end are summarised as [TrackAnchor]
-/// objects so the UI can render a "GPS halo" instead of raw noise points.
 library;
 
 import 'dart:math';
@@ -17,9 +19,10 @@ import 'filter_settings.dart';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const _mpsToKn = 1.94384; // m s⁻¹ → knots
-const _maxSpeedKn = 12.0; // hard ceiling for spike detection
-const _accelSigma = 4.0;  // robust sigma multiplier (median + σ × 1.4826 × MAD)
+const _mpsToKn    = 1.94384;
+const _maxSpeedKn = 12.0;
+const _accelSigma = 4.0;
+const _mergeGap   = 4; // merge stationary runs separated by ≤ this many moving fixes
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
 
@@ -37,9 +40,9 @@ double _haversineM(double lat1, double lon1, double lat2, double lon2) {
 
 class _Fix {
   final TrackPoint pt;
-  double instSpeedKn = 0; // instantaneous speed from previous fix
-  double winSpeedKn  = 0; // centred window speed   (primary trim signal)
-  double winSpreadM  = 0; // centred window spread  (secondary trim signal)
+  double instSpeedKn = 0;
+  double winSpeedKn  = 0;
+  double winSpreadM  = 0;
   bool stationary    = false;
   bool flagged       = false;
 
@@ -48,19 +51,9 @@ class _Fix {
 
 // ── Pass 1 — annotate ────────────────────────────────────────────────────────
 
-/// Annotates each fix with [_Fix.winSpeedKn] and [_Fix.winSpreadM].
-///
-/// Window speed is the net displacement between fix[i-w] and fix[i+w] divided
-/// by elapsed time, converted to knots.  Using net displacement (not path
-/// length) keeps GPS jitter at the dock from faking forward motion.
-///
-/// Window spread is the mean distance of fixes in the window from their
-/// centroid — independent of sample interval, so it behaves identically at
-/// both 20 s and 60 s logging.
 void _annotate(List<_Fix> fixes, int window) {
   final n = fixes.length;
   for (int i = 0; i < n; i++) {
-    // ── Instantaneous speed ──
     if (i == 0) {
       fixes[i].instSpeedKn = 0;
     } else {
@@ -70,17 +63,14 @@ void _annotate(List<_Fix> fixes, int window) {
       fixes[i].instSpeedKn = dt > 0 ? d / dt * _mpsToKn : 0;
     }
 
-    // ── Window bounds ──
     final lo = max(0, i - window);
     final hi = min(n - 1, i + window);
 
-    // ── Window speed (net displacement, time-normalised) ──
     final winDt = fixes[hi].pt.time.difference(fixes[lo].pt.time).inSeconds.toDouble();
     final winD  = _haversineM(fixes[lo].pt.lat, fixes[lo].pt.lon,
                                fixes[hi].pt.lat, fixes[hi].pt.lon);
     fixes[i].winSpeedKn = winDt > 0 ? winD / winDt * _mpsToKn : 0;
 
-    // ── Window spread (mean distance from centroid of window slice) ──
     final slice = fixes.sublist(lo, hi + 1);
     var sumLat = 0.0, sumLon = 0.0;
     for (final f in slice) { sumLat += f.pt.lat; sumLon += f.pt.lon; }
@@ -94,54 +84,105 @@ void _annotate(List<_Fix> fixes, int window) {
   }
 }
 
-// ── Pass 2 — trim ────────────────────────────────────────────────────────────
+// ── Pass 2 — find ALL stationary segments ────────────────────────────────────
 
-/// Marks [_Fix.stationary] for the leading and trailing runs of non-moving
-/// fixes.  Returns `[startIdx, endIdx]` — the inclusive moving span.
-///
-/// In [StationaryMode.speed] a fix is stationary when its window speed is
-/// below the threshold.  In [StationaryMode.both] it additionally requires the
-/// positional spread to be below the spread threshold — this prevents an anchor
-/// swing (≈0 speed, wide arc) from being treated as a stationary hold.
-List<int> _trimEnds(List<_Fix> fixes, FilterSettings settings) {
+class _StopSegment {
+  final int    startIdx;
+  final int    endIdx;
+  final AnchorKind kind;
+  final double durationMinutes;
+  final int    fixCount;
+
+  const _StopSegment(this.startIdx, this.endIdx, this.kind,
+      this.durationMinutes, this.fixCount);
+}
+
+List<_StopSegment> _findStationarySegments(
+    List<_Fix> fixes, FilterSettings settings) {
   final n = fixes.length;
+  for (final f in fixes) { f.stationary = false; }
 
   bool isStationary(int i) {
     if (settings.stationaryMode == StationaryMode.both) {
       return fixes[i].winSpeedKn < settings.speedThresholdKn &&
-          fixes[i].winSpreadM < settings.spreadThresholdM;
+             fixes[i].winSpreadM < settings.spreadThresholdM;
     }
     return fixes[i].winSpeedKn < settings.speedThresholdKn;
   }
 
-  int start = 0;
-  while (start < n && isStationary(start)) { start++; }
-  if (start >= n) start = 0; // whole track stationary — keep everything
-
-  int end = n - 1;
-  while (end > start && isStationary(end)) { end--; }
-
-  for (int i = 0; i < n; i++) {
-    fixes[i].stationary = !(i >= start && i <= end);
+  // 1. Collect raw consecutive runs of stationary fixes.
+  final raw = <List<int>>[];
+  var i = 0;
+  while (i < n) {
+    if (isStationary(i)) {
+      var j = i;
+      while (j < n && isStationary(j)) { j++; }
+      raw.add([i, j - 1]);
+      i = j;
+    } else {
+      i++;
+    }
   }
-  return [start, end];
+
+  // 2. Merge runs separated by ≤ _mergeGap moving fixes (bridges GPS flicker).
+  final merged = <List<int>>[];
+  for (final run in raw) {
+    if (merged.isNotEmpty && run[0] - merged.last[1] - 1 <= _mergeGap) {
+      merged.last[1] = run[1];
+    } else {
+      merged.add([run[0], run[1]]);
+    }
+  }
+
+  // 3. Filter and classify each merged run.
+  final stops = <_StopSegment>[];
+  for (final span in merged) {
+    final a   = span[0];
+    final b   = span[1];
+    final seg = fixes.sublist(a, b + 1);
+
+    final durationMinutes =
+        fixes[b].pt.time.difference(fixes[a].pt.time).inSeconds / 60.0;
+
+    // Centroid of this cluster.
+    var sumLat = 0.0, sumLon = 0.0;
+    for (final f in seg) { sumLat += f.pt.lat; sumLon += f.pt.lon; }
+    final cLat = sumLat / seg.length;
+    final cLon = sumLon / seg.length;
+
+    // Maximum distance from centroid (overall_spread in Python reference).
+    var maxSpread = 0.0;
+    for (final f in seg) {
+      final d = _haversineM(cLat, cLon, f.pt.lat, f.pt.lon);
+      if (d > maxSpread) maxSpread = d;
+    }
+
+    // Gate: must last long enough AND stay tight enough.
+    if (durationMinutes < settings.minStopMinutes ||
+        maxSpread > settings.maxStopSpreadM) {
+      continue;
+    }
+
+    final kind = a == 0
+        ? AnchorKind.start
+        : (b == n - 1 ? AnchorKind.end : AnchorKind.mid);
+
+    for (final f in seg) { f.stationary = true; }
+    stops.add(_StopSegment(a, b, kind, durationMinutes, seg.length));
+  }
+
+  return stops;
 }
 
 // ── Pass 3 — spike detection ─────────────────────────────────────────────────
 
-/// Flags physically implausible moving fixes using a hard speed ceiling plus a
-/// robust statistical gate (median + [_accelSigma] × 1.4826 × MAD).
-///
-/// Conservative by design: across all six Idefix files the Python reference
-/// flagged zero fixes, because apparent "jumps" off the dock are real
-/// acceleration.  The pass exists only for occasional GPS glitches.
-void _flagSpikes(List<_Fix> fixes) {
+int _flagSpikes(List<_Fix> fixes) {
   final movingSpds = fixes
       .where((f) => !f.stationary && f.instSpeedKn > 0)
       .map((f) => f.instSpeedKn)
       .toList()
     ..sort();
-  if (movingSpds.isEmpty) return;
+  if (movingSpds.isEmpty) return 0;
 
   final med = movingSpds[movingSpds.length ~/ 2];
   final mads = movingSpds.map((s) => (s - med).abs()).toList()..sort();
@@ -149,15 +190,15 @@ void _flagSpikes(List<_Fix> fixes) {
   final effectiveMad = mad < 1e-9 ? 1e-6 : mad;
   final limit = max(_maxSpeedKn, med + _accelSigma * 1.4826 * effectiveMad);
 
+  var count = 0;
   for (final f in fixes) {
-    if (!f.stationary && f.instSpeedKn > limit) f.flagged = true;
+    if (!f.stationary && f.instSpeedKn > limit) { f.flagged = true; count++; }
   }
+  return count;
 }
 
 // ── Pass 4 — smoothing ───────────────────────────────────────────────────────
 
-/// Centred sliding-median on lat and lon — removes single-fix jitter without
-/// rounding genuine course changes.  window = 3 → ±1 fix.
 List<TrackPoint> _smoothMedian(List<TrackPoint> pts, int window) {
   if (window < 2 || pts.length <= window) return pts;
   final half = window ~/ 2;
@@ -177,70 +218,111 @@ List<TrackPoint> _smoothMedian(List<TrackPoint> pts, int window) {
   return out;
 }
 
-// ── Anchor computation ───────────────────────────────────────────────────────
+// ── Public anchor kind ────────────────────────────────────────────────────────
 
-/// Centroid and RMS positional spread of a cluster of trimmed points.
-/// Used to render a "GPS halo" where the stationary cloud was.
+/// Where in the track a stationary cluster sits.
+enum AnchorKind { start, mid, end }
+
+// ── Anchor description ────────────────────────────────────────────────────────
+
+/// Positional summary of one stationary cluster (dock / anchor / harbor stop).
+/// Used by the UI to draw a "GPS halo" at each stop.
 class TrackAnchor {
   final double lat;
   final double lon;
 
-  /// RMS distance from the centroid — indicates GPS scatter.
-  /// Floored at 30 m so it is always visible on the map.
-  final double radiusM;
+  /// Radius containing 50 % of the GPS fixes in this cluster.  Inner ring.
+  /// Floored at 10 m so the marker is always visible.
+  final double cep50M;
+
+  /// Radius containing 95 % of the GPS fixes in this cluster.  Outer ring.
+  /// Floored at 20 m so the marker is always visible.
+  final double r95M;
+
+  /// Duration of this stop.
+  final double durationMinutes;
+
+  /// Number of raw GPS fixes inside this cluster.
+  final int fixCount;
+
+  /// Where in the track this stop occurred.
+  final AnchorKind kind;
+
+  /// Backward-compat alias (old code used a single [radiusM]).
+  double get radiusM => r95M;
 
   const TrackAnchor({
     required this.lat,
     required this.lon,
-    required this.radiusM,
+    required this.cep50M,
+    required this.r95M,
+    required this.durationMinutes,
+    required this.fixCount,
+    required this.kind,
   });
 }
 
-TrackAnchor _computeAnchor(List<TrackPoint> cluster) {
+TrackAnchor _computeAnchor(
+    List<TrackPoint> cluster, AnchorKind kind, double durationMinutes) {
   final n = cluster.length;
   var sumLat = 0.0, sumLon = 0.0;
   for (final p in cluster) { sumLat += p.lat; sumLon += p.lon; }
   final cLat = sumLat / n;
   final cLon = sumLon / n;
 
-  var sumSq = 0.0;
-  for (final p in cluster) {
-    final d = _haversineM(cLat, cLon, p.lat, p.lon);
-    sumSq += d * d;
-  }
+  final radii = cluster
+      .map((p) => _haversineM(cLat, cLon, p.lat, p.lon))
+      .toList()
+    ..sort();
+
+  // CEP50: 50th-percentile radius (inner ring).
+  final cep50M = max(10.0, radii[(radii.length * 0.50).floor().clamp(0, radii.length - 1)]);
+  // R95: 95th-percentile radius (outer ring).
+  final r95M   = max(20.0, radii[(radii.length * 0.95).floor().clamp(0, radii.length - 1)]);
+
   return TrackAnchor(
-    lat:     cLat,
-    lon:     cLon,
-    radiusM: max(30.0, sqrt(sumSq / n)),
+    lat:             cLat,
+    lon:             cLon,
+    cep50M:          cep50M,
+    r95M:            r95M,
+    durationMinutes: durationMinutes,
+    fixCount:        n,
+    kind:            kind,
   );
 }
 
 // ── Public result type ────────────────────────────────────────────────────────
 
+/// Result of the full four-pass pipeline.
 class TrimResult {
   /// Trimmed, spike-filtered, and smoothed points — ready for rendering and
   /// stats.
   final List<TrackPoint> points;
 
-  /// Centroid of the trimmed-away stationary cluster at the start, if any
-  /// points were removed from the beginning.
-  final TrackAnchor? startAnchor;
+  /// All detected stops (start, mid, end) in track order.  Each carries the
+  /// centroid position and positional-spread statistics for halo rendering.
+  final List<TrackAnchor> anchors;
 
-  /// Centroid of the trimmed-away stationary cluster at the end, if any
-  /// points were removed from the end.
-  final TrackAnchor? endAnchor;
+  /// Number of GPS fixes flagged as implausible speed spikes.
+  final int nSpikes;
 
   const TrimResult({
     required this.points,
-    this.startAnchor,
-    this.endAnchor,
+    this.anchors = const [],
+    this.nSpikes = 0,
   });
+
+  // Backward-compat getters for callers that only care about the endpoints.
+  TrackAnchor? get startAnchor =>
+      anchors.where((a) => a.kind == AnchorKind.start).firstOrNull;
+  TrackAnchor? get endAnchor =>
+      anchors.where((a) => a.kind == AnchorKind.end).firstOrNull;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-/// Full four-pass pipeline. Returns a [TrimResult] with cleaned points and
-/// optional anchors for the removed stationary clusters.
+/// Full four-pass pipeline.  Returns a [TrimResult] with cleaned points, all
+/// stop anchors, and the spike count.
 TrimResult trimTrackWithAnchors(
   List<TrackPoint> points, {
   FilterSettings settings = const FilterSettings(),
@@ -251,21 +333,17 @@ TrimResult trimTrackWithAnchors(
   final fixes = points.map(_Fix.new).toList();
   _annotate(fixes, settings.window);
 
-  // Pass 2 — trim
-  final span  = _trimEnds(fixes, settings);
-  final start = span[0];
-  final end   = span[1];
-
-  // Compute anchors from the trimmed-away clusters BEFORE any further filtering
-  final startAnchor = start > 0
-      ? _computeAnchor(fixes.sublist(0, start).map((f) => f.pt).toList())
-      : null;
-  final endAnchor = end < fixes.length - 1
-      ? _computeAnchor(fixes.sublist(end + 1).map((f) => f.pt).toList())
-      : null;
+  // Pass 2 — find all stationary segments
+  final stops = _findStationarySegments(fixes, settings);
+  final anchors = stops.map((s) {
+    final cluster = fixes.sublist(s.startIdx, s.endIdx + 1)
+        .map((f) => f.pt)
+        .toList();
+    return _computeAnchor(cluster, s.kind, s.durationMinutes);
+  }).toList();
 
   // Pass 3 — spikes
-  _flagSpikes(fixes);
+  final nSpikes = _flagSpikes(fixes);
 
   // Collect kept points
   final kept = fixes
@@ -274,8 +352,7 @@ TrimResult trimTrackWithAnchors(
       .toList();
 
   if (kept.isEmpty) {
-    return TrimResult(
-        points: points, startAnchor: startAnchor, endAnchor: endAnchor);
+    return TrimResult(points: points, anchors: anchors, nSpikes: nSpikes);
   }
 
   // Pass 4 — smooth
@@ -283,15 +360,10 @@ TrimResult trimTrackWithAnchors(
       ? _smoothMedian(kept, settings.smoothWindow)
       : kept;
 
-  return TrimResult(
-    points:      smoothed,
-    startAnchor: startAnchor,
-    endAnchor:   endAnchor,
-  );
+  return TrimResult(points: smoothed, anchors: anchors, nSpikes: nSpikes);
 }
 
 /// Convenience wrapper — returns only the cleaned point list.
-/// Use [trimTrackWithAnchors] when the anchor halos are also needed.
 List<TrackPoint> trimStationaryEnds(
   List<TrackPoint> points, {
   FilterSettings settings = const FilterSettings(),

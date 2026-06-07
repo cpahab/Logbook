@@ -284,7 +284,7 @@ class FirestoreService {
       );
 
   static TimelineEntry _timelineFromMap(Map<String, dynamic> d) => TimelineEntry(
-        time: DateTime.parse(d['time'] as String),
+        time: DateTime.parse(d['time'] as String).toLocal(),
         course: (d['course'] as num?)?.toDouble(),
         speed: (d['speed'] as num?)?.toDouble(),
         wind: d['wind'] as String?,

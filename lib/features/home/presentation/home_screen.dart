@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
 import '../utils/compute_daily_stats.dart';
+import '../utils/filter_settings.dart';
 import '../widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 
@@ -34,19 +35,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final repo = context.read<HomeRepository>();
     final now = DateTime.now();
 
+    final existing = repo.entries
+        .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
+        .toSet();
+
     final picked = await showDatePicker(
       context: context,
       initialDate: now,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      selectableDayPredicate: (date) =>
+          !existing.contains(DateTime(date.year, date.month, date.day)),
     );
     if (picked == null) return;
 
-    final exists = repo.entries.any((e) =>
-        e.date.year == picked.year &&
-        e.date.month == picked.month &&
-        e.date.day == picked.day);
-    if (!exists) repo.addEntry(picked);
+    repo.addEntry(picked);
     if (!mounted) return;
 
     setState(() {
@@ -65,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final recent = entries.last;
     context.push(
-        '/day/${recent.date.year}/${recent.date.month}/${recent.date.day}');
+        '/day/${recent.date.year}/${recent.date.month}/${recent.date.day}?addEntry=1');
   }
 
   void _showAddMenu() {
@@ -140,12 +143,12 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: cs.onPrimary, size: 20),
+            Icon(icon, color: cs.onPrimaryContainer, size: 20),
             const SizedBox(width: 12),
             Text(
               label,
               style: GoogleFonts.newsreader(
-                color: cs.onSurface,
+                color: cs.onPrimaryContainer,
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -209,10 +212,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repo = context.watch<HomeRepository>();
-    final entries = repo.entries;
-    final vesselName = context.watch<ThemeProvider>().vesselName;
-    final cs = Theme.of(context).colorScheme;
+    final repo           = context.watch<HomeRepository>();
+    final themeProvider  = context.watch<ThemeProvider>();
+    final entries        = repo.entries;
+    final vesselName     = themeProvider.vesselName;
+    final filterSettings = themeProvider.filterSettings;
+    final cs             = Theme.of(context).colorScheme;
 
     final years = entries.map((e) => e.date.year).toSet().toList()
       ..sort((a, b) => b.compareTo(a));
@@ -228,14 +233,17 @@ class _HomeScreenState extends State<HomeScreen> {
         .reversed
         .toList();
 
-    // Aggregate stats for selected year
+    // Aggregate from repo.dailyTracks (same source as the tracks screen) so
+    // days that have a GPX track but no logbook entry are still counted.
     double totalNm = 0;
     int daysAtSea = 0;
-    for (final entry in filtered) {
-      final track = repo.dailyTracks[
-          DateTime(entry.date.year, entry.date.month, entry.date.day)];
-      if (track != null && track.points.isNotEmpty) {
-        totalNm += computeDailyStats(track.points).distanceNm;
+    for (final day in repo.dailyTracks.keys) {
+      if (effectiveYear != null && day.year != effectiveYear) continue;
+      final track = repo.dailyTracks[day]!;
+      if (track.points.isEmpty) continue;
+      final stats = computeDailyStats(track.points, settings: filterSettings);
+      if (stats.distanceNm > 0) {
+        totalNm += stats.distanceNm;
         daysAtSea++;
       }
     }
@@ -357,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             _entryKey(filtered[i].date), () => GlobalKey());
                         return _buildTimelineItem(
                             filtered[i], i, filtered.length, repo, cs,
-                            itemKey: key);
+                            filterSettings: filterSettings, itemKey: key);
                       },
                       childCount: filtered.length,
                     ),
@@ -433,6 +441,18 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Expanded(
           child: _statCard(
+            icon: Icons.calendar_today,
+            iconBg: cs.primaryContainer,
+            iconColor: cs.onPrimaryContainer,
+            label: 'Segeltage',
+            value: '$daysAtSea',
+            unit: 'Tage',
+            cs: cs,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _statCard(
             icon: Icons.straighten,
             iconBg: cs.primaryContainer,
             iconColor: cs.onPrimaryContainer,
@@ -441,18 +461,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ? '${(totalNm / 1000).toStringAsFixed(1)}k'
                 : totalNm.toStringAsFixed(0),
             unit: 'nm',
-            cs: cs,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statCard(
-            icon: Icons.calendar_today,
-            iconBg: cs.primaryContainer,
-            iconColor: cs.onPrimaryContainer,
-            label: 'Seetage',
-            value: '$daysAtSea',
-            unit: 'Tage',
             cs: cs,
           ),
         ),
@@ -546,6 +554,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int total,
     HomeRepository repo,
     ColorScheme cs, {
+    required FilterSettings filterSettings,
     Key? itemKey,
   }) {
     final isActive = index == 0; // most recent = active
@@ -554,7 +563,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final track = repo.dailyTracks[dayKey];
     DailyStats? stats;
     if (track != null && track.points.isNotEmpty) {
-      stats = computeDailyStats(track.points);
+      stats = computeDailyStats(track.points, settings: filterSettings);
     }
     final firstTl = entry.timeline.isNotEmpty ? entry.timeline.first : null;
     final note = (entry.notes?.isNotEmpty ?? false)
