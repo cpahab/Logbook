@@ -21,7 +21,9 @@ GoRouter buildRouter(String initialLocation) => GoRouter(
             final year = int.parse(state.pathParameters['year']!);
             final month = int.parse(state.pathParameters['month']!);
             final day = int.parse(state.pathParameters['day']!);
-            return DayDetailScreen(year: year, month: month, day: day);
+            final addEntry = state.uri.queryParameters['addEntry'] == '1';
+            return DayDetailScreen(
+                year: year, month: month, day: day, openAddDialog: addEntry);
           },
         ),
         GoRoute(

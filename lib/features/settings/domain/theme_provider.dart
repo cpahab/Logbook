@@ -32,15 +32,19 @@ class ThemeProvider extends ChangeNotifier {
   static const _vhf4DescKey         = 'vhf_4_desc';
   // Epoch-ms string: when settings were last changed on *this* device.
   static const _settingsModifiedKey = 'settings_modified_at_epoch';
-  // Local-only (not cloud-synced) filter preference.
-  static const _filterModeKey = 'filter_stationary_mode';
+  // Local-only (not cloud-synced) filter preferences.
+  static const _filterModeKey        = 'filter_stationary_mode';
+  static const _minStopMinutesKey    = 'filter_min_stop_minutes';
+  static const _maxStopSpreadMKey    = 'filter_max_stop_spread_m';
 
   late Box<String> _box;
   FirestoreService? _firestore;
   StreamSubscription<Map<String, String>?>? _settingsSub;
 
   ThemeMode _mode = ThemeMode.system;
-  StationaryMode _filterMode = StationaryMode.speed;
+  StationaryMode _filterMode    = StationaryMode.speed;
+  double _minStopMinutes = 5.0;
+  double _maxStopSpreadM = 30.0;
   String _title = 'Logbuch';
   String _weatherUrl = '';
   late String _logbookCode;
@@ -61,7 +65,13 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeMode get themeMode          => _mode;
   StationaryMode get filterMode    => _filterMode;
-  FilterSettings get filterSettings => FilterSettings(stationaryMode: _filterMode);
+  double get minStopMinutes        => _minStopMinutes;
+  double get maxStopSpreadM        => _maxStopSpreadM;
+  FilterSettings get filterSettings => FilterSettings(
+    stationaryMode:  _filterMode,
+    minStopMinutes:  _minStopMinutes,
+    maxStopSpreadM:  _maxStopSpreadM,
+  );
   String get logbuchTitle          => _title;
   String get weatherUrl         => _weatherUrl;
   String get logbookCode        => _logbookCode;
@@ -117,8 +127,10 @@ class ThemeProvider extends ChangeNotifier {
 
   Future<void> init() async {
     _box = await Hive.openBox<String>(_boxName);
-    _mode        = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
-    _filterMode  = _parseFilterMode(_box.get(_filterModeKey, defaultValue: 'speed')!);
+    _mode             = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
+    _filterMode       = _parseFilterMode(_box.get(_filterModeKey, defaultValue: 'speed')!);
+    _minStopMinutes   = double.tryParse(_box.get(_minStopMinutesKey, defaultValue: '5.0')!) ?? 5.0;
+    _maxStopSpreadM   = double.tryParse(_box.get(_maxStopSpreadMKey, defaultValue: '30.0')!) ?? 30.0;
     _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
     _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
     _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
@@ -175,6 +187,20 @@ class ThemeProvider extends ChangeNotifier {
     if (_filterMode == mode) return;
     _filterMode = mode;
     _box.put(_filterModeKey, mode.name);
+    notifyListeners();
+  }
+
+  void setMinStopMinutes(double v) {
+    if (_minStopMinutes == v) return;
+    _minStopMinutes = v;
+    _box.put(_minStopMinutesKey, v.toString());
+    notifyListeners();
+  }
+
+  void setMaxStopSpreadM(double v) {
+    if (_maxStopSpreadM == v) return;
+    _maxStopSpreadM = v;
+    _box.put(_maxStopSpreadMKey, v.toString());
     notifyListeners();
   }
 
