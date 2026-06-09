@@ -733,8 +733,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 10),
           TextField(
             controller: _codeCtrl,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              color: cs.onSurface,
+            ),
             decoration: InputDecoration(
               hintText: 'Sync-Code eingeben',
+              hintStyle: GoogleFonts.inter(
+                fontSize: 15,
+                color: cs.onSurfaceVariant,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: cs.outlineVariant),

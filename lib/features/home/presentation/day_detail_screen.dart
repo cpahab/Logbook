@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -49,7 +50,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   final MapController _mapController = MapController();
   bool _satelliteView = false;
   LatLng? _droppedMarkerLatLng;
-  bool _isMarkerSheetOpen = false;
+  String? _droppedMarkerLabel;
+  Timer? _markerDismissTimer;
   bool _editingRoute = false;
   final _fromHarborCtrl = TextEditingController();
   final _toHarborCtrl = TextEditingController();
@@ -66,6 +68,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   @override
   void dispose() {
+    _markerDismissTimer?.cancel();
     _fromHarborCtrl.dispose();
     _toHarborCtrl.dispose();
     _mapController.dispose();
@@ -1288,19 +1291,26 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       final p = pair.$2;
       return Marker(
         point: LatLng(p.lat, p.lon),
-        width: 28,
-        height: 28,
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () => _showEntryDetail(t),
-          onLongPress: () {
-            setState(
-                () => _droppedMarkerLatLng = LatLng(p.lat, p.lon));
+          onTap: () {
+            _dropMarker(LatLng(p.lat, p.lon), _buildEntryLabel(t));
             _showEntryDetail(t);
           },
-          child: Icon(Icons.location_on,
-              size: 28,
-              color: Theme.of(context).colorScheme.primary),
+          child: Center(
+            child: Container(
+              width: 11,
+              height: 11,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cs.surface,
+                border: Border.all(color: cs.primary, width: 2.5),
+              ),
+            ),
+          ),
         ),
       );
     }).toList();
@@ -1348,28 +1358,73 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (_droppedMarkerLatLng != null) {
       markers.add(Marker(
         point: _droppedMarkerLatLng!,
-        width: 44,
-        height: 44,
+        width: 140,
+        height: 48,
+        // flutter_map formula: y_within_marker = height * (1 - alignment.y) / 2
+        // Icons.place tip at y=46.2 in a 48px marker → alignment.y = 1 - 2*46.2/48 = -0.924
+        alignment: const Alignment(0.0, -0.924),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
-            if (_isMarkerSheetOpen) Navigator.of(context).pop();
-            setState(() => _droppedMarkerLatLng = null);
+            _markerDismissTimer?.cancel();
+            setState(() {
+              _droppedMarkerLatLng = null;
+              _droppedMarkerLabel = null;
+            });
           },
-          onPanUpdate: (details) {
-            final camera = _mapController.camera;
-            final screenOffset = camera.latLngToScreenOffset(_droppedMarkerLatLng!);
-            final newOffset = screenOffset + details.delta;
-            setState(
-                () => _droppedMarkerLatLng = camera.screenOffsetToLatLng(newOffset));
-          },
-          onPanEnd: (_) {
-            final nearest = _findNearestTrackPoint(
-                _droppedMarkerLatLng!, track.points);
-            if (nearest != null) _showTrackPointBottomSheet(nearest);
-          },
-          child: const Icon(Icons.place,
-              color: Colors.deepOrange, size: 40),
+          child: Stack(
+            children: [
+              // height: 22 is required — without it Align expands to the full
+              // Stack height and centres the icon vertically instead of keeping
+              // it at the bottom, pushing the tip far above the coordinate.
+              const Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: 22,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Icon(Icons.place, color: Colors.red, size: 22),
+                ),
+              ),
+              if (_droppedMarkerLabel != null)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 22,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade700,
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        _droppedMarkerLabel!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 1.1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ));
     }
@@ -1383,15 +1438,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               bounds: LatLngBounds.fromPoints(polylinePoints),
               padding: const EdgeInsets.all(40),
             ),
-            onTap: (_, _) {
-              if (_isMarkerSheetOpen) Navigator.of(context).pop();
-              setState(() => _droppedMarkerLatLng = null);
-            },
-            onLongPress: (tapPosition, latLng) {
+            onTap: (_, latLng) {
               final nearest =
                   _findNearestTrackPoint(latLng, track.points);
-              setState(() => _droppedMarkerLatLng = latLng);
-              if (nearest != null) _showTrackPointBottomSheet(nearest);
+              if (nearest == null) return;
+              _dropMarker(
+                LatLng(nearest.lat, nearest.lon),
+                DateFormat('HH:mm').format(nearest.time.toLocal()),
+              );
             },
           ),
           children: [
@@ -1892,6 +1946,34 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Map helpers ───────────────────────────────────────────────────
+  void _dropMarker(LatLng pos, String label) {
+    _markerDismissTimer?.cancel();
+    setState(() {
+      _droppedMarkerLatLng = pos;
+      _droppedMarkerLabel = label;
+    });
+    _markerDismissTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _droppedMarkerLatLng = null;
+          _droppedMarkerLabel = null;
+        });
+      }
+    });
+  }
+
+  String _buildEntryLabel(TimelineEntry t) {
+    final time = DateFormat('HH:mm').format(t.time.toLocal());
+    if (t.remarks != null && t.remarks!.isNotEmpty) {
+      final short = t.remarks!.length > 22
+          ? '${t.remarks!.substring(0, 22)}…'
+          : t.remarks!;
+      return '$time · $short';
+    }
+    if (t.speed != null) return '$time · ${t.speed!.toStringAsFixed(1)} kn';
+    return time;
+  }
+
   TrackPoint? _findNearestTrackPoint(
       LatLng latLng, List<TrackPoint> points) {
     if (points.isEmpty) return null;
@@ -1907,52 +1989,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       }
     }
     return nearest;
-  }
-
-  void _showTrackPointBottomSheet(TrackPoint point) {
-    setState(() => _isMarkerSheetOpen = true);
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              DateFormat('HH:mm').format(point.time.toLocal()),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              DateFormat('dd. MMMM yyyy', 'de_CH')
-                  .format(point.time.toLocal()),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color:
-                        Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    ).whenComplete(() => setState(() => _isMarkerSheetOpen = false));
   }
 
   Widget _gpxUploadIcon() {
@@ -1990,69 +2026,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  void _showEntryDetail(TimelineEntry t) {
-    final timeStr =
-        '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(timeStr,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    )),
-            if (t.remarks?.isNotEmpty == true) ...[
-              const SizedBox(height: 4),
-              Text(t.remarks!,
-                  style: Theme.of(context).textTheme.titleMedium),
-            ],
-            const SizedBox(height: 16),
-            if (t.course != null)
-              _detailRow(Icons.navigation, 'Kurs',
-                  '${t.course!.toStringAsFixed(0)}°'),
-            if (t.speed != null)
-              _detailRow(Icons.speed, 'Fahrt',
-                  '${t.speed!.toStringAsFixed(1)} kn'),
-            if (t.wind != null) _detailRow(Icons.air, 'Wind', t.wind!),
-            if (t.sea != null)
-              _detailRow(Icons.waves, 'See', t.sea!),
-            if (t.weather != null)
-              _detailRow(
-                  Icons.wb_sunny_outlined, 'Wetter', t.weather!),
-            if (t.grossState != null)
-              _detailRow(Icons.sailing, 'Gross', t.grossState!),
-            if (t.fockState != null)
-              _detailRow(Icons.sailing, 'Fock', t.fockState!),
-            if (t.motorOn != null)
-              _detailRow(Icons.directions_boat, 'Motor',
-                  t.motorOn! ? 'An' : 'Aus'),
-          ],
-        ),
-        ),   // SingleChildScrollView
-      ),     // SafeArea
-    );
-  }
-
   Widget _smallMapBtn(IconData icon, VoidCallback onTap) {
     final cs = Theme.of(context).colorScheme;
     return FloatingActionButton.small(
@@ -2062,6 +2035,66 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       foregroundColor: cs.primary,
       elevation: 2,
       child: Icon(icon, size: 18),
+    );
+  }
+
+  void _showEntryDetail(TimelineEntry t) {
+    final timeStr = DateFormat('HH:mm').format(t.time.toLocal());
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(timeStr,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      )),
+              if (t.remarks?.isNotEmpty == true) ...[
+                const SizedBox(height: 4),
+                Text(t.remarks!,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ],
+              const SizedBox(height: 16),
+              if (t.course != null)
+                _detailRow(Icons.navigation, 'Kurs',
+                    '${t.course!.toStringAsFixed(0)}°'),
+              if (t.speed != null)
+                _detailRow(Icons.speed, 'Fahrt',
+                    '${t.speed!.toStringAsFixed(1)} kn'),
+              if (t.wind != null) _detailRow(Icons.air, 'Wind', t.wind!),
+              if (t.sea != null) _detailRow(Icons.waves, 'See', t.sea!),
+              if (t.weather != null)
+                _detailRow(Icons.wb_sunny_outlined, 'Wetter', t.weather!),
+              if (t.grossState != null)
+                _detailRow(Icons.sailing, 'Gross', t.grossState!),
+              if (t.fockState != null)
+                _detailRow(Icons.sailing, 'Fock', t.fockState!),
+              if (t.motorOn != null)
+                _detailRow(Icons.directions_boat, 'Motor',
+                    t.motorOn! ? 'An' : 'Aus'),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
