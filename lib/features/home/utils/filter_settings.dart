@@ -44,13 +44,23 @@ class FilterSettings {
   /// (see settings UI note).
   final double maxStopSpreadM;
 
+  /// Whether to detect and strip GPS cold-start convergence fixes at the track
+  /// start (coarse positions before the receiver has a solid satellite lock).
+  final bool detectColdStart;
+
+  /// How far (in settled-cloud std-devs) a leading fix must be from the settled
+  /// berth position to count as a cold-start fix.  Lower = more aggressive.
+  final double coldStartSettleFactor;
+
   const FilterSettings({
-    this.stationaryMode   = StationaryMode.speed,
-    this.speedThresholdKn = 0.5,
-    this.spreadThresholdM = 6.0,
-    this.window           = 5,
-    this.smoothWindow     = 3,
-    this.minStopMinutes   = 5.0,
-    this.maxStopSpreadM   = 30.0,
+    this.stationaryMode        = StationaryMode.speed,
+    this.speedThresholdKn      = 0.5,
+    this.spreadThresholdM      = 6.0,
+    this.window                = 5,
+    this.smoothWindow          = 3,
+    this.minStopMinutes        = 5.0,
+    this.maxStopSpreadM        = 30.0,
+    this.detectColdStart       = true,
+    this.coldStartSettleFactor = 3.0,
   });
 }

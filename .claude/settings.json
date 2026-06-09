@@ -16,7 +16,11 @@
       "Bash(rm -rf \"/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358\")",
       "Bash(python3 -c ' *)",
       "Bash(xargs cat)",
-      "Bash(adb --version)"
+      "Bash(adb --version)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(flutter logs *)"
     ],
     "additionalDirectories": [
       "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358"
