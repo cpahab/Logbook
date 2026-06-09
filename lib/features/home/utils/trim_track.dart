@@ -1,4 +1,4 @@
-/// GPS track cleaning pipeline — Dart port of gpx_filter_reference_v3.py.
+/// GPS track cleaning pipeline — Dart port of gpx_filter_reference_v4.py.
 ///
 /// v3 upgrade: detects ALL stationary segments (dock, anchor, harbor stops
 /// mid-track) rather than trimming only the leading/trailing ends.  A genuine
@@ -45,6 +45,7 @@ class _Fix {
   double winSpreadM  = 0;
   bool stationary    = false;
   bool flagged       = false;
+  bool coldStart     = false;  // GPS cold-start convergence (only at track start)
 
   _Fix(this.pt);
 }
@@ -172,6 +173,62 @@ List<_StopSegment> _findStationarySegments(
   }
 
   return stops;
+}
+
+// ── Pass 3b — GPS cold-start convergence at track start ──────────────────────
+
+/// Flags leading fixes in the start-stop cloud that sit anomalously far from
+/// the settled berth position — the coarse, inward-converging output of a GPS
+/// receiver before it has acquired a solid satellite lock.
+///
+/// Method mirrors gpx_filter_reference_v4.flag_cold_start():
+///   • Take the second half of the start-stop segment as the "settled" cloud.
+///   • threshold = settled_mean + settleFactor * max(settled_pstdev, 0.5 m)
+///   • Walk forward from fix 0; flag each consecutive fix beyond the threshold
+///     as cold_start.  Stop at the first converged fix (non-sequential cold
+///     starts don't happen).  Capped at 20 leading fixes.
+///
+/// Flagged fixes get [_Fix.coldStart] = true.  They are already inside the
+/// start stop (so [_Fix.stationary] = true and excluded from the cleaned
+/// track), but the separate flag lets the UI show a "GPS warm-up" state and
+/// lets [_computeAnchor] exclude them from cloud statistics.
+int _flagColdStart(
+  List<_Fix> fixes,
+  List<_StopSegment> stops,
+  double settleFactor,
+) {
+  final startStop = stops.where((s) => s.kind == AnchorKind.start).firstOrNull;
+  if (startStop == null) return 0;
+
+  final seg = fixes.sublist(startStop.startIdx, startStop.endIdx + 1);
+  if (seg.length < 6) return 0;
+
+  final settled = seg.sublist(seg.length ~/ 2);
+  var sumLat = 0.0, sumLon = 0.0;
+  for (final f in settled) { sumLat += f.pt.lat; sumLon += f.pt.lon; }
+  final cLat = sumLat / settled.length;
+  final cLon = sumLon / settled.length;
+
+  final sdist = settled
+      .map((f) => _haversineM(cLat, cLon, f.pt.lat, f.pt.lon))
+      .toList();
+  final smean = sdist.reduce((a, b) => a + b) / sdist.length;
+  final variance = sdist.map((d) => (d - smean) * (d - smean)).reduce((a, b) => a + b) /
+      sdist.length;
+  final sstd = settled.length > 1 ? sqrt(variance) : 0.0;
+  final threshold = smean + settleFactor * max(sstd, 0.5);
+
+  const maxLead = 20;
+  var count = 0;
+  for (int i = 0; i < min(maxLead, seg.length); i++) {
+    if (_haversineM(cLat, cLon, seg[i].pt.lat, seg[i].pt.lon) > threshold) {
+      seg[i].coldStart = true;
+      count++;
+    } else {
+      break;
+    }
+  }
+  return count;
 }
 
 // ── Pass 3 — spike detection ─────────────────────────────────────────────────
@@ -306,10 +363,14 @@ class TrimResult {
   /// Number of GPS fixes flagged as implausible speed spikes.
   final int nSpikes;
 
+  /// Number of GPS cold-start convergence fixes stripped from the track start.
+  final int nColdStart;
+
   const TrimResult({
     required this.points,
-    this.anchors = const [],
-    this.nSpikes = 0,
+    this.anchors    = const [],
+    this.nSpikes    = 0,
+    this.nColdStart = 0,
   });
 
   // Backward-compat getters for callers that only care about the endpoints.
@@ -335,8 +396,18 @@ TrimResult trimTrackWithAnchors(
 
   // Pass 2 — find all stationary segments
   final stops = _findStationarySegments(fixes, settings);
+
+  // Pass 3b — GPS cold-start (only at start stop; sets .coldStart on leading fixes)
+  final nColdStart = settings.detectColdStart
+      ? _flagColdStart(fixes, stops, settings.coldStartSettleFactor)
+      : 0;
+
+  // Build anchors, excluding cold-start fixes from the start-stop cloud so
+  // the displayed position and rings reflect the settled GPS fix.
   final anchors = stops.map((s) {
-    final cluster = fixes.sublist(s.startIdx, s.endIdx + 1)
+    final allInSeg = fixes.sublist(s.startIdx, s.endIdx + 1);
+    final settled  = allInSeg.where((f) => !f.coldStart).toList();
+    final cluster  = (settled.length >= 3 ? settled : allInSeg)
         .map((f) => f.pt)
         .toList();
     return _computeAnchor(cluster, s.kind, s.durationMinutes);
@@ -352,7 +423,7 @@ TrimResult trimTrackWithAnchors(
       .toList();
 
   if (kept.isEmpty) {
-    return TrimResult(points: points, anchors: anchors, nSpikes: nSpikes);
+    return TrimResult(points: points, anchors: anchors, nSpikes: nSpikes, nColdStart: nColdStart);
   }
 
   // Pass 4 — smooth
@@ -360,7 +431,7 @@ TrimResult trimTrackWithAnchors(
       ? _smoothMedian(kept, settings.smoothWindow)
       : kept;
 
-  return TrimResult(points: smoothed, anchors: anchors, nSpikes: nSpikes);
+  return TrimResult(points: smoothed, anchors: anchors, nSpikes: nSpikes, nColdStart: nColdStart);
 }
 
 /// Convenience wrapper — returns only the cleaned point list.
