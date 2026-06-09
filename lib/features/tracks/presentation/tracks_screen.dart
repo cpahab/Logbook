@@ -64,25 +64,20 @@ class _TracksScreenState extends State<TracksScreen> {
     return r * 2 * atan2(sqrt(s), sqrt(1 - s));
   }
 
-  // Bearing for the departure arrow: bearing from the start to the first
-  // point that is ≥ 2 nm NET displacement from the start.
-  //
-  // Net displacement (not cumulative path length) is critical: GPS jitter at
-  // rest produces many short random-walk steps that sum quickly to large
-  // cumulative distances while the boat never actually leaves the berth.
-  // Net displacement stays near zero until real movement begins.
-  //
-  // Falls back to the farthest point if the whole track is shorter than 2 nm.
+  // Bearing for the departure arrow: bearing from start toward the point that
+  // is ≥ 500 m cumulative along track. Cumulative path distance reflects where
+  // the boat actually went; the input track is already cleaned (stationary
+  // fixes removed) so GPS jitter at rest is not an issue.
+  // Falls back to the extent bearing (start → furthest point) for short tracks.
   static double _departureBearing(List<LatLng> pts) {
     if (pts.length < 2) return 0;
-    const targetM = 2.0 * 1852.0; // 2 nm in metres
+    const targetM = 500.0;
+    double cum = 0;
     for (int i = 1; i < pts.length; i++) {
-      if (_distanceM(pts[0], pts[i]) >= targetM) {
-        return _trackBearing(pts[0], pts[i]);
-      }
+      cum += _distanceM(pts[i - 1], pts[i]);
+      if (cum >= targetM) return _trackBearing(pts[0], pts[i]);
     }
-    // Entire track shorter than 2 nm net: aim at the farthest point from
-    // start so we always get the dominant direction of travel.
+    // Track shorter than 500 m — aim at the furthest point from start.
     double maxDist = 0;
     int farIdx = 1;
     for (int i = 1; i < pts.length; i++) {
@@ -746,7 +741,7 @@ class _TracksScreenState extends State<TracksScreen> {
                     Expanded(
                       child: ClipRect(
                         child: Padding(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,

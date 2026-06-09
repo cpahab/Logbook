@@ -1963,15 +1963,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   String _buildEntryLabel(TimelineEntry t) {
-    final time = DateFormat('HH:mm').format(t.time.toLocal());
-    if (t.remarks != null && t.remarks!.isNotEmpty) {
-      final short = t.remarks!.length > 22
-          ? '${t.remarks!.substring(0, 22)}…'
-          : t.remarks!;
-      return '$time · $short';
-    }
-    if (t.speed != null) return '$time · ${t.speed!.toStringAsFixed(1)} kn';
-    return time;
+    return DateFormat('HH:mm').format(t.time.toLocal());
   }
 
   TrackPoint? _findNearestTrackPoint(
@@ -2174,14 +2166,21 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return r * 2 * atan2(sqrt(s), sqrt(1 - s));
   }
 
-  /// Bearing from the first fix toward the first point ≥ 2 nm away.
+  /// Bearing from start toward the point ≥ 500 m cumulative along track.
+  /// Uses cumulative path distance so the direction reflects where the boat
+  /// actually went rather than a straight-line net displacement that can be
+  /// near-zero for a nearby tack or manoeuvre.
+  /// Falls back to the extent bearing (start → furthest point) for very short
+  /// tracks.
   static double _departureBearing(List<LatLng> pts) {
     if (pts.length < 2) return 0;
-    const targetM = 2.0 * 1852.0;
+    const targetM = 500.0;
+    double cum = 0;
     for (int i = 1; i < pts.length; i++) {
-      if (_distM(pts[0], pts[i]) >= targetM) return _trackBearing(pts[0], pts[i]);
+      cum += _distM(pts[i - 1], pts[i]);
+      if (cum >= targetM) return _trackBearing(pts[0], pts[i]);
     }
-    // Track shorter than 2 nm — aim at the farthest point from start.
+    // Track shorter than 500 m — aim at the furthest point from start.
     double maxD = 0; int farIdx = 1;
     for (int i = 1; i < pts.length; i++) {
       final d = _distM(pts[0], pts[i]);
@@ -2190,15 +2189,19 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return _trackBearing(pts[0], pts[farIdx]);
   }
 
-  /// Bearing from the last point ≥ 2 nm away into the final fix.
+  /// Bearing of the final approach: from the point ≥ 500 m cumulative before
+  /// the end into the last fix.  Falls back to the extent bearing (furthest
+  /// point from end → end) for very short tracks.
   static double _arrivalBearing(List<LatLng> pts) {
     if (pts.length < 2) return 0;
-    const targetM = 2.0 * 1852.0;
+    const targetM = 500.0;
     final last = pts.last;
+    double cum = 0;
     for (int i = pts.length - 2; i >= 0; i--) {
-      if (_distM(pts[i], last) >= targetM) return _trackBearing(pts[i], last);
+      cum += _distM(pts[i], pts[i + 1]);
+      if (cum >= targetM) return _trackBearing(pts[i], last);
     }
-    // Track shorter than 2 nm — approach from the farthest point from end.
+    // Track shorter than 500 m — approach from the furthest point from end.
     double maxD = 0; int farIdx = 0;
     for (int i = 0; i < pts.length - 1; i++) {
       final d = _distM(pts[i], last);
