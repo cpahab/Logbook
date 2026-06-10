@@ -493,6 +493,24 @@ class _TracksScreenState extends State<TracksScreen> {
                 const SizedBox(height: 8),
               ],
               _mapButton(
+                icon: Icons.fullscreen,
+                bgColor: cs.surfaceContainerLowest,
+                fgColor: cs.primary,
+                tooltip: 'Vollbild',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => _TracksMapFullScreen(
+                      displayed: displayed,
+                      initialBounds: initialBounds,
+                      initialSatellite: _satelliteView,
+                      selectedIndex: _selectedIndex,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _mapButton(
                 icon: _satelliteView ? Icons.map_outlined : Icons.satellite_alt,
                 bgColor: cs.surfaceContainerLowest,
                 fgColor: cs.primary,
@@ -907,4 +925,235 @@ class _DayTrackData {
     required this.startTime,
     this.anchors = const [],
   });
+}
+
+// ── Full-screen overview map ───────────────────────────────────────────────────
+
+class _TracksMapFullScreen extends StatefulWidget {
+  final List<_DayTrackData> displayed;
+  final LatLngBounds? initialBounds;
+  final bool initialSatellite;
+  final int? selectedIndex;
+
+  const _TracksMapFullScreen({
+    required this.displayed,
+    required this.initialBounds,
+    required this.initialSatellite,
+    this.selectedIndex,
+  });
+
+  @override
+  State<_TracksMapFullScreen> createState() => _TracksMapFullScreenState();
+}
+
+class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
+  final MapController _mapController = MapController();
+  late bool _satelliteView;
+
+  @override
+  void initState() {
+    super.initState();
+    _satelliteView = widget.initialSatellite;
+  }
+
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  static double _trackBearing(LatLng from, LatLng to) {
+    final lat1 = from.latitude * pi / 180;
+    final lat2 = to.latitude   * pi / 180;
+    final dLon = (to.longitude - from.longitude) * pi / 180;
+    return atan2(sin(dLon) * cos(lat2),
+        cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon));
+  }
+
+  static double _distanceM(LatLng a, LatLng b) {
+    const r = 6371000.0;
+    final lat1 = a.latitude * pi / 180;
+    final lat2 = b.latitude * pi / 180;
+    final dLat = (b.latitude  - a.latitude)  * pi / 180;
+    final dLon = (b.longitude - a.longitude) * pi / 180;
+    final s = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+    return r * 2 * atan2(sqrt(s), sqrt(1 - s));
+  }
+
+  static double _departureBearing(List<LatLng> pts) {
+    if (pts.length < 2) return 0;
+    double cum = 0;
+    for (int i = 1; i < pts.length; i++) {
+      cum += _distanceM(pts[i - 1], pts[i]);
+      if (cum >= 500) return _trackBearing(pts[0], pts[i]);
+    }
+    double maxD = 0; int farIdx = 1;
+    for (int i = 1; i < pts.length; i++) {
+      final d = _distanceM(pts[0], pts[i]);
+      if (d > maxD) { maxD = d; farIdx = i; }
+    }
+    return _trackBearing(pts[0], pts[farIdx]);
+  }
+
+  Widget _mapButton({
+    required IconData icon,
+    required Color bgColor,
+    required Color fgColor,
+    required VoidCallback onTap,
+    String? tooltip,
+  }) => Tooltip(
+    message: tooltip ?? '',
+    child: GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40, height: 40,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        child: Icon(icon, size: 20, color: fgColor),
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final cs       = Theme.of(context).colorScheme;
+    final displayed = widget.displayed;
+
+    final sel = widget.selectedIndex;
+    final polylines = displayed.asMap().entries.map((e) {
+      final isSelected = sel == e.key;
+      return Polyline(
+        points: e.value.points,
+        color: isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65),
+        strokeWidth: isSelected ? 5 : 3,
+      );
+    }).toList();
+    if (sel != null && sel < polylines.length) {
+      polylines.add(polylines.removeAt(sel));
+    }
+
+    final arrowMarkers = <Marker>[];
+    for (final d in displayed) {
+      if (d.points.length < 2) continue;
+      final bearing = _departureBearing(d.points);
+      arrowMarkers.add(Marker(
+        point: d.points[0], width: 13, height: 13,
+        child: Transform.rotate(
+          angle: bearing,
+          child: Container(
+            width: 13, height: 13,
+            decoration: BoxDecoration(
+              color: d.color.withValues(alpha: 0.9),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 1),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(Icons.arrow_upward, color: Colors.white, size: 7),
+          ),
+        ),
+      ));
+    }
+
+    final anchorCircles = <CircleMarker>[];
+    for (final d in displayed) {
+      for (final a in d.anchors) {
+        anchorCircles.add(CircleMarker(point: LatLng(a.lat, a.lon), radius: a.r95M,   useRadiusInMeter: true, color: d.color.withValues(alpha: 0.07)));
+        anchorCircles.add(CircleMarker(point: LatLng(a.lat, a.lon), radius: a.cep50M, useRadiusInMeter: true,
+            color: d.color.withValues(alpha: 0.22), borderStrokeWidth: 1.5, borderColor: d.color.withValues(alpha: 0.50)));
+      }
+    }
+
+    final allPts = displayed.expand((d) => d.points).toList();
+
+    void refitAll() {
+      if (allPts.isEmpty) return;
+      double minLat = allPts.first.latitude,  maxLat = allPts.first.latitude;
+      double minLng = allPts.first.longitude, maxLng = allPts.first.longitude;
+      for (final p in allPts) {
+        if (p.latitude  < minLat) minLat = p.latitude;
+        if (p.latitude  > maxLat) maxLat = p.latitude;
+        if (p.longitude < minLng) minLng = p.longitude;
+        if (p.longitude > maxLng) maxLng = p.longitude;
+      }
+      _mapController.fitCamera(CameraFit.bounds(
+        bounds: LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng)),
+        padding: const EdgeInsets.all(32),
+      ));
+    }
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: _mapButton(
+            icon: Icons.fullscreen_exit,
+            bgColor: cs.surfaceContainerLowest.withValues(alpha: 0.9),
+            fgColor: cs.primary,
+            tooltip: 'Schließen',
+            onTap: () => Navigator.pop(context),
+          ),
+        ),
+      ),
+      body: Stack(children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: widget.initialBounds != null
+              ? MapOptions(initialCameraFit: CameraFit.bounds(bounds: widget.initialBounds!, padding: const EdgeInsets.all(32)))
+              : const MapOptions(initialCenter: LatLng(47.0, 8.3), initialZoom: 8),
+          children: [
+            TileLayer(
+              urlTemplate: _satelliteView
+                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.logbook.app',
+            ),
+            CircleLayer(circles: anchorCircles),
+            PolylineLayer(polylines: polylines),
+            MarkerLayer(markers: arrowMarkers),
+            RichAttributionWidget(attributions: [
+              if (_satelliteView)
+                TextSourceAttribution('© Esri World Imagery', onTap: () async {
+                  final uri = Uri.parse('https://www.esri.com');
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                })
+              else
+                TextSourceAttribution('© OpenStreetMap contributors', onTap: () async {
+                  final uri = Uri.parse('https://www.openstreetmap.org/copyright');
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }),
+            ]),
+          ],
+        ),
+        Positioned(
+          right: 16, bottom: 16,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            if (defaultTargetPlatform == TargetPlatform.macOS) ...[
+              _mapButton(icon: Icons.add,    bgColor: cs.surfaceContainerLowest, fgColor: cs.primary, tooltip: 'Vergrössern',
+                  onTap: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1)),
+              const SizedBox(height: 8),
+              _mapButton(icon: Icons.remove, bgColor: cs.surfaceContainerLowest, fgColor: cs.primary, tooltip: 'Verkleinern',
+                  onTap: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1)),
+              const SizedBox(height: 8),
+              _mapButton(icon: Icons.explore, bgColor: cs.primary, fgColor: cs.onPrimary, tooltip: 'Alle Tracks anzeigen',
+                  onTap: refitAll),
+              const SizedBox(height: 8),
+            ],
+            _mapButton(
+              icon: _satelliteView ? Icons.map_outlined : Icons.satellite_alt,
+              bgColor: cs.surfaceContainerLowest, fgColor: cs.primary,
+              tooltip: _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
+              onTap: () => setState(() => _satelliteView = !_satelliteView),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
 }

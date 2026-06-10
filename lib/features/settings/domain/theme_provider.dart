@@ -32,6 +32,8 @@ class ThemeProvider extends ChangeNotifier {
   static const _vhf4DescKey         = 'vhf_4_desc';
   // Epoch-ms string: when settings were last changed on *this* device.
   static const _settingsModifiedKey = 'settings_modified_at_epoch';
+  // Epoch-ms string: when UI state (month expansion) was last changed locally.
+  static const _uiModifiedKey       = 'ui_modified_at_epoch';
   // Local-only (not cloud-synced) filter preferences.
   static const _filterModeKey        = 'filter_stationary_mode';
   static const _minStopMinutesKey    = 'filter_min_stop_minutes';
@@ -40,6 +42,7 @@ class ThemeProvider extends ChangeNotifier {
   late Box<String> _box;
   FirestoreService? _firestore;
   StreamSubscription<Map<String, String>?>? _settingsSub;
+  StreamSubscription<Map<String, bool>?>?   _uiSub;
 
   ThemeMode _mode = ThemeMode.system;
   StationaryMode _filterMode    = StationaryMode.speed;
@@ -90,6 +93,38 @@ class ThemeProvider extends ChangeNotifier {
   String get vhf4Label          => _vhf4Label;
   String get vhf4Desc           => _vhf4Desc;
   String get installationId     => _logbookCode;
+
+  /// Returns whether [monthKey] (format `"yyyy-M"`) is expanded.
+  /// Defaults to [defaultOpen] when the user has never explicitly set it.
+  bool getMonthExpanded(String monthKey, {bool defaultOpen = false}) {
+    final stored = _box.get('mex_$monthKey');
+    if (stored == null) return defaultOpen;
+    return stored == 'true';
+  }
+
+  void setMonthExpanded(String monthKey, bool expanded) {
+    _box.put('mex_$monthKey', expanded.toString());
+    _box.put(_uiModifiedKey, DateTime.now().millisecondsSinceEpoch.toString());
+    _firestore?.saveUiState(_monthExpandedMap).catchError((_) {});
+    notifyListeners();
+  }
+
+  Map<String, bool> get _monthExpandedMap {
+    final map = <String, bool>{};
+    for (final k in _box.keys) {
+      if (k is String && k.startsWith('mex_')) {
+        map[k.substring(4)] = _box.get(k) == 'true';
+      }
+    }
+    return map;
+  }
+
+  DateTime? get _uiModifiedAt {
+    final v = _box.get(_uiModifiedKey);
+    if (v == null) return null;
+    final ms = int.tryParse(v);
+    return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
+  }
 
   bool get needsInitialSync => _box.get(_initialSyncDoneKey) == null;
   void markInitialSyncDone() => _box.put(_initialSyncDoneKey, 'true');
@@ -344,6 +379,31 @@ class ThemeProvider extends ChangeNotifier {
       if (_mapsEqual(_toSettingsMap(), remote)) return;
       _applyRemoteSettings(remote);
     }, onError: (_) {});
+
+    // ── UI state (month expansion) sync ───────────────────────────────────────
+    await _uiSub?.cancel();
+    _uiSub = null;
+    try {
+      final (:data, :updatedAt) = await service.fetchUiStateWithMeta();
+      if (data == null) {
+        final local = _monthExpandedMap;
+        if (local.isNotEmpty) await service.saveUiState(local);
+      } else {
+        final localMod = _uiModifiedAt;
+        final remoteIsNewer = localMod == null ||
+            (updatedAt != null && updatedAt.isAfter(localMod));
+        if (remoteIsNewer) {
+          _applyRemoteUiState(data);
+        } else {
+          await service.saveUiState(_monthExpandedMap);
+        }
+      }
+    } catch (_) {}
+
+    _uiSub = service.uiStateChanges().listen((remote) {
+      if (remote == null) return;
+      _applyRemoteUiState(remote);
+    }, onError: (_) {});
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -390,6 +450,19 @@ class ThemeProvider extends ChangeNotifier {
     apply(_vhf3DescKey,       _vhf3Desc,       (v) { _vhf3Desc = v;        _box.put(_vhf3DescKey, v); });
     apply(_vhf4LabelKey,      _vhf4Label,      (v) { _vhf4Label = v;       _box.put(_vhf4LabelKey, v); });
     apply(_vhf4DescKey,       _vhf4Desc,       (v) { _vhf4Desc = v;        _box.put(_vhf4DescKey, v); });
+    if (changed) notifyListeners();
+  }
+
+  void _applyRemoteUiState(Map<String, bool> remote) {
+    var changed = false;
+    for (final e in remote.entries) {
+      final key = 'mex_${e.key}';
+      final want = e.value.toString();
+      if (_box.get(key) != want) {
+        _box.put(key, want);
+        changed = true;
+      }
+    }
     if (changed) notifyListeners();
   }
 
