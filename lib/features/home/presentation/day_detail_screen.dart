@@ -22,6 +22,7 @@ import '../widgets/add_timeline_entry_dialog.dart';
 import '../widgets/add_crew_member_dialog.dart';
 import '../widgets/nav_bar.dart';
 import '../utils/compute_daily_stats.dart';
+import '../utils/filter_settings.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
 import '../utils/trim_track.dart';
@@ -1261,10 +1262,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     final cleanedLatLngs =
         trimResult.points.map((p) => LatLng(p.lat, p.lon)).toList();
+
+    // Use anchor centroid as origin/destination so arrows point from/to the
+    // actual berth position rather than the first/last moving GPS fix.
+    final startAnchor = trimResult.startAnchor;
+    final endAnchor   = trimResult.endAnchor;
+    final startPos    = startAnchor != null
+        ? LatLng(startAnchor.lat, startAnchor.lon)
+        : LatLng(startPoint.lat, startPoint.lon);
+    final endPos      = endAnchor != null
+        ? LatLng(endAnchor.lat, endAnchor.lon)
+        : LatLng(endPoint.lat, endPoint.lon);
+
     final departureBearing = cleanedLatLngs.length >= 2
-        ? _departureBearing(cleanedLatLngs) : 0.0;
+        ? _dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
     final arrivalBearing = cleanedLatLngs.length >= 2
-        ? _arrivalBearing(cleanedLatLngs) : 0.0;
+        ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
     final startTimeStr = DateFormat('HH:mm').format(startPoint.time.toLocal());
     final endTimeStr   = DateFormat('HH:mm').format(endPoint.time.toLocal());
 
@@ -1317,17 +1330,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     final markers = <Marker>[
       ...timelineMarkers,
-      // ── Departure: timestamp label sits above the arrow ───────────
+      // ── Departure: label to the left, arrow at the coordinate ───────
       Marker(
-        point: LatLng(startPoint.lat, startPoint.lon),
-        width: 64,
-        height: 42,
-        alignment: Alignment.bottomCenter,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        point: startPos,
+        width: 82,
+        height: 22,
+        alignment: Alignment.centerRight,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             _trackLabel(startTimeStr, cs),
-            const SizedBox(height: 3),
+            const SizedBox(width: 5),
             Transform.rotate(
               angle: departureBearing,
               child: _trackArrow(cs.secondary),
@@ -1335,20 +1349,21 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           ],
         ),
       ),
-      // ── Arrival: arrow sits at the point, label extends below ──────
+      // ── Arrival: arrow at the coordinate, label to the right ────────
       Marker(
-        point: LatLng(endPoint.lat, endPoint.lon),
-        width: 64,
-        height: 42,
-        alignment: Alignment.topCenter,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        point: endPos,
+        width: 82,
+        height: 22,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Transform.rotate(
               angle: arrivalBearing,
               child: _trackArrow(cs.primary),
             ),
-            const SizedBox(height: 3),
+            const SizedBox(width: 5),
             _trackLabel(endTimeStr, cs),
           ],
         ),
@@ -1519,6 +1534,23 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 }),
                 const SizedBox(height: 6),
               ],
+              FloatingActionButton.small(
+                heroTag: 'detail_fullscreen_button',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => _DayMapFullScreen(
+                      entry: entry,
+                      track: track,
+                      filterSettings: context.read<ThemeProvider>().filterSettings,
+                      initialSatellite: _satelliteView,
+                    ),
+                  ),
+                ),
+                tooltip: 'Vollbild',
+                child: const Icon(Icons.fullscreen),
+              ),
+              const SizedBox(height: 6),
               FloatingActionButton.small(
                 heroTag: 'detail_satellite_button',
                 onPressed: () =>
@@ -2032,13 +2064,26 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   void _showEntryDetail(TimelineEntry t) {
     final timeStr = DateFormat('HH:mm').format(t.time.toLocal());
+    final cs = Theme.of(context).colorScheme;
+
+    final dataLine = [
+      if (t.course  != null) 'Kurs: ${t.course!.toStringAsFixed(0)}°',
+      if (t.speed   != null) 'Fahrt: ${t.speed!.toStringAsFixed(1)} kn',
+      if (t.wind    != null) 'Wind: ${t.wind!}',
+      if (t.sea     != null) 'See: ${t.sea!}',
+      if (t.weather != null) 'Wetter: ${t.weather!}',
+      if (t.grossState != null) 'Gross: ${t.grossState!}',
+      if (t.fockState  != null) 'Fock: ${t.fockState!}',
+      if (t.motorOn    != null) 'Motor: ${t.motorOn! ? 'An' : 'Aus'}',
+    ].join(' · ');
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
-        child: SingleChildScrollView(
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2049,65 +2094,56 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.outlineVariant,
+                    color: cs.outlineVariant,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              Text(timeStr,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      )),
+              Text(
+                timeStr,
+                style: GoogleFonts.newsreader(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
               if (t.remarks?.isNotEmpty == true) ...[
-                const SizedBox(height: 4),
-                Text(t.remarks!,
-                    style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Text(
+                  t.remarks!,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
               ],
-              const SizedBox(height: 16),
-              if (t.course != null)
-                _detailRow(Icons.navigation, 'Kurs',
-                    '${t.course!.toStringAsFixed(0)}°'),
-              if (t.speed != null)
-                _detailRow(Icons.speed, 'Fahrt',
-                    '${t.speed!.toStringAsFixed(1)} kn'),
-              if (t.wind != null) _detailRow(Icons.air, 'Wind', t.wind!),
-              if (t.sea != null) _detailRow(Icons.waves, 'See', t.sea!),
-              if (t.weather != null)
-                _detailRow(Icons.wb_sunny_outlined, 'Wetter', t.weather!),
-              if (t.grossState != null)
-                _detailRow(Icons.sailing, 'Gross', t.grossState!),
-              if (t.fockState != null)
-                _detailRow(Icons.sailing, 'Fock', t.fockState!),
-              if (t.motorOn != null)
-                _detailRow(Icons.directions_boat, 'Motor',
-                    t.motorOn! ? 'An' : 'Aus'),
+              if (t.vesselStatusNote?.isNotEmpty == true) ...[
+                const SizedBox(height: 6),
+                Text(
+                  t.vesselStatusNote!,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: cs.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+              ],
+              if (dataLine.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  dataLine,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: cs.onSurfaceVariant,
+                    height: 1.5,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _detailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon,
-              size: 18,
-              color: Theme.of(context).colorScheme.onSurfaceVariant),
-          const SizedBox(width: 10),
-          Text('$label  ',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          Text(value,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
-        ],
       ),
     );
   }
@@ -2144,70 +2180,388 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         ),
       );
 
-  // ── Geometry helpers for departure / arrival bearings ─────────────
+}
 
-  static double _trackBearing(LatLng from, LatLng to) {
-    final lat1 = from.latitude  * pi / 180;
-    final lat2 = to.latitude    * pi / 180;
-    final dLon = (to.longitude - from.longitude) * pi / 180;
-    final y = sin(dLon) * cos(lat2);
-    final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
-    return atan2(y, x);
+// ── File-level geometry helpers (used by both day-detail and fullscreen) ──────
+
+double _trackBearing(LatLng from, LatLng to) {
+  final lat1 = from.latitude  * pi / 180;
+  final lat2 = to.latitude    * pi / 180;
+  final dLon = (to.longitude - from.longitude) * pi / 180;
+  final y = sin(dLon) * cos(lat2);
+  final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
+  return atan2(y, x);
+}
+
+double _distM(LatLng a, LatLng b) {
+  const r   = 6371000.0;
+  final lat1 = a.latitude  * pi / 180;
+  final lat2 = b.latitude  * pi / 180;
+  final dLat = (b.latitude  - a.latitude)  * pi / 180;
+  final dLon = (b.longitude - a.longitude) * pi / 180;
+  final s = sin(dLat / 2) * sin(dLat / 2) +
+      cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+  return r * 2 * atan2(sqrt(s), sqrt(1 - s));
+}
+
+double _dayDetailDepartureBearing(List<LatLng> pts, LatLng origin) {
+  if (pts.length < 2) return 0;
+  const targetM = 500.0;
+  double cum = 0;
+  for (int i = 1; i < pts.length; i++) {
+    cum += _distM(pts[i - 1], pts[i]);
+    if (cum >= targetM) return _trackBearing(origin, pts[i]);
+  }
+  double maxD = 0; int farIdx = 1;
+  for (int i = 1; i < pts.length; i++) {
+    final d = _distM(origin, pts[i]);
+    if (d > maxD) { maxD = d; farIdx = i; }
+  }
+  return _trackBearing(origin, pts[farIdx]);
+}
+
+double _dayDetailArrivalBearing(List<LatLng> pts, LatLng destination) {
+  if (pts.length < 2) return 0;
+  const targetM = 500.0;
+  double cum = 0;
+  for (int i = pts.length - 2; i >= 0; i--) {
+    cum += _distM(pts[i], pts[i + 1]);
+    if (cum >= targetM) return _trackBearing(pts[i], destination);
+  }
+  double maxD = 0; int farIdx = 0;
+  for (int i = 0; i < pts.length - 1; i++) {
+    final d = _distM(pts[i], destination);
+    if (d > maxD) { maxD = d; farIdx = i; }
+  }
+  return _trackBearing(pts[farIdx], destination);
+}
+
+// ── Full-screen map for a single day ──────────────────────────────────────────
+
+class _DayMapFullScreen extends StatefulWidget {
+  final DayEntry entry;
+  final DailyTrack track;
+  final FilterSettings filterSettings;
+  final bool initialSatellite;
+
+  const _DayMapFullScreen({
+    required this.entry,
+    required this.track,
+    required this.filterSettings,
+    required this.initialSatellite,
+  });
+
+  @override
+  State<_DayMapFullScreen> createState() => _DayMapFullScreenState();
+}
+
+class _DayMapFullScreenState extends State<_DayMapFullScreen> {
+  final MapController _mapController = MapController();
+  late bool _satelliteView;
+  LatLng? _droppedMarkerLatLng;
+  String? _droppedMarkerLabel;
+  Timer? _markerDismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _satelliteView = widget.initialSatellite;
   }
 
-  static double _distM(LatLng a, LatLng b) {
-    const r   = 6371000.0;
-    final lat1 = a.latitude  * pi / 180;
-    final lat2 = b.latitude  * pi / 180;
-    final dLat = (b.latitude  - a.latitude)  * pi / 180;
-    final dLon = (b.longitude - a.longitude) * pi / 180;
-    final s = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
-    return r * 2 * atan2(sqrt(s), sqrt(1 - s));
+  @override
+  void dispose() {
+    _markerDismissTimer?.cancel();
+    _mapController.dispose();
+    super.dispose();
   }
 
-  /// Bearing from start toward the point ≥ 500 m cumulative along track.
-  /// Uses cumulative path distance so the direction reflects where the boat
-  /// actually went rather than a straight-line net displacement that can be
-  /// near-zero for a nearby tack or manoeuvre.
-  /// Falls back to the extent bearing (start → furthest point) for very short
-  /// tracks.
-  static double _departureBearing(List<LatLng> pts) {
-    if (pts.length < 2) return 0;
-    const targetM = 500.0;
-    double cum = 0;
-    for (int i = 1; i < pts.length; i++) {
-      cum += _distM(pts[i - 1], pts[i]);
-      if (cum >= targetM) return _trackBearing(pts[0], pts[i]);
-    }
-    // Track shorter than 500 m — aim at the furthest point from start.
-    double maxD = 0; int farIdx = 1;
-    for (int i = 1; i < pts.length; i++) {
-      final d = _distM(pts[0], pts[i]);
-      if (d > maxD) { maxD = d; farIdx = i; }
-    }
-    return _trackBearing(pts[0], pts[farIdx]);
+  void _dropMarker(LatLng pos, String label) {
+    _markerDismissTimer?.cancel();
+    setState(() {
+      _droppedMarkerLatLng = pos;
+      _droppedMarkerLabel  = label;
+    });
+    _markerDismissTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; });
+    });
   }
 
-  /// Bearing of the final approach: from the point ≥ 500 m cumulative before
-  /// the end into the last fix.  Falls back to the extent bearing (furthest
-  /// point from end → end) for very short tracks.
-  static double _arrivalBearing(List<LatLng> pts) {
-    if (pts.length < 2) return 0;
-    const targetM = 500.0;
-    final last = pts.last;
-    double cum = 0;
-    for (int i = pts.length - 2; i >= 0; i--) {
-      cum += _distM(pts[i], pts[i + 1]);
-      if (cum >= targetM) return _trackBearing(pts[i], last);
+  TrackPoint? _findNearest(LatLng tap, List<TrackPoint> points) {
+    if (points.isEmpty) return null;
+    TrackPoint? best;
+    double minDq = double.infinity;
+    for (final p in points) {
+      final dq = (p.lat - tap.latitude) * (p.lat - tap.latitude) +
+                 (p.lon - tap.longitude) * (p.lon - tap.longitude);
+      if (dq < minDq) { minDq = dq; best = p; }
     }
-    // Track shorter than 500 m — approach from the furthest point from end.
-    double maxD = 0; int farIdx = 0;
-    for (int i = 0; i < pts.length - 1; i++) {
-      final d = _distM(pts[i], last);
-      if (d > maxD) { maxD = d; farIdx = i; }
-    }
-    return _trackBearing(pts[farIdx], last);
+    return best;
   }
 
+  void _showEntryDetail(TimelineEntry t) {
+    final timeStr = DateFormat('HH:mm').format(t.time.toLocal());
+    final cs = Theme.of(context).colorScheme;
+    final dataLine = [
+      if (t.course  != null) 'Kurs: ${t.course!.toStringAsFixed(0)}°',
+      if (t.speed   != null) 'Fahrt: ${t.speed!.toStringAsFixed(1)} kn',
+      if (t.wind    != null) 'Wind: ${t.wind!}',
+      if (t.sea     != null) 'See: ${t.sea!}',
+      if (t.weather != null) 'Wetter: ${t.weather!}',
+      if (t.grossState != null) 'Gross: ${t.grossState!}',
+      if (t.fockState  != null) 'Fock: ${t.fockState!}',
+      if (t.motorOn    != null) 'Motor: ${t.motorOn! ? 'An' : 'Aus'}',
+    ].join(' · ');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              )),
+              const SizedBox(height: 16),
+              Text(timeStr, style: GoogleFonts.newsreader(
+                fontSize: 18, fontWeight: FontWeight.w600, color: cs.primary)),
+              if (t.remarks?.isNotEmpty == true) ...[
+                const SizedBox(height: 8),
+                Text(t.remarks!, style: GoogleFonts.inter(
+                  fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
+              ],
+              if (t.vesselStatusNote?.isNotEmpty == true) ...[
+                const SizedBox(height: 6),
+                Text(t.vesselStatusNote!, style: GoogleFonts.inter(
+                  fontSize: 13, color: cs.onSurfaceVariant, height: 1.5)),
+              ],
+              if (dataLine.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(dataLine, style: GoogleFonts.inter(
+                  fontSize: 13, color: cs.onSurfaceVariant, height: 1.5)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _trackArrow(Color color) => Container(
+    width: 15, height: 15,
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.9),
+      shape: BoxShape.circle,
+      border: Border.all(color: Colors.white, width: 1.5),
+    ),
+    alignment: Alignment.center,
+    child: const Icon(Icons.arrow_upward, color: Colors.white, size: 8),
+  );
+
+  Widget _trackLabel(String text, ColorScheme cs) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    decoration: BoxDecoration(
+      color: cs.surface.withValues(alpha: 0.55),
+      borderRadius: BorderRadius.circular(4),
+      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5), width: 0.5),
+    ),
+    child: Text(text, style: GoogleFonts.inter(
+      fontSize: 10, fontWeight: FontWeight.w700, color: cs.onSurface)),
+  );
+
+  Widget _mapBtn(IconData icon, VoidCallback onTap, ColorScheme cs) =>
+    FloatingActionButton.small(
+      heroTag: 'fs_${icon.codePoint}',
+      onPressed: onTap,
+      backgroundColor: cs.surfaceContainerLowest,
+      foregroundColor: cs.primary,
+      elevation: 2,
+      child: Icon(icon, size: 18),
+    );
+
+  @override
+  Widget build(BuildContext context) {
+    final cs    = Theme.of(context).colorScheme;
+    final track = widget.track;
+    final entry = widget.entry;
+
+    final trimResult    = trimTrackWithAnchors(track.points, settings: widget.filterSettings);
+    final polylinePoints = track.points.map((p) => LatLng(p.lat, p.lon)).toList();
+    final correlated    = correlateTimelineWithTrack(entry.timeline, track.points);
+
+    final startPoint = trimResult.points.isNotEmpty ? trimResult.points.first : track.points.first;
+    final endPoint   = trimResult.points.isNotEmpty ? trimResult.points.last  : track.points.last;
+    final cleanedLatLngs = trimResult.points.map((p) => LatLng(p.lat, p.lon)).toList();
+
+    final startAnchor = trimResult.startAnchor;
+    final endAnchor   = trimResult.endAnchor;
+    final startPos = startAnchor != null ? LatLng(startAnchor.lat, startAnchor.lon) : LatLng(startPoint.lat, startPoint.lon);
+    final endPos   = endAnchor   != null ? LatLng(endAnchor.lat,   endAnchor.lon)   : LatLng(endPoint.lat,   endPoint.lon);
+
+    final departureBearing = cleanedLatLngs.length >= 2 ? _dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
+    final arrivalBearing   = cleanedLatLngs.length >= 2 ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
+    final startTimeStr = DateFormat('HH:mm').format(startPoint.time.toLocal());
+    final endTimeStr   = DateFormat('HH:mm').format(endPoint.time.toLocal());
+
+    final anchorCircles = <CircleMarker>[];
+    for (final a in trimResult.anchors) {
+      anchorCircles.add(CircleMarker(point: LatLng(a.lat, a.lon), radius: a.r95M,   useRadiusInMeter: true, color: cs.primary.withValues(alpha: 0.07)));
+      anchorCircles.add(CircleMarker(point: LatLng(a.lat, a.lon), radius: a.cep50M, useRadiusInMeter: true,
+          color: cs.primary.withValues(alpha: 0.22), borderStrokeWidth: 1.5, borderColor: cs.primary.withValues(alpha: 0.50)));
+    }
+
+    final timelineMarkers = correlated.map((pair) {
+      final t = pair.$1; final p = pair.$2;
+      return Marker(
+        point: LatLng(p.lat, p.lon), width: 20, height: 20, alignment: Alignment.center,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            _dropMarker(LatLng(p.lat, p.lon), DateFormat('HH:mm').format(t.time.toLocal()));
+            _showEntryDetail(t);
+          },
+          child: Center(child: Container(
+            width: 11, height: 11,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: cs.surface, border: Border.all(color: cs.primary, width: 2.5)),
+          )),
+        ),
+      );
+    }).toList();
+
+    final markers = <Marker>[
+      ...timelineMarkers,
+      Marker(
+        point: startPos, width: 82, height: 22, alignment: Alignment.centerRight,
+        child: Row(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.center, children: [
+          _trackLabel(startTimeStr, cs), const SizedBox(width: 5),
+          Transform.rotate(angle: departureBearing, child: _trackArrow(cs.secondary)),
+        ]),
+      ),
+      Marker(
+        point: endPos, width: 82, height: 22, alignment: Alignment.centerLeft,
+        child: Row(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.center, children: [
+          Transform.rotate(angle: arrivalBearing, child: _trackArrow(cs.primary)),
+          const SizedBox(width: 5), _trackLabel(endTimeStr, cs),
+        ]),
+      ),
+    ];
+
+    if (_droppedMarkerLatLng != null) {
+      markers.add(Marker(
+        point: _droppedMarkerLatLng!, width: 140, height: 48,
+        alignment: const Alignment(0.0, -0.924),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () { _markerDismissTimer?.cancel(); setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; }); },
+          child: Stack(children: [
+            const Positioned(bottom: 0, left: 0, right: 0, height: 22,
+              child: Align(alignment: Alignment.center, child: Icon(Icons.place, color: Colors.red, size: 22))),
+            if (_droppedMarkerLabel != null)
+              Positioned(top: 0, left: 0, right: 0, height: 22,
+                child: Align(alignment: Alignment.center,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: Colors.red.shade700, borderRadius: BorderRadius.circular(6),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 4, offset: const Offset(0, 2))]),
+                    child: Text(_droppedMarkerLabel!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, height: 1.1)),
+                  ))),
+          ]),
+        ),
+      ));
+    }
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: FloatingActionButton.small(
+            heroTag: 'fs_close',
+            onPressed: () => Navigator.pop(context),
+            backgroundColor: cs.surfaceContainerLowest.withValues(alpha: 0.9),
+            foregroundColor: cs.primary,
+            elevation: 2,
+            child: const Icon(Icons.fullscreen_exit, size: 20),
+          ),
+        ),
+      ),
+      body: Stack(children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCameraFit: CameraFit.bounds(
+              bounds: LatLngBounds.fromPoints(polylinePoints),
+              padding: const EdgeInsets.all(60),
+            ),
+            onTap: (_, latLng) {
+              final nearest = _findNearest(latLng, track.points);
+              if (nearest == null) return;
+              _dropMarker(LatLng(nearest.lat, nearest.lon),
+                  DateFormat('HH:mm').format(nearest.time.toLocal()));
+            },
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: _satelliteView
+                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.logbook.app',
+            ),
+            CircleLayer(circles: anchorCircles),
+            PolylineLayer(polylines: [
+              Polyline(points: polylinePoints, strokeWidth: 4, color: cs.primary),
+            ]),
+            MarkerLayer(markers: markers),
+            RichAttributionWidget(attributions: [
+              if (_satelliteView)
+                TextSourceAttribution('© Esri World Imagery', onTap: () async {
+                  final uri = Uri.parse('https://www.esri.com');
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                })
+              else
+                TextSourceAttribution('© OpenStreetMap contributors', onTap: () async {
+                  final uri = Uri.parse('https://www.openstreetmap.org/copyright');
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }),
+            ]),
+          ],
+        ),
+        Positioned(
+          right: 10, bottom: 10,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            if (defaultTargetPlatform == TargetPlatform.macOS) ...[
+              _mapBtn(Icons.add, () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1), cs),
+              const SizedBox(height: 6),
+              _mapBtn(Icons.remove, () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1), cs),
+              const SizedBox(height: 6),
+              _mapBtn(Icons.explore, () {
+                if (polylinePoints.isNotEmpty) {
+                  _mapController.fitCamera(CameraFit.bounds(bounds: LatLngBounds.fromPoints(polylinePoints), padding: const EdgeInsets.all(60)));
+                }
+              }, cs),
+              const SizedBox(height: 6),
+            ],
+            FloatingActionButton.small(
+              heroTag: 'fs_satellite',
+              onPressed: () => setState(() => _satelliteView = !_satelliteView),
+              tooltip: _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
+              child: Icon(_satelliteView ? Icons.map_outlined : Icons.satellite_alt),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
 }

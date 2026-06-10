@@ -233,6 +233,26 @@ class _HomeScreenState extends State<HomeScreen> {
         .reversed
         .toList();
 
+    // Group by month (order preserved: newest month first)
+    final monthKeys = <String>[];
+    final grouped = <String, List<DayEntry>>{};
+    for (final e in filtered) {
+      final key = '${e.date.year}-${e.date.month}';
+      if (!grouped.containsKey(key)) monthKeys.add(key);
+      grouped.putIfAbsent(key, () => []).add(e);
+    }
+
+    // Flat items list: String = month header, DayEntry = day row
+    // Only the first (most recent) month is open by default.
+    final items = <Object>[];
+    for (final monthKey in monthKeys) {
+      items.add(monthKey);
+      final isFirst = monthKey == monthKeys.first;
+      if (themeProvider.getMonthExpanded(monthKey, defaultOpen: isFirst)) {
+        items.addAll(grouped[monthKey]!);
+      }
+    }
+
     // Aggregate from repo.dailyTracks (same source as the tracks screen) so
     // days that have a GPX track but no logbook entry are still counted.
     double totalNm = 0;
@@ -361,13 +381,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (_, i) {
+                        final item = items[i];
+                        if (item is String) {
+                          return _buildMonthHeader(item, item == monthKeys.first, grouped, cs);
+                        }
+                        final entry = item as DayEntry;
+                        final monthKey =
+                            '${entry.date.year}-${entry.date.month}';
+                        final isLastInGroup =
+                            entry == grouped[monthKey]!.last;
+                        final isFirst = filtered.isNotEmpty &&
+                            entry == filtered.first;
                         final key = _dayKeys.putIfAbsent(
-                            _entryKey(filtered[i].date), () => GlobalKey());
+                            _entryKey(entry.date), () => GlobalKey());
                         return _buildTimelineItem(
-                            filtered[i], i, filtered.length, repo, cs,
-                            filterSettings: filterSettings, itemKey: key);
+                          entry, repo, cs,
+                          filterSettings: filterSettings,
+                          isActive: isFirst,
+                          showConnector: !isLastInGroup,
+                          itemKey: key,
+                        );
                       },
-                      childCount: filtered.length,
+                      childCount: items.length,
                     ),
                   ),
                 ),
@@ -547,17 +582,73 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ── Month group header ────────────────────────────────────────────
+  Widget _buildMonthHeader(String monthKey, bool isFirst,
+      Map<String, List<DayEntry>> grouped, ColorScheme cs) {
+    final parts = monthKey.split('-');
+    final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
+    final label = DateFormat('MMMM yyyy', 'de_CH').format(dt).toUpperCase();
+    final tp = context.read<ThemeProvider>();
+    final expanded = tp.getMonthExpanded(monthKey, defaultOpen: isFirst);
+    final count = grouped[monthKey]!.length;
+
+    return GestureDetector(
+      onTap: () => tp.setMonthExpanded(monthKey, !expanded),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(32, 12, 0, 4),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: cs.primary,
+              ),
+            ),
+            if (!expanded) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '$count',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+            const Spacer(),
+            Icon(
+              expanded ? Icons.expand_less : Icons.expand_more,
+              size: 18,
+              color: cs.primary,
+            ),
+            const SizedBox(width: 4),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Timeline entry ────────────────────────────────────────────────
   Widget _buildTimelineItem(
     DayEntry entry,
-    int index,
-    int total,
     HomeRepository repo,
     ColorScheme cs, {
     required FilterSettings filterSettings,
+    required bool isActive,
+    required bool showConnector,
     Key? itemKey,
   }) {
-    final isActive = index == 0; // most recent = active
     final dayKey =
         DateTime(entry.date.year, entry.date.month, entry.date.day);
     final track = repo.dailyTracks[dayKey];
@@ -583,7 +674,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => context.push(
                 '/day/${entry.date.year}/${entry.date.month}/${entry.date.day}'),
             child: Opacity(
-              opacity: isActive ? 1.0 : (index == 1 ? 0.9 : 0.8),
+              opacity: isActive ? 1.0 : 0.85,
               child: Container(
                 decoration: BoxDecoration(
                   color: isActive
@@ -735,7 +826,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              if (index < total - 1)
+              if (showConnector)
                 Expanded(
                   child: Center(
                     child: Container(width: 2, color: cs.outlineVariant),

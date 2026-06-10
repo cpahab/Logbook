@@ -146,6 +146,43 @@ class FirestoreService {
     return (data: _settingsFromDoc(raw), updatedAt: _tsToDate(raw['updatedAt']));
   }
 
+  // ── Meta: UI state ────────────────────────────────────────────────────────
+
+  /// Saves the dashboard month-expansion map.
+  Future<void> saveUiState(Map<String, bool> monthExpanded) =>
+      _metaDoc('ui').set({
+        'monthExpanded': monthExpanded,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+  /// Real-time stream of UI state.  Emits null when the document is absent.
+  Stream<Map<String, bool>?> uiStateChanges() =>
+      _metaDoc('ui').snapshots().map((doc) {
+        if (!doc.exists) return null;
+        final data = doc.data();
+        return data == null ? null : _uiStateFromDoc(data);
+      });
+
+  /// Fetches UI state together with the server [updatedAt] timestamp.
+  Future<({Map<String, bool>? data, DateTime? updatedAt})>
+      fetchUiStateWithMeta() async {
+    final doc = await _metaDoc('ui')
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 10));
+    if (!doc.exists) return (data: null, updatedAt: null);
+    final raw = doc.data();
+    if (raw == null) return (data: null, updatedAt: null);
+    return (data: _uiStateFromDoc(raw), updatedAt: _tsToDate(raw['updatedAt']));
+  }
+
+  static Map<String, bool> _uiStateFromDoc(Map<String, dynamic> data) {
+    final raw = data['monthExpanded'];
+    if (raw is! Map) return {};
+    return Map<String, bool>.fromEntries(
+      raw.entries.map((e) => MapEntry(e.key as String, e.value == true)),
+    );
+  }
+
   // ── Meta: emergency contacts ───────────────────────────────────────────────
 
   Future<void> saveEmergencyContacts(List<Map<String, String>> contacts) =>
