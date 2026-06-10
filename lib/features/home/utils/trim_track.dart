@@ -1,15 +1,20 @@
-/// GPS track cleaning pipeline — Dart port of gpx_filter_reference_v4.py.
+/// GPS track cleaning pipeline — Dart port of gpx_filter_reference_v5.py.
 ///
-/// v3 upgrade: detects ALL stationary segments (dock, anchor, harbor stops
-/// mid-track) rather than trimming only the leading/trailing ends.  A genuine
-/// stop must last ≥ [FilterSettings.minStopMinutes] AND stay within
-/// [FilterSettings.maxStopSpreadM] of its centroid.
+/// v5 upgrade: robustness to GPS dropouts / teleports (a logging gap where the
+/// receiver re-acquires at a new position).  Two changes:
+///   (a) the moving-window speed/spread is GAP-AWARE — the window never spans a
+///       flagged spike, so berth fixes adjacent to a departure glitch still read
+///       as stationary;
+///   (b) the stop-merge never bridges across a flagged spike, so a teleport
+///       cannot fuse the pre- and post-jump pauses into one bogus wide "stop".
 ///
-/// Four passes in order:
-///   1. Annotate  — windowed speed + positional spread for every fix.
-///   2. Detect    — find ALL stationary segments (start, mid, end).
-///   3. Spikes    — flag physically implausible moving fixes.
-///   4. Smooth    — sliding-median on the kept track.
+/// Pipeline order (v5):
+///   1. Annotate  — initial windowed speed + spread (simple window, no spikes yet).
+///   2. Spikes    — flag physically implausible moving fixes BEFORE stop detection.
+///   3. Re-annotate — gap-aware window now that spike positions are known.
+///   4. Detect    — find ALL stationary segments (start, mid, end).
+///   5. Cold-start — flag GPS warm-up fixes at track start.
+///   6. Smooth    — sliding-median on the kept moving track.
 library;
 
 import 'dart:math';
@@ -54,6 +59,13 @@ class _Fix {
 
 void _annotate(List<_Fix> fixes, int window) {
   final n = fixes.length;
+
+  // A "break" at position k means the window must not cross the k-1 ↔ k
+  // boundary: either fix is a flagged spike.  On the first pass (before spikes
+  // are flagged) this is always false, so the window expands normally.
+  bool isBreakAt(int k) =>
+      k > 0 && (fixes[k].flagged || fixes[k - 1].flagged);
+
   for (int i = 0; i < n; i++) {
     if (i == 0) {
       fixes[i].instSpeedKn = 0;
@@ -64,24 +76,33 @@ void _annotate(List<_Fix> fixes, int window) {
       fixes[i].instSpeedKn = dt > 0 ? d / dt * _mpsToKn : 0;
     }
 
-    final lo = max(0, i - window);
-    final hi = min(n - 1, i + window);
+    // Expand centred window but stop at any spike boundary (v5 gap-aware).
+    var lo = i;
+    while (lo > max(0, i - window) && !isBreakAt(lo)) { lo--; }
+    var hi = i;
+    while (hi < min(n - 1, i + window) && !isBreakAt(hi + 1)) { hi++; }
 
-    final winDt = fixes[hi].pt.time.difference(fixes[lo].pt.time).inSeconds.toDouble();
-    final winD  = _haversineM(fixes[lo].pt.lat, fixes[lo].pt.lon,
-                               fixes[hi].pt.lat, fixes[hi].pt.lon);
-    fixes[i].winSpeedKn = winDt > 0 ? winD / winDt * _mpsToKn : 0;
+    if (hi > lo) {
+      final winDt = fixes[hi].pt.time.difference(fixes[lo].pt.time).inSeconds.toDouble();
+      final winD  = _haversineM(fixes[lo].pt.lat, fixes[lo].pt.lon,
+                                 fixes[hi].pt.lat, fixes[hi].pt.lon);
+      fixes[i].winSpeedKn = winDt > 0 ? winD / winDt * _mpsToKn : 0;
 
-    final slice = fixes.sublist(lo, hi + 1);
-    var sumLat = 0.0, sumLon = 0.0;
-    for (final f in slice) { sumLat += f.pt.lat; sumLon += f.pt.lon; }
-    final cLat = sumLat / slice.length;
-    final cLon = sumLon / slice.length;
-    var sumDist = 0.0;
-    for (final f in slice) {
-      sumDist += _haversineM(cLat, cLon, f.pt.lat, f.pt.lon);
+      final slice = fixes.sublist(lo, hi + 1);
+      var sumLat = 0.0, sumLon = 0.0;
+      for (final f in slice) { sumLat += f.pt.lat; sumLon += f.pt.lon; }
+      final cLat = sumLat / slice.length;
+      final cLon = sumLon / slice.length;
+      var sumDist = 0.0;
+      for (final f in slice) {
+        sumDist += _haversineM(cLat, cLon, f.pt.lat, f.pt.lon);
+      }
+      fixes[i].winSpreadM = sumDist / slice.length;
+    } else {
+      // Fix isolated between two spike boundaries: fall back to instantaneous.
+      fixes[i].winSpeedKn = fixes[i].instSpeedKn;
+      fixes[i].winSpreadM = 0.0;
     }
-    fixes[i].winSpreadM = sumDist / slice.length;
   }
 }
 
@@ -126,10 +147,22 @@ List<_StopSegment> _findStationarySegments(
   }
 
   // 2. Merge runs separated by ≤ _mergeGap moving fixes (bridges GPS flicker).
+  //    v5: never bridge a gap that contains a flagged spike fix — those are
+  //    teleports/dropouts that must NOT be absorbed into a stop segment.
   final merged = <List<int>>[];
   for (final run in raw) {
     if (merged.isNotEmpty && run[0] - merged.last[1] - 1 <= _mergeGap) {
-      merged.last[1] = run[1];
+      final gapStart = merged.last[1] + 1;
+      final gapEnd   = run[0] - 1;
+      bool hasSpike  = false;
+      for (int k = gapStart; k <= gapEnd; k++) {
+        if (fixes[k].flagged) { hasSpike = true; break; }
+      }
+      if (!hasSpike) {
+        merged.last[1] = run[1];
+      } else {
+        merged.add([run[0], run[1]]);
+      }
     } else {
       merged.add([run[0], run[1]]);
     }
@@ -360,6 +393,10 @@ class TrimResult {
   /// centroid position and positional-spread statistics for halo rendering.
   final List<TrackAnchor> anchors;
 
+  /// Instantaneous speeds (knots) of the kept moving fixes, in track order.
+  /// Pre-computed by the pipeline so callers don't need to re-derive them.
+  final List<double> movingInstSpeedsKn;
+
   /// Number of GPS fixes flagged as implausible speed spikes.
   final int nSpikes;
 
@@ -368,9 +405,10 @@ class TrimResult {
 
   const TrimResult({
     required this.points,
-    this.anchors    = const [],
-    this.nSpikes    = 0,
-    this.nColdStart = 0,
+    this.anchors             = const [],
+    this.movingInstSpeedsKn  = const [],
+    this.nSpikes             = 0,
+    this.nColdStart          = 0,
   });
 
   // Backward-compat getters for callers that only care about the endpoints.
@@ -390,14 +428,21 @@ TrimResult trimTrackWithAnchors(
 }) {
   if (points.length < 4) return TrimResult(points: points);
 
-  // Pass 1 — annotate
   final fixes = points.map(_Fix.new).toList();
+
+  // Pass 1 — initial annotate (simple window; no spikes flagged yet)
   _annotate(fixes, settings.window);
 
-  // Pass 2 — find all stationary segments
+  // Pass 2 — flag spikes BEFORE stop detection
+  final nSpikes = _flagSpikes(fixes);
+
+  // Pass 3 — re-annotate now that spike positions are known (gap-aware window)
+  _annotate(fixes, settings.window);
+
+  // Pass 4 — find all stationary segments (uses spike-aware annotations)
   final stops = _findStationarySegments(fixes, settings);
 
-  // Pass 3b — GPS cold-start (only at start stop; sets .coldStart on leading fixes)
+  // Pass 5 — GPS cold-start (only at start stop; sets .coldStart on leading fixes)
   final nColdStart = settings.detectColdStart
       ? _flagColdStart(fixes, stops, settings.coldStartSettleFactor)
       : 0;
@@ -413,25 +458,32 @@ TrimResult trimTrackWithAnchors(
     return _computeAnchor(cluster, s.kind, s.durationMinutes);
   }).toList();
 
-  // Pass 3 — spikes
-  final nSpikes = _flagSpikes(fixes);
+  // Collect kept fixes (moving, non-spiked)
+  final keptFixes = fixes.where((f) => !f.stationary && !f.flagged).toList();
 
-  // Collect kept points
-  final kept = fixes
-      .where((f) => !f.stationary && !f.flagged)
-      .map((f) => f.pt)
-      .toList();
-
-  if (kept.isEmpty) {
+  if (keptFixes.isEmpty) {
     return TrimResult(points: points, anchors: anchors, nSpikes: nSpikes, nColdStart: nColdStart);
   }
 
-  // Pass 4 — smooth
+  // Collect instantaneous speeds of kept fixes for robust max-speed computation.
+  final movingInstSpeedsKn = keptFixes
+      .map((f) => f.instSpeedKn)
+      .where((s) => s > 0)
+      .toList();
+
+  // Pass 6 — smooth the kept track
+  final kept     = keptFixes.map((f) => f.pt).toList();
   final smoothed = settings.smoothWindow >= 2
       ? _smoothMedian(kept, settings.smoothWindow)
       : kept;
 
-  return TrimResult(points: smoothed, anchors: anchors, nSpikes: nSpikes, nColdStart: nColdStart);
+  return TrimResult(
+    points:              smoothed,
+    anchors:             anchors,
+    movingInstSpeedsKn:  movingInstSpeedsKn,
+    nSpikes:             nSpikes,
+    nColdStart:          nColdStart,
+  );
 }
 
 /// Convenience wrapper — returns only the cleaned point list.

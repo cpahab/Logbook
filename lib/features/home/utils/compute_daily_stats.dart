@@ -105,11 +105,10 @@ DailyStats computeDailyStats(
   const makingWayThresholdKn = 1.0;
   const maxSpeedPercentile   = 0.99;
 
-  double distanceM   = 0;
-  double movingTimeS = 0;
+  double distanceM    = 0;
+  double movingTimeS  = 0;
   double makewayDistM = 0;
   double makewayTimeS = 0;
-  final  instantSpeeds = <double>[];
 
   for (int i = 1; i < pts.length; i++) {
     final p1 = pts[i - 1];
@@ -127,14 +126,16 @@ DailyStats computeDailyStats(
       makewayDistM += d;
       makewayTimeS += dt;
     }
-    if (speedKn > 0) instantSpeeds.add(speedKn);
   }
+
+  // Use pre-computed moving instantaneous speeds from the pipeline (v5).
+  // These are derived before smoothing, so they reflect real GPS velocity.
+  final instantSpeeds = List<double>.from(result.movingInstSpeedsKn)..sort();
 
   double maxSpeedKn    = 0;
   double maxSpeedRawKn = 0;
   if (instantSpeeds.isNotEmpty) {
-    instantSpeeds.sort();
-    final idx    = ((instantSpeeds.length - 1) * maxSpeedPercentile).floor();
+    final idx = ((instantSpeeds.length - 1) * maxSpeedPercentile).floor();
     maxSpeedKn    = instantSpeeds[idx.clamp(0, instantSpeeds.length - 1)];
     maxSpeedRawKn = instantSpeeds.last;
   }
