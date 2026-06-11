@@ -134,6 +134,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         appBar: AppBar(
           backgroundColor: cs.surface,
           foregroundColor: cs.primary,
+          iconTheme: IconThemeData(color: cs.primary),
           elevation: 0,
           scrolledUnderElevation: 1,
           shadowColor: Colors.black12,
@@ -163,19 +164,19 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                   color: cs.primary.withValues(alpha: 0.03)),
             ),
             SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── 1. Chronometrie ─────────────────────────────────
                   _sectionHeader(Icons.schedule, 'Chronometrie', cs),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   _plainCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _labelSm('UHRZEIT', cs),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         GestureDetector(
                           onTap: () async {
                             final t = await showTimePicker(
@@ -185,7 +186,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           child: Text(
                             selectedTime.format(context),
                             style: GoogleFonts.newsreader(
-                              fontSize: 32,
+                              fontSize: 28,
                               fontWeight: FontWeight.w500,
                               color: cs.primary,
                             ),
@@ -196,10 +197,10 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     cs: cs,
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   // ── 2. Navigation ────────────────────────────────────
                   _sectionHeader(Icons.explore, 'Navigation', cs),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -216,7 +217,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           cs: cs,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _navCard(
                           label: 'FAHRT (kn)',
@@ -235,17 +236,17 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   // ── 3. Umgebung ──────────────────────────────────────
                   _sectionHeader(Icons.air, 'Umgebung', cs),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   // Wind: direction + strength
                   _plainCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _labelSm('WIND RICHTUNG & STÄRKE', cs),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             // Direction dropdown
@@ -345,7 +346,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     ),
                     cs: cs,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
@@ -354,21 +355,21 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _labelSm('SEE', cs),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 4),
                               _bareTextField(seaCtrl, 'z.B. Leicht', cs),
                             ],
                           ),
                           cs: cs,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _plainCard(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _labelSm('WETTER', cs),
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 4),
                               _bareTextField(weatherCtrl, 'z.B. Sonnig', cs),
                             ],
                           ),
@@ -378,35 +379,35 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     ],
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   // ── 4. Segel & Motor ─────────────────────────────────
                   _sectionHeader(Icons.sailing, 'Segel & Motor', cs),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   _plainCard(
                     cs: cs,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _labelSm('GROSS', cs),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         _sailChips(
                           options: const ['Voll gesetzt', '1. Reff', '2. Reff', 'Niedergeholt'],
                           selected: _grossState,
                           onSelect: (v) => setState(() => _grossState = v),
                           cs: cs,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
                         _labelSm('FOCK', cs),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         _sailChips(
                           options: const ['Voll gesetzt', '1. Reff', '2. Reff', 'Eingerollt'],
                           selected: _fockState,
                           onSelect: (v) => setState(() => _fockState = v),
                           cs: cs,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 10),
                         _labelSm('MOTOR', cs),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Row(
                           children: [
                             _stateChip('An',  _motorOn == true,
@@ -420,15 +421,15 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   // ── 5. Bemerkungen ───────────────────────────────────
                   _sectionHeader(Icons.edit_note, 'Bemerkungen', cs),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   _plainCard(
                     child: TextField(
                       controller: remarksCtrl,
                       style: GoogleFonts.newsreader(
-                        fontSize: 18,
+                        fontSize: 15,
                         fontStyle: FontStyle.italic,
                         color: cs.primary,
                       ),
@@ -438,12 +439,12 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         contentPadding: EdgeInsets.zero,
                         hintText: 'z.B. Beobachtung, Erlebnis…',
                         hintStyle: GoogleFonts.newsreader(
-                          fontSize: 18,
+                          fontSize: 15,
                           fontStyle: FontStyle.italic,
                           color: cs.onSurface.withValues(alpha: 0.3),
                         ),
                       ),
-                      minLines: 3,
+                      minLines: 2,
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
                       textInputAction: TextInputAction.newline,
@@ -451,11 +452,11 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     cs: cs,
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20),
                   // ── Actions ──────────────────────────────────────────
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: 48,
                     child: FilledButton.icon(
                       onPressed: _submit,
                       style: FilledButton.styleFrom(
@@ -470,7 +471,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       label: Text(isEdit ? 'Änderungen speichern' : 'In Log eintragen'),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
@@ -520,7 +521,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   Widget _plainCard({required Widget child, required ColorScheme cs}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
@@ -548,7 +549,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     required ColorScheme cs,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
@@ -565,7 +566,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _labelSm(label, cs),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -574,7 +575,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                 child: TextField(
                   controller: controller,
                   style: GoogleFonts.newsreader(
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: cs.primary,
                   ),
@@ -584,9 +585,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     contentPadding: EdgeInsets.zero,
                     hintText: placeholder,
                     hintStyle: GoogleFonts.newsreader(
-                      fontSize: 18,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: cs.primary.withValues(alpha: 0.20),
+                      color: cs.outline,
                     ),
                   ),
                   keyboardType: keyboardType,
@@ -598,7 +599,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
               Text(
                 unit,
                 style: GoogleFonts.inter(
-                  fontSize: 14,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: cs.outline,
                 ),

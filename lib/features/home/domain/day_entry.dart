@@ -68,6 +68,11 @@ class DayEntry extends HiveObject {
   @HiveField(19)
   String? freeText;
 
+  /// Retractable keel position. true = keel down (sailing), false = keel up
+  /// (shallow water / harbour). null = not yet recorded.
+  @HiveField(20)
+  bool? keelDown;
+
   DayEntry({
     required this.date,
     this.timeline = const [],
@@ -89,6 +94,7 @@ class DayEntry extends HiveObject {
     this.fuelLevel,
     List<CrewMember>? crew,
     this.freeText,
+    this.keelDown,
   })  : participantsList = participantsList ?? <String>[],
         checkedItems = checkedItems ?? <String>[],
         crew = crew ?? <CrewMember>[];

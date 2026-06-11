@@ -346,7 +346,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
           fontSize: 18,
           fontWeight: FontWeight.w600,
           fontStyle: italic ? FontStyle.italic : FontStyle.normal,
-          color: cs.primary.withValues(alpha: 0.20),
+          color: cs.outline,
         ),
       ),
     );
