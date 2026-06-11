@@ -35,9 +35,13 @@ class ThemeProvider extends ChangeNotifier {
   // Epoch-ms string: when UI state (month expansion) was last changed locally.
   static const _uiModifiedKey       = 'ui_modified_at_epoch';
   // Local-only (not cloud-synced) filter preferences.
-  static const _filterModeKey        = 'filter_stationary_mode';
-  static const _minStopMinutesKey    = 'filter_min_stop_minutes';
-  static const _maxStopSpreadMKey    = 'filter_max_stop_spread_m';
+  static const _filterModeKey              = 'filter_stationary_mode';
+  static const _minStopMinutesKey          = 'filter_min_stop_minutes';
+  static const _maxStopSpreadMKey          = 'filter_max_stop_spread_m';
+  static const _detectColdStartKey         = 'filter_detect_cold_start';
+  static const _coldStartSettleFactorKey   = 'filter_cold_start_settle_factor';
+  static const _makingWayThresholdKnKey    = 'filter_making_way_threshold_kn';
+  static const _topSpeedPercentileKey      = 'filter_top_speed_percentile';
 
   late Box<String> _box;
   FirestoreService? _firestore;
@@ -45,9 +49,13 @@ class ThemeProvider extends ChangeNotifier {
   StreamSubscription<Map<String, bool>?>?   _uiSub;
 
   ThemeMode _mode = ThemeMode.system;
-  StationaryMode _filterMode    = StationaryMode.speed;
-  double _minStopMinutes = 5.0;
-  double _maxStopSpreadM = 30.0;
+  StationaryMode _filterMode        = StationaryMode.speed;
+  double _minStopMinutes            = 5.0;
+  double _maxStopSpreadM            = 30.0;
+  bool   _detectColdStart           = true;
+  double _coldStartSettleFactor     = 3.0;
+  double _makingWayThresholdKn      = 1.0;
+  double _topSpeedPercentile        = 0.99;
   String _title = 'Logbuch';
   String _weatherUrl = '';
   late String _logbookCode;
@@ -66,14 +74,22 @@ class ThemeProvider extends ChangeNotifier {
   String _vhf4Label = 'Channel 13';
   String _vhf4Desc  = 'Bridge to Bridge · 156.650 MHz';
 
-  ThemeMode get themeMode          => _mode;
-  StationaryMode get filterMode    => _filterMode;
-  double get minStopMinutes        => _minStopMinutes;
-  double get maxStopSpreadM        => _maxStopSpreadM;
+  ThemeMode get themeMode               => _mode;
+  StationaryMode get filterMode         => _filterMode;
+  double get minStopMinutes             => _minStopMinutes;
+  double get maxStopSpreadM             => _maxStopSpreadM;
+  bool   get detectColdStart            => _detectColdStart;
+  double get coldStartSettleFactor      => _coldStartSettleFactor;
+  double get makingWayThresholdKn       => _makingWayThresholdKn;
+  double get topSpeedPercentile         => _topSpeedPercentile;
   FilterSettings get filterSettings => FilterSettings(
-    stationaryMode:  _filterMode,
-    minStopMinutes:  _minStopMinutes,
-    maxStopSpreadM:  _maxStopSpreadM,
+    stationaryMode:        _filterMode,
+    minStopMinutes:        _minStopMinutes,
+    maxStopSpreadM:        _maxStopSpreadM,
+    detectColdStart:       _detectColdStart,
+    coldStartSettleFactor: _coldStartSettleFactor,
+    makingWayThresholdKn:  _makingWayThresholdKn,
+    topSpeedPercentile:    _topSpeedPercentile,
   );
   String get logbuchTitle          => _title;
   String get weatherUrl         => _weatherUrl;
@@ -162,10 +178,14 @@ class ThemeProvider extends ChangeNotifier {
 
   Future<void> init() async {
     _box = await Hive.openBox<String>(_boxName);
-    _mode             = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
-    _filterMode       = _parseFilterMode(_box.get(_filterModeKey, defaultValue: 'speed')!);
-    _minStopMinutes   = double.tryParse(_box.get(_minStopMinutesKey, defaultValue: '5.0')!) ?? 5.0;
-    _maxStopSpreadM   = double.tryParse(_box.get(_maxStopSpreadMKey, defaultValue: '30.0')!) ?? 30.0;
+    _mode                  = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
+    _filterMode            = _parseFilterMode(_box.get(_filterModeKey, defaultValue: 'speed')!);
+    _minStopMinutes        = double.tryParse(_box.get(_minStopMinutesKey,         defaultValue: '5.0')!)  ?? 5.0;
+    _maxStopSpreadM        = double.tryParse(_box.get(_maxStopSpreadMKey,         defaultValue: '30.0')!) ?? 30.0;
+    _detectColdStart       = (_box.get(_detectColdStartKey,       defaultValue: 'true')!)  != 'false';
+    _coldStartSettleFactor = double.tryParse(_box.get(_coldStartSettleFactorKey,  defaultValue: '3.0')!)  ?? 3.0;
+    _makingWayThresholdKn  = double.tryParse(_box.get(_makingWayThresholdKnKey,   defaultValue: '1.0')!)  ?? 1.0;
+    _topSpeedPercentile    = double.tryParse(_box.get(_topSpeedPercentileKey,      defaultValue: '0.99')!) ?? 0.99;
     _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
     _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
     _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
@@ -236,6 +256,34 @@ class ThemeProvider extends ChangeNotifier {
     if (_maxStopSpreadM == v) return;
     _maxStopSpreadM = v;
     _box.put(_maxStopSpreadMKey, v.toString());
+    notifyListeners();
+  }
+
+  void setDetectColdStart(bool v) {
+    if (_detectColdStart == v) return;
+    _detectColdStart = v;
+    _box.put(_detectColdStartKey, v.toString());
+    notifyListeners();
+  }
+
+  void setColdStartSettleFactor(double v) {
+    if (_coldStartSettleFactor == v) return;
+    _coldStartSettleFactor = v;
+    _box.put(_coldStartSettleFactorKey, v.toString());
+    notifyListeners();
+  }
+
+  void setMakingWayThresholdKn(double v) {
+    if (_makingWayThresholdKn == v) return;
+    _makingWayThresholdKn = v;
+    _box.put(_makingWayThresholdKnKey, v.toString());
+    notifyListeners();
+  }
+
+  void setTopSpeedPercentile(double v) {
+    if (_topSpeedPercentile == v) return;
+    _topSpeedPercentile = v;
+    _box.put(_topSpeedPercentileKey, v.toString());
     notifyListeners();
   }
 

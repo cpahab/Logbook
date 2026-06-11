@@ -52,6 +52,14 @@ class FilterSettings {
   /// berth position to count as a cold-start fix.  Lower = more aggressive.
   final double coldStartSettleFactor;
 
+  /// Minimum speed (knots) for a fix to count toward the "making-way" average.
+  /// Drifting / motoring slowly below this threshold is excluded.
+  final double makingWayThresholdKn;
+
+  /// Percentile (0–1) of instantaneous moving speeds used as the reported
+  /// "max speed".  1.0 = true maximum; 0.99 = p99 (suppresses lone GPS spikes).
+  final double topSpeedPercentile;
+
   const FilterSettings({
     this.stationaryMode        = StationaryMode.speed,
     this.speedThresholdKn      = 0.5,
@@ -62,5 +70,7 @@ class FilterSettings {
     this.maxStopSpreadM        = 30.0,
     this.detectColdStart       = true,
     this.coldStartSettleFactor = 3.0,
+    this.makingWayThresholdKn  = 1.0,
+    this.topSpeedPercentile    = 0.99,
   });
 }

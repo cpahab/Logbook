@@ -486,9 +486,343 @@ TrimResult trimTrackWithAnchors(
   );
 }
 
+/// Splits [points] into continuous sub-segments, starting a new segment
+/// whenever the time gap between two consecutive points exceeds [breakSeconds].
+///
+/// Use this on [TrimResult.points] before rendering: removed fixes (spikes,
+/// cold-start, stationary runs) leave large time gaps in the filtered list.
+/// Connecting those gaps with a straight line would show phantom track
+/// segments on the map.
+///
+/// [breakSeconds] defaults to 60 s — safe for GPS intervals up to ~20 s and
+/// stop durations ≥ 1 minute.  Raise it for slow-logging receivers.
+List<List<TrackPoint>> splitTrackSegments(
+  List<TrackPoint> points, {
+  int breakSeconds = 60,
+}) {
+  if (points.isEmpty) return [];
+  final segments = <List<TrackPoint>>[];
+  var current = [points.first];
+  for (int i = 1; i < points.length; i++) {
+    final gapS = points[i].time.difference(points[i - 1].time).inSeconds.abs();
+    if (gapS > breakSeconds) {
+      if (current.length >= 2) segments.add(current);
+      current = [];
+    }
+    current.add(points[i]);
+  }
+  if (current.length >= 2) segments.add(current);
+  return segments;
+}
+
 /// Convenience wrapper — returns only the cleaned point list.
 List<TrackPoint> trimStationaryEnds(
   List<TrackPoint> points, {
   FilterSettings settings = const FilterSettings(),
 }) =>
     trimTrackWithAnchors(points, settings: settings).points;
+
+// ── Display model ─────────────────────────────────────────────────────────────
+
+const _samePlaceM = 100.0;
+const _teleportM  = 200.0;
+
+/// Visual category of one rendered track segment.
+enum SegmentKind { moving, stopEntry, stopExit, teleportBreak }
+
+/// One continuous piece of the rendered track.
+class TrackSegment {
+  /// Category determines rendering style.
+  final SegmentKind kind;
+
+  /// Ordered coordinates. Empty for [SegmentKind.teleportBreak].
+  /// Entry/exit connectors contain two synthetic end-points.
+  final List<TrackPoint> points;
+
+  /// Per-fix instantaneous speed (knots), parallel to [points]. null for connectors.
+  final List<double?> speedKn;
+
+  const TrackSegment(this.kind, this.points, this.speedKn);
+}
+
+/// Everything needed to render one stop on the map.
+class StopMarker {
+  final AnchorKind kind;
+  final double lat;
+  final double lon;
+
+  /// Inner halo: 50th-percentile GPS spread radius.
+  final double cep50M;
+
+  /// Outer halo: 95th-percentile GPS spread radius.
+  final double r95M;
+
+  final double minutes;
+  final int nFixes;
+  final int nColdStart;
+
+  /// True when departure from this stop involved a GPS teleport / gap.
+  final bool hasTeleportAfter;
+
+  const StopMarker({
+    required this.kind,
+    required this.lat,
+    required this.lon,
+    required this.cep50M,
+    required this.r95M,
+    required this.minutes,
+    required this.nFixes,
+    required this.nColdStart,
+    this.hasTeleportAfter = false,
+  });
+}
+
+/// Complete rendering model for one day's GPS track.
+class DisplayModel {
+  final List<TrackSegment> segments;
+  final List<StopMarker> stops;
+  final bool hasTeleport;
+
+  const DisplayModel({
+    this.segments    = const [],
+    this.stops       = const [],
+    this.hasTeleport = false,
+  });
+
+  /// First moving fix — departure time.
+  TrackPoint? get firstMovingPoint {
+    for (final s in segments) {
+      if (s.kind == SegmentKind.moving && s.points.isNotEmpty) return s.points.first;
+    }
+    return null;
+  }
+
+  /// Last moving fix — arrival time.
+  TrackPoint? get lastMovingPoint {
+    for (int i = segments.length - 1; i >= 0; i--) {
+      final s = segments[i];
+      if (s.kind == SegmentKind.moving && s.points.isNotEmpty) return s.points.last;
+    }
+    return null;
+  }
+
+  /// All non-break coords in track order.
+  List<TrackPoint> allPoints() => [
+    for (final s in segments)
+      if (s.kind != SegmentKind.teleportBreak) ...s.points,
+  ];
+
+  /// Moving coords only — for bearing calculations and stats.
+  List<TrackPoint> movingPoints() => [
+    for (final s in segments)
+      if (s.kind == SegmentKind.moving) ...s.points,
+  ];
+
+  /// Start stop (kind = start) if present.
+  StopMarker? get startStop =>
+      stops.where((s) => s.kind == AnchorKind.start).firstOrNull;
+
+  /// End stop (kind = end) if present.
+  StopMarker? get endStop =>
+      stops.where((s) => s.kind == AnchorKind.end).firstOrNull;
+
+  /// All non-break coords split at teleport breaks, min 2 points each.
+  /// Used for overview map polyline rendering.
+  List<List<TrackPoint>> polylines() {
+    final polys = <List<TrackPoint>>[[]];
+    for (final seg in segments) {
+      if (seg.kind == SegmentKind.teleportBreak) {
+        if (polys.last.isNotEmpty) polys.add([]);
+      } else {
+        polys.last.addAll(seg.points);
+      }
+    }
+    return polys.where((p) => p.length >= 2).toList();
+  }
+}
+
+// ── Display model builder ─────────────────────────────────────────────────────
+
+String _connType(double? dBefore, double? dAfter, bool hasSpike) {
+  final maxD = max(dBefore ?? 0.0, dAfter ?? 0.0);
+  if (hasSpike && maxD > _teleportM) return 'teleport';
+  if (maxD < _samePlaceM) return 'on_track';
+  return 'position_shift';
+}
+
+/// Build a [DisplayModel] from a raw GPS point list.
+///
+/// Runs the same v5 pipeline as [trimTrackWithAnchors] and segments the output
+/// into moving runs, stop connectors, and teleport breaks — ready for
+/// multi-style map rendering.
+DisplayModel buildDisplayModel(
+  List<TrackPoint> points, {
+  FilterSettings settings = const FilterSettings(),
+}) {
+  if (points.length < 4) return const DisplayModel();
+
+  final fixes = points.map(_Fix.new).toList();
+  final n = fixes.length;
+
+  _annotate(fixes, settings.window);
+  _flagSpikes(fixes);
+  _annotate(fixes, settings.window);
+  final stops = _findStationarySegments(fixes, settings);
+  if (settings.detectColdStart) {
+    _flagColdStart(fixes, stops, settings.coldStartSettleFactor);
+  }
+
+  // Build anchors (same logic as trimTrackWithAnchors)
+  final anchors = stops.map((s) {
+    final allInSeg = fixes.sublist(s.startIdx, s.endIdx + 1);
+    final settled  = allInSeg.where((f) => !f.coldStart).toList();
+    final cluster  = (settled.length >= 3 ? settled : allInSeg)
+        .map((f) => f.pt)
+        .toList();
+    return _computeAnchor(cluster, s.kind, s.durationMinutes);
+  }).toList();
+
+  // Fast lookup: raw fix index → stop index
+  final inStop = <int, int>{};
+  for (int si = 0; si < stops.length; si++) {
+    for (int k = stops[si].startIdx; k <= stops[si].endIdx; k++) {
+      inStop[k] = si;
+    }
+  }
+
+  final spikeSet = <int>{
+    for (int i = 0; i < n; i++)
+      if (fixes[i].flagged) i,
+  };
+
+  final segments    = <TrackSegment>[];
+  final stopMarkers = <StopMarker>[];
+  bool hasTeleport  = false;
+
+  final curPoints = <TrackPoint>[];
+  final curSpeeds = <double?>[];
+
+  void flushMoving() {
+    if (curPoints.isNotEmpty) {
+      segments.add(TrackSegment(
+          SegmentKind.moving, List.of(curPoints), List.of(curSpeeds)));
+      curPoints.clear();
+      curSpeeds.clear();
+    }
+  }
+
+  var ri = 0;
+  while (ri < n) {
+    final f = fixes[ri];
+
+    if (f.coldStart || f.stationary) {
+      final si = inStop[ri];
+      if (si == null) { ri++; continue; }
+
+      final s      = stops[si];
+      final anchor = anchors[si];
+      final clat   = anchor.lat;
+      final clon   = anchor.lon;
+
+      final nCold = fixes
+          .sublist(s.startIdx, s.endIdx + 1)
+          .where((fix) => fix.coldStart)
+          .length;
+
+      // Last moving fix before this stop
+      TrackPoint? beforePt;
+      for (int k = s.startIdx - 1; k >= 0; k--) {
+        final fk = fixes[k];
+        if (!fk.stationary && !fk.coldStart && !fk.flagged) {
+          beforePt = fk.pt;
+          break;
+        }
+      }
+
+      // First moving fix after this stop
+      TrackPoint? afterPt;
+      for (int k = s.endIdx + 1; k < n; k++) {
+        final fk = fixes[k];
+        if (!fk.stationary && !fk.coldStart && !fk.flagged) {
+          afterPt = fk.pt;
+          break;
+        }
+      }
+
+      // Any spike within ±2 positions of the stop boundary?
+      final lo = max(0, s.startIdx - 2);
+      final hi = min(n, s.endIdx + 3);
+      var hasSpike = false;
+      for (int k = lo; k < hi; k++) {
+        if (spikeSet.contains(k)) { hasSpike = true; break; }
+      }
+
+      final dBefore = beforePt != null
+          ? _haversineM(beforePt.lat, beforePt.lon, clat, clon) : null;
+      final dAfter  = afterPt != null
+          ? _haversineM(clat, clon, afterPt.lat, afterPt.lon) : null;
+
+      final conn          = _connType(dBefore, dAfter, hasSpike);
+      final teleportAfter = conn == 'teleport' &&
+          (afterPt == null || (dAfter ?? 0) > _teleportM);
+
+      // Flush moving run + optional stop_entry connector (not for the start stop)
+      if (s.kind != AnchorKind.start && curPoints.isNotEmpty) {
+        final entryStart = curPoints.last;
+        flushMoving();
+        if (_haversineM(entryStart.lat, entryStart.lon, clat, clon) > 5) {
+          segments.add(TrackSegment(SegmentKind.stopEntry,
+            [entryStart, TrackPoint(lat: clat, lon: clon, time: entryStart.time)],
+            [null, null]));
+        }
+      } else {
+        flushMoving();
+      }
+
+      stopMarkers.add(StopMarker(
+        kind:             s.kind,
+        lat:              clat,
+        lon:              clon,
+        cep50M:           anchor.cep50M,
+        r95M:             anchor.r95M,
+        minutes:          s.durationMinutes,
+        nFixes:           anchor.fixCount,
+        nColdStart:       nCold,
+        hasTeleportAfter: teleportAfter,
+      ));
+      hasTeleport |= teleportAfter;
+
+      if (teleportAfter) {
+        segments.add(const TrackSegment(SegmentKind.teleportBreak, [], []));
+      } else if (afterPt != null && (dAfter ?? 0) > 5) {
+        segments.add(TrackSegment(SegmentKind.stopExit,
+          [TrackPoint(lat: clat, lon: clon, time: afterPt.time), afterPt],
+          [null, null]));
+      }
+
+      ri = s.endIdx + 1;
+      continue;
+    }
+
+    if (f.flagged) {
+      flushMoving();
+      segments.add(const TrackSegment(SegmentKind.teleportBreak, [], []));
+      hasTeleport = true;
+      ri++;
+      continue;
+    }
+
+    // Normal moving fix
+    curPoints.add(f.pt);
+    curSpeeds.add(f.instSpeedKn > 0 ? f.instSpeedKn : null);
+    ri++;
+  }
+
+  flushMoving();
+
+  return DisplayModel(
+    segments:    segments,
+    stops:       stopMarkers,
+    hasTeleport: hasTeleport,
+  );
+}
