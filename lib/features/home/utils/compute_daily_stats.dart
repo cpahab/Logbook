@@ -101,9 +101,9 @@ DailyStats computeDailyStats(
     );
   }
 
-  const mpsToKn              = 1.94384;
-  const makingWayThresholdKn = 1.0;
-  const maxSpeedPercentile   = 0.99;
+  const mpsToKn            = 1.94384;
+  final makingWayThresholdKn = settings.makingWayThresholdKn;
+  final maxSpeedPercentile   = settings.topSpeedPercentile.clamp(0.0, 1.0);
 
   double distanceM    = 0;
   double movingTimeS  = 0;

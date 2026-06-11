@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
@@ -56,10 +56,29 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   bool _editingRoute = false;
   final _fromHarborCtrl = TextEditingController();
   final _toHarborCtrl = TextEditingController();
+  StreamSubscription<MapEvent>? _mapSizeSub;
+  LatLngBounds? _trackBounds;
 
   @override
   void initState() {
     super.initState();
+    // Fit the camera the first time the map reports a valid (non-zero) size.
+    // Using initialCameraFit in MapOptions doesn't work on web because
+    // flutter_map marks the fit as applied on the first layout pass which
+    // may have zero constraints, producing zoom=0 and blocking the real fit.
+    _mapSizeSub = _mapController.mapEventStream
+        .where((e) => e is MapEventNonRotatedSizeChange)
+        .listen((_) {
+      final size = _mapController.camera.nonRotatedSize;
+      if (mounted && _trackBounds != null && size.width > 0 && size.height > 0) {
+        _mapSizeSub?.cancel();
+        _mapSizeSub = null;
+        _mapController.fitCamera(CameraFit.bounds(
+          bounds: _trackBounds!,
+          padding: const EdgeInsets.all(40),
+        ));
+      }
+    });
     if (widget.openAddDialog) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _addTimelineEntry(context);
@@ -69,6 +88,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   @override
   void dispose() {
+    _mapSizeSub?.cancel();
     _markerDismissTimer?.cancel();
     _fromHarborCtrl.dispose();
     _toHarborCtrl.dispose();
@@ -1116,17 +1136,65 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       size: 80, color: cs.onTertiary),
                 ),
               ),
-              Row(
+              Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: _vesselStatCell(
-                        'MOTORÖL', entry.oilLevel, Icons.check_circle, cs),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _vesselStatCell(
+                            'MOTORÖL', entry.oilLevel, Icons.check_circle, cs),
+                      ),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: _vesselStatCell('KRAFTSTOFF', entry.fuelLevel,
+                            Icons.local_gas_station, cs),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: _vesselStatCell('KRAFTSTOFF', entry.fuelLevel,
-                        Icons.local_gas_station, cs),
+                  Divider(
+                    color: cs.onTertiary.withValues(alpha: 0.15),
+                    height: 24,
+                    thickness: 1,
+                  ),
+                  Row(
+                    children: [
+                      _KeelIcon(
+                        down: entry.keelDown ?? false,
+                        color: cs.onTertiary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'KIEL',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.5,
+                                color: cs.onTertiary.withValues(alpha: 0.70),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              entry.keelDown == null
+                                  ? '—'
+                                  : (entry.keelDown! ? 'NIEDER' : 'HOCH'),
+                              style: GoogleFonts.newsreader(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: entry.keelDown == null
+                                    ? cs.onTertiary.withValues(alpha: 0.45)
+                                    : cs.onTertiary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1154,7 +1222,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(icon, color: cs.secondaryFixed, size: 20),
+            Icon(icon, color: cs.onTertiary.withValues(alpha: 0.75), size: 20),
             const SizedBox(width: 8),
             Text(
               level != null ? '$level%' : '—',
@@ -1246,32 +1314,36 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     final cs = Theme.of(context).colorScheme;
     final filterSettings = context.read<ThemeProvider>().filterSettings;
-    final trimResult = trimTrackWithAnchors(track.points, settings: filterSettings);
-    final polylinePoints =
-        track.points.map((p) => LatLng(p.lat, p.lon)).toList();
-    final correlated =
-        correlateTimelineWithTrack(entry.timeline, track.points);
-    // Use first/last moving fix so timestamps reflect actual departure/arrival,
-    // not when the GPS processor started or stopped recording.
-    final startPoint = trimResult.points.isNotEmpty
-        ? trimResult.points.first
-        : track.points.first;
-    final endPoint = trimResult.points.isNotEmpty
-        ? trimResult.points.last
-        : track.points.last;
+    final display    = buildDisplayModel(track.points, settings: filterSettings);
+    final correlated = correlateTimelineWithTrack(entry.timeline, track.points);
+
+    final startPoint = display.firstMovingPoint ?? track.points.first;
+    final endPoint   = display.lastMovingPoint  ?? track.points.last;
 
     final cleanedLatLngs =
-        trimResult.points.map((p) => LatLng(p.lat, p.lon)).toList();
+        display.movingPoints().map((p) => LatLng(p.lat, p.lon)).toList();
 
-    // Use anchor centroid as origin/destination so arrows point from/to the
-    // actual berth position rather than the first/last moving GPS fix.
-    final startAnchor = trimResult.startAnchor;
-    final endAnchor   = trimResult.endAnchor;
-    final startPos    = startAnchor != null
-        ? LatLng(startAnchor.lat, startAnchor.lon)
+    // Bounding box covers all rendered coords + stop centroids
+    final boundsLatLngs = [
+      for (final s in display.segments)
+        if (s.kind != SegmentKind.teleportBreak)
+          ...s.points.map((p) => LatLng(p.lat, p.lon)),
+      for (final s in display.stops) LatLng(s.lat, s.lon),
+    ];
+    final fitLatLngs = boundsLatLngs.isNotEmpty
+        ? boundsLatLngs
+        : track.points.map((p) => LatLng(p.lat, p.lon)).toList();
+    if (fitLatLngs.isNotEmpty) {
+      _trackBounds = LatLngBounds.fromPoints(fitLatLngs);
+    }
+
+    final startStop = display.startStop;
+    final endStop   = display.endStop;
+    final startPos  = startStop != null
+        ? LatLng(startStop.lat, startStop.lon)
         : LatLng(startPoint.lat, startPoint.lon);
-    final endPos      = endAnchor != null
-        ? LatLng(endAnchor.lat, endAnchor.lon)
+    final endPos    = endStop != null
+        ? LatLng(endStop.lat, endStop.lon)
         : LatLng(endPoint.lat, endPoint.lon);
 
     final departureBearing = cleanedLatLngs.length >= 2
@@ -1281,22 +1353,57 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final startTimeStr = DateFormat('HH:mm').format(startPoint.time.toLocal());
     final endTimeStr   = DateFormat('HH:mm').format(endPoint.time.toLocal());
 
+    // Stop halos: two concentric circles per stop
     final anchorCircles = <CircleMarker>[];
-    for (final anchor in trimResult.anchors) {
+    for (final stop in display.stops) {
       anchorCircles.add(CircleMarker(
-        point: LatLng(anchor.lat, anchor.lon),
-        radius: anchor.r95M,
+        point: LatLng(stop.lat, stop.lon),
+        radius: stop.r95M,
         useRadiusInMeter: true,
         color: cs.primary.withValues(alpha: 0.07),
       ));
       anchorCircles.add(CircleMarker(
-        point: LatLng(anchor.lat, anchor.lon),
-        radius: anchor.cep50M,
+        point: LatLng(stop.lat, stop.lon),
+        radius: stop.cep50M,
         useRadiusInMeter: true,
         color: cs.primary.withValues(alpha: 0.22),
         borderStrokeWidth: 1.5,
         borderColor: cs.primary.withValues(alpha: 0.50),
       ));
+    }
+
+    // Build polylines: moving runs solid, stop entry/exit connectors thin/faded
+    final trackPolylines = <Polyline>[];
+    var curPoly = <LatLng>[];
+    for (final seg in display.segments) {
+      switch (seg.kind) {
+        case SegmentKind.teleportBreak:
+          if (curPoly.isNotEmpty) {
+            trackPolylines.add(
+                Polyline(points: curPoly, strokeWidth: 4, color: cs.primary));
+            curPoly = [];
+          }
+        case SegmentKind.moving:
+          curPoly.addAll(seg.points.map((p) => LatLng(p.lat, p.lon)));
+        case SegmentKind.stopEntry:
+        case SegmentKind.stopExit:
+          if (curPoly.isNotEmpty) {
+            trackPolylines.add(
+                Polyline(points: curPoly, strokeWidth: 4, color: cs.primary));
+            curPoly = [];
+          }
+          if (seg.points.length >= 2) {
+            trackPolylines.add(Polyline(
+              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+              strokeWidth: 2,
+              color: cs.primary.withValues(alpha: 0.35),
+            ));
+          }
+      }
+    }
+    if (curPoly.isNotEmpty) {
+      trackPolylines.add(
+          Polyline(points: curPoly, strokeWidth: 4, color: cs.primary));
     }
 
     final timelineMarkers = correlated.map((pair) {
@@ -1449,10 +1556,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCameraFit: CameraFit.bounds(
-              bounds: LatLngBounds.fromPoints(polylinePoints),
-              padding: const EdgeInsets.all(40),
-            ),
             onTap: (_, latLng) {
               final nearest =
                   _findNearestTrackPoint(latLng, track.points);
@@ -1471,15 +1574,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             CircleLayer(circles: anchorCircles),
-            PolylineLayer(
-              polylines: [
-                Polyline(
-                  points: polylinePoints,
-                  strokeWidth: 4,
-                  color: cs.primary,
-                ),
-              ],
-            ),
+            PolylineLayer(polylines: trackPolylines, cullingMargin: null),
             MarkerLayer(markers: markers),
             RichAttributionWidget(
               attributions: [
@@ -1525,9 +1620,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 )),
                 const SizedBox(height: 6),
                 _smallMapBtn(Icons.explore, () {
-                  if (polylinePoints.isNotEmpty) {
+                  if (fitLatLngs.isNotEmpty) {
                     _mapController.fitCamera(CameraFit.bounds(
-                      bounds: LatLngBounds.fromPoints(polylinePoints),
+                      bounds: LatLngBounds.fromPoints(fitLatLngs),
                       padding: const EdgeInsets.all(32),
                     ));
                   }
@@ -1629,6 +1724,41 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final newDate = DateTime(picked.year, picked.month, picked.day);
     if (newDate == current) return;
 
+    // If a GPX track is present, warn if it belongs to a different day.
+    if (entry.hasGpx && entry.track.isNotEmpty) {
+      final counts = <DateTime, int>{};
+      for (final p in entry.track) {
+        final d = DateTime(p.time.toLocal().year, p.time.toLocal().month,
+            p.time.toLocal().day);
+        counts[d] = (counts[d] ?? 0) + 1;
+      }
+      final dominantDate =
+          counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+      if (dominantDate != newDate) {
+        final proceed = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Falsches Datum?'),
+            content: Text(
+              'Der GPX-Track enthält hauptsächlich Daten vom '
+              '${DateFormat('d. MMMM yyyy', 'de_CH').format(dominantDate)}, '
+              'nicht vom ${DateFormat('d. MMMM yyyy', 'de_CH').format(newDate)}.\n\n'
+              'Trotzdem verschieben?',
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Abbrechen')),
+              TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Trotzdem verschieben')),
+            ],
+          ),
+        );
+        if (!mounted || proceed != true) return;
+      }
+    }
+
     final repo = context.read<HomeRepository>();
     final ok = await repo.changeEntryDate(current, newDate);
     if (!mounted) return;
@@ -1662,6 +1792,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _editVesselStatus(DayEntry entry) async {
     int oilVal = entry.oilLevel ?? 50;
     int fuelVal = entry.fuelLevel ?? 50;
+    bool? keelVal = entry.keelDown;
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -1707,6 +1838,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 divisions: 20,
                 onChanged: (v) => setS(() => fuelVal = v.round()),
               ),
+              const Divider(height: 24),
+              Row(
+                children: [
+                  const Text('Kiel'),
+                  const Spacer(),
+                  Text(
+                    keelVal == null ? '—' : (keelVal! ? 'Nieder' : 'Hoch'),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 8),
+                  Switch(
+                    value: keelVal ?? false,
+                    onChanged: (v) => setS(() => keelVal = v),
+                  ),
+                ],
+              ),
             ],
           ),
           actions: [
@@ -1726,21 +1873,26 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted || saved != true) return;
     final oldOil = entry.oilLevel;
     final oldFuel = entry.fuelLevel;
-    final changed = oilVal != oldOil || fuelVal != oldFuel;
+    final oldKeel = entry.keelDown;
+    final now = DateTime.now();
+    final entryTime = DateTime(widget.year, widget.month, widget.day, now.hour, now.minute);
     setState(() {
       entry.oilLevel = oilVal;
       entry.fuelLevel = fuelVal;
-      if (changed) {
-        final now = DateTime.now();
-        final note = 'Motoröl: $oilVal% · Kraftstoff: $fuelVal%';
-        final autoEntry = TimelineEntry(
-          time: DateTime(widget.year, widget.month, widget.day,
-              now.hour, now.minute),
-          vesselStatusNote: note,
-        );
-        entry.timeline.add(autoEntry);
-        entry.timeline.sort((a, b) => a.time.compareTo(b.time));
+      entry.keelDown = keelVal;
+      if (oilVal != oldOil || fuelVal != oldFuel) {
+        entry.timeline.add(TimelineEntry(
+          time: entryTime,
+          vesselStatusNote: 'Motoröl: $oilVal% · Kraftstoff: $fuelVal%',
+        ));
       }
+      if (keelVal != oldKeel && keelVal != null) {
+        entry.timeline.add(TimelineEntry(
+          time: entryTime,
+          vesselStatusNote: keelVal! ? 'Kiel: Ausgefahren (Nieder)' : 'Kiel: Eingefahren (Hoch)',
+        ));
+      }
+      entry.timeline.sort((a, b) => a.time.compareTo(b.time));
       context.read<HomeRepository>().saveEntry(entry);
     });
   }
@@ -2394,18 +2546,26 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final track = widget.track;
     final entry = widget.entry;
 
-    final trimResult    = trimTrackWithAnchors(track.points, settings: widget.filterSettings);
-    final polylinePoints = track.points.map((p) => LatLng(p.lat, p.lon)).toList();
-    final correlated    = correlateTimelineWithTrack(entry.timeline, track.points);
+    final display    = buildDisplayModel(track.points, settings: widget.filterSettings);
+    final correlated = correlateTimelineWithTrack(entry.timeline, track.points);
 
-    final startPoint = trimResult.points.isNotEmpty ? trimResult.points.first : track.points.first;
-    final endPoint   = trimResult.points.isNotEmpty ? trimResult.points.last  : track.points.last;
-    final cleanedLatLngs = trimResult.points.map((p) => LatLng(p.lat, p.lon)).toList();
+    final startPoint = display.firstMovingPoint ?? track.points.first;
+    final endPoint   = display.lastMovingPoint  ?? track.points.last;
+    final cleanedLatLngs = display.movingPoints().map((p) => LatLng(p.lat, p.lon)).toList();
+    final boundsLatLngs = [
+      for (final s in display.segments)
+        if (s.kind != SegmentKind.teleportBreak)
+          ...s.points.map((p) => LatLng(p.lat, p.lon)),
+      for (final s in display.stops) LatLng(s.lat, s.lon),
+    ];
+    final fitLatLngs = boundsLatLngs.isNotEmpty
+        ? boundsLatLngs
+        : track.points.map((p) => LatLng(p.lat, p.lon)).toList();
 
-    final startAnchor = trimResult.startAnchor;
-    final endAnchor   = trimResult.endAnchor;
-    final startPos = startAnchor != null ? LatLng(startAnchor.lat, startAnchor.lon) : LatLng(startPoint.lat, startPoint.lon);
-    final endPos   = endAnchor   != null ? LatLng(endAnchor.lat,   endAnchor.lon)   : LatLng(endPoint.lat,   endPoint.lon);
+    final startStop = display.startStop;
+    final endStop   = display.endStop;
+    final startPos  = startStop != null ? LatLng(startStop.lat, startStop.lon) : LatLng(startPoint.lat, startPoint.lon);
+    final endPos    = endStop   != null ? LatLng(endStop.lat,   endStop.lon)   : LatLng(endPoint.lat,   endPoint.lon);
 
     final departureBearing = cleanedLatLngs.length >= 2 ? _dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
     final arrivalBearing   = cleanedLatLngs.length >= 2 ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
@@ -2413,10 +2573,40 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final endTimeStr   = DateFormat('HH:mm').format(endPoint.time.toLocal());
 
     final anchorCircles = <CircleMarker>[];
-    for (final a in trimResult.anchors) {
-      anchorCircles.add(CircleMarker(point: LatLng(a.lat, a.lon), radius: a.r95M,   useRadiusInMeter: true, color: cs.primary.withValues(alpha: 0.07)));
-      anchorCircles.add(CircleMarker(point: LatLng(a.lat, a.lon), radius: a.cep50M, useRadiusInMeter: true,
+    for (final stop in display.stops) {
+      anchorCircles.add(CircleMarker(point: LatLng(stop.lat, stop.lon), radius: stop.r95M, useRadiusInMeter: true, color: cs.primary.withValues(alpha: 0.07)));
+      anchorCircles.add(CircleMarker(point: LatLng(stop.lat, stop.lon), radius: stop.cep50M, useRadiusInMeter: true,
           color: cs.primary.withValues(alpha: 0.22), borderStrokeWidth: 1.5, borderColor: cs.primary.withValues(alpha: 0.50)));
+    }
+
+    final fsTrackPolylines = <Polyline>[];
+    var fsCurPoly = <LatLng>[];
+    for (final seg in display.segments) {
+      switch (seg.kind) {
+        case SegmentKind.teleportBreak:
+          if (fsCurPoly.isNotEmpty) {
+            fsTrackPolylines.add(Polyline(points: fsCurPoly, strokeWidth: 4, color: cs.primary));
+            fsCurPoly = [];
+          }
+        case SegmentKind.moving:
+          fsCurPoly.addAll(seg.points.map((p) => LatLng(p.lat, p.lon)));
+        case SegmentKind.stopEntry:
+        case SegmentKind.stopExit:
+          if (fsCurPoly.isNotEmpty) {
+            fsTrackPolylines.add(Polyline(points: fsCurPoly, strokeWidth: 4, color: cs.primary));
+            fsCurPoly = [];
+          }
+          if (seg.points.length >= 2) {
+            fsTrackPolylines.add(Polyline(
+              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+              strokeWidth: 2,
+              color: cs.primary.withValues(alpha: 0.35),
+            ));
+          }
+      }
+    }
+    if (fsCurPoly.isNotEmpty) {
+      fsTrackPolylines.add(Polyline(points: fsCurPoly, strokeWidth: 4, color: cs.primary));
     }
 
     final timelineMarkers = correlated.map((pair) {
@@ -2502,7 +2692,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
           mapController: _mapController,
           options: MapOptions(
             initialCameraFit: CameraFit.bounds(
-              bounds: LatLngBounds.fromPoints(polylinePoints),
+              bounds: LatLngBounds.fromPoints(fitLatLngs),
               padding: const EdgeInsets.all(60),
             ),
             onTap: (_, latLng) {
@@ -2520,9 +2710,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             CircleLayer(circles: anchorCircles),
-            PolylineLayer(polylines: [
-              Polyline(points: polylinePoints, strokeWidth: 4, color: cs.primary),
-            ]),
+            PolylineLayer(polylines: fsTrackPolylines),
             MarkerLayer(markers: markers),
             RichAttributionWidget(attributions: [
               if (_satelliteView)
@@ -2547,8 +2735,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
               _mapBtn(Icons.remove, () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1), cs),
               const SizedBox(height: 6),
               _mapBtn(Icons.explore, () {
-                if (polylinePoints.isNotEmpty) {
-                  _mapController.fitCamera(CameraFit.bounds(bounds: LatLngBounds.fromPoints(polylinePoints), padding: const EdgeInsets.all(60)));
+                if (fitLatLngs.isNotEmpty) {
+                  _mapController.fitCamera(CameraFit.bounds(bounds: LatLngBounds.fromPoints(fitLatLngs), padding: const EdgeInsets.all(60)));
                 }
               }, cs),
               const SizedBox(height: 6),
@@ -2564,4 +2752,79 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       ]),
     );
   }
+}
+
+// ── Keel icon ─────────────────────────────────────────────────────────────────
+
+class _KeelIcon extends StatelessWidget {
+  final bool down;
+  final Color color;
+  const _KeelIcon({required this.down, required this.color});
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: const Size(28, 36), painter: _KeelPainter(down: down, color: color));
+}
+
+class _KeelPainter extends CustomPainter {
+  final bool down;
+  final Color color;
+  const _KeelPainter({required this.down, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final fill  = Paint()..color = color..style = PaintingStyle.fill;
+    final ghost = Paint()..color = color.withValues(alpha: 0.28)..style = PaintingStyle.fill;
+
+    // Hull: front cross-section of sailboat hull — wider at waterline (top),
+    // narrowing toward the keel root at the bottom.
+    const hullFrac = 0.38;
+    canvas.drawPath(
+      Path()
+        ..moveTo(w * 0.06, 0)
+        ..lineTo(w * 0.94, 0)
+        ..lineTo(w * 0.70, h * hullFrac)
+        ..lineTo(w * 0.30, h * hullFrac)
+        ..close(),
+      fill,
+    );
+
+    // Keel fin: tapered from root to tip.
+    // Full length when down; short ghost stub when retracted (up).
+    final keelTop    = h * hullFrac;
+    final keelBottom = down ? h * 0.96 : h * (hullFrac + 0.20);
+    final cx   = w / 2;
+    final kRoot = w * 0.14; // half-width at hull attachment
+    final kTip  = down ? w * 0.04 : w * 0.09;
+    canvas.drawPath(
+      Path()
+        ..moveTo(cx - kRoot, keelTop)
+        ..lineTo(cx + kRoot, keelTop)
+        ..lineTo(cx + kTip,  keelBottom)
+        ..lineTo(cx - kTip,  keelBottom)
+        ..close(),
+      down ? fill : ghost,
+    );
+
+    // When keel is up: upward arrow over the ghost stub.
+    if (!down) {
+      final stroke = Paint()
+        ..color = color.withValues(alpha: 0.72)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6
+        ..strokeCap = StrokeCap.round;
+      final ax  = cx;
+      final ay1 = h * 0.72;
+      final ay2 = h * 0.54;
+      canvas.drawLine(Offset(ax, ay1), Offset(ax, ay2), stroke);
+      canvas.drawLine(Offset(ax, ay2), Offset(ax - w * 0.12, ay2 + h * 0.11), stroke);
+      canvas.drawLine(Offset(ax, ay2), Offset(ax + w * 0.12, ay2 + h * 0.11), stroke);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_KeelPainter old) => old.down != down || old.color != color;
 }

@@ -13,7 +13,7 @@ import '../../home/data/home_repository.dart';
 import '../../home/domain/day_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
 import '../../home/utils/trim_track.dart'
-    show trimStationaryEnds, trimTrackWithAnchors, TrackAnchor;
+    show trimStationaryEnds, buildDisplayModel, DisplayModel;
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 
@@ -192,17 +192,14 @@ class _TracksScreenState extends State<TracksScreen> {
     for (final day in trackedDays) {
       final track = repo.dailyTracks[day]!;
       if (track.points.isEmpty) continue;
-      final result = trimTrackWithAnchors(track.points, settings: filterSettings);
-      final trimmed = result.points;
-      final pts = trimmed.map((p) => LatLng(p.lat, p.lon)).toList();
+      final display = buildDisplayModel(track.points, settings: filterSettings);
       trackData.add(_DayTrackData(
         day: day,
-        points: pts,
+        display: display,
         color: _colorForIndex(trackIdx, totalTracks),
         entry: repo.getEntry(day),
         stats: computeDailyStats(track.points, settings: filterSettings),
-        startTime: trimmed.isNotEmpty ? trimmed.first.time.toLocal() : null,
-        anchors: result.anchors,
+        startTime: display.firstMovingPoint?.time.toLocal(),
       ));
       trackIdx++;
     }
@@ -215,28 +212,33 @@ class _TracksScreenState extends State<TracksScreen> {
                 !d.day.isBefore(range.start) && !d.day.isAfter(range.end))
             .toList();
 
-    // Polylines: selected drawn last (on top)
-    final polylines = displayed.asMap().entries.map((e) {
+    // Build per-day polyline groups; selected day is drawn last (on top).
+    final polylinesByDay = displayed.asMap().entries.map((e) {
       final isSelected = _selectedIndex == e.key;
-      return Polyline(
-        points: e.value.points,
-        color: isSelected
-            ? e.value.color
-            : e.value.color.withValues(alpha: 0.65),
-        strokeWidth: isSelected ? 5 : 3,
-      );
+      final color = isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65);
+      final width = isSelected ? 5.0 : 3.0;
+      return e.value.display.polylines().map((pts) => Polyline(
+        points: pts.map((p) => LatLng(p.lat, p.lon)).toList(),
+        color: color,
+        strokeWidth: width,
+      )).toList();
     }).toList();
-    if (_selectedIndex != null && _selectedIndex! < polylines.length) {
-      polylines.add(polylines.removeAt(_selectedIndex!));
+    final polylines = <Polyline>[];
+    for (int i = 0; i < polylinesByDay.length; i++) {
+      if (i != _selectedIndex) polylines.addAll(polylinesByDay[i]);
+    }
+    if (_selectedIndex != null && _selectedIndex! < polylinesByDay.length) {
+      polylines.addAll(polylinesByDay[_selectedIndex!]);
     }
 
     // Departure arrows at the start of each displayed track
     final arrowMarkers = <Marker>[];
     for (final d in displayed) {
-      if (d.points.length < 2) continue;
-      final bearing = _departureBearing(d.points);
+      final movPts = d.display.movingPoints().map((p) => LatLng(p.lat, p.lon)).toList();
+      if (movPts.length < 2) continue;
+      final bearing = _departureBearing(movPts);
       arrowMarkers.add(Marker(
-        point: d.points[0],
+        point: movPts[0],
         width: 13,
         height: 13,
         child: Transform.rotate(
@@ -257,21 +259,18 @@ class _TracksScreenState extends State<TracksScreen> {
       ));
     }
 
-    // Anchor halos for trimmed-away stationary clusters at track ends.
-    // Two concentric semi-transparent circles simulate a position "glow"
-    // so the mooring position is visible without showing the raw noise points.
     final anchorCircles = <CircleMarker>[];
     for (final d in displayed) {
-      for (final anchor in d.anchors) {
+      for (final stop in d.display.stops) {
         anchorCircles.add(CircleMarker(
-          point: LatLng(anchor.lat, anchor.lon),
-          radius: anchor.r95M,
+          point: LatLng(stop.lat, stop.lon),
+          radius: stop.r95M,
           useRadiusInMeter: true,
           color: d.color.withValues(alpha: 0.07),
         ));
         anchorCircles.add(CircleMarker(
-          point: LatLng(anchor.lat, anchor.lon),
-          radius: anchor.cep50M,
+          point: LatLng(stop.lat, stop.lon),
+          radius: stop.cep50M,
           useRadiusInMeter: true,
           color: d.color.withValues(alpha: 0.22),
           borderStrokeWidth: 1.5,
@@ -280,8 +279,10 @@ class _TracksScreenState extends State<TracksScreen> {
       }
     }
 
-    final initialBounds =
-        _boundsFor(displayed.expand((d) => d.points).toList());
+    final allBoundsLatLngs = displayed
+        .expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon)))
+        .toList();
+    final initialBounds = _boundsFor(allBoundsLatLngs);
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -728,7 +729,7 @@ class _TracksScreenState extends State<TracksScreen> {
             child: GestureDetector(
               onTap: () {
                 setState(() => _selectedIndex = index);
-                _focusTrack(d.points);
+                _focusTrack(d.display.allPoints().map((p) => LatLng(p.lat, p.lon)).toList());
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
@@ -909,21 +910,19 @@ class _TracksScreenState extends State<TracksScreen> {
 
 class _DayTrackData {
   final DateTime day;
-  final List<LatLng> points;
+  final DisplayModel display;
   final Color color;
   final DayEntry? entry;
   final DailyStats? stats;
   final DateTime? startTime;
-  final List<TrackAnchor> anchors;
 
   const _DayTrackData({
     required this.day,
-    required this.points,
+    required this.display,
     required this.color,
     required this.entry,
     required this.stats,
     required this.startTime,
-    this.anchors = const [],
   });
 }
 
@@ -1024,24 +1023,31 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
     final displayed = widget.displayed;
 
     final sel = widget.selectedIndex;
-    final polylines = displayed.asMap().entries.map((e) {
+    final fsPolylinesByDay = displayed.asMap().entries.map((e) {
       final isSelected = sel == e.key;
-      return Polyline(
-        points: e.value.points,
-        color: isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65),
-        strokeWidth: isSelected ? 5 : 3,
-      );
+      final color = isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65);
+      final width = isSelected ? 5.0 : 3.0;
+      return e.value.display.polylines().map((pts) => Polyline(
+        points: pts.map((p) => LatLng(p.lat, p.lon)).toList(),
+        color: color,
+        strokeWidth: width,
+      )).toList();
     }).toList();
-    if (sel != null && sel < polylines.length) {
-      polylines.add(polylines.removeAt(sel));
+    final polylines = <Polyline>[];
+    for (int i = 0; i < fsPolylinesByDay.length; i++) {
+      if (i != sel) polylines.addAll(fsPolylinesByDay[i]);
+    }
+    if (sel != null && sel < fsPolylinesByDay.length) {
+      polylines.addAll(fsPolylinesByDay[sel]);
     }
 
     final arrowMarkers = <Marker>[];
     for (final d in displayed) {
-      if (d.points.length < 2) continue;
-      final bearing = _departureBearing(d.points);
+      final movPts = d.display.movingPoints().map((p) => LatLng(p.lat, p.lon)).toList();
+      if (movPts.length < 2) continue;
+      final bearing = _departureBearing(movPts);
       arrowMarkers.add(Marker(
-        point: d.points[0], width: 13, height: 13,
+        point: movPts[0], width: 13, height: 13,
         child: Transform.rotate(
           angle: bearing,
           child: Container(
@@ -1060,14 +1066,16 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
 
     final anchorCircles = <CircleMarker>[];
     for (final d in displayed) {
-      for (final a in d.anchors) {
-        anchorCircles.add(CircleMarker(point: LatLng(a.lat, a.lon), radius: a.r95M,   useRadiusInMeter: true, color: d.color.withValues(alpha: 0.07)));
-        anchorCircles.add(CircleMarker(point: LatLng(a.lat, a.lon), radius: a.cep50M, useRadiusInMeter: true,
+      for (final stop in d.display.stops) {
+        anchorCircles.add(CircleMarker(point: LatLng(stop.lat, stop.lon), radius: stop.r95M, useRadiusInMeter: true, color: d.color.withValues(alpha: 0.07)));
+        anchorCircles.add(CircleMarker(point: LatLng(stop.lat, stop.lon), radius: stop.cep50M, useRadiusInMeter: true,
             color: d.color.withValues(alpha: 0.22), borderStrokeWidth: 1.5, borderColor: d.color.withValues(alpha: 0.50)));
       }
     }
 
-    final allPts = displayed.expand((d) => d.points).toList();
+    final allPts = displayed
+        .expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon)))
+        .toList();
 
     void refitAll() {
       if (allPts.isEmpty) return;

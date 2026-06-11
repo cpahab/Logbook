@@ -50,13 +50,17 @@ class HomeRepository extends ChangeNotifier {
     return [];
   }
 
-  ({int? oilLevel, int? fuelLevel}) get lastVesselStatus {
+  ({int? oilLevel, int? fuelLevel, bool? keelDown}) get lastVesselStatus {
+    int? oil;
+    int? fuel;
+    bool? keel;
     for (final e in entries.reversed) {
-      if (e.oilLevel != null || e.fuelLevel != null) {
-        return (oilLevel: e.oilLevel, fuelLevel: e.fuelLevel);
-      }
+      oil  ??= e.oilLevel;
+      fuel ??= e.fuelLevel;
+      keel ??= e.keelDown;
+      if (oil != null && fuel != null && keel != null) break;
     }
-    return (oilLevel: null, fuelLevel: null);
+    return (oilLevel: oil, fuelLevel: fuel, keelDown: keel);
   }
 
   List<CrewMember> get lastCrew {
@@ -261,8 +265,9 @@ class HomeRepository extends ChangeNotifier {
       timeline: [],
       participantsList: lastParticipants,
       crew: lastCrew,
-      oilLevel: vs.oilLevel,
+      oilLevel:  vs.oilLevel,
       fuelLevel: vs.fuelLevel,
+      keelDown:  vs.keelDown,
     );
     _entries[normalized] = entry;
     _dayBox.put(normalized.toIso8601String(), entry);

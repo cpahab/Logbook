@@ -120,6 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         backgroundColor: cs.surface,
         foregroundColor: cs.primary,
+        iconTheme: IconThemeData(color: cs.primary),
         elevation: 0,
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
@@ -571,6 +572,148 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           Text(
             'Maximale Ausdehnung eines Stopps. Erhöhen bei weitem Ankerschwung über Nacht (Standard: 30 m).',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          _rowDivider(cs),
+          // ── Cold-start trimming ───────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Kaltstart-Trimmen',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              Switch(
+                value: p.detectColdStart,
+                onChanged: p.setDetectColdStart,
+              ),
+            ],
+          ),
+          Text(
+            'Entfernt ungenaue GPS-Fixes am Spuranfang, bevor der Empfänger eingeschwungen ist.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          if (p.detectColdStart) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Trim-Schärfe',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
+                Text(
+                  p.coldStartSettleFactor.toStringAsFixed(1),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: cs.primary,
+                  ),
+                ),
+              ],
+            ),
+            Slider(
+              value: p.coldStartSettleFactor,
+              min: 1.0,
+              max: 6.0,
+              divisions: 10,
+              onChanged: p.setColdStartSettleFactor,
+            ),
+            Text(
+              'Niedrigerer Wert = aggressiver trimmen. Standard: 3.0.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+          _rowDivider(cs),
+          // ── Underway threshold ────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Unterwegs-Schwelle',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              Text(
+                '${p.makingWayThresholdKn.toStringAsFixed(1)} kn',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: p.makingWayThresholdKn,
+            min: 0.3,
+            max: 3.0,
+            divisions: 27,
+            onChanged: p.setMakingWayThresholdKn,
+          ),
+          Text(
+            'Mindestgeschwindigkeit für den Fahrt-Durchschnitt. Driften unterhalb wird nicht mitgezählt.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
+          _rowDivider(cs),
+          // ── Max-speed percentile ──────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Spitzenwert-Perzentil',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              Text(
+                'p${(p.topSpeedPercentile * 100).round()}',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.primary,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: p.topSpeedPercentile,
+            min: 0.90,
+            max: 1.00,
+            divisions: 10,
+            onChanged: p.setTopSpeedPercentile,
+          ),
+          Text(
+            'p99 ignoriert das oberste 1 % der Messwerte und unterdrückt GPS-Ausreißer. p100 = echter Maximalwert.',
             style: GoogleFonts.inter(
               fontSize: 12,
               fontStyle: FontStyle.italic,
