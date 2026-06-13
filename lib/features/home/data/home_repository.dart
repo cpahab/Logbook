@@ -259,15 +259,25 @@ class HomeRepository extends ChangeNotifier {
     final normalized = DateTime(date.year, date.month, date.day);
     if (_entries.containsKey(normalized)) return;
 
-    final vs = lastVesselStatus;
+    // Vessel status from the closest past day (never from future entries).
+    int? oil, fuel;
+    bool? keel;
+    for (final e in entries.reversed) {
+      if (!e.date.isBefore(normalized)) continue;
+      oil  ??= e.oilLevel;
+      fuel ??= e.fuelLevel;
+      keel ??= e.keelDown;
+      if (oil != null && fuel != null && keel != null) break;
+    }
+
     final entry = DayEntry(
       date: normalized,
       timeline: [],
       participantsList: lastParticipants,
       crew: lastCrew,
-      oilLevel:  vs.oilLevel,
-      fuelLevel: vs.fuelLevel,
-      keelDown:  vs.keelDown,
+      oilLevel:  oil,
+      fuelLevel: fuel,
+      keelDown:  keel,
     );
     _entries[normalized] = entry;
     _dayBox.put(normalized.toIso8601String(), entry);
@@ -352,6 +362,17 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Timeline management ────────────────────────────────────────────────────
 
+  /// Propagates the most recent keelDown value from [d]'s timeline entries
+  /// back to [d.keelDown]. Call after any timeline mutation.
+  void syncKeelFromTimeline(DayEntry d) {
+    for (final t in d.timeline.reversed) {
+      if (t.keelDown != null) {
+        d.keelDown = t.keelDown;
+        return;
+      }
+    }
+  }
+
   void addTimelineEntry(DateTime day, TimelineEntry entry) {
     final normalized = DateTime(day.year, day.month, day.day);
     final d = _entries[normalized];
@@ -359,6 +380,7 @@ class HomeRepository extends ChangeNotifier {
 
     d.timeline.add(entry);
     d.timeline.sort((a, b) => a.time.compareTo(b.time));
+    syncKeelFromTimeline(d);
     _dayBox.put(normalized.toIso8601String(), d);
     _recordLocalEdit(normalized);
     _syncToFirestore(d);

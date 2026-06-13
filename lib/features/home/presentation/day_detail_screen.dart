@@ -164,9 +164,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 PopupMenuItem<String>(
                   value: 'change_date',
                   child: Row(children: [
-                    const Icon(Icons.calendar_today_outlined),
+                    Icon(Icons.calendar_today_outlined, color: cs.onSurface),
                     const SizedBox(width: 12),
-                    const Text('Datum ändern'),
+                    Text('Datum ändern', style: TextStyle(color: cs.onSurface)),
                   ]),
                 ),
                 PopupMenuItem<String>(
@@ -174,7 +174,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   child: Row(children: [
                     _gpxUploadIcon(),
                     const SizedBox(width: 12),
-                    const Text('GPX importieren'),
+                    Text('GPX importieren', style: TextStyle(color: cs.onSurface)),
                   ]),
                 ),
                 if (track != null)
@@ -1093,6 +1093,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Vessel Status ─────────────────────────────────────────────────
   Widget _buildVesselStatus(DayEntry entry, ColorScheme cs) {
+    final isDark = cs.brightness == Brightness.dark;
+    final cardBg = isDark ? cs.tertiaryContainer : cs.tertiary;
+    final cardFg = isDark ? cs.onTertiaryContainer : cs.onTertiary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1133,7 +1136,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: cs.tertiary,
+            color: cardBg,
             borderRadius: BorderRadius.circular(12),
           ),
           clipBehavior: Clip.antiAlias,
@@ -1145,7 +1148,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 child: Opacity(
                   opacity: 0.10,
                   child: Icon(Icons.water_drop,
-                      size: 80, color: cs.onTertiary),
+                      size: 80, color: cardFg),
                 ),
               ),
               Column(
@@ -1156,17 +1159,17 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     children: [
                       Expanded(
                         child: _vesselStatCell(
-                            'MOTORÖL', entry.oilLevel, Icons.check_circle, cs),
+                            'MOTORÖL', entry.oilLevel, Icons.check_circle, cs, cardFg),
                       ),
                       const SizedBox(width: 20),
                       Expanded(
                         child: _vesselStatCell('KRAFTSTOFF', entry.fuelLevel,
-                            Icons.local_gas_station, cs),
+                            Icons.local_gas_station, cs, cardFg),
                       ),
                     ],
                   ),
                   Divider(
-                    color: cs.onTertiary.withValues(alpha: 0.15),
+                    color: cardFg.withValues(alpha: 0.15),
                     height: 24,
                     thickness: 1,
                   ),
@@ -1174,7 +1177,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     children: [
                       _KeelIcon(
                         down: entry.keelDown ?? false,
-                        color: cs.onTertiary,
+                        color: cardFg,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1187,7 +1190,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 1.5,
-                                color: cs.onTertiary.withValues(alpha: 0.70),
+                                color: cardFg.withValues(alpha: 0.70),
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -1199,8 +1202,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
                                 color: entry.keelDown == null
-                                    ? cs.onTertiary.withValues(alpha: 0.45)
-                                    : cs.onTertiary,
+                                    ? cardFg.withValues(alpha: 0.45)
+                                    : cardFg,
                               ),
                             ),
                           ],
@@ -1218,7 +1221,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   Widget _vesselStatCell(
-      String label, int? level, IconData icon, ColorScheme cs) {
+      String label, int? level, IconData icon, ColorScheme cs, Color onCard) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1228,20 +1231,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
-            color: cs.onTertiary.withValues(alpha: 0.70),
+            color: onCard.withValues(alpha: 0.70),
           ),
         ),
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(icon, color: cs.onTertiary.withValues(alpha: 0.75), size: 20),
+            Icon(icon, color: onCard.withValues(alpha: 0.75), size: 20),
             const SizedBox(width: 8),
             Text(
               level != null ? '$level%' : '—',
               style: GoogleFonts.newsreader(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: level != null ? cs.onTertiary : cs.onTertiary.withValues(alpha: 0.54),
+                color: level != null ? onCard : onCard.withValues(alpha: 0.54),
               ),
             ),
           ],
@@ -1251,7 +1254,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           borderRadius: BorderRadius.circular(999),
           child: Stack(
             children: [
-              Container(height: 8, color: cs.tertiaryContainer),
+              Container(height: 8, color: onCard.withValues(alpha: 0.20)),
               if (level != null)
                 FractionallySizedBox(
                   widthFactor: level / 100,
@@ -1270,7 +1273,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
-                color: cs.onTertiary.withValues(alpha: 0.50),
+                color: onCard.withValues(alpha: 0.50),
               ),
             ),
             Text(
@@ -1279,7 +1282,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.5,
-                color: cs.onTertiary.withValues(alpha: 0.50),
+                color: onCard.withValues(alpha: 0.50),
               ),
             ),
           ],
@@ -1415,12 +1418,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         width: 20,
         height: 20,
         alignment: Alignment.center,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            _dropMarker(LatLng(p.lat, p.lon), _buildEntryLabel(t));
-            _showEntryDetail(t);
-          },
+        child: Tooltip(
+          richMessage: TextSpan(text: _buildEntryTooltip(t)),
+          preferBelow: false,
+          triggerMode: TooltipTriggerMode.tap,
+          showDuration: const Duration(seconds: 5),
+          waitDuration: Duration.zero,
           child: Center(
             child: Container(
               width: 11,
@@ -1436,6 +1439,36 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       );
     }).toList();
 
+    final timeWaypoints = _sampleHourlyPoints(display.movingPoints()).map((p) =>
+      Marker(
+        point: LatLng(p.lat, p.lon),
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
+        child: Tooltip(
+          message: DateFormat('HH:mm').format(p.time.toLocal()),
+          preferBelow: false,
+          triggerMode: _isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
+          showDuration: _isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
+          waitDuration: _isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
+          child: Center(
+            child: Container(
+              width: 11,
+              height: 11,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cs.primary.withValues(alpha: 0.12),
+                border: Border.all(
+                  color: cs.primary.withValues(alpha: 0.60),
+                  width: 2.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ).toList();
+
     final midStopMarkers = [
       for (final stop in display.stops.where((s) => s.kind == AnchorKind.mid))
         Marker(
@@ -1445,13 +1478,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           alignment: Alignment.center,
           child: Tooltip(
             message: _fmtDur(stop.minutes),
+            triggerMode: _isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
+            showDuration: _isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
+            waitDuration: _isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
             child: Container(
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: cs.surfaceContainer.withValues(alpha: 0.90),
+                color: cs.primary.withValues(alpha: 0.85),
                 shape: BoxShape.circle,
-                border: Border.all(color: cs.primary, width: 1.5),
+                border: Border.all(color: Colors.white, width: 1.5),
                 boxShadow: [BoxShadow(
                   color: Colors.black.withValues(alpha: 0.20),
                   blurRadius: 3, offset: const Offset(0, 1))],
@@ -1459,7 +1495,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               child: Icon(
                 stop.minutes >= 30 ? Icons.anchor : Icons.schedule,
                 size: 14,
-                color: cs.primary,
+                color: Colors.white,
               ),
             ),
           ),
@@ -1467,6 +1503,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     ];
 
     final markers = <Marker>[
+      ...timeWaypoints,
       ...timelineMarkers,
       ...midStopMarkers,
       // ── Departure: label to the left, arrow at the coordinate ───────
@@ -1483,7 +1520,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             const SizedBox(width: 5),
             Transform.rotate(
               angle: departureBearing,
-              child: _trackArrow(cs.secondary),
+              child: _trackArrow(cs.primary),
             ),
           ],
         ),
@@ -1512,70 +1549,31 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (_droppedMarkerLatLng != null) {
       markers.add(Marker(
         point: _droppedMarkerLatLng!,
-        width: 140,
-        height: 48,
-        // flutter_map formula: y_within_marker = height * (1 - alignment.y) / 2
-        // Icons.place tip at y=46.2 in a 48px marker → alignment.y = 1 - 2*46.2/48 = -0.924
-        alignment: const Alignment(0.0, -0.924),
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () {
             _markerDismissTimer?.cancel();
-            setState(() {
-              _droppedMarkerLatLng = null;
-              _droppedMarkerLabel = null;
-            });
+            setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; });
           },
           child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
             children: [
-              // height: 22 is required — without it Align expands to the full
-              // Stack height and centres the icon vertically instead of keeping
-              // it at the bottom, pushing the tip far above the coordinate.
-              const Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                height: 22,
-                child: Align(
-                  alignment: Alignment.center,
-                  child: Icon(Icons.place, color: Colors.red, size: 22),
+              Container(
+                width: 11, height: 11,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surface,
+                  border: Border.all(color: cs.primary, width: 2.5),
                 ),
               ),
               if (_droppedMarkerLabel != null)
                 Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 22,
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade700,
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        _droppedMarkerLabel!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          height: 1.1,
-                        ),
-                      ),
-                    ),
-                  ),
+                  left: 16, top: 3,
+                  child: IgnorePointer(child: _trackLabel(_droppedMarkerLabel!, cs)),
                 ),
             ],
           ),
@@ -1828,78 +1826,83 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(
-            'Schiffsstatus',
-            style: GoogleFonts.newsreader(
-                fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Motoröl'),
-                  Text('$oilVal%',
-                      style:
-                          const TextStyle(fontWeight: FontWeight.w600)),
-                ],
+        builder: (ctx, setS) {
+          final cs = Theme.of(ctx).colorScheme;
+          return AlertDialog(
+            title: Text(
+              'Schiffsstatus',
+              style: GoogleFonts.newsreader(
+                  fontSize: 18, fontWeight: FontWeight.w600,
+                  color: cs.onSurface),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Motoröl', style: TextStyle(color: cs.onSurface)),
+                    Text('$oilVal%',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  ],
+                ),
+                Slider(
+                  value: oilVal.toDouble(),
+                  min: 0,
+                  max: 100,
+                  divisions: 20,
+                  onChanged: (v) => setS(() => oilVal = v.round()),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Kraftstoff', style: TextStyle(color: cs.onSurface)),
+                    Text('$fuelVal%',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  ],
+                ),
+                Slider(
+                  value: fuelVal.toDouble(),
+                  min: 0,
+                  max: 100,
+                  divisions: 20,
+                  onChanged: (v) => setS(() => fuelVal = v.round()),
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Text('Kiel', style: TextStyle(color: cs.onSurface)),
+                    const Spacer(),
+                    Text(
+                      keelVal == null ? '—' : (keelVal! ? 'Nieder' : 'Hoch'),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, color: cs.onSurface),
+                    ),
+                    const SizedBox(width: 8),
+                    Switch(
+                      value: keelVal ?? false,
+                      onChanged: (v) => setS(() => keelVal = v),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Abbrechen'),
               ),
-              Slider(
-                value: oilVal.toDouble(),
-                min: 0,
-                max: 100,
-                divisions: 20,
-                onChanged: (v) => setS(() => oilVal = v.round()),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Kraftstoff'),
-                  Text('$fuelVal%',
-                      style:
-                          const TextStyle(fontWeight: FontWeight.w600)),
-                ],
-              ),
-              Slider(
-                value: fuelVal.toDouble(),
-                min: 0,
-                max: 100,
-                divisions: 20,
-                onChanged: (v) => setS(() => fuelVal = v.round()),
-              ),
-              const Divider(height: 24),
-              Row(
-                children: [
-                  const Text('Kiel'),
-                  const Spacer(),
-                  Text(
-                    keelVal == null ? '—' : (keelVal! ? 'Nieder' : 'Hoch'),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(width: 8),
-                  Switch(
-                    value: keelVal ?? false,
-                    onChanged: (v) => setS(() => keelVal = v),
-                  ),
-                ],
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(ctx, true),
+                icon: const Icon(Icons.anchor, size: 18),
+                label: const Text('Speichern'),
               ),
             ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Abbrechen'),
-            ),
-            FilledButton.icon(
-              onPressed: () => Navigator.pop(ctx, true),
-              icon: const Icon(Icons.anchor, size: 18),
-              label: const Text('Speichern'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
     if (!mounted || saved != true) return;
@@ -1984,7 +1987,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final index = entry.timeline.indexOf(t);
     setState(() {
       entry.timeline.remove(t);
-      context.read<HomeRepository>().saveEntry(entry);
+      final repo = context.read<HomeRepository>();
+      repo.syncKeelFromTimeline(entry);
+      repo.saveEntry(entry);
     });
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
@@ -1997,7 +2002,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             setState(() {
               entry.timeline.insert(index.clamp(0, entry.timeline.length), t);
               entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-              context.read<HomeRepository>().saveEntry(entry);
+              final repo = context.read<HomeRepository>();
+              repo.syncKeelFromTimeline(entry);
+              repo.saveEntry(entry);
             });
           },
         ),
@@ -2016,7 +2023,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (index != -1) {
         entry.timeline[index] = updated;
         entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-        context.read<HomeRepository>().saveEntry(entry);
+        final repo = context.read<HomeRepository>();
+        repo.syncKeelFromTimeline(entry);
+        repo.saveEntry(entry);
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2137,23 +2146,25 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         DateFormat('d. MMMM yyyy', 'de_CH').format(day);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Tag löschen?'),
-        content: Text(
-          'Alle Daten für den $dateLabel werden unwiderruflich gelöscht, '
-          'inklusive Logeinträge und GPX-Track.',
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Abbrechen')),
-          TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('Löschen',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.error))),
-        ],
-      ),
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          title: Text('Tag löschen?', style: TextStyle(color: cs.onSurface)),
+          content: Text(
+            'Alle Daten für den $dateLabel werden unwiderruflich gelöscht, '
+            'inklusive Logeinträge und GPX-Track.',
+            style: TextStyle(color: cs.onSurface),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Abbrechen')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text('Löschen', style: TextStyle(color: cs.error))),
+          ],
+        );
+      },
     );
     if (!mounted || confirmed != true) return;
     await repo.removeEntry(day);
@@ -2168,7 +2179,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       _droppedMarkerLatLng = pos;
       _droppedMarkerLabel = label;
     });
-    _markerDismissTimer = Timer(const Duration(seconds: 4), () {
+    _markerDismissTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           _droppedMarkerLatLng = null;
@@ -2176,10 +2187,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         });
       }
     });
-  }
-
-  String _buildEntryLabel(TimelineEntry t) {
-    return DateFormat('HH:mm').format(t.time.toLocal());
   }
 
   TrackPoint? _findNearestTrackPoint(
@@ -2206,7 +2213,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          const Icon(Icons.file_upload_outlined, size: 22),
+          Icon(Icons.file_upload_outlined, size: 22, color: Theme.of(context).colorScheme.onSurface),
           Positioned(
             bottom: -3,
             right: -6,
@@ -2246,99 +2253,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  void _showEntryDetail(TimelineEntry t) {
-    final timeStr = DateFormat('HH:mm').format(t.time.toLocal());
-    final cs = Theme.of(context).colorScheme;
-
-    final dataLine = [
-      if (t.course  != null) 'Kurs: ${t.course!.toStringAsFixed(0)}°',
-      if (t.speed   != null) 'Fahrt: ${t.speed!.toStringAsFixed(1)} kn',
-      if (t.wind    != null) 'Wind: ${t.wind!}',
-      if (t.sea     != null) 'See: ${t.sea!}',
-      if (t.weather != null) 'Wetter: ${t.weather!}',
-      if (t.grossState != null) 'Gross: ${t.grossState!}',
-      if (t.fockState  != null) 'Fock: ${t.fockState!}',
-      if (t.motorOn    != null) 'Motor: ${t.motorOn! ? 'An' : 'Aus'}',
-    ].join(' · ');
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: cs.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                timeStr,
-                style: GoogleFonts.newsreader(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
-                ),
-              ),
-              if (t.remarks?.isNotEmpty == true) ...[
-                const SizedBox(height: 8),
-                Text(
-                  t.remarks!,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
-                ),
-              ],
-              if (t.vesselStatusNote?.isNotEmpty == true) ...[
-                const SizedBox(height: 6),
-                Text(
-                  t.vesselStatusNote!,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: cs.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-              if (dataLine.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  dataLine,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: cs.onSurfaceVariant,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // ── Map marker helpers ────────────────────────────────────────────
 
   Widget _trackArrow(Color color) => Container(
         width: 15,
         height: 15,
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.9),
+          color: color.withValues(alpha: 0.85),
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 1.5),
         ),
@@ -2349,17 +2270,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   Widget _trackLabel(String text, ColorScheme cs) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         decoration: BoxDecoration(
-          color: cs.surface.withValues(alpha: 0.55),
+          color: cs.primary.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.5), width: 0.5),
         ),
         child: Text(
           text,
           style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            color: cs.onSurface,
+            color: Colors.white,
           ),
         ),
       );
@@ -2502,7 +2421,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       _droppedMarkerLatLng = pos;
       _droppedMarkerLabel  = label;
     });
-    _markerDismissTimer = Timer(const Duration(seconds: 4), () {
+    _markerDismissTimer = Timer(const Duration(seconds: 5), () {
       if (mounted) setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; });
     });
   }
@@ -2519,68 +2438,10 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     return best;
   }
 
-  void _showEntryDetail(TimelineEntry t) {
-    final timeStr = DateFormat('HH:mm').format(t.time.toLocal());
-    final cs = Theme.of(context).colorScheme;
-    final dataLine = [
-      if (t.course  != null) 'Kurs: ${t.course!.toStringAsFixed(0)}°',
-      if (t.speed   != null) 'Fahrt: ${t.speed!.toStringAsFixed(1)} kn',
-      if (t.wind    != null) 'Wind: ${t.wind!}',
-      if (t.sea     != null) 'See: ${t.sea!}',
-      if (t.weather != null) 'Wetter: ${t.weather!}',
-      if (t.grossState != null) 'Gross: ${t.grossState!}',
-      if (t.fockState  != null) 'Fock: ${t.fockState!}',
-      if (t.motorOn    != null) 'Motor: ${t.motorOn! ? 'An' : 'Aus'}',
-    ].join(' · ');
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(child: Container(
-                width: 36, height: 4,
-                decoration: BoxDecoration(
-                  color: cs.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              )),
-              const SizedBox(height: 16),
-              Text(timeStr, style: GoogleFonts.newsreader(
-                fontSize: 18, fontWeight: FontWeight.w600, color: cs.primary)),
-              if (t.remarks?.isNotEmpty == true) ...[
-                const SizedBox(height: 8),
-                Text(t.remarks!, style: GoogleFonts.inter(
-                  fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
-              ],
-              if (t.vesselStatusNote?.isNotEmpty == true) ...[
-                const SizedBox(height: 6),
-                Text(t.vesselStatusNote!, style: GoogleFonts.inter(
-                  fontSize: 13, color: cs.onSurfaceVariant, height: 1.5)),
-              ],
-              if (dataLine.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(dataLine, style: GoogleFonts.inter(
-                  fontSize: 13, color: cs.onSurfaceVariant, height: 1.5)),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _trackArrow(Color color) => Container(
     width: 15, height: 15,
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.9),
+      color: color.withValues(alpha: 0.85),
       shape: BoxShape.circle,
       border: Border.all(color: Colors.white, width: 1.5),
     ),
@@ -2591,12 +2452,11 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
   Widget _trackLabel(String text, ColorScheme cs) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
     decoration: BoxDecoration(
-      color: cs.surface.withValues(alpha: 0.55),
+      color: cs.primary.withValues(alpha: 0.85),
       borderRadius: BorderRadius.circular(4),
-      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5), width: 0.5),
     ),
     child: Text(text, style: GoogleFonts.inter(
-      fontSize: 10, fontWeight: FontWeight.w700, color: cs.onSurface)),
+      fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
   );
 
   Widget _mapBtn(IconData icon, VoidCallback onTap, ColorScheme cs) =>
@@ -2674,12 +2534,12 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       final t = pair.$1; final p = pair.$2;
       return Marker(
         point: LatLng(p.lat, p.lon), width: 20, height: 20, alignment: Alignment.center,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            _dropMarker(LatLng(p.lat, p.lon), DateFormat('HH:mm').format(t.time.toLocal()));
-            _showEntryDetail(t);
-          },
+        child: Tooltip(
+          richMessage: TextSpan(text: _buildEntryTooltip(t)),
+          preferBelow: false,
+          triggerMode: TooltipTriggerMode.tap,
+          showDuration: const Duration(seconds: 5),
+          waitDuration: Duration.zero,
           child: Center(child: Container(
             width: 11, height: 11,
             decoration: BoxDecoration(shape: BoxShape.circle, color: cs.surface, border: Border.all(color: cs.primary, width: 2.5)),
@@ -2687,6 +2547,29 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
         ),
       );
     }).toList();
+
+    final fsTimeWaypoints = _sampleHourlyPoints(display.movingPoints()).map((p) =>
+      Marker(
+        point: LatLng(p.lat, p.lon), width: 20, height: 20, alignment: Alignment.center,
+        child: Tooltip(
+          message: DateFormat('HH:mm').format(p.time.toLocal()),
+          preferBelow: false,
+          triggerMode: _isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
+          showDuration: _isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
+          waitDuration: _isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
+          child: Center(
+            child: Container(
+              width: 11, height: 11,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cs.primary.withValues(alpha: 0.12),
+                border: Border.all(color: cs.primary.withValues(alpha: 0.60), width: 2.5),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ).toList();
 
     final fsMidStopMarkers = [
       for (final stop in display.stops.where((s) => s.kind == AnchorKind.mid))
@@ -2697,13 +2580,16 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
           alignment: Alignment.center,
           child: Tooltip(
             message: _fmtDur(stop.minutes),
+            triggerMode: _isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
+            showDuration: _isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
+            waitDuration: _isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
             child: Container(
               width: 28,
               height: 28,
               decoration: BoxDecoration(
-                color: cs.surfaceContainer.withValues(alpha: 0.90),
+                color: cs.primary.withValues(alpha: 0.85),
                 shape: BoxShape.circle,
-                border: Border.all(color: cs.primary, width: 1.5),
+                border: Border.all(color: Colors.white, width: 1.5),
                 boxShadow: [BoxShadow(
                   color: Colors.black.withValues(alpha: 0.20),
                   blurRadius: 3, offset: const Offset(0, 1))],
@@ -2711,7 +2597,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
               child: Icon(
                 stop.minutes >= 30 ? Icons.anchor : Icons.schedule,
                 size: 14,
-                color: cs.primary,
+                color: Colors.white,
               ),
             ),
           ),
@@ -2719,13 +2605,14 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     ];
 
     final markers = <Marker>[
+      ...fsTimeWaypoints,
       ...timelineMarkers,
       ...fsMidStopMarkers,
       Marker(
         point: startPos, width: 82, height: 22, alignment: Alignment.centerRight,
         child: Row(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.center, children: [
           _trackLabel(startTimeStr, cs), const SizedBox(width: 5),
-          Transform.rotate(angle: departureBearing, child: _trackArrow(cs.secondary)),
+          Transform.rotate(angle: departureBearing, child: _trackArrow(cs.primary)),
         ]),
       ),
       Marker(
@@ -2739,25 +2626,35 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
 
     if (_droppedMarkerLatLng != null) {
       markers.add(Marker(
-        point: _droppedMarkerLatLng!, width: 140, height: 48,
-        alignment: const Alignment(0.0, -0.924),
+        point: _droppedMarkerLatLng!,
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: () { _markerDismissTimer?.cancel(); setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; }); },
-          child: Stack(children: [
-            const Positioned(bottom: 0, left: 0, right: 0, height: 22,
-              child: Align(alignment: Alignment.center, child: Icon(Icons.place, color: Colors.red, size: 22))),
-            if (_droppedMarkerLabel != null)
-              Positioned(top: 0, left: 0, right: 0, height: 22,
-                child: Align(alignment: Alignment.center,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.red.shade700, borderRadius: BorderRadius.circular(6),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 4, offset: const Offset(0, 2))]),
-                    child: Text(_droppedMarkerLabel!, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, height: 1.1)),
-                  ))),
-          ]),
+          onTap: () {
+            _markerDismissTimer?.cancel();
+            setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; });
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 11, height: 11,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surface,
+                  border: Border.all(color: cs.primary, width: 2.5),
+                ),
+              ),
+              if (_droppedMarkerLabel != null)
+                Positioned(
+                  left: 16, top: 3,
+                  child: IgnorePointer(child: _trackLabel(_droppedMarkerLabel!, cs)),
+                ),
+            ],
+          ),
         ),
       ));
     }
@@ -2845,6 +2742,63 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
 }
 
 // ── Shared map helpers ────────────────────────────────────────────────────────
+
+/// Full timeline entry as a multi-line tooltip string.
+String _buildEntryTooltip(TimelineEntry t) {
+  final buf = StringBuffer(DateFormat('HH:mm').format(t.time.toLocal()));
+
+  final nav = <String>[];
+  if (t.course != null) nav.add('${t.course!.toStringAsFixed(0)}°');
+  if (t.speed  != null) nav.add('${t.speed!.toStringAsFixed(1)} kn');
+  if (nav.isNotEmpty) buf.write('\n${nav.join(' · ')}');
+
+  final cond = <String>[];
+  if (t.wind?.isNotEmpty    == true) cond.add(t.wind!);
+  if (t.sea?.isNotEmpty     == true) cond.add(t.sea!);
+  if (t.weather?.isNotEmpty == true) cond.add(t.weather!);
+  if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
+
+  final sails = <String>[];
+  if (t.grossState?.isNotEmpty == true) sails.add('Gross: ${t.grossState}');
+  if (t.fockState?.isNotEmpty  == true) sails.add('Fock: ${t.fockState}');
+  if (t.motorOn  != null) sails.add('Motor: ${t.motorOn!  ? 'an'    : 'aus'}');
+  if (t.keelDown != null) sails.add('Kiel: ${t.keelDown! ? 'unten' : 'oben'}');
+  if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
+
+  if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');
+  if (t.vesselStatusNote?.isNotEmpty == true) buf.write('\n${t.vesselStatusNote}');
+
+  return buf.toString();
+}
+
+/// True on native iOS/Android; false on web and desktop.
+/// Used to select tooltip trigger mode: tap on touch, hover+longPress on desktop.
+bool get _isTouchPlatform =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.iOS ||
+     defaultTargetPlatform == TargetPlatform.android);
+
+/// Returns one representative TrackPoint per clock-hour, skipping the first
+/// and last 20 minutes of the track to avoid overlapping start/end markers.
+List<TrackPoint> _sampleHourlyPoints(List<TrackPoint> pts) {
+  if (pts.length < 2) return [];
+  final first = pts.first.time;
+  final last  = pts.last.time;
+  const minGap = Duration(minutes: 20);
+  final result = <TrackPoint>[];
+  DateTime? lastBucket;
+  for (final p in pts) {
+    if (p.time.difference(first).abs() < minGap) continue;
+    if (last.difference(p.time).abs() < minGap) continue;
+    final l = p.time.toLocal();
+    final bucket = DateTime(l.year, l.month, l.day, l.hour);
+    if (lastBucket == null || bucket.isAfter(lastBucket)) {
+      result.add(p);
+      lastBucket = bucket;
+    }
+  }
+  return result;
+}
 
 String _fmtDur(double minutes) {
   final m = minutes.round();

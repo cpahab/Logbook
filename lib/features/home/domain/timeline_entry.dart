@@ -60,6 +60,11 @@ class TimelineEntry extends HiveObject {
   @HiveField(16)
   String? vesselStatusNote;
 
+  /// Keel position at the time of this log entry.
+  /// true = keel down (sailing), false = keel up (shoal), null = not recorded.
+  @HiveField(17)
+  bool? keelDown;
+
   TimelineEntry({
     required this.time,
     this.course,
@@ -78,5 +83,6 @@ class TimelineEntry extends HiveObject {
     this.grossState,
     this.fockState,
     this.vesselStatusNote,
+    this.keelDown,
   });
 }
