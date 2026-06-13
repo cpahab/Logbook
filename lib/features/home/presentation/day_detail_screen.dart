@@ -58,27 +58,25 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   final _toHarborCtrl = TextEditingController();
   StreamSubscription<MapEvent>? _mapSizeSub;
   LatLngBounds? _trackBounds;
+  bool _cameraFitted = false;
 
   @override
   void initState() {
     super.initState();
-    // Fit the camera the first time the map reports a valid (non-zero) size.
+    // Fit the camera once both conditions are true:
+    //   1. The map has a valid (non-zero) nonRotatedSize, AND
+    //   2. _trackBounds has been computed by _buildMap().
+    //
     // Using initialCameraFit in MapOptions doesn't work on web because
     // flutter_map marks the fit as applied on the first layout pass which
     // may have zero constraints, producing zoom=0 and blocking the real fit.
+    //
+    // The subscription handles the case where the size becomes valid first.
+    // A post-frame callback in _buildMap() handles the case where the track
+    // data arrives from async storage AFTER the size is already valid.
     _mapSizeSub = _mapController.mapEventStream
         .where((e) => e is MapEventNonRotatedSizeChange)
-        .listen((_) {
-      final size = _mapController.camera.nonRotatedSize;
-      if (mounted && _trackBounds != null && size.width > 0 && size.height > 0) {
-        _mapSizeSub?.cancel();
-        _mapSizeSub = null;
-        _mapController.fitCamera(CameraFit.bounds(
-          bounds: _trackBounds!,
-          padding: const EdgeInsets.all(40),
-        ));
-      }
-    });
+        .listen((_) => _tryFitCamera());
     if (widget.openAddDialog) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _addTimelineEntry(context);
@@ -94,6 +92,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     _toHarborCtrl.dispose();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _tryFitCamera() {
+    if (_cameraFitted) return;
+    final size = _mapController.camera.nonRotatedSize;
+    if (mounted && _trackBounds != null && size.width > 0 && size.height > 0) {
+      _cameraFitted = true;
+      _mapSizeSub?.cancel();
+      _mapSizeSub = null;
+      _mapController.fitCamera(CameraFit.bounds(
+        bounds: _trackBounds!,
+        padding: const EdgeInsets.all(40),
+      ));
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────
@@ -1335,6 +1347,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         : track.points.map((p) => LatLng(p.lat, p.lon)).toList();
     if (fitLatLngs.isNotEmpty) {
       _trackBounds = LatLngBounds.fromPoints(fitLatLngs);
+      // The subscription fires when the camera first gets a valid size. If that
+      // already happened before the track data arrived (async storage), retry now.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tryFitCamera());
     }
 
     final startStop = display.startStop;
@@ -1372,38 +1387,24 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ));
     }
 
-    // Build polylines: moving runs solid, stop entry/exit connectors thin/faded
     final trackPolylines = <Polyline>[];
-    var curPoly = <LatLng>[];
     for (final seg in display.segments) {
-      switch (seg.kind) {
-        case SegmentKind.teleportBreak:
-          if (curPoly.isNotEmpty) {
-            trackPolylines.add(
-                Polyline(points: curPoly, strokeWidth: 4, color: cs.primary));
-            curPoly = [];
-          }
-        case SegmentKind.moving:
-          curPoly.addAll(seg.points.map((p) => LatLng(p.lat, p.lon)));
-        case SegmentKind.stopEntry:
-        case SegmentKind.stopExit:
-          if (curPoly.isNotEmpty) {
-            trackPolylines.add(
-                Polyline(points: curPoly, strokeWidth: 4, color: cs.primary));
-            curPoly = [];
-          }
-          if (seg.points.length >= 2) {
-            trackPolylines.add(Polyline(
-              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-              strokeWidth: 2,
-              color: cs.primary.withValues(alpha: 0.35),
-            ));
-          }
+      if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
+        trackPolylines.add(Polyline(
+          points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+          strokeWidth: 4,
+          color: cs.primary,
+        ));
+      } else if ((seg.kind == SegmentKind.stopEntry ||
+                  seg.kind == SegmentKind.stopExit) &&
+                 seg.points.length >= 2) {
+        trackPolylines.add(Polyline(
+          points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+          strokeWidth: 2.5,
+          color: cs.primary.withValues(alpha: 0.40),
+        ));
       }
-    }
-    if (curPoly.isNotEmpty) {
-      trackPolylines.add(
-          Polyline(points: curPoly, strokeWidth: 4, color: cs.primary));
+      // teleportBreak: no polyline drawn — gap is the visual signal
     }
 
     final timelineMarkers = correlated.map((pair) {
@@ -1435,8 +1436,39 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       );
     }).toList();
 
+    final midStopMarkers = [
+      for (final stop in display.stops.where((s) => s.kind == AnchorKind.mid))
+        Marker(
+          point: LatLng(stop.lat, stop.lon),
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          child: Tooltip(
+            message: _fmtDur(stop.minutes),
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainer.withValues(alpha: 0.90),
+                shape: BoxShape.circle,
+                border: Border.all(color: cs.primary, width: 1.5),
+                boxShadow: [BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.20),
+                  blurRadius: 3, offset: const Offset(0, 1))],
+              ),
+              child: Icon(
+                stop.minutes >= 30 ? Icons.anchor : Icons.schedule,
+                size: 14,
+                color: cs.primary,
+              ),
+            ),
+          ),
+        ),
+    ];
+
     final markers = <Marker>[
       ...timelineMarkers,
+      ...midStopMarkers,
       // ── Departure: label to the left, arrow at the coordinate ───────
       Marker(
         point: startPos,
@@ -1573,8 +1605,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
-            CircleLayer(circles: anchorCircles),
-            PolylineLayer(polylines: trackPolylines, cullingMargin: null),
+            _ZoomAwareCircleLayer(circles: anchorCircles),
+            PolylineLayer(polylines: trackPolylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: markers),
             RichAttributionWidget(
               attributions: [
@@ -2413,18 +2445,55 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
   LatLng? _droppedMarkerLatLng;
   String? _droppedMarkerLabel;
   Timer? _markerDismissTimer;
+  StreamSubscription<MapEvent>? _mapSizeSub;
+  LatLngBounds? _fitBounds;
+  bool _cameraFitted = false;
 
   @override
   void initState() {
     super.initState();
     _satelliteView = widget.initialSatellite;
+
+    // Pre-compute the camera fit bounds from the track data.
+    final display = buildDisplayModel(widget.track.points, settings: widget.filterSettings);
+    final boundsLL = [
+      for (final s in display.segments)
+        if (s.kind != SegmentKind.teleportBreak)
+          ...s.points.map((p) => LatLng(p.lat, p.lon)),
+      for (final s in display.stops) LatLng(s.lat, s.lon),
+    ];
+    final fitLL = boundsLL.isNotEmpty
+        ? boundsLL
+        : widget.track.points.map((p) => LatLng(p.lat, p.lon)).toList();
+    if (fitLL.isNotEmpty) {
+      _fitBounds = LatLngBounds.fromPoints(fitLL);
+    }
+
+    _mapSizeSub = _mapController.mapEventStream
+        .where((e) => e is MapEventNonRotatedSizeChange)
+        .listen((_) => _tryFitCamera());
   }
 
   @override
   void dispose() {
+    _mapSizeSub?.cancel();
     _markerDismissTimer?.cancel();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _tryFitCamera() {
+    if (_cameraFitted || _fitBounds == null) return;
+    final size = _mapController.camera.nonRotatedSize;
+    if (mounted && size.width > 0 && size.height > 0) {
+      _cameraFitted = true;
+      _mapSizeSub?.cancel();
+      _mapSizeSub = null;
+      _mapController.fitCamera(CameraFit.bounds(
+        bounds: _fitBounds!,
+        padding: const EdgeInsets.all(60),
+      ));
+    }
   }
 
   void _dropMarker(LatLng pos, String label) {
@@ -2561,6 +2630,9 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final fitLatLngs = boundsLatLngs.isNotEmpty
         ? boundsLatLngs
         : track.points.map((p) => LatLng(p.lat, p.lon)).toList();
+    if (fitLatLngs.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _tryFitCamera());
+    }
 
     final startStop = display.startStop;
     final endStop   = display.endStop;
@@ -2580,33 +2652,22 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     }
 
     final fsTrackPolylines = <Polyline>[];
-    var fsCurPoly = <LatLng>[];
     for (final seg in display.segments) {
-      switch (seg.kind) {
-        case SegmentKind.teleportBreak:
-          if (fsCurPoly.isNotEmpty) {
-            fsTrackPolylines.add(Polyline(points: fsCurPoly, strokeWidth: 4, color: cs.primary));
-            fsCurPoly = [];
-          }
-        case SegmentKind.moving:
-          fsCurPoly.addAll(seg.points.map((p) => LatLng(p.lat, p.lon)));
-        case SegmentKind.stopEntry:
-        case SegmentKind.stopExit:
-          if (fsCurPoly.isNotEmpty) {
-            fsTrackPolylines.add(Polyline(points: fsCurPoly, strokeWidth: 4, color: cs.primary));
-            fsCurPoly = [];
-          }
-          if (seg.points.length >= 2) {
-            fsTrackPolylines.add(Polyline(
-              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-              strokeWidth: 2,
-              color: cs.primary.withValues(alpha: 0.35),
-            ));
-          }
+      if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
+        fsTrackPolylines.add(Polyline(
+          points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+          strokeWidth: 4,
+          color: cs.primary,
+        ));
+      } else if ((seg.kind == SegmentKind.stopEntry ||
+                  seg.kind == SegmentKind.stopExit) &&
+                 seg.points.length >= 2) {
+        fsTrackPolylines.add(Polyline(
+          points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+          strokeWidth: 2.5,
+          color: cs.primary.withValues(alpha: 0.40),
+        ));
       }
-    }
-    if (fsCurPoly.isNotEmpty) {
-      fsTrackPolylines.add(Polyline(points: fsCurPoly, strokeWidth: 4, color: cs.primary));
     }
 
     final timelineMarkers = correlated.map((pair) {
@@ -2627,8 +2688,39 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       );
     }).toList();
 
+    final fsMidStopMarkers = [
+      for (final stop in display.stops.where((s) => s.kind == AnchorKind.mid))
+        Marker(
+          point: LatLng(stop.lat, stop.lon),
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          child: Tooltip(
+            message: _fmtDur(stop.minutes),
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainer.withValues(alpha: 0.90),
+                shape: BoxShape.circle,
+                border: Border.all(color: cs.primary, width: 1.5),
+                boxShadow: [BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.20),
+                  blurRadius: 3, offset: const Offset(0, 1))],
+              ),
+              child: Icon(
+                stop.minutes >= 30 ? Icons.anchor : Icons.schedule,
+                size: 14,
+                color: cs.primary,
+              ),
+            ),
+          ),
+        ),
+    ];
+
     final markers = <Marker>[
       ...timelineMarkers,
+      ...fsMidStopMarkers,
       Marker(
         point: startPos, width: 82, height: 22, alignment: Alignment.centerRight,
         child: Row(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.center, children: [
@@ -2691,10 +2783,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCameraFit: CameraFit.bounds(
-              bounds: LatLngBounds.fromPoints(fitLatLngs),
-              padding: const EdgeInsets.all(60),
-            ),
+            initialCenter: const LatLng(47.0, 8.3),
+            initialZoom: 8,
             onTap: (_, latLng) {
               final nearest = _findNearest(latLng, track.points);
               if (nearest == null) return;
@@ -2709,8 +2799,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
-            CircleLayer(circles: anchorCircles),
-            PolylineLayer(polylines: fsTrackPolylines),
+            _ZoomAwareCircleLayer(circles: anchorCircles),
+            PolylineLayer(polylines: fsTrackPolylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: markers),
             RichAttributionWidget(attributions: [
               if (_satelliteView)
@@ -2751,6 +2841,29 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
         ),
       ]),
     );
+  }
+}
+
+// ── Shared map helpers ────────────────────────────────────────────────────────
+
+String _fmtDur(double minutes) {
+  final m = minutes.round();
+  return m >= 60 ? '${m ~/ 60}h ${m % 60}m' : '${m}m';
+}
+
+/// Shows the GPS accuracy rings (CEP50 / R95) only at harbour zoom (> 15).
+/// flutter_map propagates MapCamera via InheritedWidget, so this widget
+/// rebuilds automatically whenever the camera zoom changes.
+class _ZoomAwareCircleLayer extends StatelessWidget {
+  final List<CircleMarker> circles;
+  const _ZoomAwareCircleLayer({required this.circles});
+
+  @override
+  Widget build(BuildContext context) {
+    if (circles.isEmpty) return const SizedBox.shrink();
+    final zoom = MapCamera.of(context).zoom;
+    if (zoom <= 15) return const SizedBox.shrink();
+    return CircleLayer(circles: circles);
   }
 }
 

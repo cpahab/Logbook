@@ -86,6 +86,11 @@ final ThemeData darkTheme = ThemeData(
     onTertiaryFixedVariant: const Color(0xFF38485A),
   ),
   textTheme: _buildDarkTextTheme(),
+  dialogTheme: const DialogThemeData(
+    backgroundColor: Color(0xFF1B1D22),
+    surfaceTintColor: Colors.transparent,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+  ),
   appBarTheme: AppBarTheme(
     backgroundColor: _darkNavy,
     foregroundColor: _lightBlue,
