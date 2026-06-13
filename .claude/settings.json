@@ -21,7 +21,8 @@
       "Bash(git pull *)",
       "Bash(git stash *)",
       "Bash(flutter logs *)",
-      "Bash(flutter config *)"
+      "Bash(flutter config *)",
+      "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\" | Where-Object { $_.Name -match \"flutter_map\" })"
     ],
     "additionalDirectories": [
       "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358"

@@ -86,6 +86,11 @@ final ThemeData lightTheme = ThemeData(
     onTertiaryFixedVariant: const Color(0xFF38485A),
   ),
   textTheme: _buildTextTheme(),
+  dialogTheme: const DialogThemeData(
+    backgroundColor: Color(0xFFFFFFFF),
+    surfaceTintColor: Colors.transparent,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
+  ),
   appBarTheme: AppBarTheme(
     backgroundColor: _primary,
     foregroundColor: const Color(0xFFFFFFFF),
