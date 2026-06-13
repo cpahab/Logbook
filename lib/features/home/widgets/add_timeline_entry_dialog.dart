@@ -33,6 +33,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   String? _grossState;
   String? _fockState;
   bool?   _motorOn;
+  bool?   _keelDown;
 
   static const _windDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
@@ -58,6 +59,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       _grossState = src.grossState;
       _fockState  = src.fockState;
       _motorOn    = src.motorOn;
+      _keelDown   = src.keelDown;
       if (widget.initialEntry == null) _parseWind(src.wind);
     }
   }
@@ -114,6 +116,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         grossState: _grossState,
         fockState:  _fockState,
         motorOn:    _motorOn,
+        keelDown:   _keelDown,
       ),
     );
   }
@@ -406,15 +409,42 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           cs: cs,
                         ),
                         const SizedBox(height: 10),
-                        _labelSm('MOTOR', cs),
-                        const SizedBox(height: 6),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _stateChip('An',  _motorOn == true,
-                                () => setState(() => _motorOn = _motorOn == true  ? null : true),  cs),
-                            const SizedBox(width: 8),
-                            _stateChip('Aus', _motorOn == false,
-                                () => setState(() => _motorOn = _motorOn == false ? null : false), cs),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _labelSm('MOTOR', cs),
+                                  const SizedBox(height: 6),
+                                  Row(children: [
+                                    _stateChip('An',  _motorOn == true,
+                                        () => setState(() => _motorOn = _motorOn == true  ? null : true),  cs),
+                                    const SizedBox(width: 8),
+                                    _stateChip('Aus', _motorOn == false,
+                                        () => setState(() => _motorOn = _motorOn == false ? null : false), cs),
+                                  ]),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _labelSm('KIEL', cs),
+                                  const SizedBox(height: 6),
+                                  Row(children: [
+                                    _stateChip('Unten', _keelDown == true,
+                                        () => setState(() => _keelDown = _keelDown == true  ? null : true),  cs),
+                                    const SizedBox(width: 8),
+                                    _stateChip('Oben', _keelDown == false,
+                                        () => setState(() => _keelDown = _keelDown == false ? null : false), cs),
+                                  ]),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ],
