@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/domain/day_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
+import '../../home/domain/track_point.dart';
 import '../../home/utils/trim_track.dart'
     show trimStationaryEnds, buildDisplayModel, DisplayModel;
 import '../../home/widgets/nav_bar.dart';
@@ -32,6 +34,29 @@ class _TracksScreenState extends State<TracksScreen> {
   _FilterPreset _preset = _FilterPreset.months3;
   DateTimeRange? _customRange;
   bool _satelliteView = false;
+  StreamSubscription<MapEvent>? _mapSizeSub;
+  bool _initialFitDone = false;
+  bool _pendingFit = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Same web workaround as day_detail_screen: initialCameraFit applies on the
+    // first layout pass which may have zero constraints. Subscribe to size changes
+    // and perform the fit when the camera first gets a valid size.
+    _mapSizeSub = _mapController.mapEventStream
+        .where((e) => e is MapEventNonRotatedSizeChange)
+        .listen((_) {
+      final size = _mapController.camera.nonRotatedSize;
+      if (mounted && _pendingFit && size.width > 0 && size.height > 0) {
+        _mapSizeSub?.cancel();
+        _mapSizeSub = null;
+        _pendingFit = false;
+        _initialFitDone = true;
+        _refitToDisplayed();
+      }
+    });
+  }
 
   // Golden-angle hue palette: each sequential track steps ~137.5° around the
   // hue wheel, guaranteeing maximum perceptual separation between adjacent days.
@@ -110,6 +135,7 @@ class _TracksScreenState extends State<TracksScreen> {
 
   @override
   void dispose() {
+    _mapSizeSub?.cancel();
     _mapController.dispose();
     super.dispose();
   }
@@ -196,12 +222,28 @@ class _TracksScreenState extends State<TracksScreen> {
       trackData.add(_DayTrackData(
         day: day,
         display: display,
+        rawPoints: track.points,
         color: _colorForIndex(trackIdx, totalTracks),
         entry: repo.getEntry(day),
         stats: computeDailyStats(track.points, settings: filterSettings),
         startTime: display.firstMovingPoint?.time.toLocal(),
       ));
       trackIdx++;
+    }
+
+    // Trigger initial camera fit once track data is available. Covers the case
+    // where data arrives from async storage after the first layout event fired.
+    if (!_initialFitDone && trackData.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _initialFitDone) return;
+        final size = _mapController.camera.nonRotatedSize;
+        if (size.width > 0 && size.height > 0) {
+          _initialFitDone = true;
+          _refitToDisplayed();
+        } else {
+          _pendingFit = true;
+        }
+      });
     }
 
     final range = _effectiveRange;
@@ -217,11 +259,11 @@ class _TracksScreenState extends State<TracksScreen> {
       final isSelected = _selectedIndex == e.key;
       final color = isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65);
       final width = isSelected ? 5.0 : 3.0;
-      return e.value.display.polylines().map((pts) => Polyline(
-        points: pts.map((p) => LatLng(p.lat, p.lon)).toList(),
+      return [Polyline(
+        points: e.value.rawPoints.map((p) => LatLng(p.lat, p.lon)).toList(),
         color: color,
         strokeWidth: width,
-      )).toList();
+      )];
     }).toList();
     final polylines = <Polyline>[];
     for (int i = 0; i < polylinesByDay.length; i++) {
@@ -279,10 +321,6 @@ class _TracksScreenState extends State<TracksScreen> {
       }
     }
 
-    final allBoundsLatLngs = displayed
-        .expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon)))
-        .toList();
-    final initialBounds = _boundsFor(allBoundsLatLngs);
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -323,7 +361,7 @@ class _TracksScreenState extends State<TracksScreen> {
                 Expanded(
                   flex: 3,
                   child: _buildMapSection(
-                      displayed, initialBounds, polylines,
+                      displayed, polylines,
                       anchorCircles, arrowMarkers, cs),
                 ),
                 // ── List ───────────────────────────────────────────────
@@ -395,27 +433,22 @@ class _TracksScreenState extends State<TracksScreen> {
   // ── Map section ────────────────────────────────────────────────────
   Widget _buildMapSection(
     List<_DayTrackData> displayed,
-    LatLngBounds? initialBounds,
     List<Polyline> polylines,
     List<CircleMarker> anchorCircles,
     List<Marker> arrowMarkers,
     ColorScheme cs,
   ) {
+    final initialBounds = _boundsFor(
+      displayed.expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon))).toList(),
+    );
     return Stack(
       children: [
         FlutterMap(
           mapController: _mapController,
-          options: initialBounds != null
-              ? MapOptions(
-                  initialCameraFit: CameraFit.bounds(
-                    bounds: initialBounds,
-                    padding: const EdgeInsets.all(24),
-                  ),
-                )
-              : const MapOptions(
-                  initialCenter: LatLng(47.0, 8.3),
-                  initialZoom: 8,
-                ),
+          options: const MapOptions(
+            initialCenter: LatLng(47.0, 8.3),
+            initialZoom: 8,
+          ),
           children: [
             TileLayer(
               urlTemplate: _satelliteView
@@ -424,7 +457,7 @@ class _TracksScreenState extends State<TracksScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             CircleLayer(circles: anchorCircles),
-            PolylineLayer(polylines: polylines),
+            PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(
               attributions: [
@@ -911,6 +944,7 @@ class _TracksScreenState extends State<TracksScreen> {
 class _DayTrackData {
   final DateTime day;
   final DisplayModel display;
+  final List<TrackPoint> rawPoints;
   final Color color;
   final DayEntry? entry;
   final DailyStats? stats;
@@ -919,6 +953,7 @@ class _DayTrackData {
   const _DayTrackData({
     required this.day,
     required this.display,
+    required this.rawPoints,
     required this.color,
     required this.entry,
     required this.stats,
@@ -948,17 +983,37 @@ class _TracksMapFullScreen extends StatefulWidget {
 class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
   final MapController _mapController = MapController();
   late bool _satelliteView;
+  StreamSubscription<MapEvent>? _mapSizeSub;
+  bool _cameraFitted = false;
 
   @override
   void initState() {
     super.initState();
     _satelliteView = widget.initialSatellite;
+    _mapSizeSub = _mapController.mapEventStream
+        .where((e) => e is MapEventNonRotatedSizeChange)
+        .listen((_) => _tryFitCamera());
   }
 
   @override
   void dispose() {
+    _mapSizeSub?.cancel();
     _mapController.dispose();
     super.dispose();
+  }
+
+  void _tryFitCamera() {
+    if (_cameraFitted || widget.initialBounds == null) return;
+    final size = _mapController.camera.nonRotatedSize;
+    if (mounted && size.width > 0 && size.height > 0) {
+      _cameraFitted = true;
+      _mapSizeSub?.cancel();
+      _mapSizeSub = null;
+      _mapController.fitCamera(CameraFit.bounds(
+        bounds: widget.initialBounds!,
+        padding: const EdgeInsets.all(32),
+      ));
+    }
   }
 
   static double _trackBearing(LatLng from, LatLng to) {
@@ -1022,16 +1077,20 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
     final cs       = Theme.of(context).colorScheme;
     final displayed = widget.displayed;
 
+    // Post-frame fallback: if the map already has a valid size (e.g., device
+    // layout resolved immediately), the subscription may not fire — try here.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _tryFitCamera());
+
     final sel = widget.selectedIndex;
     final fsPolylinesByDay = displayed.asMap().entries.map((e) {
       final isSelected = sel == e.key;
       final color = isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65);
       final width = isSelected ? 5.0 : 3.0;
-      return e.value.display.polylines().map((pts) => Polyline(
-        points: pts.map((p) => LatLng(p.lat, p.lon)).toList(),
+      return [Polyline(
+        points: e.value.rawPoints.map((p) => LatLng(p.lat, p.lon)).toList(),
         color: color,
         strokeWidth: width,
-      )).toList();
+      )];
     }).toList();
     final polylines = <Polyline>[];
     for (int i = 0; i < fsPolylinesByDay.length; i++) {
@@ -1112,9 +1171,10 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
       body: Stack(children: [
         FlutterMap(
           mapController: _mapController,
-          options: widget.initialBounds != null
-              ? MapOptions(initialCameraFit: CameraFit.bounds(bounds: widget.initialBounds!, padding: const EdgeInsets.all(32)))
-              : const MapOptions(initialCenter: LatLng(47.0, 8.3), initialZoom: 8),
+          options: const MapOptions(
+            initialCenter: LatLng(47.0, 8.3),
+            initialZoom: 8,
+          ),
           children: [
             TileLayer(
               urlTemplate: _satelliteView
@@ -1123,7 +1183,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             CircleLayer(circles: anchorCircles),
-            PolylineLayer(polylines: polylines),
+            PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(attributions: [
               if (_satelliteView)

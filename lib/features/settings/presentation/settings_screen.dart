@@ -64,23 +64,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Logbuch verbinden'),
-        content: Text(
-          'Dieses Gerät wird mit dem Logbuch "$code" verbunden. '
-          'Alle lokalen Einträge werden gelöscht und durch die Cloud-Daten ersetzt.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Abbrechen'),
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          titleTextStyle: TextStyle(
+            color: cs.onSurface,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Verbinden'),
+          contentTextStyle: TextStyle(
+            color: cs.onSurfaceVariant,
+            fontSize: 14,
           ),
-        ],
-      ),
+          title: const Text('Logbuch verbinden'),
+          content: Text(
+            'Dieses Gerät wird mit dem Logbuch "$code" verbunden. '
+            'Alle lokalen Einträge werden gelöscht und durch die Cloud-Daten ersetzt.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Verbinden'),
+            ),
+          ],
+        );
+      },
     );
     if (confirmed != true) return;
 
