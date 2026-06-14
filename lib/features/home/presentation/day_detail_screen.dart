@@ -1328,7 +1328,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (track == null || track.points.isEmpty) return const SizedBox();
 
     final cs = Theme.of(context).colorScheme;
-    final filterSettings = context.read<ThemeProvider>().filterSettings;
+    final provider = context.watch<ThemeProvider>();
+    final filterSettings = provider.filterSettings;
+    final showRawTrack = provider.showRawTrack;
     final display    = buildDisplayModel(track.points, settings: filterSettings);
     final correlated = correlateTimelineWithTrack(entry.timeline, track.points);
 
@@ -1604,6 +1606,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             _ZoomAwareCircleLayer(circles: anchorCircles),
+            if (showRawTrack)
+              PolylineLayer(
+                polylines: [
+                  for (final seg in splitTrackSegments(track.points))
+                    if (seg.length >= 2)
+                      Polyline(
+                        points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+                        strokeWidth: 2.0,
+                        color: const Color(0xFFE65100).withValues(alpha: 0.55),
+                      ),
+                ],
+                cullingMargin: null,
+                simplificationTolerance: 0,
+              ),
             PolylineLayer(polylines: trackPolylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: markers),
             RichAttributionWidget(
@@ -1669,6 +1685,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       track: track,
                       filterSettings: context.read<ThemeProvider>().filterSettings,
                       initialSatellite: _satelliteView,
+                      showRawTrack: context.read<ThemeProvider>().showRawTrack,
                     ),
                   ),
                 ),
@@ -2346,12 +2363,14 @@ class _DayMapFullScreen extends StatefulWidget {
   final DailyTrack track;
   final FilterSettings filterSettings;
   final bool initialSatellite;
+  final bool showRawTrack;
 
   const _DayMapFullScreen({
     required this.entry,
     required this.track,
     required this.filterSettings,
     required this.initialSatellite,
+    required this.showRawTrack,
   });
 
   @override
@@ -2697,6 +2716,20 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             _ZoomAwareCircleLayer(circles: anchorCircles),
+            if (widget.showRawTrack)
+              PolylineLayer(
+                polylines: [
+                  for (final seg in splitTrackSegments(track.points))
+                    if (seg.length >= 2)
+                      Polyline(
+                        points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+                        strokeWidth: 2.0,
+                        color: const Color(0xFFE65100).withValues(alpha: 0.55),
+                      ),
+                ],
+                cullingMargin: null,
+                simplificationTolerance: 0,
+              ),
             PolylineLayer(polylines: fsTrackPolylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: markers),
             RichAttributionWidget(attributions: [

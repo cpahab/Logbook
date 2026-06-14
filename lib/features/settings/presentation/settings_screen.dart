@@ -732,6 +732,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: cs.onSurfaceVariant,
             ),
           ),
+          _rowDivider(cs),
+          // ── Raw track overlay ─────────────────────────────────
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Ungefilterte Spur anzeigen',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                ),
+              ),
+              Switch(
+                value: p.showRawTrack,
+                onChanged: p.setShowRawTrack,
+              ),
+            ],
+          ),
+          Text(
+            'Zeigt den Roh-GPX-Track (orange) zusätzlich zur gefilterten Spur an. Dient zur Fehleranalyse und zum Optimieren der Filtereinstellungen.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
+            ),
+          ),
         ],
       ),
     );

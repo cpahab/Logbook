@@ -23,7 +23,9 @@
       "Bash(flutter logs *)",
       "Bash(flutter config *)",
       "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\" | Where-Object { $_.Name -match \"flutter_map\" })",
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(echo \"DONE:$?\")"
     ],
     "additionalDirectories": [
       "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358"
