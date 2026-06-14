@@ -42,6 +42,7 @@ class ThemeProvider extends ChangeNotifier {
   static const _coldStartSettleFactorKey   = 'filter_cold_start_settle_factor';
   static const _makingWayThresholdKnKey    = 'filter_making_way_threshold_kn';
   static const _topSpeedPercentileKey      = 'filter_top_speed_percentile';
+  static const _showRawTrackKey            = 'debug_show_raw_track';
 
   late Box<String> _box;
   FirestoreService? _firestore;
@@ -56,6 +57,7 @@ class ThemeProvider extends ChangeNotifier {
   double _coldStartSettleFactor     = 3.0;
   double _makingWayThresholdKn      = 1.0;
   double _topSpeedPercentile        = 0.99;
+  bool   _showRawTrack              = false;
   String _title = 'Logbuch';
   String _weatherUrl = '';
   late String _logbookCode;
@@ -82,6 +84,7 @@ class ThemeProvider extends ChangeNotifier {
   double get coldStartSettleFactor      => _coldStartSettleFactor;
   double get makingWayThresholdKn       => _makingWayThresholdKn;
   double get topSpeedPercentile         => _topSpeedPercentile;
+  bool   get showRawTrack               => _showRawTrack;
   FilterSettings get filterSettings => FilterSettings(
     stationaryMode:        _filterMode,
     minStopMinutes:        _minStopMinutes,
@@ -186,6 +189,7 @@ class ThemeProvider extends ChangeNotifier {
     _coldStartSettleFactor = double.tryParse(_box.get(_coldStartSettleFactorKey,  defaultValue: '3.0')!)  ?? 3.0;
     _makingWayThresholdKn  = double.tryParse(_box.get(_makingWayThresholdKnKey,   defaultValue: '1.0')!)  ?? 1.0;
     _topSpeedPercentile    = double.tryParse(_box.get(_topSpeedPercentileKey,      defaultValue: '0.99')!) ?? 0.99;
+    _showRawTrack          = (_box.get(_showRawTrackKey, defaultValue: 'false')!) == 'true';
     _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
     _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
     _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
@@ -284,6 +288,13 @@ class ThemeProvider extends ChangeNotifier {
     if (_topSpeedPercentile == v) return;
     _topSpeedPercentile = v;
     _box.put(_topSpeedPercentileKey, v.toString());
+    notifyListeners();
+  }
+
+  void setShowRawTrack(bool v) {
+    if (_showRawTrack == v) return;
+    _showRawTrack = v;
+    _box.put(_showRawTrackKey, v.toString());
     notifyListeners();
   }
 
