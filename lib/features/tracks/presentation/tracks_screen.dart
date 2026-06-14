@@ -15,7 +15,8 @@ import '../../home/domain/day_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
 import '../../home/domain/track_point.dart';
 import '../../home/utils/trim_track.dart'
-    show trimStationaryEnds, buildDisplayModel, DisplayModel;
+    show trimStationaryEnds, buildDisplayModel, DisplayModel, SegmentKind,
+        splitTrackSegments;
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 
@@ -206,7 +207,9 @@ class _TracksScreenState extends State<TracksScreen> {
   @override
   Widget build(BuildContext context) {
     final repo           = context.watch<HomeRepository>();
-    final filterSettings = context.watch<ThemeProvider>().filterSettings;
+    final provider       = context.watch<ThemeProvider>();
+    final filterSettings = provider.filterSettings;
+    final showRawTrack   = provider.showRawTrack;
     final cs             = Theme.of(context).colorScheme;
 
     final trackedDays = repo.dailyTracks.keys.toList()..sort();
@@ -259,11 +262,26 @@ class _TracksScreenState extends State<TracksScreen> {
       final isSelected = _selectedIndex == e.key;
       final color = isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65);
       final width = isSelected ? 5.0 : 3.0;
-      return [Polyline(
-        points: e.value.rawPoints.map((p) => LatLng(p.lat, p.lon)).toList(),
-        color: color,
-        strokeWidth: width,
-      )];
+      final segs = <Polyline>[];
+      for (final seg in e.value.display.segments) {
+        if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
+          segs.add(Polyline(
+            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+            color: color,
+            strokeWidth: width,
+          ));
+        } else if ((seg.kind == SegmentKind.stopEntry ||
+                    seg.kind == SegmentKind.stopExit) &&
+                   seg.points.length >= 2) {
+          segs.add(Polyline(
+            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+            color: e.value.color.withValues(alpha: isSelected ? 0.40 : 0.26),
+            strokeWidth: width * 0.6,
+          ));
+        }
+        // teleportBreak: no polyline — gap is the visual signal
+      }
+      return segs;
     }).toList();
     final polylines = <Polyline>[];
     for (int i = 0; i < polylinesByDay.length; i++) {
@@ -322,6 +340,19 @@ class _TracksScreenState extends State<TracksScreen> {
     }
 
 
+    final rawPolylines = showRawTrack
+        ? [
+            for (final d in displayed)
+              for (final seg in splitTrackSegments(d.rawPoints))
+                if (seg.length >= 2)
+                  Polyline(
+                    points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+                    strokeWidth: 1.5,
+                    color: d.color.withValues(alpha: 0.40),
+                  ),
+          ]
+        : <Polyline>[];
+
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
@@ -361,7 +392,7 @@ class _TracksScreenState extends State<TracksScreen> {
                 Expanded(
                   flex: 3,
                   child: _buildMapSection(
-                      displayed, polylines,
+                      displayed, polylines, rawPolylines,
                       anchorCircles, arrowMarkers, cs),
                 ),
                 // ── List ───────────────────────────────────────────────
@@ -434,6 +465,7 @@ class _TracksScreenState extends State<TracksScreen> {
   Widget _buildMapSection(
     List<_DayTrackData> displayed,
     List<Polyline> polylines,
+    List<Polyline> rawPolylines,
     List<CircleMarker> anchorCircles,
     List<Marker> arrowMarkers,
     ColorScheme cs,
@@ -457,6 +489,8 @@ class _TracksScreenState extends State<TracksScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             CircleLayer(circles: anchorCircles),
+            if (rawPolylines.isNotEmpty)
+              PolylineLayer(polylines: rawPolylines, cullingMargin: null, simplificationTolerance: 0),
             PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(
@@ -1074,8 +1108,9 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final cs       = Theme.of(context).colorScheme;
-    final displayed = widget.displayed;
+    final cs           = Theme.of(context).colorScheme;
+    final displayed    = widget.displayed;
+    final showRawTrack = context.watch<ThemeProvider>().showRawTrack;
 
     // Post-frame fallback: if the map already has a valid size (e.g., device
     // layout resolved immediately), the subscription may not fire — try here.
@@ -1086,11 +1121,25 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
       final isSelected = sel == e.key;
       final color = isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65);
       final width = isSelected ? 5.0 : 3.0;
-      return [Polyline(
-        points: e.value.rawPoints.map((p) => LatLng(p.lat, p.lon)).toList(),
-        color: color,
-        strokeWidth: width,
-      )];
+      final segs = <Polyline>[];
+      for (final seg in e.value.display.segments) {
+        if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
+          segs.add(Polyline(
+            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+            color: color,
+            strokeWidth: width,
+          ));
+        } else if ((seg.kind == SegmentKind.stopEntry ||
+                    seg.kind == SegmentKind.stopExit) &&
+                   seg.points.length >= 2) {
+          segs.add(Polyline(
+            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+            color: e.value.color.withValues(alpha: isSelected ? 0.40 : 0.26),
+            strokeWidth: width * 0.6,
+          ));
+        }
+      }
+      return segs;
     }).toList();
     final polylines = <Polyline>[];
     for (int i = 0; i < fsPolylinesByDay.length; i++) {
@@ -1131,6 +1180,19 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
             color: d.color.withValues(alpha: 0.22), borderStrokeWidth: 1.5, borderColor: d.color.withValues(alpha: 0.50)));
       }
     }
+
+    final fsRawPolylines = showRawTrack
+        ? [
+            for (final d in displayed)
+              for (final seg in splitTrackSegments(d.rawPoints))
+                if (seg.length >= 2)
+                  Polyline(
+                    points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+                    strokeWidth: 1.5,
+                    color: d.color.withValues(alpha: 0.40),
+                  ),
+          ]
+        : <Polyline>[];
 
     final allPts = displayed
         .expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon)))
@@ -1183,6 +1245,8 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             CircleLayer(circles: anchorCircles),
+            if (fsRawPolylines.isNotEmpty)
+              PolylineLayer(polylines: fsRawPolylines, cullingMargin: null, simplificationTolerance: 0),
             PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(attributions: [
