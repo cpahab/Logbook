@@ -57,7 +57,7 @@ class ThemeProvider extends ChangeNotifier {
   double _coldStartSettleFactor     = 3.0;
   double _makingWayThresholdKn      = 1.0;
   double _topSpeedPercentile        = 0.99;
-  bool   _showRawTrack              = false;
+  bool   _showRawTrack              = true;
   String _title = 'Logbuch';
   String _weatherUrl = '';
   late String _logbookCode;
@@ -189,7 +189,7 @@ class ThemeProvider extends ChangeNotifier {
     _coldStartSettleFactor = double.tryParse(_box.get(_coldStartSettleFactorKey,  defaultValue: '3.0')!)  ?? 3.0;
     _makingWayThresholdKn  = double.tryParse(_box.get(_makingWayThresholdKnKey,   defaultValue: '1.0')!)  ?? 1.0;
     _topSpeedPercentile    = double.tryParse(_box.get(_topSpeedPercentileKey,      defaultValue: '0.99')!) ?? 0.99;
-    _showRawTrack          = (_box.get(_showRawTrackKey, defaultValue: 'false')!) == 'true';
+    _showRawTrack          = (_box.get(_showRawTrackKey, defaultValue: 'true')!) != 'false';
     _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
     _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
     _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
@@ -295,6 +295,25 @@ class ThemeProvider extends ChangeNotifier {
     if (_showRawTrack == v) return;
     _showRawTrack = v;
     _box.put(_showRawTrackKey, v.toString());
+    notifyListeners();
+  }
+
+  void resetFilterDefaults() {
+    _filterMode           = StationaryMode.speed;
+    _minStopMinutes       = 5.0;
+    _maxStopSpreadM       = 30.0;
+    _detectColdStart      = true;
+    _coldStartSettleFactor = 3.0;
+    _makingWayThresholdKn = 1.0;
+    _topSpeedPercentile   = 0.99;
+    _box
+      ..put(_filterModeKey,            StationaryMode.speed.name)
+      ..put(_minStopMinutesKey,        '5.0')
+      ..put(_maxStopSpreadMKey,        '30.0')
+      ..put(_detectColdStartKey,       'true')
+      ..put(_coldStartSettleFactorKey, '3.0')
+      ..put(_makingWayThresholdKnKey,  '1.0')
+      ..put(_topSpeedPercentileKey,    '0.99');
     notifyListeners();
   }
 

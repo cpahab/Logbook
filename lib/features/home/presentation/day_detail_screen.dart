@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
@@ -25,6 +26,7 @@ import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
+import '../utils/gpx_exporter.dart';
 import '../utils/trim_track.dart';
 import '../../settings/domain/theme_provider.dart';
 
@@ -157,6 +159,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               onSelected: (value) {
                 if (value == 'change_date') _changeDate(entry);
                 if (value == 'import_gpx') _importGpx();
+                if (value == 'export_gpx') _exportGpx(track!, day);
                 if (value == 'delete_gpx') _removeGpx();
                 if (value == 'delete_day') _deleteDay();
               },
@@ -177,6 +180,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     Text('GPX importieren', style: TextStyle(color: cs.onSurface)),
                   ]),
                 ),
+                if (track != null)
+                  PopupMenuItem<String>(
+                    value: 'export_gpx',
+                    child: Row(children: [
+                      Icon(Icons.download_outlined, color: cs.onSurface),
+                      const SizedBox(width: 12),
+                      Text('GPX exportieren', style: TextStyle(color: cs.onSurface)),
+                    ]),
+                  ),
                 if (track != null)
                   PopupMenuItem<String>(
                     value: 'delete_gpx',
@@ -1605,6 +1617,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
+            if (!_satelliteView)
+              TileLayer(
+                urlTemplate: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.logbook.app',
+              ),
             _ZoomAwareCircleLayer(circles: anchorCircles),
             if (showRawTrack)
               PolylineLayer(
@@ -1614,7 +1631,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       Polyline(
                         points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
                         strokeWidth: 2.0,
-                        color: const Color(0xFFE65100).withValues(alpha: 0.55),
+                        color: cs.primary.withValues(alpha: 0.55),
+                        pattern: StrokePattern.dashed(segments: const [8, 5]),
                       ),
                 ],
                 cullingMargin: null,
@@ -1633,7 +1651,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                           mode: LaunchMode.externalApplication);
                     }
                   })
-                else
+                else ...[
                   TextSourceAttribution(
                       '© OpenStreetMap contributors', onTap: () async {
                     final uri = Uri.parse(
@@ -1643,6 +1661,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                           mode: LaunchMode.externalApplication);
                     }
                   }),
+                  TextSourceAttribution('© OpenSeaMap contributors',
+                      onTap: () async {
+                    final uri = Uri.parse('https://www.openseamap.org');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  }),
+                ],
               ],
             ),
           ],
@@ -2129,6 +2156,34 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
             'GPX-Track importiert für ${DateFormat('d. MMMM yyyy', 'de_CH').format(day)}')));
+  }
+
+  void _exportGpx(DailyTrack track, DateTime day) async {
+    final filterSettings = context.read<ThemeProvider>().filterSettings;
+    final vesselName    = context.read<ThemeProvider>().vesselName;
+    final display = buildDisplayModel(track.points, settings: filterSettings);
+    final gpxStr  = buildGpxExport(
+      rawPoints:  track.points,
+      display:    display,
+      date:       day,
+      vesselName: vesselName,
+    );
+    final bytes    = utf8.encode(gpxStr);
+    final fileName = 'logbuch_${DateFormat('yyyy-MM-dd').format(day)}.gpx';
+
+    final result = await FilePicker.saveFile(
+      dialogTitle:       'GPX exportieren',
+      fileName:          fileName,
+      type:              FileType.custom,
+      allowedExtensions: ['gpx'],
+      bytes:             Uint8List.fromList(bytes),
+    );
+
+    if (mounted && result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('GPX exportiert.')),
+      );
+    }
   }
 
   void _removeGpx() async {
@@ -2715,6 +2770,11 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
+            if (!_satelliteView)
+              TileLayer(
+                urlTemplate: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.logbook.app',
+              ),
             _ZoomAwareCircleLayer(circles: anchorCircles),
             if (widget.showRawTrack)
               PolylineLayer(
@@ -2724,7 +2784,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
                       Polyline(
                         points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
                         strokeWidth: 2.0,
-                        color: const Color(0xFFE65100).withValues(alpha: 0.55),
+                        color: cs.primary.withValues(alpha: 0.55),
+                        pattern: StrokePattern.dashed(segments: const [8, 5]),
                       ),
                 ],
                 cullingMargin: null,
@@ -2738,11 +2799,16 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
                   final uri = Uri.parse('https://www.esri.com');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 })
-              else
+              else ...[
                 TextSourceAttribution('© OpenStreetMap contributors', onTap: () async {
                   final uri = Uri.parse('https://www.openstreetmap.org/copyright');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }),
+                TextSourceAttribution('© OpenSeaMap contributors', onTap: () async {
+                  final uri = Uri.parse('https://www.openseamap.org');
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }),
+              ],
             ]),
           ],
         ),
