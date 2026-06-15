@@ -24,6 +24,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _vesselCallSignCtrl;
   final TextEditingController _codeCtrl = TextEditingController();
   bool _syncing = false;
+  bool _trackFilterExpanded = false;
 
   @override
   void initState() {
@@ -427,6 +428,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  bool _filterIsModified(ThemeProvider p) =>
+      p.filterMode != StationaryMode.speed ||
+      p.minStopMinutes != 5.0 ||
+      p.maxStopSpreadM != 30.0 ||
+      p.detectColdStart != true ||
+      p.coldStartSettleFactor != 3.0 ||
+      p.makingWayThresholdKn != 1.0 ||
+      p.topSpeedPercentile != 0.99;
+
   // ── Track Filter ────────────────────────────────────────────────────
   Widget _buildTrackFilterSection(ThemeProvider p, ColorScheme cs) {
     return Container(
@@ -441,322 +451,391 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'TRACKFILTER',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
-                  color: cs.secondary,
-                ),
-              ),
-              Icon(Icons.route, size: 20, color: cs.outlineVariant),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Stationäre Erkennung',
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Bestimmt, wie Liegeplätze, Ankerstopps und Hafenbesuche erkannt und als Ankerpunkt dargestellt werden – am Anfang, Ende und unterwegs.',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                _filterModeButton(
-                  label: 'Liegeplatz & Anker',
-                  mode: StationaryMode.speed,
-                  current: p.filterMode,
-                  onTap: () => p.setFilterMode(StationaryMode.speed),
-                  cs: cs,
-                ),
-                _filterModeButton(
-                  label: 'Genaue Position',
-                  mode: StationaryMode.both,
-                  current: p.filterMode,
-                  onTap: () => p.setFilterMode(StationaryMode.both),
-                  cs: cs,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            p.filterMode == StationaryMode.speed
-                ? 'Liegeplatz und Ankerpositionen werden als einzelner Punkt dargestellt. Auch ein weitausholender Ankerkreis wird zu einem Punkt zusammengefasst.'
-                : 'Nur eng geclusterte Positionen gelten als stationär. Breite Ankerkreise bleiben sichtbar – besser für Ankerwache.',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          _rowDivider(cs),
-          // ── Min. stop duration ────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Min. Stopp-Dauer',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              Text(
-                '${p.minStopMinutes.round()} min',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
-                ),
-              ),
-            ],
-          ),
-          Slider(
-            value: p.minStopMinutes,
-            min: 1,
-            max: 30,
-            divisions: 29,
-            onChanged: p.setMinStopMinutes,
-          ),
-          Text(
-            'Mindestdauer eines echten Stopps (Anker, Hafen). Kurze Langsamfahrten (Wende, Flaute) werden ignoriert.',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          _rowDivider(cs),
-          // ── Max anchor swing ──────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Max. Ankerschwung',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              Text(
-                '${p.maxStopSpreadM.round()} m',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
-                ),
-              ),
-            ],
-          ),
-          Slider(
-            value: p.maxStopSpreadM,
-            min: 10,
-            max: 100,
-            divisions: 18,
-            onChanged: p.setMaxStopSpreadM,
-          ),
-          Text(
-            'Maximale Ausdehnung eines Stopps. Erhöhen bei weitem Ankerschwung über Nacht (Standard: 30 m).',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          _rowDivider(cs),
-          // ── Cold-start trimming ───────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Kaltstart-Trimmen',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              Switch(
-                value: p.detectColdStart,
-                onChanged: p.setDetectColdStart,
-              ),
-            ],
-          ),
-          Text(
-            'Entfernt ungenaue GPS-Fixes am Spuranfang, bevor der Empfänger eingeschwungen ist.',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          if (p.detectColdStart) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Trim-Schärfe',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
+          // ── Header (always visible, tap to expand) ────────────
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _trackFilterExpanded = !_trackFilterExpanded),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+              child: Row(
+                children: [
+                  Text(
+                    'TRACKFILTER',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                      color: cs.secondary,
+                    ),
                   ),
-                ),
-                Text(
-                  p.coldStartSettleFactor.toStringAsFixed(1),
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: cs.primary,
+                  if (_filterIsModified(p)) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: cs.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                  const Spacer(),
+                  if (!_trackFilterExpanded)
+                    Text(
+                      p.filterMode == StationaryMode.speed
+                          ? 'Liegeplatz & Anker'
+                          : 'Genaue Position',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  AnimatedRotation(
+                    turns: _trackFilterExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(Icons.expand_more,
+                        size: 20, color: cs.outlineVariant),
                   ),
-                ),
-              ],
-            ),
-            Slider(
-              value: p.coldStartSettleFactor,
-              min: 1.0,
-              max: 6.0,
-              divisions: 10,
-              onChanged: p.setColdStartSettleFactor,
-            ),
-            Text(
-              'Niedrigerer Wert = aggressiver trimmen. Standard: 3.0.',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: cs.onSurfaceVariant,
+                ],
               ),
             ),
-          ],
-          _rowDivider(cs),
-          // ── Underway threshold ────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Unterwegs-Schwelle',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
+          ),
+          // ── Expandable content ────────────────────────────────
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _trackFilterExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Divider(color: cs.surfaceContainerHigh, height: 1, thickness: 1),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Stationäre Erkennung',
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Bestimmt, wie Liegeplätze, Ankerstopps und Hafenbesuche erkannt und als Ankerpunkt dargestellt werden – am Anfang, Ende und unterwegs.',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        _filterModeButton(
+                          label: 'Liegeplatz & Anker',
+                          mode: StationaryMode.speed,
+                          current: p.filterMode,
+                          onTap: () => p.setFilterMode(StationaryMode.speed),
+                          cs: cs,
+                        ),
+                        _filterModeButton(
+                          label: 'Genaue Position',
+                          mode: StationaryMode.both,
+                          current: p.filterMode,
+                          onTap: () => p.setFilterMode(StationaryMode.both),
+                          cs: cs,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    p.filterMode == StationaryMode.speed
+                        ? 'Liegeplatz und Ankerpositionen werden als einzelner Punkt dargestellt. Auch ein weitausholender Ankerkreis wird zu einem Punkt zusammengefasst.'
+                        : 'Nur eng geclusterte Positionen gelten als stationär. Breite Ankerkreise bleiben sichtbar – besser für Ankerwache.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  _rowDivider(cs),
+                  // ── Min. stop duration ──────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Min. Stopp-Dauer',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '${p.minStopMinutes.round()} min',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: p.minStopMinutes,
+                    min: 1,
+                    max: 30,
+                    divisions: 29,
+                    onChanged: p.setMinStopMinutes,
+                  ),
+                  Text(
+                    'Mindestdauer eines echten Stopps (Anker, Hafen). Kurze Langsamfahrten (Wende, Flaute) werden ignoriert.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  _rowDivider(cs),
+                  // ── Max anchor swing ────────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Max. Ankerschwung',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '${p.maxStopSpreadM.round()} m',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: p.maxStopSpreadM,
+                    min: 10,
+                    max: 100,
+                    divisions: 18,
+                    onChanged: p.setMaxStopSpreadM,
+                  ),
+                  Text(
+                    'Maximale Ausdehnung eines Stopps. Erhöhen bei weitem Ankerschwung über Nacht (Standard: 30 m).',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  _rowDivider(cs),
+                  // ── Cold-start trimming ─────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Kaltstart-Trimmen',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Switch(
+                        value: p.detectColdStart,
+                        onChanged: p.setDetectColdStart,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Entfernt ungenaue GPS-Fixes am Spuranfang, bevor der Empfänger eingeschwungen ist.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  if (p.detectColdStart) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Trim-Schärfe',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                        Text(
+                          p.coldStartSettleFactor.toStringAsFixed(1),
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: cs.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: p.coldStartSettleFactor,
+                      min: 1.0,
+                      max: 6.0,
+                      divisions: 10,
+                      onChanged: p.setColdStartSettleFactor,
+                    ),
+                    Text(
+                      'Niedrigerer Wert = aggressiver trimmen. Standard: 3.0.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontStyle: FontStyle.italic,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                  _rowDivider(cs),
+                  // ── Underway threshold ──────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Unterwegs-Schwelle',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '${p.makingWayThresholdKn.toStringAsFixed(1)} kn',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: p.makingWayThresholdKn,
+                    min: 0.3,
+                    max: 3.0,
+                    divisions: 27,
+                    onChanged: p.setMakingWayThresholdKn,
+                  ),
+                  Text(
+                    'Mindestgeschwindigkeit für den Fahrt-Durchschnitt. Driften unterhalb wird nicht mitgezählt.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  _rowDivider(cs),
+                  // ── Max-speed percentile ────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Spitzenwert-Perzentil',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Text(
+                        'p${(p.topSpeedPercentile * 100).round()}',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: p.topSpeedPercentile,
+                    min: 0.90,
+                    max: 1.00,
+                    divisions: 10,
+                    onChanged: p.setTopSpeedPercentile,
+                  ),
+                  Text(
+                    'p99 ignoriert das oberste 1 % der Messwerte und unterdrückt GPS-Ausreißer. p100 = echter Maximalwert.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  _rowDivider(cs),
+                  // ── Raw track overlay ───────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Ungefilterte Spur anzeigen',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Switch(
+                        value: p.showRawTrack,
+                        onChanged: p.setShowRawTrack,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    'Zeigt den Roh-GPX-Track zusätzlich zur gefilterten Spur an. Dient zur Fehleranalyse und zum Optimieren der Filtereinstellungen.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  if (_filterIsModified(p)) ...[
+                    _rowDivider(cs),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: p.resetFilterDefaults,
+                        icon: Icon(Icons.restart_alt,
+                            size: 16, color: cs.onSurfaceVariant),
+                        label: Text(
+                          'Zurücksetzen',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              Text(
-                '${p.makingWayThresholdKn.toStringAsFixed(1)} kn',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
-                ),
-              ),
-            ],
-          ),
-          Slider(
-            value: p.makingWayThresholdKn,
-            min: 0.3,
-            max: 3.0,
-            divisions: 27,
-            onChanged: p.setMakingWayThresholdKn,
-          ),
-          Text(
-            'Mindestgeschwindigkeit für den Fahrt-Durchschnitt. Driften unterhalb wird nicht mitgezählt.',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          _rowDivider(cs),
-          // ── Max-speed percentile ──────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Spitzenwert-Perzentil',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              Text(
-                'p${(p.topSpeedPercentile * 100).round()}',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
-                ),
-              ),
-            ],
-          ),
-          Slider(
-            value: p.topSpeedPercentile,
-            min: 0.90,
-            max: 1.00,
-            divisions: 10,
-            onChanged: p.setTopSpeedPercentile,
-          ),
-          Text(
-            'p99 ignoriert das oberste 1 % der Messwerte und unterdrückt GPS-Ausreißer. p100 = echter Maximalwert.',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          _rowDivider(cs),
-          // ── Raw track overlay ─────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Ungefilterte Spur anzeigen',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
-              ),
-              Switch(
-                value: p.showRawTrack,
-                onChanged: p.setShowRawTrack,
-              ),
-            ],
-          ),
-          Text(
-            'Zeigt den Roh-GPX-Track (orange) zusätzlich zur gefilterten Spur an. Dient zur Fehleranalyse und zum Optimieren der Filtereinstellungen.',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurfaceVariant,
             ),
           ),
         ],
