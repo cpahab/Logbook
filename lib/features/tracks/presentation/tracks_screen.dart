@@ -349,6 +349,7 @@ class _TracksScreenState extends State<TracksScreen> {
                     points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
                     strokeWidth: 1.5,
                     color: d.color.withValues(alpha: 0.40),
+                    pattern: StrokePattern.dashed(segments: const [8, 5]),
                   ),
           ]
         : <Polyline>[];
@@ -488,6 +489,11 @@ class _TracksScreenState extends State<TracksScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
+            if (!_satelliteView)
+              TileLayer(
+                urlTemplate: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.logbook.app',
+              ),
             CircleLayer(circles: anchorCircles),
             if (rawPolylines.isNotEmpty)
               PolylineLayer(polylines: rawPolylines, cullingMargin: null, simplificationTolerance: 0),
@@ -504,7 +510,7 @@ class _TracksScreenState extends State<TracksScreen> {
                           mode: LaunchMode.externalApplication);
                     }
                   })
-                else
+                else ...[
                   TextSourceAttribution('© OpenStreetMap contributors',
                       onTap: () async {
                     final uri = Uri.parse(
@@ -514,6 +520,15 @@ class _TracksScreenState extends State<TracksScreen> {
                           mode: LaunchMode.externalApplication);
                     }
                   }),
+                  TextSourceAttribution('© OpenSeaMap contributors',
+                      onTap: () async {
+                    final uri = Uri.parse('https://www.openseamap.org');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
+                  }),
+                ],
               ],
             ),
           ],
@@ -1190,6 +1205,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
                     points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
                     strokeWidth: 1.5,
                     color: d.color.withValues(alpha: 0.40),
+                    pattern: StrokePattern.dashed(segments: const [8, 5]),
                   ),
           ]
         : <Polyline>[];
@@ -1244,6 +1260,11 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
+            if (!_satelliteView)
+              TileLayer(
+                urlTemplate: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.logbook.app',
+              ),
             CircleLayer(circles: anchorCircles),
             if (fsRawPolylines.isNotEmpty)
               PolylineLayer(polylines: fsRawPolylines, cullingMargin: null, simplificationTolerance: 0),
@@ -1255,11 +1276,16 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
                   final uri = Uri.parse('https://www.esri.com');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 })
-              else
+              else ...[
                 TextSourceAttribution('© OpenStreetMap contributors', onTap: () async {
                   final uri = Uri.parse('https://www.openstreetmap.org/copyright');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }),
+                TextSourceAttribution('© OpenSeaMap contributors', onTap: () async {
+                  final uri = Uri.parse('https://www.openseamap.org');
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }),
+              ],
             ]),
           ],
         ),
