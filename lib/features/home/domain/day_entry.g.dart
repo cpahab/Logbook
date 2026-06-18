@@ -38,13 +38,14 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       crew: (fields[18] as List?)?.cast<CrewMember>(),
       freeText: fields[19] as String?,
       keelDown: fields[20] as bool?,
+      photos: (fields[21] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, DayEntry obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(22)
       ..writeByte(0)
       ..write(obj.date)
       ..writeByte(1)
@@ -86,7 +87,9 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       ..writeByte(19)
       ..write(obj.freeText)
       ..writeByte(20)
-      ..write(obj.keelDown);
+      ..write(obj.keelDown)
+      ..writeByte(21)
+      ..write(obj.photos);
   }
 
   @override

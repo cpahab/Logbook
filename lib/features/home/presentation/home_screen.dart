@@ -604,7 +604,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5,
-                color: cs.primary,
+                color: cs.secondary,
               ),
             ),
             if (!expanded) ...[
@@ -613,7 +613,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: cs.primaryContainer,
+                  color: cs.secondaryContainer,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
@@ -621,7 +621,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: cs.onPrimaryContainer,
+                    color: cs.onSecondaryContainer,
                   ),
                 ),
               ),
@@ -630,7 +630,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               expanded ? Icons.expand_less : Icons.expand_more,
               size: 18,
-              color: cs.primary,
+              color: cs.secondary,
             ),
             const SizedBox(width: 4),
           ],

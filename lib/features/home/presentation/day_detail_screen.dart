@@ -11,6 +11,7 @@ import 'package:latlong2/latlong.dart' hide Path;
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/home_repository.dart';
@@ -21,12 +22,15 @@ import '../domain/track_point.dart';
 import '../domain/crew_member.dart';
 import '../widgets/add_timeline_entry_dialog.dart';
 import '../widgets/add_crew_member_dialog.dart';
+import '../widgets/keel_icon.dart';
 import '../widgets/nav_bar.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
 import '../utils/gpx_exporter.dart';
+import '../utils/pdf_exporter.dart';
+import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
 import '../../settings/domain/theme_provider.dart';
 
@@ -160,6 +164,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 if (value == 'change_date') _changeDate(entry);
                 if (value == 'import_gpx') _importGpx();
                 if (value == 'export_gpx') _exportGpx(track!, day);
+                if (value == 'export_pdf') _exportPdf(entry, stats, track);
                 if (value == 'delete_gpx') _removeGpx();
                 if (value == 'delete_day') _deleteDay();
               },
@@ -189,6 +194,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       Text('GPX exportieren', style: TextStyle(color: cs.onSurface)),
                     ]),
                   ),
+                PopupMenuItem<String>(
+                  value: 'export_pdf',
+                  child: Row(children: [
+                    Icon(Icons.picture_as_pdf_outlined, color: cs.onSurface),
+                    const SizedBox(width: 12),
+                    Text('PDF exportieren', style: TextStyle(color: cs.onSurface)),
+                  ]),
+                ),
                 if (track != null)
                   PopupMenuItem<String>(
                     value: 'delete_gpx',
@@ -245,9 +258,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildCrewList(entry, cs),
             _buildReflection(entry, cs),
             _buildFreeText(entry, cs),
-            _buildCrewList(entry, cs),
+            _buildPhotoStrip(entry, cs),
             _buildRouteMap(entry, track, stats, cs),
             _buildLogSection(entry, correlatedMap, cs),
             _buildVesselStatus(entry, cs),
@@ -315,45 +329,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   void _editFreeText(DayEntry entry) async {
-    final ctrl = TextEditingController(text: entry.freeText ?? '');
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Notizen',
-          style: GoogleFonts.newsreader(
-              fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: TextField(
-            controller: ctrl,
-            minLines: 8,
-            maxLines: 14,
-            keyboardType: TextInputType.multiline,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: 'Freie Notizen für diesen Tag…',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              contentPadding: const EdgeInsets.all(12),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(ctx, ctrl.text),
-            icon: const Icon(Icons.anchor, size: 18),
-            label: const Text('Speichern'),
-          ),
-        ],
+      builder: (_) => _EditTextDialog(
+        title: 'Notizen',
+        initialText: entry.freeText,
+        hintText: 'Freie Notizen für diesen Tag…',
       ),
     );
-    ctrl.dispose();
     if (!mounted || result == null) return;
     setState(() {
       entry.freeText = result.trim().isEmpty ? null : result.trim();
@@ -1103,6 +1086,154 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  // ── Photo strip ───────────────────────────────────────────────────
+  Widget _buildPhotoStrip(DayEntry entry, ColorScheme cs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'FOTOS',
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+            color: cs.secondary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 96,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _photoAddButton(entry, cs),
+              for (final path in List<String>.from(entry.photos)) ...[
+                const SizedBox(width: 8),
+                _photoThumbnail(entry, path, cs),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _photoAddButton(DayEntry entry, ColorScheme cs) {
+    return InkWell(
+      onTap: () => _addPhotos(entry),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 88,
+        height: 88,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: cs.outline, width: 1.5),
+          color: cs.surfaceContainerHighest,
+        ),
+        child: Icon(Icons.add_a_photo_outlined, color: cs.secondary, size: 28),
+      ),
+    );
+  }
+
+  Widget _photoThumbnail(DayEntry entry, String storagePath, ColorScheme cs) {
+    return FutureBuilder<File?>(
+      future: PhotoService.localFile(storagePath),
+      builder: (context, snap) {
+        return Stack(
+          children: [
+            GestureDetector(
+              onTap: () { if (snap.data != null) _viewPhoto(snap.data!); },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 88,
+                  height: 88,
+                  child: switch (snap.connectionState) {
+                    ConnectionState.done when snap.data != null =>
+                      Image.file(snap.data!, fit: BoxFit.cover),
+                    ConnectionState.done =>
+                      Container(
+                        color: cs.errorContainer,
+                        child: Icon(Icons.broken_image_outlined,
+                            color: cs.onErrorContainer),
+                      ),
+                    _ => Container(
+                        color: cs.surfaceContainerHighest,
+                        child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                      ),
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: 3,
+              right: 3,
+              child: GestureDetector(
+                onTap: () => _deletePhoto(entry, storagePath),
+                child: Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: cs.errorContainer.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(Icons.close, size: 14, color: cs.onErrorContainer),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _addPhotos(DayEntry entry) async {
+    final day = DateTime(widget.year, widget.month, widget.day);
+    final paths = await PhotoService.pickAndUpload(day);
+    if (!mounted || paths.isEmpty) return;
+    setState(() => entry.photos.addAll(paths));
+    await entry.save();
+  }
+
+  void _deletePhoto(DayEntry entry, String storagePath) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Foto löschen?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Abbrechen')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Löschen')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => entry.photos.remove(storagePath));
+    await entry.save();
+    await PhotoService.delete(storagePath);
+  }
+
+  void _viewPhoto(File file) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: InteractiveViewer(
+            child: Image.file(file),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Vessel Status ─────────────────────────────────────────────────
   Widget _buildVesselStatus(DayEntry entry, ColorScheme cs) {
     final isDark = cs.brightness == Brightness.dark;
@@ -1185,41 +1316,43 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     height: 24,
                     thickness: 1,
                   ),
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _KeelIcon(
-                        down: entry.keelDown ?? false,
-                        color: cardFg,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'KIEL',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1.5,
-                                color: cardFg.withValues(alpha: 0.70),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              entry.keelDown == null
-                                  ? '—'
-                                  : (entry.keelDown! ? 'NIEDER' : 'HOCH'),
-                              style: GoogleFonts.newsreader(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: entry.keelDown == null
-                                    ? cardFg.withValues(alpha: 0.45)
-                                    : cardFg,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        'KIEL',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                          color: cardFg.withValues(alpha: 0.70),
                         ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          KeelIcon(
+                            size: 28,
+                            color: entry.keelDown == null
+                                ? cardFg.withValues(alpha: 0.35)
+                                : cardFg,
+                            keelDown: entry.keelDown,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            entry.keelDown == null
+                                ? '—'
+                                : (entry.keelDown! ? 'UNTEN' : 'OBEN'),
+                            style: GoogleFonts.newsreader(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: entry.keelDown == null
+                                  ? cardFg.withValues(alpha: 0.45)
+                                  : cardFg,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1739,45 +1872,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Edit dialogs ──────────────────────────────────────────────────
   void _editNotes(DayEntry entry) async {
-    final ctrl = TextEditingController(text: entry.notes ?? '');
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Tagebucheintrag',
-          style: GoogleFonts.newsreader(
-              fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: TextField(
-            controller: ctrl,
-            minLines: 8,
-            maxLines: 14,
-            keyboardType: TextInputType.multiline,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: 'Notizen für diesen Tag…',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              contentPadding: const EdgeInsets.all(12),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
-          ),
-          FilledButton.icon(
-            onPressed: () => Navigator.pop(ctx, ctrl.text),
-            icon: const Icon(Icons.anchor, size: 18),
-            label: const Text('Speichern'),
-          ),
-        ],
+      builder: (_) => _EditTextDialog(
+        title: 'Tagebucheintrag',
+        initialText: entry.notes,
+        hintText: 'Notizen für diesen Tag…',
       ),
     );
-    ctrl.dispose();
     if (!mounted || result == null) return;
     setState(() {
       entry.notes = result.trim().isEmpty ? null : result.trim();
@@ -1921,7 +2023,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     Text('Kiel', style: TextStyle(color: cs.onSurface)),
                     const Spacer(),
                     Text(
-                      keelVal == null ? '—' : (keelVal! ? 'Nieder' : 'Hoch'),
+                      keelVal == null ? '—' : (keelVal! ? 'Unten' : 'Oben'),
                       style: TextStyle(
                           fontWeight: FontWeight.w600, color: cs.onSurface),
                     ),
@@ -1968,7 +2070,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (keelVal != oldKeel && keelVal != null) {
         entry.timeline.add(TimelineEntry(
           time: entryTime,
-          vesselStatusNote: keelVal! ? 'Kiel: Ausgefahren (Nieder)' : 'Kiel: Eingefahren (Hoch)',
+          vesselStatusNote: keelVal! ? 'Kiel: Unten' : 'Kiel: Oben',
         ));
       }
       entry.timeline.sort((a, b) => a.time.compareTo(b.time));
@@ -2184,6 +2286,30 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         const SnackBar(content: Text('GPX exportiert.')),
       );
     }
+  }
+
+  void _exportPdf(DayEntry entry, DailyStats? stats, DailyTrack? track) async {
+    final p = context.read<ThemeProvider>();
+    final filteredPoints = track != null
+        ? buildDisplayModel(track.points, settings: p.filterSettings).allPoints()
+        : const <TrackPoint>[];
+    final photoBytes = <Uint8List>[];
+    for (final path in entry.photos) {
+      final file = await PhotoService.localFile(path);
+      if (file != null) photoBytes.add(await file.readAsBytes());
+    }
+    final bytes = await buildVoyagePdf(
+      entry:          entry,
+      stats:          stats,
+      vesselName:     p.vesselName,
+      vesselMmsi:     p.vesselMmsi,
+      vesselCallSign: p.vesselCallSign,
+      trackPoints:    filteredPoints,
+      photoBytes:     photoBytes,
+    );
+    final fileName =
+        'logbuch_${DateFormat('yyyy-MM-dd').format(entry.date)}.pdf';
+    await Printing.sharePdf(bytes: bytes, filename: fileName);
   }
 
   void _removeGpx() async {
@@ -2847,21 +2973,21 @@ String _buildEntryTooltip(TimelineEntry t) {
   final buf = StringBuffer(DateFormat('HH:mm').format(t.time.toLocal()));
 
   final nav = <String>[];
-  if (t.course != null) nav.add('${t.course!.toStringAsFixed(0)}°');
-  if (t.speed  != null) nav.add('${t.speed!.toStringAsFixed(1)} kn');
+  if (t.course != null) nav.add('Kurs: ${t.course!.toStringAsFixed(0)}°');
+  if (t.speed  != null) nav.add('Fahrt: ${t.speed!.toStringAsFixed(1)} kn');
   if (nav.isNotEmpty) buf.write('\n${nav.join(' · ')}');
 
   final cond = <String>[];
-  if (t.wind?.isNotEmpty    == true) cond.add(t.wind!);
-  if (t.sea?.isNotEmpty     == true) cond.add(t.sea!);
-  if (t.weather?.isNotEmpty == true) cond.add(t.weather!);
+  if (t.wind?.isNotEmpty    == true) cond.add('Wind: ${t.wind!}');
+  if (t.sea?.isNotEmpty     == true) cond.add('See: ${t.sea!}');
+  if (t.weather?.isNotEmpty == true) cond.add('Wetter: ${t.weather!}');
   if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
 
   final sails = <String>[];
   if (t.grossState?.isNotEmpty == true) sails.add('Gross: ${t.grossState}');
   if (t.fockState?.isNotEmpty  == true) sails.add('Fock: ${t.fockState}');
-  if (t.motorOn  != null) sails.add('Motor: ${t.motorOn!  ? 'an'    : 'aus'}');
-  if (t.keelDown != null) sails.add('Kiel: ${t.keelDown! ? 'unten' : 'oben'}');
+  if (t.motorOn  != null) sails.add('Motor: ${t.motorOn!  ? 'An'    : 'Aus'}');
+  if (t.keelDown != null) sails.add('Kiel: ${t.keelDown! ? 'Unten' : 'Oben'}');
   if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
 
   if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');
@@ -2922,75 +3048,77 @@ class _ZoomAwareCircleLayer extends StatelessWidget {
 
 // ── Keel icon ─────────────────────────────────────────────────────────────────
 
-class _KeelIcon extends StatelessWidget {
-  final bool down;
-  final Color color;
-  const _KeelIcon({required this.down, required this.color});
+
+// ── Reusable multiline-text edit dialog ───────────────────────────────────────
+//
+// Owns its TextEditingController so disposal is always tied to the widget
+// lifecycle — avoids "controller used after dispose" when the dialog builder
+// is invoked one final time during the closing animation.
+class _EditTextDialog extends StatefulWidget {
+  final String title;
+  final String? initialText;
+  final String hintText;
+
+  const _EditTextDialog({
+    required this.title,
+    this.initialText,
+    required this.hintText,
+  });
 
   @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: const Size(28, 36), painter: _KeelPainter(down: down, color: color));
+  State<_EditTextDialog> createState() => _EditTextDialogState();
 }
 
-class _KeelPainter extends CustomPainter {
-  final bool down;
-  final Color color;
-  const _KeelPainter({required this.down, required this.color});
+class _EditTextDialogState extends State<_EditTextDialog> {
+  late final TextEditingController _ctrl;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    final fill  = Paint()..color = color..style = PaintingStyle.fill;
-    final ghost = Paint()..color = color.withValues(alpha: 0.28)..style = PaintingStyle.fill;
-
-    // Hull: front cross-section of sailboat hull — wider at waterline (top),
-    // narrowing toward the keel root at the bottom.
-    const hullFrac = 0.38;
-    canvas.drawPath(
-      Path()
-        ..moveTo(w * 0.06, 0)
-        ..lineTo(w * 0.94, 0)
-        ..lineTo(w * 0.70, h * hullFrac)
-        ..lineTo(w * 0.30, h * hullFrac)
-        ..close(),
-      fill,
-    );
-
-    // Keel fin: tapered from root to tip.
-    // Full length when down; short ghost stub when retracted (up).
-    final keelTop    = h * hullFrac;
-    final keelBottom = down ? h * 0.96 : h * (hullFrac + 0.20);
-    final cx   = w / 2;
-    final kRoot = w * 0.14; // half-width at hull attachment
-    final kTip  = down ? w * 0.04 : w * 0.09;
-    canvas.drawPath(
-      Path()
-        ..moveTo(cx - kRoot, keelTop)
-        ..lineTo(cx + kRoot, keelTop)
-        ..lineTo(cx + kTip,  keelBottom)
-        ..lineTo(cx - kTip,  keelBottom)
-        ..close(),
-      down ? fill : ghost,
-    );
-
-    // When keel is up: upward arrow over the ghost stub.
-    if (!down) {
-      final stroke = Paint()
-        ..color = color.withValues(alpha: 0.72)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6
-        ..strokeCap = StrokeCap.round;
-      final ax  = cx;
-      final ay1 = h * 0.72;
-      final ay2 = h * 0.54;
-      canvas.drawLine(Offset(ax, ay1), Offset(ax, ay2), stroke);
-      canvas.drawLine(Offset(ax, ay2), Offset(ax - w * 0.12, ay2 + h * 0.11), stroke);
-      canvas.drawLine(Offset(ax, ay2), Offset(ax + w * 0.12, ay2 + h * 0.11), stroke);
-    }
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.initialText ?? '');
   }
 
   @override
-  bool shouldRepaint(_KeelPainter old) => old.down != down || old.color != color;
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AlertDialog(
+      title: Text(
+        widget.title,
+        style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600),
+      ),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: TextField(
+          controller: _ctrl,
+          minLines: 8,
+          maxLines: 14,
+          keyboardType: TextInputType.multiline,
+          autofocus: true,
+          style: TextStyle(color: cs.onSurface),
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.all(12),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Abbrechen'),
+        ),
+        FilledButton.icon(
+          onPressed: () => Navigator.pop(context, _ctrl.text),
+          icon: const Icon(Icons.anchor, size: 18),
+          label: const Text('Speichern'),
+        ),
+      ],
+    );
+  }
 }
