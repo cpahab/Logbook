@@ -73,6 +73,12 @@ class DayEntry extends HiveObject {
   @HiveField(20)
   bool? keelDown;
 
+  /// Firebase Storage paths for photos attached to this day (e.g.
+  /// "photos/2026-06-16/1718440000000.jpg"). Local cache is managed by
+  /// PhotoService.
+  @HiveField(21)
+  List<String> photos;
+
   DayEntry({
     required this.date,
     this.timeline = const [],
@@ -95,9 +101,11 @@ class DayEntry extends HiveObject {
     List<CrewMember>? crew,
     this.freeText,
     this.keelDown,
+    List<String>? photos,
   })  : participantsList = participantsList ?? <String>[],
         checkedItems = checkedItems ?? <String>[],
-        crew = crew ?? <CrewMember>[];
+        crew = crew ?? <CrewMember>[],
+        photos = photos ?? <String>[];
 
   // Convenience getters
   Duration get totalDuration => Duration(seconds: totalDurationSeconds);
