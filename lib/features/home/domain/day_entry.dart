@@ -16,8 +16,7 @@ class DayEntry extends HiveObject {
   @HiveField(2)
   List<TrackPoint> track;
 
-  @HiveField(3)
-  bool hasGpx;
+  // @HiveField(3) hasGpx — retired, do not reuse index
 
   @HiveField(4)
   String? fromHarbor;
@@ -41,17 +40,13 @@ class DayEntry extends HiveObject {
   @HiveField(10)
   double maxSpeedKnots;
 
-  @HiveField(11)
-  String? participants;
-
-  @HiveField(12)
-  String? controlled;
+  // @HiveField(11) participants — retired, do not reuse index
+  // @HiveField(12) controlled  — retired, do not reuse index
 
   @HiveField(13)
   List<String> participantsList;
 
-  @HiveField(14)
-  List<String> checkedItems;
+  // @HiveField(14) checkedItems — retired, do not reuse index
 
   @HiveField(15)
   String? notes;
@@ -83,7 +78,6 @@ class DayEntry extends HiveObject {
     required this.date,
     this.timeline = const [],
     this.track = const [],
-    this.hasGpx = false,
     this.fromHarbor,
     this.toHarbor,
     this.distanceNm = 0.0,
@@ -91,10 +85,7 @@ class DayEntry extends HiveObject {
     this.movingDurationSeconds = 0,
     this.avgSpeedKnots = 0.0,
     this.maxSpeedKnots = 0.0,
-    this.participants,
-    this.controlled,
     List<String>? participantsList,
-    List<String>? checkedItems,
     this.notes,
     this.oilLevel,
     this.fuelLevel,
@@ -103,7 +94,6 @@ class DayEntry extends HiveObject {
     this.keelDown,
     List<String>? photos,
   })  : participantsList = participantsList ?? <String>[],
-        checkedItems = checkedItems ?? <String>[],
         crew = crew ?? <CrewMember>[],
         photos = photos ?? <String>[];
 

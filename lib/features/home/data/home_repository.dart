@@ -424,7 +424,6 @@ class HomeRepository extends ChangeNotifier {
 
     final entry = _entries[normalized];
     if (entry != null) {
-      entry.hasGpx = false;
       await _dayBox.put(normalized.toIso8601String(), entry);
       _recordLocalEdit(normalized);
       _syncToFirestore(entry);

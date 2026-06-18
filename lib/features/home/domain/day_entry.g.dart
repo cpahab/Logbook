@@ -20,7 +20,6 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       date: fields[0] as DateTime,
       timeline: (fields[1] as List).cast<TimelineEntry>(),
       track: (fields[2] as List).cast<TrackPoint>(),
-      hasGpx: fields[3] as bool,
       fromHarbor: fields[4] as String?,
       toHarbor: fields[5] as String?,
       distanceNm: fields[6] as double,
@@ -28,10 +27,7 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       movingDurationSeconds: fields[8] as int,
       avgSpeedKnots: fields[9] as double,
       maxSpeedKnots: fields[10] as double,
-      participants: fields[11] as String?,
-      controlled: fields[12] as String?,
       participantsList: (fields[13] as List?)?.cast<String>(),
-      checkedItems: (fields[14] as List?)?.cast<String>(),
       notes: fields[15] as String?,
       oilLevel: fields[16] as int?,
       fuelLevel: fields[17] as int?,
@@ -45,15 +41,13 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
   @override
   void write(BinaryWriter writer, DayEntry obj) {
     writer
-      ..writeByte(22)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.date)
       ..writeByte(1)
       ..write(obj.timeline)
       ..writeByte(2)
       ..write(obj.track)
-      ..writeByte(3)
-      ..write(obj.hasGpx)
       ..writeByte(4)
       ..write(obj.fromHarbor)
       ..writeByte(5)
@@ -68,14 +62,8 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       ..write(obj.avgSpeedKnots)
       ..writeByte(10)
       ..write(obj.maxSpeedKnots)
-      ..writeByte(11)
-      ..write(obj.participants)
-      ..writeByte(12)
-      ..write(obj.controlled)
       ..writeByte(13)
       ..write(obj.participantsList)
-      ..writeByte(14)
-      ..write(obj.checkedItems)
       ..writeByte(15)
       ..write(obj.notes)
       ..writeByte(16)
