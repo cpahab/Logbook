@@ -25,30 +25,16 @@ class TimelineEntry extends HiveObject {
   @HiveField(6)
   String? remarks;
 
-  // Sailing state — null means not recorded
-  @HiveField(7)
-  bool? fockUp;     // true = auf, false = unten
-
-  @HiveField(8)
-  bool? grossUp;    // true = auf, false = unten
-
-  @HiveField(9)
-  bool? reff1Fock;
-
-  @HiveField(10)
-  bool? reff1Gross;
-
-  @HiveField(11)
-  bool? reff2Fock;
-
-  @HiveField(12)
-  bool? reff2Gross;
+  // @HiveField(7)  fockUp      — retired (replaced by fockState)
+  // @HiveField(8)  grossUp     — retired (replaced by grossState)
+  // @HiveField(9)  reff1Fock   — retired
+  // @HiveField(10) reff1Gross  — retired
+  // @HiveField(11) reff2Fock   — retired
+  // @HiveField(12) reff2Gross  — retired
 
   @HiveField(13)
-  bool? motorOn;    // true = an, false = aus
+  bool? motorOn; // true = an, false = aus
 
-  // Replaces the old bool fockUp/grossUp + reff fields.
-  // Values: 'Voll Gesetzt' | '1. Reff' | '2. Reff' | 'Niedergeholt'/'Eingerollt' | null
   @HiveField(14)
   String? grossState;
 
@@ -73,12 +59,6 @@ class TimelineEntry extends HiveObject {
     this.sea,
     this.weather,
     this.remarks,
-    this.fockUp,
-    this.grossUp,
-    this.reff1Fock,
-    this.reff1Gross,
-    this.reff2Fock,
-    this.reff2Gross,
     this.motorOn,
     this.grossState,
     this.fockState,

@@ -32,7 +32,7 @@ const _mergeGap   = 4; // merge stationary runs separated by ≤ this many movin
 // ── Geometry ─────────────────────────────────────────────────────────────────
 
 double _haversineM(double lat1, double lon1, double lat2, double lon2) {
-  const r = 6_371_000.0;
+  const r = 6371000.0;
   final dLat = (lat2 - lat1) * pi / 180;
   final dLon = (lon2 - lon1) * pi / 180;
   final a = sin(dLat / 2) * sin(dLat / 2) +
