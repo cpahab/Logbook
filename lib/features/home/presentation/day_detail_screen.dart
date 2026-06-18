@@ -1901,7 +1901,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (newDate == current) return;
 
     // If a GPX track is present, warn if it belongs to a different day.
-    if (entry.hasGpx && entry.track.isNotEmpty) {
+    if (entry.track.isNotEmpty) {
       final counts = <DateTime, int>{};
       for (final p in entry.track) {
         final d = DateTime(p.time.toLocal().year, p.time.toLocal().month,
