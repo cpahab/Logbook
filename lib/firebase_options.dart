@@ -6,7 +6,9 @@ class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) throw UnsupportedError('Web platform is not configured.');
     return switch (defaultTargetPlatform) {
-      TargetPlatform.iOS || TargetPlatform.macOS => ios,
+      TargetPlatform.iOS     => ios,
+      TargetPlatform.macOS   => macos,
+      TargetPlatform.android => android,
       _ => throw UnsupportedError(
           '${defaultTargetPlatform.name} is not configured.'),
     };
@@ -19,5 +21,25 @@ class DefaultFirebaseOptions {
     projectId: 'logbook-b19ed',
     storageBucket: 'logbook-b19ed.firebasestorage.app',
     iosBundleId: 'com.ziegler.logbook',
+  );
+
+  // Run `flutterfire configure --platforms=macos` to register the macOS app
+  // in Firebase Console and replace the appId below with the generated value.
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyB1sAEN7GS33LcsiOVUC5b3npgq6lxC--k',
+    appId: 'REPLACE_WITH_MACOS_APP_ID',
+    messagingSenderId: '34296706111',
+    projectId: 'logbook-b19ed',
+    storageBucket: 'logbook-b19ed.firebasestorage.app',
+  );
+
+  // Run `flutterfire configure --platforms=android` to register the Android app
+  // in Firebase Console and replace the appId below with the generated value.
+  static const FirebaseOptions android = FirebaseOptions(
+    apiKey: 'AIzaSyB1sAEN7GS33LcsiOVUC5b3npgq6lxC--k',
+    appId: 'REPLACE_WITH_ANDROID_APP_ID',
+    messagingSenderId: '34296706111',
+    projectId: 'logbook-b19ed',
+    storageBucket: 'logbook-b19ed.firebasestorage.app',
   );
 }

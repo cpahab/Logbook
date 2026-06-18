@@ -32,5 +32,9 @@
 	<string>This app needs access to documents to import GPX files.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your position is shown in the MAYDAY radio protocol so you can relay it to the Coast Guard.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera is used to take photos for the logbook.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Photos from your library are attached to logbook entries.</string>
 </dict>
 </plist>
