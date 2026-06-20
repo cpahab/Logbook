@@ -40,7 +40,12 @@
       "Bash(~/.pub-cache/bin/flutterfire configure *)",
       "Bash(flutter doctor *)",
       "Bash(xcrun simctl *)",
-      "Bash(rm /Users/ursziegler/development/Logbook/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved && rm /Users/ursziegler/development/Logbook/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved && rm -rf ~/Library/Caches/org.swift.swiftpm/repositories/DKImagePickerController-* 2>/dev/null; echo \"done\")"
+      "Bash(rm /Users/ursziegler/development/Logbook/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved && rm /Users/ursziegler/development/Logbook/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved && rm -rf ~/Library/Caches/org.swift.swiftpm/repositories/DKImagePickerController-* 2>/dev/null; echo \"done\")",
+      "Bash(convert --version)",
+      "Bash(python3 -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
+      "Bash(identify /Users/ursziegler/development/Logbook/assets/icon/app_icon.png)",
+      "Bash(sips -g all /Users/ursziegler/development/Logbook/assets/icon/app_icon.png)",
+      "Bash(sips -g hasAlpha /Users/ursziegler/development/Logbook/assets/icon/app_icon_dark.png)"
     ],
     "additionalDirectories": [
       "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358",

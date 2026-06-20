@@ -306,20 +306,6 @@ class _TracksScreenState extends State<TracksScreen> {
     }
 
 
-    final rawPolylines = showRawTrack
-        ? [
-            for (final d in displayed)
-              for (final seg in splitTrackSegments(d.rawPoints))
-                if (seg.length >= 2)
-                  Polyline(
-                    points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
-                    strokeWidth: 1.5,
-                    color: d.color.withValues(alpha: 0.40),
-                    pattern: StrokePattern.dashed(segments: const [8, 5]),
-                  ),
-          ]
-        : <Polyline>[];
-
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
