@@ -62,27 +62,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   bool _editingRoute = false;
   final _fromHarborCtrl = TextEditingController();
   final _toHarborCtrl = TextEditingController();
-  StreamSubscription<MapEvent>? _mapSizeSub;
-  LatLngBounds? _trackBounds;
-  bool _cameraFitted = false;
-
   @override
   void initState() {
     super.initState();
-    // Fit the camera once both conditions are true:
-    //   1. The map has a valid (non-zero) nonRotatedSize, AND
-    //   2. _trackBounds has been computed by _buildMap().
-    //
-    // Using initialCameraFit in MapOptions doesn't work on web because
-    // flutter_map marks the fit as applied on the first layout pass which
-    // may have zero constraints, producing zoom=0 and blocking the real fit.
-    //
-    // The subscription handles the case where the size becomes valid first.
-    // A post-frame callback in _buildMap() handles the case where the track
-    // data arrives from async storage AFTER the size is already valid.
-    _mapSizeSub = _mapController.mapEventStream
-        .where((e) => e is MapEventNonRotatedSizeChange)
-        .listen((_) => _tryFitCamera());
     if (widget.openAddDialog) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _addTimelineEntry(context);
@@ -92,26 +74,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   @override
   void dispose() {
-    _mapSizeSub?.cancel();
     _markerDismissTimer?.cancel();
     _fromHarborCtrl.dispose();
     _toHarborCtrl.dispose();
     _mapController.dispose();
     super.dispose();
-  }
-
-  void _tryFitCamera() {
-    if (_cameraFitted) return;
-    final size = _mapController.camera.nonRotatedSize;
-    if (mounted && _trackBounds != null && size.width > 0 && size.height > 0) {
-      _cameraFitted = true;
-      _mapSizeSub?.cancel();
-      _mapSizeSub = null;
-      _mapController.fitCamera(CameraFit.bounds(
-        bounds: _trackBounds!,
-        padding: const EdgeInsets.all(40),
-      ));
-    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────
@@ -1193,28 +1160,36 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final day = DateTime(widget.year, widget.month, widget.day);
     final paths = await PhotoService.pickAndUpload(day);
     if (!mounted || paths.isEmpty) return;
-    setState(() => entry.photos.addAll(paths));
-    await entry.save();
+    entry.photos.addAll(paths);
+    context.read<HomeRepository>().saveEntry(entry);
   }
 
   void _deletePhoto(DayEntry entry, String storagePath) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Foto löschen?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Abbrechen')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Löschen')),
-        ],
-      ),
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          backgroundColor: cs.surfaceContainerHigh,
+          titleTextStyle: TextStyle(
+              color: cs.onSurface,
+              fontSize: 18,
+              fontWeight: FontWeight.w600),
+          title: const Text('Foto löschen?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text('Abbrechen', style: TextStyle(color: cs.primary))),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Löschen')),
+          ],
+        );
+      },
     );
     if (confirmed != true || !mounted) return;
-    setState(() => entry.photos.remove(storagePath));
-    await entry.save();
+    entry.photos.remove(storagePath);
+    context.read<HomeRepository>().saveEntry(entry);
     await PhotoService.delete(storagePath);
   }
 
@@ -1495,12 +1470,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final fitLatLngs = boundsLatLngs.isNotEmpty
         ? boundsLatLngs
         : track.points.map((p) => LatLng(p.lat, p.lon)).toList();
-    if (fitLatLngs.isNotEmpty) {
-      _trackBounds = LatLngBounds.fromPoints(fitLatLngs);
-      // The subscription fires when the camera first gets a valid size. If that
-      // already happened before the track data arrived (async storage), retry now.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _tryFitCamera());
-    }
+    final trackBounds = fitLatLngs.isNotEmpty ? LatLngBounds.fromPoints(fitLatLngs) : null;
 
     final startStop = display.startStop;
     final endStop   = display.endStop;
@@ -1536,6 +1506,17 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         borderColor: cs.primary.withValues(alpha: 0.50),
       ));
     }
+
+    // Uncertainty bands: translucent blue corridor per moving segment.
+    // Gated to zoom > 15 by _ZoomAwareUncertaintyLayer (sub-pixel at route zoom).
+    // Fixed blue regardless of theme — reads as "confidence", not alarm.
+    final uncertaintyPolygons = display.uncertaintyBands()
+        .map((ring) => Polygon(
+              points: ring.map((c) => LatLng(c.$1, c.$2)).toList(),
+              color: const Color(0x1A42A5F5), // Blue 400 at ~10 %
+              borderStrokeWidth: 0,
+            ))
+        .toList();
 
     final trackPolylines = <Polyline>[];
     for (final seg in display.segments) {
@@ -1733,6 +1714,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
+            initialCameraFit: trackBounds != null
+                ? CameraFit.bounds(bounds: trackBounds, padding: const EdgeInsets.all(40))
+                : null,
             onTap: (_, latLng) {
               final nearest =
                   _findNearestTrackPoint(latLng, track.points);
@@ -1750,27 +1734,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
-            if (!_satelliteView)
-              TileLayer(
-                urlTemplate: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.logbook.app',
-              ),
+            _ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
+            if (showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             _ZoomAwareCircleLayer(circles: anchorCircles),
-            if (showRawTrack)
-              PolylineLayer(
-                polylines: [
-                  for (final seg in splitTrackSegments(track.points))
-                    if (seg.length >= 2)
-                      Polyline(
-                        points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
-                        strokeWidth: 2.0,
-                        color: cs.primary.withValues(alpha: 0.55),
-                        pattern: StrokePattern.dashed(segments: const [8, 5]),
-                      ),
-                ],
-                cullingMargin: null,
-                simplificationTolerance: 0,
-              ),
             PolylineLayer(polylines: trackPolylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: markers),
             RichAttributionWidget(
@@ -1784,7 +1750,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                           mode: LaunchMode.externalApplication);
                     }
                   })
-                else ...[
+                else
                   TextSourceAttribution(
                       '© OpenStreetMap contributors', onTap: () async {
                     final uri = Uri.parse(
@@ -1794,15 +1760,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                           mode: LaunchMode.externalApplication);
                     }
                   }),
-                  TextSourceAttribution('© OpenSeaMap contributors',
-                      onTap: () async {
-                    final uri = Uri.parse('https://www.openseamap.org');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  }),
-                ],
               ],
             ),
           ],
@@ -2299,13 +2256,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (file != null) photoBytes.add(await file.readAsBytes());
     }
     final bytes = await buildVoyagePdf(
-      entry:          entry,
-      stats:          stats,
-      vesselName:     p.vesselName,
-      vesselMmsi:     p.vesselMmsi,
-      vesselCallSign: p.vesselCallSign,
-      trackPoints:    filteredPoints,
-      photoBytes:     photoBytes,
+      entry:       entry,
+      stats:       stats,
+      vesselName:  p.vesselName,
+      trackPoints: filteredPoints,
+      photoBytes:  photoBytes,
     );
     final fileName =
         'logbuch_${DateFormat('yyyy-MM-dd').format(entry.date)}.pdf';
@@ -2564,55 +2519,18 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
   LatLng? _droppedMarkerLatLng;
   String? _droppedMarkerLabel;
   Timer? _markerDismissTimer;
-  StreamSubscription<MapEvent>? _mapSizeSub;
-  LatLngBounds? _fitBounds;
-  bool _cameraFitted = false;
 
   @override
   void initState() {
     super.initState();
     _satelliteView = widget.initialSatellite;
-
-    // Pre-compute the camera fit bounds from the track data.
-    final display = buildDisplayModel(widget.track.points, settings: widget.filterSettings);
-    final boundsLL = [
-      for (final s in display.segments)
-        if (s.kind != SegmentKind.teleportBreak)
-          ...s.points.map((p) => LatLng(p.lat, p.lon)),
-      for (final s in display.stops) LatLng(s.lat, s.lon),
-    ];
-    final fitLL = boundsLL.isNotEmpty
-        ? boundsLL
-        : widget.track.points.map((p) => LatLng(p.lat, p.lon)).toList();
-    if (fitLL.isNotEmpty) {
-      _fitBounds = LatLngBounds.fromPoints(fitLL);
-    }
-
-    _mapSizeSub = _mapController.mapEventStream
-        .where((e) => e is MapEventNonRotatedSizeChange)
-        .listen((_) => _tryFitCamera());
   }
 
   @override
   void dispose() {
-    _mapSizeSub?.cancel();
     _markerDismissTimer?.cancel();
     _mapController.dispose();
     super.dispose();
-  }
-
-  void _tryFitCamera() {
-    if (_cameraFitted || _fitBounds == null) return;
-    final size = _mapController.camera.nonRotatedSize;
-    if (mounted && size.width > 0 && size.height > 0) {
-      _cameraFitted = true;
-      _mapSizeSub?.cancel();
-      _mapSizeSub = null;
-      _mapController.fitCamera(CameraFit.bounds(
-        bounds: _fitBounds!,
-        padding: const EdgeInsets.all(60),
-      ));
-    }
   }
 
   void _dropMarker(LatLng pos, String label) {
@@ -2690,9 +2608,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final fitLatLngs = boundsLatLngs.isNotEmpty
         ? boundsLatLngs
         : track.points.map((p) => LatLng(p.lat, p.lon)).toList();
-    if (fitLatLngs.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _tryFitCamera());
-    }
+    final trackBounds = fitLatLngs.isNotEmpty ? LatLngBounds.fromPoints(fitLatLngs) : null;
 
     final startStop = display.startStop;
     final endStop   = display.endStop;
@@ -2710,6 +2626,14 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       anchorCircles.add(CircleMarker(point: LatLng(stop.lat, stop.lon), radius: stop.cep50M, useRadiusInMeter: true,
           color: cs.primary.withValues(alpha: 0.22), borderStrokeWidth: 1.5, borderColor: cs.primary.withValues(alpha: 0.50)));
     }
+
+    final fsUncertaintyPolygons = display.uncertaintyBands()
+        .map((ring) => Polygon(
+              points: ring.map((c) => LatLng(c.$1, c.$2)).toList(),
+              color: const Color(0x1A42A5F5),
+              borderStrokeWidth: 0,
+            ))
+        .toList();
 
     final fsTrackPolylines = <Polyline>[];
     for (final seg in display.segments) {
@@ -2880,8 +2804,9 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: const LatLng(47.0, 8.3),
-            initialZoom: 8,
+            initialCameraFit: trackBounds != null
+                ? CameraFit.bounds(bounds: trackBounds, padding: const EdgeInsets.all(60))
+                : null,
             onTap: (_, latLng) {
               final nearest = _findNearest(latLng, track.points);
               if (nearest == null) return;
@@ -2896,27 +2821,9 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
-            if (!_satelliteView)
-              TileLayer(
-                urlTemplate: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.logbook.app',
-              ),
+            _ZoomAwareUncertaintyLayer(polygons: fsUncertaintyPolygons),
+            if (widget.showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             _ZoomAwareCircleLayer(circles: anchorCircles),
-            if (widget.showRawTrack)
-              PolylineLayer(
-                polylines: [
-                  for (final seg in splitTrackSegments(track.points))
-                    if (seg.length >= 2)
-                      Polyline(
-                        points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
-                        strokeWidth: 2.0,
-                        color: cs.primary.withValues(alpha: 0.55),
-                        pattern: StrokePattern.dashed(segments: const [8, 5]),
-                      ),
-                ],
-                cullingMargin: null,
-                simplificationTolerance: 0,
-              ),
             PolylineLayer(polylines: fsTrackPolylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: markers),
             RichAttributionWidget(attributions: [
@@ -2925,16 +2832,11 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
                   final uri = Uri.parse('https://www.esri.com');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 })
-              else ...[
+              else
                 TextSourceAttribution('© OpenStreetMap contributors', onTap: () async {
                   final uri = Uri.parse('https://www.openstreetmap.org/copyright');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }),
-                TextSourceAttribution('© OpenSeaMap contributors', onTap: () async {
-                  final uri = Uri.parse('https://www.openseamap.org');
-                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }),
-              ],
             ]),
           ],
         ),
@@ -3043,6 +2945,50 @@ class _ZoomAwareCircleLayer extends StatelessWidget {
     final zoom = MapCamera.of(context).zoom;
     if (zoom <= 15) return const SizedBox.shrink();
     return CircleLayer(circles: circles);
+  }
+}
+
+/// Shows the ±GPS uncertainty corridor only at harbour/detail zoom (> 15).
+/// At route zoom the band is sub-pixel and would only hurt performance.
+/// Fixed blue colour regardless of theme — reads as "confidence", not alarm.
+class _ZoomAwareUncertaintyLayer extends StatelessWidget {
+  final List<Polygon> polygons;
+  const _ZoomAwareUncertaintyLayer({required this.polygons});
+
+  @override
+  Widget build(BuildContext context) {
+    if (polygons.isEmpty) return const SizedBox.shrink();
+    if (MapCamera.of(context).zoom <= 15) return const SizedBox.shrink();
+    return PolygonLayer(polygons: polygons);
+  }
+}
+
+/// Shows the raw (unfiltered) GPS fixes only at harbour/detail zoom (> 15),
+/// as faint blue texture inside the uncertainty band — not a competing line.
+/// At route zoom two overlapping tracks just look like a mess.
+class _ZoomAwareRawTrackLayer extends StatelessWidget {
+  final List<TrackPoint> rawPoints;
+  const _ZoomAwareRawTrackLayer({required this.rawPoints});
+
+  static const _rawColor = Color(0x3342A5F5); // Blue 400 at ~20 %
+
+  @override
+  Widget build(BuildContext context) {
+    if (rawPoints.isEmpty) return const SizedBox.shrink();
+    if (MapCamera.of(context).zoom <= 15) return const SizedBox.shrink();
+    return PolylineLayer(
+      polylines: [
+        for (final seg in splitTrackSegments(rawPoints))
+          if (seg.length >= 2)
+            Polyline(
+              points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+              strokeWidth: 1.0,
+              color: _rawColor,
+            ),
+      ],
+      cullingMargin: null,
+      simplificationTolerance: 0,
+    );
   }
 }
 

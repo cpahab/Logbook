@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "34296706111",
+    "project_id": "logbook-b19ed",
+    "storage_bucket": "logbook-b19ed.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:34296706111:android:885f3976d853be9eebf48a",
+        "android_client_info": {
+          "package_name": "com.ziegler.logbook"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyABHc8SlhoG9KcIq356CwJ3D2nLP-78kQk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

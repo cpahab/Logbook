@@ -25,10 +25,26 @@
       "PowerShell(Get-ChildItem \"$env:LOCALAPPDATA\\\\Pub\\\\Cache\\\\hosted\\\\pub.dev\" | Where-Object { $_.Name -match \"flutter_map\" })",
       "Bash(flutter analyze *)",
       "Bash(echo \"EXIT:$?\")",
-      "Bash(echo \"DONE:$?\")"
+      "Bash(echo \"DONE:$?\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Project ID:', d['project_info']['project_id']\\); print\\('Project number:', d['project_info']['project_number']\\)\")",
+      "Bash(firebase apps:list --project=logbook-b19ed)",
+      "Bash(firebase apps:create APPLE com.ziegler.logbook --display-name \"Logbook macOS\" --project logbook-b19ed)",
+      "Bash(firebase apps:create --help)",
+      "Bash(firebase apps:create IOS \"Logbook macOS\" -b com.ziegler.logbook --project logbook-b19ed)",
+      "Bash(firebase apps:list --json --project logbook-b19ed)",
+      "Bash(python3 -c \"import json,sys; apps=json.load\\(sys.stdin\\); [print\\(a.get\\('platform'\\), a.get\\('appId'\\), a.get\\('bundleId',''\\)\\) for a in apps]\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); t=d.get\\('tokens',{}\\); print\\('access_token length:', len\\(t.get\\('access_token',''\\)\\)\\); print\\('token_type:', t.get\\('token_type',''\\)\\)\")",
+      "Bash(flutterfire --version)",
+      "Bash(~/.pub-cache/bin/flutterfire --version)",
+      "Bash(dart pub *)",
+      "Bash(~/.pub-cache/bin/flutterfire configure *)",
+      "Bash(flutter doctor *)",
+      "Bash(xcrun simctl *)",
+      "Bash(rm /Users/ursziegler/development/Logbook/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved && rm /Users/ursziegler/development/Logbook/ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved && rm -rf ~/Library/Caches/org.swift.swiftpm/repositories/DKImagePickerController-* 2>/dev/null; echo \"done\")"
     ],
     "additionalDirectories": [
-      "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358"
+      "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358",
+      "/Users/ursziegler/Library/Caches/org.swift.swiftpm/repositories"
     ]
   }
 }
