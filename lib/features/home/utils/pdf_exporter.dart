@@ -14,6 +14,60 @@ import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import 'compute_daily_stats.dart';
 
+// Returns true for codepoints that NotoSans can't render but NotoEmoji can.
+bool _isEmojiRune(int r) =>
+    (r >= 0x2600  && r <= 0x27BF)  ||  // misc symbols + dingbats
+    (r >= 0xFE00  && r <= 0xFE0F)  ||  // variation selectors
+     r == 0x200D                   ||  // zero-width joiner
+    (r >= 0x1F000 && r <= 0x1FFFF);    // supplementary emoji blocks
+
+// Splits [s] into (chunk, isEmoji) pairs for mixed-font rendering.
+List<(String, bool)> _splitRuns(String s) {
+  final out = <(String, bool)>[];
+  final buf = StringBuffer();
+  bool? cur;
+  for (final r in s.runes) {
+    final e = _isEmojiRune(r);
+    if (cur != null && e != cur) { out.add((buf.toString(), cur)); buf.clear(); }
+    buf.writeCharCode(r);
+    cur = e;
+  }
+  if (buf.isNotEmpty) out.add((buf.toString(), cur ?? false));
+  return out;
+}
+
+// Renders text with [base] font, switching to [emoji] for emoji codepoints.
+pw.Widget _richText(
+  String text, {
+  required pw.Font base,
+  required pw.Font emoji,
+  required double size,
+  required PdfColor color,
+}) {
+  final runs = _splitRuns(text);
+  if (runs.isEmpty) {
+    return pw.Text('', style: pw.TextStyle(font: base, fontSize: size, color: color));
+  }
+  if (runs.length == 1 && !runs[0].$2) {
+    return pw.Text(text, style: pw.TextStyle(font: base, fontSize: size, color: color));
+  }
+  return pw.RichText(
+    text: pw.TextSpan(
+      children: [
+        for (final (chunk, isEmoji) in runs)
+          pw.TextSpan(
+            text: chunk,
+            style: pw.TextStyle(
+              font:     isEmoji ? emoji : base,
+              fontSize: size,
+              color:    color,
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
 // ── Colour palette (aligned with app theme) ────────────────────────────────────
 const _navy  = PdfColor(0.00,  0.141, 0.267);    // #002444 — primary
 const _fog   = PdfColor(0.937, 0.929, 0.933);    // #efedee — surface-container
@@ -28,14 +82,13 @@ Future<Uint8List> buildVoyagePdf({
   required DayEntry entry,
   required DailyStats? stats,
   required String vesselName,
-  required String vesselMmsi,
-  required String vesselCallSign,
   List<TrackPoint> trackPoints = const [],
   List<Uint8List> photoBytes = const [],
 }) async {
-  final regular = await PdfGoogleFonts.notoSansRegular();
-  final bold    = await PdfGoogleFonts.notoSansBold();
-  final italic  = await PdfGoogleFonts.notoSansItalic();
+  final regular  = await PdfGoogleFonts.notoSansRegular();
+  final bold     = await PdfGoogleFonts.notoSansBold();
+  final italic   = await PdfGoogleFonts.notoSansItalic();
+  final emojiFont = await PdfGoogleFonts.notoEmojiRegular();
 
   final Uint8List? trackImageBytes =
       trackPoints.length >= 2 ? await _renderTrackImage(trackPoints) : null;
@@ -51,14 +104,14 @@ Future<Uint8List> buildVoyagePdf({
         final sections = <pw.Widget>[];
 
         // ── Full-width: Vessel header ──────────────────────────────
-        sections.add(_buildHeader(entry, vesselName, vesselMmsi, vesselCallSign, bold, regular, italic));
+        sections.add(_buildHeader(vesselName, bold, emojiFont));
         sections.add(pw.SizedBox(height: 16));
 
         // ── Full-width: Voyage title + date box ───────────────────
         final from = entry.fromHarbor?.trim() ?? '';
         final to   = entry.toHarbor?.trim()   ?? '';
         if (from.isNotEmpty || to.isNotEmpty) {
-          sections.add(_buildRoute(from, to, entry.date, bold, regular, italic));
+          sections.add(_buildRoute(from, to, entry.date, bold, regular, italic, emojiFont));
           sections.add(pw.SizedBox(height: 16));
         }
 
@@ -67,61 +120,62 @@ Future<Uint8List> buildVoyagePdf({
 
         // ── Full-width: Narrative (always, avoids overflowing the two-column row)
         if (narrative.isNotEmpty) {
-          sections.add(_buildNotes('TAGEBUCH', narrative, bold, regular, italic));
+          sections.add(_buildNotes('TAGEBUCH', narrative, bold, italic, emojiFont));
           sections.add(pw.SizedBox(height: 14));
         }
 
         // ── Full-width: Photos ─────────────────────────────────────
         if (photoBytes.isNotEmpty) {
-          sections.add(pw.Divider(color: _rule, thickness: 0.5));
-          sections.add(pw.SizedBox(height: 8));
           sections.add(_buildPhotos(photoBytes, bold));
           sections.add(pw.SizedBox(height: 14));
         }
 
         // ── Full-width: Free notes ─────────────────────────────────
         if (freeNote.isNotEmpty) {
-          sections.add(_buildNotes('NOTIZEN', freeNote, bold, regular, italic));
+          sections.add(_buildNotes('NOTIZEN', freeNote, bold, italic, emojiFont));
           sections.add(pw.SizedBox(height: 14));
         }
 
-        // ── Two-column: left = log entries | right = stats+crew+map ──
-        final leftCol  = <pw.Widget>[];
-        final rightCol = <pw.Widget>[];
-
-        if (entry.timeline.isNotEmpty) {
-          leftCol.add(_buildTimeline(entry.timeline, bold, regular));
-        }
-        if (stats != null) {
-          rightCol.add(_buildStats(stats, bold, regular));
-        }
-        if (entry.crew.isNotEmpty) {
-          if (rightCol.isNotEmpty) rightCol.add(pw.SizedBox(height: 14));
-          rightCol.add(_buildCrew(entry.crew, bold, regular));
-        }
-        if (trackImageBytes != null) {
-          if (rightCol.isNotEmpty) rightCol.add(pw.SizedBox(height: 14));
-          rightCol.add(_buildTrackMap(trackImageBytes, bold, regular));
-        }
-
-        if (leftCol.isNotEmpty || rightCol.isNotEmpty) {
+        // ── Row 1: Track map (left) | Stats (right) ──────────────
+        if (trackImageBytes != null || stats != null) {
           sections.add(pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Expanded(
                 flex: 8,
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: leftCol,
-                ),
+                child: trackImageBytes != null
+                    ? _buildTrackMap(trackImageBytes, bold, regular)
+                    : pw.SizedBox(),
               ),
               pw.SizedBox(width: 20),
               pw.Expanded(
-                flex: 6,
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: rightCol,
-                ),
+                flex: 5,
+                child: stats != null
+                    ? _buildStats(stats, bold, regular)
+                    : pw.SizedBox(),
+              ),
+            ],
+          ));
+          sections.add(pw.SizedBox(height: 16));
+        }
+
+        // ── Row 2: Timeline (left) | Crew (right) ─────────────────
+        if (entry.timeline.isNotEmpty || entry.crew.isNotEmpty) {
+          sections.add(pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(
+                flex: 8,
+                child: entry.timeline.isNotEmpty
+                    ? _buildTimeline(entry.timeline, bold, regular, emojiFont)
+                    : pw.SizedBox(),
+              ),
+              pw.SizedBox(width: 20),
+              pw.Expanded(
+                flex: 5,
+                child: entry.crew.isNotEmpty
+                    ? _buildCrew(entry.crew, bold, regular, emojiFont)
+                    : pw.SizedBox(),
               ),
             ],
           ));
@@ -138,52 +192,12 @@ Future<Uint8List> buildVoyagePdf({
 
 // ── Header ────────────────────────────────────────────────────────────────────
 
-pw.Widget _buildHeader(
-  DayEntry entry,
-  String vesselName,
-  String vesselMmsi,
-  String vesselCallSign,
-  pw.Font bold,
-  pw.Font regular,
-  pw.Font italic,
-) {
-  final dateStr = DateFormat('d. MMMM yyyy', 'de_CH').format(entry.date);
-  final subParts = <String>[
-    if (vesselMmsi.isNotEmpty)     'MMSI: $vesselMmsi',
-    if (vesselCallSign.isNotEmpty) 'RUFZEICHEN: $vesselCallSign',
-  ];
-
+pw.Widget _buildHeader(String vesselName, pw.Font bold, pw.Font emoji) {
+  final name = vesselName.isNotEmpty ? vesselName.toUpperCase() : 'LOGBUCH';
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
-      pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
-        children: [
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                vesselName.isNotEmpty ? vesselName.toUpperCase() : 'LOGBUCH',
-                style: pw.TextStyle(font: bold, fontSize: 26, color: _navy),
-              ),
-              if (subParts.isNotEmpty) ...[
-                pw.SizedBox(height: 3),
-                pw.Text(
-                  subParts.join('  ·  '),
-                  style: pw.TextStyle(
-                      font: bold, fontSize: 8, color: _steel, letterSpacing: 1.5),
-                ),
-              ],
-            ],
-          ),
-          pw.Text(
-            dateStr,
-            style: pw.TextStyle(
-                font: bold, fontSize: 10, color: _steel, letterSpacing: 0.5),
-          ),
-        ],
-      ),
+      _richText(name, base: bold, emoji: emoji, size: 26, color: _navy),
       pw.SizedBox(height: 8),
       pw.Divider(color: _navy, thickness: 1.5),
     ],
@@ -193,7 +207,7 @@ pw.Widget _buildHeader(
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 pw.Widget _buildRoute(String from, String to, DateTime date,
-    pw.Font bold, pw.Font regular, pw.Font italic) {
+    pw.Font bold, pw.Font regular, pw.Font italic, pw.Font emoji) {
   final hasFrom = from.isNotEmpty;
   final hasTo   = to.isNotEmpty;
 
@@ -207,37 +221,26 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Text(title,
-                style: pw.TextStyle(font: bold, fontSize: 18, color: _navy)),
+            _richText(title, base: bold, emoji: emoji, size: 18, color: _navy),
             if (hasFrom && hasTo) ...[
               pw.SizedBox(height: 2),
-              pw.Text(
-                'Abfahrt von $from',
-                style: pw.TextStyle(font: italic, fontSize: 10, color: _steel),
-              ),
+              _richText('Abfahrt von $from',
+                  base: italic, emoji: emoji, size: 10, color: _steel),
             ],
           ],
         ),
       ),
       pw.SizedBox(width: 12),
-      pw.Container(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: pw.BoxDecoration(
-          color: _fog,
-          border: pw.Border.all(color: _rule, width: 0.5),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.end,
-          children: [
-            pw.Text('DATUM',
-                style: pw.TextStyle(
-                    font: bold, fontSize: 7, color: _steel, letterSpacing: 1.2)),
-            pw.SizedBox(height: 2),
-            pw.Text(dateStr,
-                style: pw.TextStyle(font: bold, fontSize: 13, color: _navy)),
-          ],
-        ),
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
+        children: [
+          pw.Text('DATUM',
+              style: pw.TextStyle(
+                  font: bold, fontSize: 7, color: _steel, letterSpacing: 1.2)),
+          pw.SizedBox(height: 2),
+          pw.Text(dateStr,
+              style: pw.TextStyle(font: bold, fontSize: 13, color: _navy)),
+        ],
       ),
     ],
   );
@@ -278,7 +281,11 @@ pw.Widget _buildStats(DailyStats stats, pw.Font bold, pw.Font regular) {
 
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
-    children: rows,
+    children: [
+      _sectionLabel('STATISTIK', bold),
+      pw.SizedBox(height: 6),
+      ...rows,
+    ],
   );
 }
 
@@ -304,11 +311,11 @@ pw.Widget _statCard(String label, String value, pw.Font bold, pw.Font regular) =
 
 // ── Crew ──────────────────────────────────────────────────────────────────────
 
-pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular) {
+pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular, pw.Font emoji) {
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
-      _sectionLabel('MUSTERROLLE', bold),
+      _sectionLabel('CREW', bold),
       pw.SizedBox(height: 6),
       for (int i = 0; i < crew.length; i++)
         pw.Container(
@@ -321,11 +328,9 @@ pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular) {
           child: pw.Row(
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
-              pw.Text(
-                crew[i].name,
-                style: pw.TextStyle(
-                    font: i == 0 ? bold : regular, fontSize: 10, color: _steel),
-              ),
+              _richText(crew[i].name,
+                  base: i == 0 ? bold : regular,
+                  emoji: emoji, size: 10, color: _steel),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: i == 0
@@ -359,7 +364,7 @@ pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular) {
 // ── Timeline table ────────────────────────────────────────────────────────────
 
 pw.Widget _buildTimeline(
-    List<TimelineEntry> entries, pw.Font bold, pw.Font regular) {
+    List<TimelineEntry> entries, pw.Font bold, pw.Font regular, pw.Font emoji) {
   // Detect which optional columns are actually populated so we only render them.
   final hasCourse  = entries.any((e) => e.course  != null);
   final hasSpeed   = entries.any((e) => e.speed   != null);
@@ -397,14 +402,9 @@ pw.Widget _buildTimeline(
 
   pw.Widget cell(String text, {bool isHeader = false}) => pw.Padding(
     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-    child: pw.Text(
-      text,
-      style: pw.TextStyle(
-        font:     isHeader ? bold : regular,
-        fontSize: 8,
-        color:    isHeader ? PdfColors.white : _steel,
-      ),
-    ),
+    child: isHeader
+        ? pw.Text(text, style: pw.TextStyle(font: bold, fontSize: 8, color: PdfColors.white))
+        : _richText(text, base: regular, emoji: emoji, size: 8, color: _steel),
   );
 
   pw.TableRow headerRow() => pw.TableRow(
@@ -457,8 +457,7 @@ pw.Widget _buildTimeline(
 // ── Notes ─────────────────────────────────────────────────────────────────────
 
 pw.Widget _buildNotes(
-    String label, String notes, pw.Font bold, pw.Font regular, pw.Font italic) {
-  final isNarrative = label == 'TAGEBUCH';
+    String label, String notes, pw.Font bold, pw.Font italic, pw.Font emoji) {
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
@@ -467,19 +466,7 @@ pw.Widget _buildNotes(
       pw.Container(
         width: double.infinity,
         padding: const pw.EdgeInsets.all(10),
-        decoration: pw.BoxDecoration(
-          color: isNarrative ? PdfColors.white : _fog,
-          border: pw.Border.all(color: _rule, width: 0.5),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-        ),
-        child: pw.Text(
-          isNarrative ? '“$notes”' : notes,
-          style: pw.TextStyle(
-            font: isNarrative ? italic : regular,
-            fontSize: isNarrative ? 10 : 9,
-            color: _steel,
-          ),
-        ),
+        child: _richText(notes, base: italic, emoji: emoji, size: 10, color: _steel),
       ),
     ],
   );
@@ -488,8 +475,8 @@ pw.Widget _buildNotes(
 // ── Photos ────────────────────────────────────────────────────────────────────
 
 pw.Widget _buildPhotos(List<Uint8List> photos, pw.Font bold) {
-  const nCols = 4;
-  const cellH = 110.0;
+  const nCols = 3;
+  const cellH = 150.0;
 
   final rows = <pw.Widget>[];
   for (int i = 0; i < photos.length; i += nCols) {
@@ -527,11 +514,7 @@ pw.Widget _buildPhotos(List<Uint8List> photos, pw.Font bold) {
 
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
-    children: [
-      _sectionLabel('VISUELLE DOKUMENTATION', bold),
-      pw.SizedBox(height: 8),
-      ...rows,
-    ],
+    children: rows,
   );
 }
 
@@ -542,34 +525,12 @@ pw.Widget _footer(pw.Context ctx, pw.Font regular) {
     children: [
       pw.Divider(color: _rule, thickness: 0.3),
       pw.SizedBox(height: 4),
-      pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          pw.Text(
-            'Log erstellt mit Logbuch-App',
-            style: pw.TextStyle(
-                font: regular, fontSize: 7, color: _rule, letterSpacing: 0.8)),
-          pw.Row(
-            children: [
-              pw.Text(
-                'Skipper: ',
-                style: pw.TextStyle(font: regular, fontSize: 7, color: _rule)),
-              pw.Container(
-                width: 80,
-                height: 8,
-                decoration: pw.BoxDecoration(
-                  border: pw.Border(
-                    bottom: pw.BorderSide(color: _rule, width: 0.5),
-                  ),
-                ),
-              ),
-              pw.SizedBox(width: 20),
-              pw.Text(
-                'Seite ${ctx.pageNumber} von ${ctx.pagesCount}',
-                style: pw.TextStyle(font: regular, fontSize: 7, color: _rule)),
-            ],
-          ),
-        ],
+      pw.Align(
+        alignment: pw.Alignment.centerRight,
+        child: pw.Text(
+          'Seite ${ctx.pageNumber} von ${ctx.pagesCount}',
+          style: pw.TextStyle(font: regular, fontSize: 7, color: _rule),
+        ),
       ),
     ],
   );

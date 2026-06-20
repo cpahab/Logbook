@@ -2,10 +2,16 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
 class PhotoService {
+  // Max long-side dimension for uploaded photos.
+  // Covers Retina screen display and 4-up PDF thumbnails at 300 dpi.
+  static const int _maxSide = 1920;
+  static const int _jpegQuality = 85;
+
   static Future<Directory> _cacheDir() async {
     final docs = await getApplicationDocumentsDirectory();
     final dir = Directory('${docs.path}/photo_cache');
@@ -13,18 +19,19 @@ class PhotoService {
     return dir;
   }
 
-  // The storage path is "photos/YYYY-MM-DD/<id>.jpg" — the last segment
-  // uniquely identifies the local cache file.
   static String _cacheFilename(String storagePath) =>
       storagePath.split('/').last;
 
-  /// Presents the system image picker, copies chosen files to local cache and
-  /// uploads them to Firebase Storage.  Returns the list of Storage paths for
-  /// successfully uploaded images.
+  /// Picks images, compresses them (max 1920 px, JPEG 85 %), caches locally
+  /// and uploads to Firebase Storage. Returns the Storage paths of successes.
+  ///
+  /// Uses [withData: true] so that [f.bytes] is always populated — this is the
+  /// only reliable path on iOS where PHAsset-backed picks may have no [f.path].
   static Future<List<String>> pickAndUpload(DateTime day) async {
     final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: true,
+      withData: true,
     );
     if (result == null || result.files.isEmpty) return [];
 
@@ -32,14 +39,27 @@ class PhotoService {
     final uploaded = <String>[];
 
     for (final f in result.files) {
-      if (f.path == null) continue;
+      // Prefer in-memory bytes (always present when withData:true); fall back
+      // to reading from path in case the platform only fills one of them.
+      final srcBytes = f.bytes?.isNotEmpty == true
+          ? f.bytes!
+          : (f.path != null ? await File(f.path!).readAsBytes() : null);
+      if (srcBytes == null || srcBytes.isEmpty) continue;
+
       final id = '${DateTime.now().millisecondsSinceEpoch}';
       final storagePath = 'photos/$dateStr/$id.jpg';
       try {
-        final src = File(f.path!);
+        final compressed = await FlutterImageCompress.compressWithList(
+          srcBytes,
+          minWidth: _maxSide,
+          minHeight: _maxSide,
+          quality: _jpegQuality,
+          format: CompressFormat.jpeg,
+          keepExif: false,
+        );
         final cache = await _cacheDir();
         final local = File('${cache.path}/$id.jpg');
-        await src.copy(local.path);
+        await local.writeAsBytes(compressed.isNotEmpty ? compressed : srcBytes);
         await FirebaseStorage.instance.ref(storagePath).putFile(local);
         uploaded.add(storagePath);
       } catch (_) {}
@@ -70,4 +90,5 @@ class PhotoService {
     final local = File('${cache.path}/${_cacheFilename(storagePath)}');
     if (await local.exists()) await local.delete();
   }
+
 }

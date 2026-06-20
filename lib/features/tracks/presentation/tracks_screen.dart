@@ -35,28 +35,9 @@ class _TracksScreenState extends State<TracksScreen> {
   _FilterPreset _preset = _FilterPreset.months3;
   DateTimeRange? _customRange;
   bool _satelliteView = false;
-  StreamSubscription<MapEvent>? _mapSizeSub;
-  bool _initialFitDone = false;
-  bool _pendingFit = false;
-
   @override
   void initState() {
     super.initState();
-    // Same web workaround as day_detail_screen: initialCameraFit applies on the
-    // first layout pass which may have zero constraints. Subscribe to size changes
-    // and perform the fit when the camera first gets a valid size.
-    _mapSizeSub = _mapController.mapEventStream
-        .where((e) => e is MapEventNonRotatedSizeChange)
-        .listen((_) {
-      final size = _mapController.camera.nonRotatedSize;
-      if (mounted && _pendingFit && size.width > 0 && size.height > 0) {
-        _mapSizeSub?.cancel();
-        _mapSizeSub = null;
-        _pendingFit = false;
-        _initialFitDone = true;
-        _refitToDisplayed();
-      }
-    });
   }
 
   // Golden-angle hue palette: each sequential track steps ~137.5° around the
@@ -136,7 +117,6 @@ class _TracksScreenState extends State<TracksScreen> {
 
   @override
   void dispose() {
-    _mapSizeSub?.cancel();
     _mapController.dispose();
     super.dispose();
   }
@@ -225,7 +205,7 @@ class _TracksScreenState extends State<TracksScreen> {
       trackData.add(_DayTrackData(
         day: day,
         display: display,
-        rawPoints: track.points,
+        rawPoints: display.rawMovingPoints,
         color: _colorForIndex(trackIdx, totalTracks),
         entry: repo.getEntry(day),
         stats: computeDailyStats(track.points, settings: filterSettings),
@@ -234,20 +214,6 @@ class _TracksScreenState extends State<TracksScreen> {
       trackIdx++;
     }
 
-    // Trigger initial camera fit once track data is available. Covers the case
-    // where data arrives from async storage after the first layout event fired.
-    if (!_initialFitDone && trackData.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || _initialFitDone) return;
-        final size = _mapController.camera.nonRotatedSize;
-        if (size.width > 0 && size.height > 0) {
-          _initialFitDone = true;
-          _refitToDisplayed();
-        } else {
-          _pendingFit = true;
-        }
-      });
-    }
 
     final range = _effectiveRange;
     final displayed = range == null
@@ -393,7 +359,7 @@ class _TracksScreenState extends State<TracksScreen> {
                 Expanded(
                   flex: 3,
                   child: _buildMapSection(
-                      displayed, polylines, rawPolylines,
+                      displayed, polylines, showRawTrack,
                       anchorCircles, arrowMarkers, cs),
                 ),
                 // ── List ───────────────────────────────────────────────
@@ -466,7 +432,7 @@ class _TracksScreenState extends State<TracksScreen> {
   Widget _buildMapSection(
     List<_DayTrackData> displayed,
     List<Polyline> polylines,
-    List<Polyline> rawPolylines,
+    bool showRawTrack,
     List<CircleMarker> anchorCircles,
     List<Marker> arrowMarkers,
     ColorScheme cs,
@@ -474,13 +440,23 @@ class _TracksScreenState extends State<TracksScreen> {
     final initialBounds = _boundsFor(
       displayed.expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon))).toList(),
     );
+    final uncertaintyPolygons = [
+      for (final d in displayed)
+        for (final ring in d.display.uncertaintyBands())
+          Polygon(
+            points: ring.map((c) => LatLng(c.$1, c.$2)).toList(),
+            color: d.color.withValues(alpha: 0.10),
+            borderStrokeWidth: 0,
+          ),
+    ];
     return Stack(
       children: [
         FlutterMap(
           mapController: _mapController,
-          options: const MapOptions(
-            initialCenter: LatLng(47.0, 8.3),
-            initialZoom: 8,
+          options: MapOptions(
+            initialCameraFit: initialBounds != null
+                ? CameraFit.bounds(bounds: initialBounds, padding: const EdgeInsets.all(24))
+                : null,
           ),
           children: [
             TileLayer(
@@ -489,14 +465,31 @@ class _TracksScreenState extends State<TracksScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
-            if (!_satelliteView)
-              TileLayer(
-                urlTemplate: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.logbook.app',
-              ),
-            CircleLayer(circles: anchorCircles),
-            if (rawPolylines.isNotEmpty)
-              PolylineLayer(polylines: rawPolylines, cullingMargin: null, simplificationTolerance: 0),
+            Builder(builder: (ctx) {
+              if (MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
+              return PolygonLayer(polygons: uncertaintyPolygons);
+            }),
+            Builder(builder: (ctx) {
+              if (!showRawTrack || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
+              return PolylineLayer(
+                polylines: [
+                  for (final d in displayed)
+                    for (final seg in splitTrackSegments(d.rawPoints))
+                      if (seg.length >= 2)
+                        Polyline(
+                          points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+                          strokeWidth: 1.0,
+                          color: d.color.withValues(alpha: 0.20),
+                        ),
+                ],
+                cullingMargin: null,
+                simplificationTolerance: 0,
+              );
+            }),
+            Builder(builder: (ctx) {
+              if (anchorCircles.isEmpty || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
+              return CircleLayer(circles: anchorCircles);
+            }),
             PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(
@@ -510,7 +503,7 @@ class _TracksScreenState extends State<TracksScreen> {
                           mode: LaunchMode.externalApplication);
                     }
                   })
-                else ...[
+                else
                   TextSourceAttribution('© OpenStreetMap contributors',
                       onTap: () async {
                     final uri = Uri.parse(
@@ -520,15 +513,6 @@ class _TracksScreenState extends State<TracksScreen> {
                           mode: LaunchMode.externalApplication);
                     }
                   }),
-                  TextSourceAttribution('© OpenSeaMap contributors',
-                      onTap: () async {
-                    final uri = Uri.parse('https://www.openseamap.org');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  }),
-                ],
               ],
             ),
           ],
@@ -1032,37 +1016,17 @@ class _TracksMapFullScreen extends StatefulWidget {
 class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
   final MapController _mapController = MapController();
   late bool _satelliteView;
-  StreamSubscription<MapEvent>? _mapSizeSub;
-  bool _cameraFitted = false;
 
   @override
   void initState() {
     super.initState();
     _satelliteView = widget.initialSatellite;
-    _mapSizeSub = _mapController.mapEventStream
-        .where((e) => e is MapEventNonRotatedSizeChange)
-        .listen((_) => _tryFitCamera());
   }
 
   @override
   void dispose() {
-    _mapSizeSub?.cancel();
     _mapController.dispose();
     super.dispose();
-  }
-
-  void _tryFitCamera() {
-    if (_cameraFitted || widget.initialBounds == null) return;
-    final size = _mapController.camera.nonRotatedSize;
-    if (mounted && size.width > 0 && size.height > 0) {
-      _cameraFitted = true;
-      _mapSizeSub?.cancel();
-      _mapSizeSub = null;
-      _mapController.fitCamera(CameraFit.bounds(
-        bounds: widget.initialBounds!,
-        padding: const EdgeInsets.all(32),
-      ));
-    }
   }
 
   static double _trackBearing(LatLng from, LatLng to) {
@@ -1126,10 +1090,6 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
     final cs           = Theme.of(context).colorScheme;
     final displayed    = widget.displayed;
     final showRawTrack = context.watch<ThemeProvider>().showRawTrack;
-
-    // Post-frame fallback: if the map already has a valid size (e.g., device
-    // layout resolved immediately), the subscription may not fire — try here.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _tryFitCamera());
 
     final sel = widget.selectedIndex;
     final fsPolylinesByDay = displayed.asMap().entries.map((e) {
@@ -1196,19 +1156,15 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
       }
     }
 
-    final fsRawPolylines = showRawTrack
-        ? [
-            for (final d in displayed)
-              for (final seg in splitTrackSegments(d.rawPoints))
-                if (seg.length >= 2)
-                  Polyline(
-                    points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
-                    strokeWidth: 1.5,
-                    color: d.color.withValues(alpha: 0.40),
-                    pattern: StrokePattern.dashed(segments: const [8, 5]),
-                  ),
-          ]
-        : <Polyline>[];
+    final fsUncertaintyPolygons = [
+      for (final d in displayed)
+        for (final ring in d.display.uncertaintyBands())
+          Polygon(
+            points: ring.map((c) => LatLng(c.$1, c.$2)).toList(),
+            color: d.color.withValues(alpha: 0.10),
+            borderStrokeWidth: 0,
+          ),
+    ];
 
     final allPts = displayed
         .expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon)))
@@ -1249,9 +1205,10 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
       body: Stack(children: [
         FlutterMap(
           mapController: _mapController,
-          options: const MapOptions(
-            initialCenter: LatLng(47.0, 8.3),
-            initialZoom: 8,
+          options: MapOptions(
+            initialCameraFit: widget.initialBounds != null
+                ? CameraFit.bounds(bounds: widget.initialBounds!, padding: const EdgeInsets.all(32))
+                : null,
           ),
           children: [
             TileLayer(
@@ -1260,14 +1217,31 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.logbook.app',
             ),
-            if (!_satelliteView)
-              TileLayer(
-                urlTemplate: 'https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.logbook.app',
-              ),
-            CircleLayer(circles: anchorCircles),
-            if (fsRawPolylines.isNotEmpty)
-              PolylineLayer(polylines: fsRawPolylines, cullingMargin: null, simplificationTolerance: 0),
+            Builder(builder: (ctx) {
+              if (MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
+              return PolygonLayer(polygons: fsUncertaintyPolygons);
+            }),
+            Builder(builder: (ctx) {
+              if (!showRawTrack || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
+              return PolylineLayer(
+                polylines: [
+                  for (final d in displayed)
+                    for (final seg in splitTrackSegments(d.rawPoints))
+                      if (seg.length >= 2)
+                        Polyline(
+                          points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+                          strokeWidth: 1.0,
+                          color: d.color.withValues(alpha: 0.20),
+                        ),
+                ],
+                cullingMargin: null,
+                simplificationTolerance: 0,
+              );
+            }),
+            Builder(builder: (ctx) {
+              if (anchorCircles.isEmpty || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
+              return CircleLayer(circles: anchorCircles);
+            }),
             PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(attributions: [
@@ -1276,16 +1250,11 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
                   final uri = Uri.parse('https://www.esri.com');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 })
-              else ...[
+              else
                 TextSourceAttribution('© OpenStreetMap contributors', onTap: () async {
                   final uri = Uri.parse('https://www.openstreetmap.org/copyright');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }),
-                TextSourceAttribution('© OpenSeaMap contributors', onTap: () async {
-                  final uri = Uri.parse('https://www.openseamap.org');
-                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }),
-              ],
             ]),
           ],
         ),
