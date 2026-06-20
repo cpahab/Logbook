@@ -60,6 +60,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   String? _droppedMarkerLabel;
   Timer? _markerDismissTimer;
   bool _editingRoute = false;
+  final Set<String> _deletingPhotos = {};
   final _fromHarborCtrl = TextEditingController();
   final _toHarborCtrl = TextEditingController();
   @override
@@ -1055,55 +1056,85 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Photo strip ───────────────────────────────────────────────────
   Widget _buildPhotoStrip(DayEntry entry, ColorScheme cs) {
+    final hasPhotos = entry.photos.isNotEmpty || _deletingPhotos.isNotEmpty;
+    final allPaths = [
+      ...List<String>.from(entry.photos),
+      ..._deletingPhotos.where((p) => !entry.photos.contains(p)),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'FOTOS',
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
-            color: cs.secondary,
-          ),
+        Row(
+          children: [
+            Text(
+              'FOTOS',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: cs.secondary,
+              ),
+            ),
+            if (hasPhotos) ...[
+              const Spacer(),
+              GestureDetector(
+                onTap: () => _addPhotos(entry),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.surfaceContainer,
+                  ),
+                  child: Icon(Icons.add_a_photo_outlined, size: 20, color: cs.secondary),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 10),
-        SizedBox(
-          height: 96,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _photoAddButton(entry, cs),
-              for (final path in List<String>.from(entry.photos)) ...[
-                const SizedBox(width: 8),
-                _photoThumbnail(entry, path, cs),
+        if (hasPhotos)
+          SizedBox(
+            height: 96,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (final path in allPaths) ...[
+                  _photoThumbnail(entry, path, cs),
+                  const SizedBox(width: 8),
+                ],
               ],
-            ],
+            ),
+          )
+        else
+          _emptyStateButton(
+            Icons.add_a_photo_outlined,
+            'Fotos hinzufügen…',
+            () => _addPhotos(entry),
+            cs,
           ),
-        ),
         const SizedBox(height: 20),
       ],
     );
   }
 
-  Widget _photoAddButton(DayEntry entry, ColorScheme cs) {
-    return InkWell(
-      onTap: () => _addPhotos(entry),
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: 88,
-        height: 88,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: cs.outline, width: 1.5),
-          color: cs.surfaceContainerHighest,
-        ),
-        child: Icon(Icons.add_a_photo_outlined, color: cs.secondary, size: 28),
-      ),
-    );
-  }
-
   Widget _photoThumbnail(DayEntry entry, String storagePath, ColorScheme cs) {
+    final isDeleting = _deletingPhotos.contains(storagePath);
+
+    if (isDeleting) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: SizedBox(
+          width: 88,
+          height: 88,
+          child: Container(
+            color: cs.surfaceContainerHighest,
+            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+        ),
+      );
+    }
+
     return FutureBuilder<File?>(
       future: PhotoService.localFile(storagePath),
       builder: (context, snap) {
@@ -1188,9 +1219,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       },
     );
     if (confirmed != true || !mounted) return;
+    setState(() => _deletingPhotos.add(storagePath));
     entry.photos.remove(storagePath);
     context.read<HomeRepository>().saveEntry(entry);
     await PhotoService.delete(storagePath);
+    if (mounted) setState(() => _deletingPhotos.remove(storagePath));
   }
 
   void _viewPhoto(File file) {
