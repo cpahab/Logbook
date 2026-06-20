@@ -265,6 +265,8 @@ class FirestoreService {
         'participantsList': e.participantsList,
         'crew': e.crew.map(_crewToMap).toList(),
         'timeline': e.timeline.map(_timelineToMap).toList(),
+        'photos': e.photos,
+        'keelDown': e.keelDown,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
@@ -310,6 +312,8 @@ class FirestoreService {
         timeline: (d['timeline'] as List? ?? [])
             .map((t) => _timelineFromMap(t as Map<String, dynamic>))
             .toList(),
+        photos: List<String>.from(d['photos'] as List? ?? []),
+        keelDown: d['keelDown'] as bool?,
       );
 
   static TimelineEntry _timelineFromMap(Map<String, dynamic> d) => TimelineEntry(

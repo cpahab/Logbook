@@ -524,8 +524,12 @@ List<TrackPoint> trimStationaryEnds(
 
 // ── Display model ─────────────────────────────────────────────────────────────
 
-const _samePlaceM = 100.0;
-const _teleportM  = 200.0;
+const _samePlaceM           = 100.0;
+const _teleportM            = 200.0;
+const _defaultBaseAccuracyM = 8.0;
+const _jitterGain           = 1.5;
+const _uncertaintyCapFactor = 3.0;
+const _gapSeconds           = 120.0;
 
 /// Visual category of one rendered track segment.
 enum SegmentKind { moving, stopEntry, stopExit, teleportBreak }
@@ -542,7 +546,13 @@ class TrackSegment {
   /// Per-fix instantaneous speed (knots), parallel to [points]. null for connectors.
   final List<double?> speedKn;
 
-  const TrackSegment(this.kind, this.points, this.speedKn);
+  /// Per-fix inferred GPS uncertainty (metres), parallel to [points].
+  /// null for connectors and break sentinels.
+  /// Half-width of the ±error band at each fix — use with [DisplayModel.uncertaintyBands].
+  final List<double?> uncertaintyM;
+
+  const TrackSegment(this.kind, this.points, this.speedKn,
+      {this.uncertaintyM = const []});
 }
 
 /// Everything needed to render one stop on the map.
@@ -583,10 +593,21 @@ class DisplayModel {
   final List<StopMarker> stops;
   final bool hasTeleport;
 
+  /// Inferred GPS receiver base accuracy (metres) — median R95 across all stops.
+  /// Floor of the per-fix uncertainty band; falls back to 8 m when no stops.
+  final double baseAccuracyM;
+
+  /// Raw (unsmoothed) GPS fixes with cold-start and stationary fixes removed.
+  /// Speed spikes are retained so the filter's effect stays visible.
+  /// Use this for the "raw track" overlay instead of the original track.points.
+  final List<TrackPoint> rawMovingPoints;
+
   const DisplayModel({
-    this.segments    = const [],
-    this.stops       = const [],
-    this.hasTeleport = false,
+    this.segments         = const [],
+    this.stops            = const [],
+    this.hasTeleport      = false,
+    this.baseAccuracyM    = _defaultBaseAccuracyM,
+    this.rawMovingPoints  = const [],
   });
 
   /// First moving fix — departure time.
@@ -639,6 +660,128 @@ class DisplayModel {
     }
     return polys.where((p) => p.length >= 2).toList();
   }
+
+  /// One closed (lat, lon) polygon per continuous moving polyline forming the
+  /// ±GPS uncertainty corridor. Render as a translucent filled polygon beneath
+  /// the track line; meaningful only at harbour / detail zoom (≥ 15).
+  List<List<(double, double)>> uncertaintyBands() {
+    final bands = <List<(double, double)>>[];
+    var runCoords = <(double, double)>[];
+    var runUnc    = <double>[];
+
+    void closeRun() {
+      if (runCoords.length >= 2) {
+        bands.add(_uncertaintyBand(runCoords, runUnc, baseAccuracyM));
+      }
+      runCoords = [];
+      runUnc    = [];
+    }
+
+    for (final seg in segments) {
+      if (seg.kind == SegmentKind.teleportBreak) {
+        closeRun();
+      } else if (seg.kind == SegmentKind.moving) {
+        runCoords.addAll(seg.points.map((p) => (p.lat, p.lon)));
+        final unc = seg.uncertaintyM;
+        runUnc.addAll(List.generate(seg.points.length,
+            (i) => (i < unc.length ? unc[i] : null) ?? baseAccuracyM));
+      }
+    }
+    closeRun();
+    return bands;
+  }
+}
+
+// ── Uncertainty helpers ───────────────────────────────────────────────────────
+
+/// Infer the receiver's base positional accuracy from stationary scatter.
+/// Returns the median R95 across all stops (cold-start fixes excluded).
+double _baseAccuracyFromStops(List<_Fix> fixes, List<_StopSegment> stops) {
+  final r95s = <double>[];
+  for (final s in stops) {
+    final seg     = fixes.sublist(s.startIdx, s.endIdx + 1);
+    final settled = seg.where((f) => !f.coldStart).toList();
+    final cluster = settled.length >= 3 ? settled : seg;
+    if (cluster.length < 2) continue;
+    final pts    = cluster.map((f) => f.pt).toList();
+    final anchor = _computeAnchor(pts, s.kind, s.durationMinutes);
+    r95s.add(anchor.r95M);
+  }
+  if (r95s.isEmpty) return _defaultBaseAccuracyM;
+  r95s.sort();
+  return r95s[r95s.length ~/ 2];
+}
+
+/// Per-fix GPS uncertainty (metres) for the moving track, inferred from two
+/// signals combined in quadrature:
+///   base_accuracy — receiver's measured accuracy from stationary scatter.
+///   local jitter  — deviation of each fix from the midpoint of its neighbours.
+/// Result is capped at [_uncertaintyCapFactor] × base so a single wild fix
+/// cannot blow the band to absurd widths. Jitter is not measured across a time
+/// gap > [_gapSeconds] (stop boundary); those fixes keep base accuracy.
+List<double> _perFixUncertainty(List<_Fix> movingFixes, double baseAccuracyM) {
+  final n   = movingFixes.length;
+  final cap = _uncertaintyCapFactor * baseAccuracyM;
+  final unc = List<double>.filled(n, baseAccuracyM);
+  for (int i = 1; i < n - 1; i++) {
+    final a   = movingFixes[i - 1];
+    final b   = movingFixes[i];
+    final c   = movingFixes[i + 1];
+    final dt1 = b.pt.time.difference(a.pt.time).inSeconds.toDouble();
+    final dt2 = c.pt.time.difference(b.pt.time).inSeconds.toDouble();
+    if (dt1 > _gapSeconds || dt2 > _gapSeconds) continue;
+    final midLat = (a.pt.lat + c.pt.lat) / 2;
+    final midLon = (a.pt.lon + c.pt.lon) / 2;
+    final jitter = _haversineM(midLat, midLon, b.pt.lat, b.pt.lon);
+    final combined = sqrt(baseAccuracyM * baseAccuracyM +
+        (_jitterGain * jitter) * (_jitterGain * jitter));
+    unc[i] = combined < cap ? combined : cap;
+  }
+  return unc;
+}
+
+/// Closed (lat, lon) polygon outlining the ±uncertainty corridor around a
+/// polyline. Returns left-side forward + right-side reversed so the result is
+/// a single ring suitable for a filled-polygon primitive.
+List<(double, double)> _uncertaintyBand(
+  List<(double, double)> coords,
+  List<double> uncertaintyM,
+  double baseAccuracyM,
+) {
+  final n = coords.length;
+  if (n < 2) return [];
+  final lat0       = coords.map((c) => c.$1).reduce((a, b) => a + b) / n;
+  const mPerDegLat = 111320.0;
+  final mPerDegLon = 111320.0 * cos(lat0 * pi / 180);
+
+  (double oy, double ox) perp(int i) {
+    final double dLat, dLon;
+    if (i == 0) {
+      dLat = coords[1].$1 - coords[0].$1;
+      dLon = coords[1].$2 - coords[0].$2;
+    } else if (i == n - 1) {
+      dLat = coords[n - 1].$1 - coords[n - 2].$1;
+      dLon = coords[n - 1].$2 - coords[n - 2].$2;
+    } else {
+      dLat = coords[i + 1].$1 - coords[i - 1].$1;
+      dLon = coords[i + 1].$2 - coords[i - 1].$2;
+    }
+    final dxm    = dLon * mPerDegLon;
+    final dym    = dLat * mPerDegLat;
+    final length = sqrt(dxm * dxm + dym * dym);
+    if (length == 0) return (0.0, 0.0);
+    final u = i < uncertaintyM.length ? uncertaintyM[i] : baseAccuracyM;
+    return (dxm / length * u / mPerDegLat, -dym / length * u / mPerDegLon);
+  }
+
+  final left  = <(double, double)>[];
+  final right = <(double, double)>[];
+  for (int i = 0; i < n; i++) {
+    final (oy, ox) = perp(i);
+    left.add( (coords[i].$1 + oy, coords[i].$2 + ox));
+    right.add((coords[i].$1 - oy, coords[i].$2 - ox));
+  }
+  return [...left, ...right.reversed];
 }
 
 // ── Display model builder ─────────────────────────────────────────────────────
@@ -672,6 +815,22 @@ DisplayModel buildDisplayModel(
     _flagColdStart(fixes, stops, settings.coldStartSettleFactor);
   }
 
+  // Per-fix uncertainty: compute base accuracy from stop scatter, then
+  // infer jitter-based uncertainty for every moving fix.
+  final baseAccuracyM  = _baseAccuracyFromStops(fixes, stops);
+  // rawMovingPoints: cold-start and stationary removed, spikes kept so the
+  // filter's effect is visible when the raw overlay is shown.
+  final rawMovingPoints = fixes
+      .where((f) => !f.stationary && !f.coldStart)
+      .map((f) => f.pt)
+      .toList();
+  final movingFixes    = fixes.where((f) => !f.stationary && !f.coldStart && !f.flagged).toList();
+  final movingUncM     = _perFixUncertainty(movingFixes, baseAccuracyM);
+  final uncByTime      = <DateTime, double>{
+    for (int i = 0; i < movingFixes.length; i++)
+      movingFixes[i].pt.time: movingUncM[i],
+  };
+
   // Build anchors (same logic as trimTrackWithAnchors)
   final anchors = stops.map((s) {
     final allInSeg = fixes.sublist(s.startIdx, s.endIdx + 1);
@@ -701,13 +860,16 @@ DisplayModel buildDisplayModel(
 
   final curPoints = <TrackPoint>[];
   final curSpeeds = <double?>[];
+  final curUnc    = <double?>[];
 
   void flushMoving() {
     if (curPoints.isNotEmpty) {
       segments.add(TrackSegment(
-          SegmentKind.moving, List.of(curPoints), List.of(curSpeeds)));
+          SegmentKind.moving, List.of(curPoints), List.of(curSpeeds),
+          uncertaintyM: List.of(curUnc)));
       curPoints.clear();
       curSpeeds.clear();
+      curUnc.clear();
     }
   }
 
@@ -815,14 +977,17 @@ DisplayModel buildDisplayModel(
     // Normal moving fix
     curPoints.add(f.pt);
     curSpeeds.add(f.instSpeedKn > 0 ? f.instSpeedKn : null);
+    curUnc.add(uncByTime[f.pt.time] ?? baseAccuracyM);
     ri++;
   }
 
   flushMoving();
 
   return DisplayModel(
-    segments:    segments,
-    stops:       stopMarkers,
-    hasTeleport: hasTeleport,
+    segments:        segments,
+    stops:           stopMarkers,
+    hasTeleport:     hasTeleport,
+    baseAccuracyM:   baseAccuracyM,
+    rawMovingPoints: rawMovingPoints,
   );
 }
