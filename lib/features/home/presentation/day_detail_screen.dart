@@ -2460,11 +2460,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _addTimelineEntry(BuildContext context) async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
-    final prefill = repo.getEntry(day)?.timeline.lastOrNull;
     final newEntry = await showDialog<TimelineEntry>(
       context: context,
-      builder: (_) =>
-          AddTimelineEntryDialog(day: day, prefillEntry: prefill),
+      builder: (_) => AddTimelineEntryDialog(day: day),
     );
     if (!mounted || newEntry == null) return;
     repo.addTimelineEntry(day, newEntry);
@@ -2478,24 +2476,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       repo.syncKeelFromTimeline(entry);
       repo.saveEntry(entry);
     });
-    ScaffoldMessenger.of(context)
-      ..clearSnackBars()
-      ..showSnackBar(SnackBar(
-        content: const Text('Logeintrag gelöscht'),
-        action: SnackBarAction(
-          label: 'Rückgängig',
-          onPressed: () {
-            if (!mounted) return;
-            setState(() {
-              entry.timeline.insert(index.clamp(0, entry.timeline.length), t);
-              entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-              final repo = context.read<HomeRepository>();
-              repo.syncKeelFromTimeline(entry);
-              repo.saveEntry(entry);
-            });
-          },
-        ),
-      ));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: const Text('Logeintrag gelöscht'),
+      action: SnackBarAction(
+        label: 'Rückgängig',
+        onPressed: () {
+          if (!mounted) return;
+          setState(() {
+            entry.timeline.insert(index.clamp(0, entry.timeline.length), t);
+            entry.timeline.sort((a, b) => a.time.compareTo(b.time));
+            final repo = context.read<HomeRepository>();
+            repo.syncKeelFromTimeline(entry);
+            repo.saveEntry(entry);
+          });
+        },
+      ),
+    ));
   }
 
   void _editTimelineEntry(DayEntry entry, TimelineEntry t) async {
