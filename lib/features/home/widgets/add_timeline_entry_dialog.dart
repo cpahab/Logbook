@@ -3,16 +3,25 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../domain/timeline_entry.dart';
 
+class _CourseFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue;
+    final v = int.tryParse(newValue.text);
+    if (v == null || v > 359) return oldValue;
+    return newValue;
+  }
+}
+
 class AddTimelineEntryDialog extends StatefulWidget {
   final DateTime day;
   final TimelineEntry? initialEntry;
-  final TimelineEntry? prefillEntry;
 
   const AddTimelineEntryDialog({
     super.key,
     required this.day,
     this.initialEntry,
-    this.prefillEntry,
   });
 
   @override
@@ -40,27 +49,21 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   @override
   void initState() {
     super.initState();
-    final src = widget.initialEntry ?? widget.prefillEntry;
-
     if (widget.initialEntry != null) {
       final e = widget.initialEntry!;
-      selectedTime = TimeOfDay.fromDateTime(e.time);
+      selectedTime     = TimeOfDay.fromDateTime(e.time);
       courseCtrl.text  = e.course?.toString() ?? '';
       speedCtrl.text   = e.speed?.toString() ?? '';
       _parseWind(e.wind);
       seaCtrl.text     = e.sea ?? '';
       weatherCtrl.text = e.weather ?? '';
       remarksCtrl.text = e.remarks ?? '';
+      _grossState = e.grossState;
+      _fockState  = e.fockState;
+      _motorOn    = e.motorOn;
+      _keelDown   = e.keelDown;
     } else {
       selectedTime = TimeOfDay.now();
-    }
-
-    if (src != null) {
-      _grossState = src.grossState;
-      _fockState  = src.fockState;
-      _motorOn    = src.motorOn;
-      _keelDown   = src.keelDown;
-      if (widget.initialEntry == null) _parseWind(src.wind);
     }
   }
 
@@ -216,6 +219,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(
                                 RegExp(r'[0-9]')),
+                            _CourseFormatter(),
                           ],
                           cs: cs,
                         ),
