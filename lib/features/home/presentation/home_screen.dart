@@ -10,6 +10,7 @@ import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
+import '../../../core/services/gps_consent_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,6 +25,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _dayKeys = {};
   DateTime? _pendingScrollDate;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) GpsConsentService.requestIfNeeded(context);
+    });
+  }
 
   @override
   void dispose() {
