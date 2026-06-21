@@ -22,6 +22,7 @@ import '../domain/track_point.dart';
 import '../domain/crew_member.dart';
 import '../widgets/add_timeline_entry_dialog.dart';
 import '../widgets/add_crew_member_dialog.dart';
+import '../widgets/crew_picker_sheet.dart';
 import '../widgets/keel_icon.dart';
 import '../widgets/nav_bar.dart';
 import '../utils/compute_daily_stats.dart';
@@ -61,6 +62,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   Timer? _markerDismissTimer;
   bool _editingRoute = false;
   final Set<String> _deletingPhotos = {};
+  bool _importingPhotos = false;
   final _fromHarborCtrl = TextEditingController();
   final _toHarborCtrl = TextEditingController();
   @override
@@ -419,30 +421,59 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 ),
               ],
             ),
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: crew.asMap().entries.map((e) {
-                final isFirst = e.key == 0;
-                final isLast = e.key == crew.length - 1;
-                final member = e.value;
+            child: ReorderableListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false,
+              padding: const EdgeInsets.all(12),
+              onReorderItem: (oldIndex, newIndex) =>
+                  _reorderCrew(entry, oldIndex, newIndex),
+              proxyDecorator: (child, index, animation) => Material(
+                elevation: 4,
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(8),
+                child: child,
+              ),
+              itemCount: crew.length,
+              itemBuilder: (context, i) {
+                final isFirst = i == 0;
+                final isLast = i == crew.length - 1;
+                final member = crew[i];
                 return Column(
+                  key: ValueKey(member.name),
                   children: [
-                    GestureDetector(
-                      onTap: () => _editCrewMember(entry, e.key),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: cs.surfaceContainerHigh,
-                            ),
-                            child: Icon(Icons.person,
-                                color: cs.primary, size: 22),
+                    Row(
+                      children: [
+                        ReorderableDragStartListener(
+                          index: i,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: Icon(Icons.drag_handle,
+                                size: 20,
+                                color: cs.outline.withValues(alpha: 0.4)),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
+                        ),
+                        GestureDetector(
+                          onTap: () => _editCrewMember(entry, i),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: cs.surfaceContainerHigh,
+                                ),
+                                child: Icon(Icons.person,
+                                    color: cs.primary, size: 22),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => _editCrewMember(entry, i),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -462,7 +493,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                         fontSize: 9,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: 0.5,
-                                        color: cs.outline,
+                                        color: isFirst
+                                            ? cs.primary
+                                            : cs.outline,
                                       ),
                                     ),
                                     if (member.bloodType != null) ...[
@@ -491,10 +524,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                               ],
                             ),
                           ),
-                          Icon(Icons.chevron_right,
+                        ),
+                        GestureDetector(
+                          onTap: () => _editCrewMember(entry, i),
+                          child: Icon(Icons.chevron_right,
                               size: 18, color: cs.outlineVariant),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                     if (!isLast)
                       Divider(
@@ -503,7 +539,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       ),
                   ],
                 );
-              }).toList(),
+              },
             ),
           )
         else
@@ -1054,7 +1090,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  // ── Photo strip ───────────────────────────────────────────────────
+  // ── Photo gallery ─────────────────────────────────────────────────
   Widget _buildPhotoStrip(DayEntry entry, ColorScheme cs) {
     final hasPhotos = entry.photos.isNotEmpty || _deletingPhotos.isNotEmpty;
     final allPaths = [
@@ -1078,31 +1114,52 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
             if (hasPhotos) ...[
               const Spacer(),
-              GestureDetector(
-                onTap: () => _addPhotos(entry),
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: cs.surfaceContainer,
+              if (_importingPhotos)
+                SizedBox(
+                  width: 28, height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: cs.secondary),
+                )
+              else
+                GestureDetector(
+                  onTap: () => _addPhotos(entry),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: cs.surfaceContainer,
+                    ),
+                    child: Icon(Icons.add_a_photo_outlined, size: 20, color: cs.secondary),
                   ),
-                  child: Icon(Icons.add_a_photo_outlined, size: 20, color: cs.secondary),
                 ),
-              ),
             ],
           ],
         ),
         const SizedBox(height: 10),
         if (hasPhotos)
-          SizedBox(
-            height: 96,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
+          _buildPhotoGallery(allPaths, entry, cs)
+        else if (_importingPhotos)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            decoration: BoxDecoration(
+              border: Border.all(color: cs.outlineVariant, width: 1.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
               children: [
-                for (final path in allPaths) ...[
-                  _photoThumbnail(entry, path, cs),
-                  const SizedBox(width: 8),
-                ],
+                SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: cs.secondary),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Fotos werden importiert…',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           )
@@ -1118,15 +1175,48 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  Widget _photoThumbnail(DayEntry entry, String storagePath, ColorScheme cs) {
-    final isDeleting = _deletingPhotos.contains(storagePath);
+  Widget _buildPhotoGallery(List<String> paths, DayEntry entry, ColorScheme cs) {
+    const h = 200.0;
 
-    if (isDeleting) {
+    // Single photo: full width, contain so the whole image is visible
+    if (paths.length == 1) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 220,
+          width: double.infinity,
+          color: cs.surfaceContainerHighest,
+          child: _photoCell(entry, paths[0], cs, h: 220, single: true),
+        ),
+      );
+    }
+
+    // Multiple: horizontal scroll, each tile naturally wide for its aspect ratio
+    return SizedBox(
+      height: h,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.zero,
+        itemCount: paths.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => _photoCell(entry, paths[i], cs, h: h),
+      ),
+    );
+  }
+
+  Widget _photoCell(
+    DayEntry entry,
+    String storagePath,
+    ColorScheme cs, {
+    required double h,
+    bool single = false,
+  }) {
+    if (_deletingPhotos.contains(storagePath)) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(single ? 0 : 10),
         child: SizedBox(
-          width: 88,
-          height: 88,
+          width: single ? double.infinity : 120,
+          height: h,
           child: Container(
             color: cs.surfaceContainerHighest,
             child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
@@ -1138,46 +1228,63 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return FutureBuilder<File?>(
       future: PhotoService.localFile(storagePath),
       builder: (context, snap) {
+        final file = snap.data;
+        final done = snap.connectionState == ConnectionState.done;
+
+        Widget image;
+        if (!done) {
+          image = SizedBox(
+            width: single ? double.infinity : 120,
+            height: h,
+            child: Container(
+              color: cs.surfaceContainerHighest,
+              child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            ),
+          );
+        } else if (file == null) {
+          image = SizedBox(
+            width: single ? double.infinity : 120,
+            height: h,
+            child: Container(
+              color: cs.errorContainer,
+              child: Icon(Icons.broken_image_outlined, color: cs.onErrorContainer),
+            ),
+          );
+        } else if (single) {
+          // Full-width: contain so complete photo is visible
+          image = GestureDetector(
+            onTap: () => _viewPhoto(file),
+            child: SizedBox.expand(
+              child: Image.file(file, fit: BoxFit.contain),
+            ),
+          );
+        } else {
+          // Strip tile: scale to height, natural width — no cropping
+          image = GestureDetector(
+            onTap: () => _viewPhoto(file),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.file(file, height: h, fit: BoxFit.fitHeight),
+            ),
+          );
+        }
+
         return Stack(
           children: [
-            GestureDetector(
-              onTap: () { if (snap.data != null) _viewPhoto(snap.data!); },
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: SizedBox(
-                  width: 88,
-                  height: 88,
-                  child: switch (snap.connectionState) {
-                    ConnectionState.done when snap.data != null =>
-                      Image.file(snap.data!, fit: BoxFit.cover),
-                    ConnectionState.done =>
-                      Container(
-                        color: cs.errorContainer,
-                        child: Icon(Icons.broken_image_outlined,
-                            color: cs.onErrorContainer),
-                      ),
-                    _ => Container(
-                        color: cs.surfaceContainerHighest,
-                        child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2)),
-                      ),
-                  },
-                ),
-              ),
-            ),
+            image,
             Positioned(
-              top: 3,
-              right: 3,
+              top: 8,
+              right: 8,
               child: GestureDetector(
                 onTap: () => _deletePhoto(entry, storagePath),
                 child: Container(
-                  width: 22,
-                  height: 22,
+                  width: 26,
+                  height: 26,
                   decoration: BoxDecoration(
                     color: cs.errorContainer.withValues(alpha: 0.92),
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(13),
                   ),
-                  child: Icon(Icons.close, size: 14, color: cs.onErrorContainer),
+                  child: Icon(Icons.close, size: 15, color: cs.onErrorContainer),
                 ),
               ),
             ),
@@ -1188,11 +1295,21 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   void _addPhotos(DayEntry entry) async {
+    if (_importingPhotos) return;
+    setState(() => _importingPhotos = true);
     final day = DateTime(widget.year, widget.month, widget.day);
-    final paths = await PhotoService.pickAndUpload(day);
-    if (!mounted || paths.isEmpty) return;
-    entry.photos.addAll(paths);
-    context.read<HomeRepository>().saveEntry(entry);
+    try {
+      final paths = await PhotoService.pickAndUpload(day);
+      if (!mounted || paths.isEmpty) return;
+      // Re-fetch: a Firestore sync may have replaced the entry object in the
+      // Hive box during the await, making the original reference invalid.
+      final repo = context.read<HomeRepository>();
+      final fresh = repo.getEntry(day) ?? entry;
+      fresh.photos.addAll(paths);
+      repo.saveEntry(fresh);
+    } finally {
+      if (mounted) setState(() => _importingPhotos = false);
+    }
   }
 
   void _deletePhoto(DayEntry entry, String storagePath) async {
@@ -1220,8 +1337,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
     if (confirmed != true || !mounted) return;
     setState(() => _deletingPhotos.add(storagePath));
-    entry.photos.remove(storagePath);
-    context.read<HomeRepository>().saveEntry(entry);
+    // Re-fetch: a Firestore sync or a prior concurrent delete may have replaced
+    // the entry object in the Hive box while the dialog was open.
+    final repo = context.read<HomeRepository>();
+    final day = DateTime(widget.year, widget.month, widget.day);
+    final fresh = repo.getEntry(day) ?? entry;
+    fresh.photos.remove(storagePath);
+    repo.saveEntry(fresh);
     await PhotoService.delete(storagePath);
     if (mounted) setState(() => _deletingPhotos.remove(storagePath));
   }
@@ -1915,7 +2037,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               TextButton(
                   onPressed: () => Navigator.pop(context, false),
                   child: const Text('Abbrechen')),
-              TextButton(
+              FilledButton(
                   onPressed: () => Navigator.pop(context, true),
                   child: const Text('Trotzdem verschieben')),
             ],
@@ -2070,19 +2192,41 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Crew helpers ──────────────────────────────────────────────────
   void _addCrewMember(DayEntry entry) async {
-    final member = await showDialog<CrewMember>(
-      context: context,
-      builder: (_) => const AddCrewMemberDialog(),
-    );
+    final repo = context.read<HomeRepository>();
+    final day = DateTime(widget.year, widget.month, widget.day);
+    final alreadyAdded = entry.crew.map((m) => m.name).toSet();
+
+    CrewMember? member;
+    final availableRoster =
+        repo.roster.where((m) => !alreadyAdded.contains(m.name)).toList();
+
+    if (availableRoster.isEmpty) {
+      // Roster empty or everyone already added — open form directly.
+      member = await showDialog<CrewMember>(
+        context: context,
+        builder: (_) => const AddCrewMemberDialog(),
+      );
+      if (member != null) repo.saveRosterMember(member);
+    } else {
+      member = await showModalBottomSheet<CrewMember>(
+        context: context,
+        isScrollControlled: true,
+        useRootNavigator: true,
+        builder: (_) => CrewPickerSheet(repo: repo, excludeNames: alreadyAdded),
+      );
+    }
+
     if (!mounted || member == null) return;
-    setState(() {
-      entry.crew.add(member);
-      context.read<HomeRepository>().saveEntry(entry);
-    });
+    // Re-fetch: Firestore sync may have replaced the entry during the await.
+    final fresh = repo.getEntry(day) ?? entry;
+    fresh.crew.add(member);
+    repo.saveEntry(fresh);
   }
 
   void _editCrewMember(DayEntry entry, int index) async {
     final member = entry.crew[index];
+    final repo = context.read<HomeRepository>();
+    final day = DateTime(widget.year, widget.month, widget.day);
     final updated = await showDialog<CrewMember>(
       context: context,
       builder: (_) => AddCrewMemberDialog(
@@ -2091,18 +2235,26 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ),
     );
     if (!mounted || updated == null) return;
-    setState(() {
-      final i = entry.crew.indexOf(member);
-      if (i != -1) entry.crew[i] = updated;
-      context.read<HomeRepository>().saveEntry(entry);
-    });
+    // Re-fetch: Firestore sync may have replaced the entry during the await.
+    final fresh = repo.getEntry(day) ?? entry;
+    final i = fresh.crew.indexWhere((m) => m.name == member.name);
+    if (i != -1) fresh.crew[i] = updated;
+    repo.saveEntry(fresh);
   }
 
   void _removeCrewMember(DayEntry entry, CrewMember member) {
-    setState(() {
-      entry.crew.remove(member);
-      context.read<HomeRepository>().saveEntry(entry);
-    });
+    entry.crew.remove(member);
+    context.read<HomeRepository>().saveEntry(entry);
+  }
+
+  void _reorderCrew(DayEntry entry, int oldIndex, int newIndex) {
+    final repo = context.read<HomeRepository>();
+    final day = DateTime(widget.year, widget.month, widget.day);
+    final fresh = repo.getEntry(day) ?? entry;
+    // onReorderItem already provides the correct final index — no adjustment needed.
+    final member = fresh.crew.removeAt(oldIndex);
+    fresh.crew.insert(newIndex, member);
+    repo.saveEntry(fresh);
   }
 
   // ── Timeline mutations ────────────────────────────────────────────
@@ -2227,7 +2379,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text('Abbrechen')),
-            TextButton(
+            FilledButton(
                 onPressed: () => Navigator.pop(context, true),
                 child: const Text('Trotzdem importieren')),
           ],
@@ -2312,7 +2464,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           TextButton(
               onPressed: () => Navigator.pop(context, false),
               child: const Text('Abbrechen')),
-          TextButton(
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError),
               onPressed: () => Navigator.pop(context, true),
               child: const Text('Löschen')),
         ],
@@ -2345,9 +2500,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
                 child: const Text('Abbrechen')),
-            TextButton(
+            FilledButton(
+                style: FilledButton.styleFrom(
+                    backgroundColor: cs.error,
+                    foregroundColor: cs.onError),
                 onPressed: () => Navigator.pop(ctx, true),
-                child: Text('Löschen', style: TextStyle(color: cs.error))),
+                child: const Text('Löschen')),
           ],
         );
       },

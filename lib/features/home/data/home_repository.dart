@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:gpx/gpx.dart';
 import 'package:hive/hive.dart';
@@ -18,6 +19,7 @@ class HomeRepository extends ChangeNotifier {
   // ── Hive boxes ─────────────────────────────────────────────────────────────
   late Box<DayEntry> _dayBox;
   late Box<DailyTrack> _trackBox;
+  late Box<CrewMember> _rosterBox;
 
   /// Stores two kinds of integers keyed by string:
   ///   'last_sync_at'           → epoch-ms of the last successful Firestore pull
@@ -35,8 +37,9 @@ class HomeRepository extends ChangeNotifier {
   // ── Debounce timers (keyed by entry date) ──────────────────────────────────
   final Map<DateTime, Timer> _syncTimers = {};
 
-  // ── Real-time Firestore stream subscription ────────────────────────────────
+  // ── Real-time Firestore stream subscriptions ───────────────────────────────
   StreamSubscription<void>? _entrySub;
+  StreamSubscription<void>? _rosterSub;
 
   // ── Public getters ─────────────────────────────────────────────────────────
 
@@ -61,6 +64,12 @@ class HomeRepository extends ChangeNotifier {
       if (oil != null && fuel != null && keel != null) break;
     }
     return (oilLevel: oil, fuelLevel: fuel, keelDown: keel);
+  }
+
+  List<CrewMember> get roster {
+    final members = _rosterBox.values.toList();
+    members.sort((a, b) => a.name.compareTo(b.name));
+    return members;
   }
 
   List<CrewMember> get lastCrew {
@@ -112,8 +121,9 @@ class HomeRepository extends ChangeNotifier {
   // ── Initialization ─────────────────────────────────────────────────────────
 
   Future<void> init() async {
-    _dayBox   = await Hive.openBox<DayEntry>('daily_entries');
-    _trackBox = await Hive.openBox<DailyTrack>('daily_tracks');
+    _dayBox       = await Hive.openBox<DayEntry>('daily_entries');
+    _trackBox     = await Hive.openBox<DailyTrack>('daily_tracks');
+    _rosterBox    = await Hive.openBox<CrewMember>('crew_roster');
     _syncStateBox = await Hive.openBox<int>('entry_sync_state');
 
     for (final e in _dayBox.values) { _entries[e.date] = e; }
@@ -194,6 +204,20 @@ class HomeRepository extends ChangeNotifier {
     _entrySub = service
         .entryChanges()
         .asyncMap(_applyRemoteEntries)
+        .listen((_) {}, onError: (_) {});
+
+    // ── Step 4: roster sync ───────────────────────────────────────────────────
+    try {
+      final remote = await service.fetchRoster();
+      if (remote.isNotEmpty) {
+        await _applyRemoteRoster(remote);
+      }
+    } catch (_) {}
+
+    await _rosterSub?.cancel();
+    _rosterSub = service
+        .rosterChanges()
+        .asyncMap(_applyRemoteRoster)
         .listen((_) {}, onError: (_) {});
   }
 
@@ -494,6 +518,8 @@ class HomeRepository extends ChangeNotifier {
       FirestoreService firestoreService, StorageService storageService) async {
     await _entrySub?.cancel();
     _entrySub = null;
+    await _rosterSub?.cancel();
+    _rosterSub = null;
 
     for (final t in _syncTimers.values) { t.cancel(); }
     _syncTimers.clear();
@@ -501,6 +527,7 @@ class HomeRepository extends ChangeNotifier {
     await _dayBox.clear();
     await _trackBox.clear();
     await _syncStateBox.clear();
+    await _rosterBox.clear();
     _entries.clear();
     dailyTracks.clear();
 
@@ -529,11 +556,55 @@ class HomeRepository extends ChangeNotifier {
 
     notifyListeners();
 
-    // Re-subscribe to the new logbook's entry stream.
+    // Re-subscribe to the new logbook's streams.
     _entrySub = firestoreService
         .entryChanges()
         .asyncMap(_applyRemoteEntries)
         .listen((_) {}, onError: (_) {});
+
+    try {
+      final remoteRoster = await firestoreService.fetchRoster();
+      if (remoteRoster.isNotEmpty) await _applyRemoteRoster(remoteRoster);
+    } catch (_) {}
+
+    _rosterSub = firestoreService
+        .rosterChanges()
+        .asyncMap(_applyRemoteRoster)
+        .listen((_) {}, onError: (_) {});
+  }
+
+  // ── Crew roster CRUD ───────────────────────────────────────────────────────
+
+  void saveRosterMember(CrewMember m) {
+    m.id ??= _newId();
+    _rosterBox.put(m.id!, m);
+    _syncRosterToFirestore();
+    notifyListeners();
+  }
+
+  void deleteRosterMember(String id) {
+    _rosterBox.delete(id);
+    _syncRosterToFirestore();
+    notifyListeners();
+  }
+
+  Future<void> _applyRemoteRoster(List<CrewMember> members) async {
+    await _rosterBox.clear();
+    for (final m in members) {
+      if (m.id != null) await _rosterBox.put(m.id!, m);
+    }
+    notifyListeners();
+  }
+
+  void _syncRosterToFirestore() {
+    _firestore?.saveRoster(_rosterBox.values.toList()).catchError((_) {});
+  }
+
+  static String _newId() {
+    final r = Random.secure();
+    return List.generate(16, (_) => r.nextInt(256))
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join();
   }
 
   // ── Private Firestore helpers ──────────────────────────────────────────────
@@ -553,6 +624,7 @@ class HomeRepository extends ChangeNotifier {
   @override
   void dispose() {
     _entrySub?.cancel();
+    _rosterSub?.cancel();
     for (final t in _syncTimers.values) { t.cancel(); }
     super.dispose();
   }

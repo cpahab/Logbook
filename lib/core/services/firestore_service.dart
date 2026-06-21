@@ -28,7 +28,7 @@ class FirestoreService {
   static void configure() {
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      cacheSizeBytes: 50 * 1024 * 1024, // 50 MB — enough for the full logbook
     );
   }
 
@@ -212,6 +212,30 @@ class FirestoreService {
     return (contacts: _contactsFromDoc(raw), updatedAt: _tsToDate(raw['updatedAt']));
   }
 
+  // ── Meta: crew roster ─────────────────────────────────────────────────────
+
+  Future<void> saveRoster(List<CrewMember> members) =>
+      _metaDoc('crew_roster').set({
+        'members': members.map(_rosterMemberToMap).toList(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+  Future<List<CrewMember>> fetchRoster() async {
+    final doc = await _metaDoc('crew_roster')
+        .get(const GetOptions(source: Source.server))
+        .timeout(const Duration(seconds: 10));
+    if (!doc.exists) return [];
+    final data = doc.data();
+    return data == null ? [] : _rosterFromDoc(data);
+  }
+
+  Stream<List<CrewMember>> rosterChanges() =>
+      _metaDoc('crew_roster').snapshots().map((doc) {
+        if (!doc.exists) return <CrewMember>[];
+        final data = doc.data();
+        return data == null ? <CrewMember>[] : _rosterFromDoc(data);
+      });
+
   // ── Serialization ──────────────────────────────────────────────────────────
 
   static String _dateKey(DateTime d) =>
@@ -336,6 +360,33 @@ class FirestoreService {
         allergies: d['allergies'] as String?,
         conditions: d['conditions'] as String?,
         remarks: d['remarks'] as String?,
+      );
+
+  // ── Roster serialization ───────────────────────────────────────────────────
+
+  static Map<String, dynamic> _rosterMemberToMap(CrewMember m) => {
+        'id': m.id,
+        'name': m.name,
+        'bloodType': m.bloodType,
+        'allergies': m.allergies,
+        'conditions': m.conditions,
+        'remarks': m.remarks,
+      };
+
+  static List<CrewMember> _rosterFromDoc(Map<String, dynamic> data) {
+    final list = data['members'] as List? ?? [];
+    return list
+        .map((e) => _rosterMemberFromMap(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  static CrewMember _rosterMemberFromMap(Map<String, dynamic> d) => CrewMember(
+        name: d['name'] as String? ?? '',
+        bloodType: d['bloodType'] as String?,
+        allergies: d['allergies'] as String?,
+        conditions: d['conditions'] as String?,
+        remarks: d['remarks'] as String?,
+        id: d['id'] as String?,
       );
 
   // ── Private helpers ────────────────────────────────────────────────────────
