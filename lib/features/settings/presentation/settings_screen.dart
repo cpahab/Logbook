@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../home/data/home_repository.dart';
+import '../../home/screens/crew_roster_screen.dart';
 import '../../home/utils/filter_settings.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../domain/theme_provider.dart';
@@ -187,6 +188,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // ── Track Filter ──────────────────────────────────────────
             _buildTrackFilterSection(p, cs),
+            const SizedBox(height: 16),
+
+            // ── Crew Roster ───────────────────────────────────────────
+            _buildCrewRosterSection(cs),
             const SizedBox(height: 16),
 
             // ── Synchronization ───────────────────────────────────────
@@ -878,6 +883,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               color: isActive ? cs.primary : cs.onSurfaceVariant,
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Crew Roster ──────────────────────────────────────────────────────
+  Widget _buildCrewRosterSection(ColorScheme cs) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CrewRosterScreen()),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0, top: 0, bottom: 0,
+                child: Container(width: 4, color: cs.tertiaryContainer),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+                child: Row(
+                  children: [
+                    Icon(Icons.people_outline, size: 20, color: cs.tertiary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'BESATZUNGSLISTE',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.5,
+                              color: cs.secondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Consumer<HomeRepository>(
+                            builder: (_, repo, _) {
+                              final count = repo.roster.length;
+                              return Text(
+                                count == 0
+                                    ? 'Noch keine Einträge'
+                                    : '$count ${count == 1 ? 'Person' : 'Personen'}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, color: cs.outlineVariant),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

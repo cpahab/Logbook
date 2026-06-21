@@ -19,11 +19,15 @@ class CrewMember extends HiveObject {
   @HiveField(4)
   String? remarks;
 
+  @HiveField(5)
+  String? id;
+
   CrewMember({
     required this.name,
     this.bloodType,
     this.allergies,
     this.conditions,
     this.remarks,
+    this.id,
   });
 }
