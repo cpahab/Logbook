@@ -402,6 +402,14 @@ class HomeRepository extends ChangeNotifier {
     final d = _entries[normalized];
     if (d == null) return;
 
+    // On the very first timeline entry, auto-snapshot the crew list.
+    if (d.timeline.isEmpty && d.crew.isNotEmpty) {
+      d.timeline.add(TimelineEntry(
+        time: entry.time,
+        vesselStatusNote: buildCrewNote(d.crew),
+      ));
+    }
+
     d.timeline.add(entry);
     d.timeline.sort((a, b) => a.time.compareTo(b.time));
     syncKeelFromTimeline(d);
@@ -605,6 +613,12 @@ class HomeRepository extends ChangeNotifier {
     return List.generate(16, (_) => r.nextInt(256))
         .map((b) => b.toRadixString(16).padLeft(2, '0'))
         .join();
+  }
+
+  static String buildCrewNote(List<CrewMember> crew) {
+    final parts = crew.asMap().entries.map((e) =>
+        e.key == 0 ? '${e.value.name} (Skipper)' : e.value.name).toList();
+    return 'Besatzung: ${parts.join(' · ')}';
   }
 
   // ── Private Firestore helpers ──────────────────────────────────────────────
