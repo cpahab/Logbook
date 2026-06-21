@@ -63,6 +63,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   bool _editingRoute = false;
   final Set<String> _deletingPhotos = {};
   bool _importingPhotos = false;
+  bool _crewEditing = false;
+  List<CrewMember>? _pendingCrew;
   final _fromHarborCtrl = TextEditingController();
   final _toHarborCtrl = TextEditingController();
   @override
@@ -375,10 +377,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Crew List ─────────────────────────────────────────────────────
   Widget _buildCrewList(DayEntry entry, ColorScheme cs) {
-    final crew = entry.crew;
+    final displayCrew =
+        _crewEditing ? (_pendingCrew ?? <CrewMember>[]) : entry.crew;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Header ──────────────────────────────────────────────────
         Row(
           children: [
             Text(
@@ -391,21 +396,49 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: () => _addCrewMember(entry),
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cs.surfaceContainer,
+            if (_crewEditing) ...[
+              GestureDetector(
+                onTap: _addPendingMember,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: cs.surfaceContainer,
+                  ),
+                  child: Icon(Icons.person_add, size: 20, color: cs.secondary),
                 ),
-                child: Icon(Icons.person_add, size: 20, color: cs.secondary),
               ),
-            ),
+            ] else ...[
+              GestureDetector(
+                onTap: entry.crew.isEmpty
+                    ? () => _addCrewMember(entry)
+                    : _enterCrewEditMode,
+                child: Row(
+                  children: [
+                    Icon(
+                      entry.crew.isEmpty ? Icons.person_add : Icons.edit,
+                      size: 16,
+                      color: cs.secondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      entry.crew.isEmpty ? 'HINZUFÜGEN' : 'ÄNDERN',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                        color: cs.secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         const SizedBox(height: 8),
-        if (crew.isNotEmpty)
+        // ── Crew body ────────────────────────────────────────────────
+        if (displayCrew.isNotEmpty)
           Container(
             width: double.infinity,
             decoration: BoxDecoration(
@@ -421,126 +454,78 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 ),
               ],
             ),
-            child: ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              padding: const EdgeInsets.all(12),
-              onReorderItem: (oldIndex, newIndex) =>
-                  _reorderCrew(entry, oldIndex, newIndex),
-              proxyDecorator: (child, index, animation) => Material(
-                elevation: 4,
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(8),
-                child: child,
-              ),
-              itemCount: crew.length,
-              itemBuilder: (context, i) {
-                final isFirst = i == 0;
-                final isLast = i == crew.length - 1;
-                final member = crew[i];
-                return Column(
-                  key: ValueKey(member.name),
-                  children: [
-                    Row(
-                      children: [
-                        ReorderableDragStartListener(
-                          index: i,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Icon(Icons.drag_handle,
-                                size: 20,
-                                color: cs.outline.withValues(alpha: 0.4)),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => _editCrewMember(entry, i),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: cs.surfaceContainerHigh,
-                                ),
-                                child: Icon(Icons.person,
-                                    color: cs.primary, size: 22),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _editCrewMember(entry, i),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  member.name,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: cs.onSurface,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    Text(
-                                      isFirst ? 'SKIPPER' : 'BESATZUNG',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.5,
-                                        color: isFirst
-                                            ? cs.primary
-                                            : cs.outline,
-                                      ),
-                                    ),
-                                    if (member.bloodType != null) ...[
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 6, vertical: 1),
-                                        decoration: BoxDecoration(
-                                          color: cs.errorContainer,
-                                          borderRadius:
-                                              BorderRadius.circular(999),
-                                        ),
-                                        child: Text(
-                                          member.bloodType!,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: 0.3,
-                                            color: cs.onErrorContainer,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => _editCrewMember(entry, i),
-                          child: Icon(Icons.chevron_right,
-                              size: 18, color: cs.outlineVariant),
-                        ),
-                      ],
+            child: _crewEditing
+                ? ReorderableListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    buildDefaultDragHandles: false,
+                    padding: const EdgeInsets.all(12),
+                    onReorderItem: _reorderPending,
+                    proxyDecorator: (child, index, animation) => Material(
+                      elevation: 4,
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(8),
+                      child: child,
                     ),
-                    if (!isLast)
-                      Divider(
-                        color: cs.outlineVariant.withValues(alpha: 0.3),
-                        height: 16,
-                      ),
-                  ],
-                );
-              },
-            ),
+                    itemCount: displayCrew.length,
+                    itemBuilder: (context, i) {
+                      final member = displayCrew[i];
+                      final isFirst = i == 0;
+                      final isLast = i == displayCrew.length - 1;
+                      return Column(
+                        key: ValueKey(member.name),
+                        children: [
+                          _buildCrewRow(
+                            member: member,
+                            isFirst: isFirst,
+                            cs: cs,
+                            editing: true,
+                            index: i,
+                            onTap: () => _editPendingMember(i),
+                          ),
+                          if (!isLast)
+                            Divider(
+                              color: cs.outlineVariant.withValues(alpha: 0.3),
+                              height: 16,
+                            ),
+                        ],
+                      );
+                    },
+                  )
+                : Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: displayCrew.asMap().entries.map((e) {
+                        final isFirst = e.key == 0;
+                        final isLast = e.key == displayCrew.length - 1;
+                        return Column(
+                          key: ValueKey(e.value.name),
+                          children: [
+                            _buildCrewRow(
+                              member: e.value,
+                              isFirst: isFirst,
+                              cs: cs,
+                              editing: false,
+                              index: e.key,
+                            ),
+                            if (!isLast)
+                              Divider(
+                                color:
+                                    cs.outlineVariant.withValues(alpha: 0.3),
+                                height: 16,
+                              ),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+          )
+        else if (_crewEditing)
+          _emptyStateButton(
+            Icons.groups,
+            'Besatzungsmitglied hinzufügen…',
+            _addPendingMember,
+            cs,
           )
         else
           _emptyStateButton(
@@ -549,7 +534,140 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             () => _addCrewMember(entry),
             cs,
           ),
+        // ── Edit mode commit / cancel ───────────────────────────────
+        if (_crewEditing) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _cancelCrewChanges,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: cs.secondary,
+                    side: BorderSide(
+                        color: cs.secondary.withValues(alpha: 0.3)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    textStyle: GoogleFonts.inter(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  child: const Text('Abbrechen'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => _commitCrewChanges(entry),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: cs.secondary,
+                    foregroundColor: cs.onSecondary,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    textStyle: GoogleFonts.inter(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  child: const Text('Übernehmen'),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildCrewRow({
+    required CrewMember member,
+    required bool isFirst,
+    required ColorScheme cs,
+    required bool editing,
+    required int index,
+    VoidCallback? onTap,
+  }) {
+    return Row(
+      children: [
+        if (editing) ...[
+          ReorderableDragStartListener(
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Icon(Icons.drag_handle,
+                  size: 20, color: cs.outline.withValues(alpha: 0.4)),
+            ),
+          ),
+        ],
+        GestureDetector(
+          onTap: onTap,
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: cs.surfaceContainerHigh,
+            ),
+            child: Icon(Icons.person, color: cs.primary, size: 22),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: GestureDetector(
+            onTap: onTap,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.name,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      isFirst ? 'SKIPPER' : 'BESATZUNG',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                        color: isFirst ? cs.primary : cs.outline,
+                      ),
+                    ),
+                    if (member.bloodType != null) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: cs.errorContainer,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          member.bloodType!,
+                          style: GoogleFonts.inter(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                            color: cs.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (editing && onTap != null)
+          GestureDetector(
+            onTap: onTap,
+            child: Icon(Icons.chevron_right, size: 18, color: cs.outlineVariant),
+          ),
       ],
     );
   }
@@ -952,9 +1070,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final timeStr =
         '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
 
-    final bool isStatusEntry = t.vesselStatusNote != null;
+    final bool isCrewEntry =
+        t.vesselStatusNote?.startsWith('Besatzung: ') == true;
+    final bool isStatusEntry = t.vesselStatusNote != null && !isCrewEntry;
     final String entryLabel;
-    if (isStatusEntry) {
+    if (isCrewEntry) {
+      entryLabel = 'BESATZUNG';
+    } else if (isStatusEntry) {
       entryLabel = 'SCHIFFSSTATUS';
     } else if (total == 1) {
       entryLabel = 'EINTRAG';
@@ -2191,6 +2313,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Crew helpers ──────────────────────────────────────────────────
+
+  // Direct add (locked mode, empty list — saves immediately).
   void _addCrewMember(DayEntry entry) async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
@@ -2201,7 +2325,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         repo.roster.where((m) => !alreadyAdded.contains(m.name)).toList();
 
     if (availableRoster.isEmpty) {
-      // Roster empty or everyone already added — open form directly.
       member = await showDialog<CrewMember>(
         context: context,
         builder: (_) => const AddCrewMemberDialog(),
@@ -2217,44 +2340,120 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     }
 
     if (!mounted || member == null) return;
-    // Re-fetch: Firestore sync may have replaced the entry during the await.
     final fresh = repo.getEntry(day) ?? entry;
     fresh.crew.add(member);
     repo.saveEntry(fresh);
   }
 
-  void _editCrewMember(DayEntry entry, int index) async {
-    final member = entry.crew[index];
+  // Activate edit mode (locked → editing, non-empty crew only).
+  void _enterCrewEditMode() {
+    final day = DateTime(widget.year, widget.month, widget.day);
+    final entry = context.read<HomeRepository>().getEntry(day);
+    if (entry == null) return;
+    setState(() {
+      _crewEditing = true;
+      _pendingCrew = entry.crew
+          .map((m) => CrewMember(
+                name: m.name,
+                bloodType: m.bloodType,
+                allergies: m.allergies,
+                conditions: m.conditions,
+                remarks: m.remarks,
+                id: m.id,
+              ))
+          .toList();
+    });
+  }
+
+  void _cancelCrewChanges() {
+    setState(() {
+      _crewEditing = false;
+      _pendingCrew = null;
+    });
+  }
+
+  void _commitCrewChanges(DayEntry entry) {
+    if (_pendingCrew == null) return;
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
+    final fresh = repo.getEntry(day) ?? entry;
+
+    final hadCrewLog = fresh.timeline
+        .any((t) => t.vesselStatusNote?.startsWith('Besatzung: ') == true);
+
+    fresh.crew = List<CrewMember>.from(_pendingCrew!);
+
+    if (hadCrewLog && fresh.crew.isNotEmpty) {
+      final now = DateTime.now();
+      final ts = DateTime(
+          widget.year, widget.month, widget.day, now.hour, now.minute);
+      final note = HomeRepository.buildCrewNote(fresh.crew);
+      fresh.timeline.add(TimelineEntry(time: ts, vesselStatusNote: note));
+      fresh.timeline.sort((a, b) => a.time.compareTo(b.time));
+    }
+
+    repo.saveEntry(fresh);
+    setState(() {
+      _crewEditing = false;
+      _pendingCrew = null;
+    });
+  }
+
+  // Pending-crew add (edit mode — buffers to _pendingCrew).
+  void _addPendingMember() async {
+    if (_pendingCrew == null) return;
+    final repo = context.read<HomeRepository>();
+    final alreadyAdded = _pendingCrew!.map((m) => m.name).toSet();
+    final available =
+        repo.roster.where((m) => !alreadyAdded.contains(m.name)).toList();
+
+    CrewMember? member;
+    if (available.isEmpty) {
+      member = await showDialog<CrewMember>(
+        context: context,
+        builder: (_) => const AddCrewMemberDialog(),
+      );
+      if (member != null) repo.saveRosterMember(member);
+    } else {
+      member = await showModalBottomSheet<CrewMember>(
+        context: context,
+        isScrollControlled: true,
+        useRootNavigator: true,
+        builder: (_) => CrewPickerSheet(repo: repo, excludeNames: alreadyAdded),
+      );
+    }
+
+    if (!mounted || member == null) return;
+    setState(() => _pendingCrew!.add(member!));
+  }
+
+  void _editPendingMember(int index) async {
+    if (_pendingCrew == null || index >= _pendingCrew!.length) return;
+    final member = _pendingCrew![index];
     final updated = await showDialog<CrewMember>(
       context: context,
       builder: (_) => AddCrewMemberDialog(
         initialMember: member,
-        onDelete: () => _removeCrewMember(entry, member),
+        onDelete: () => _removePendingMember(member),
       ),
     );
     if (!mounted || updated == null) return;
-    // Re-fetch: Firestore sync may have replaced the entry during the await.
-    final fresh = repo.getEntry(day) ?? entry;
-    final i = fresh.crew.indexWhere((m) => m.name == member.name);
-    if (i != -1) fresh.crew[i] = updated;
-    repo.saveEntry(fresh);
+    setState(() {
+      final i = _pendingCrew!.indexWhere((m) => m.name == member.name);
+      if (i != -1) _pendingCrew![i] = updated;
+    });
   }
 
-  void _removeCrewMember(DayEntry entry, CrewMember member) {
-    entry.crew.remove(member);
-    context.read<HomeRepository>().saveEntry(entry);
+  void _removePendingMember(CrewMember member) {
+    setState(() => _pendingCrew?.remove(member));
   }
 
-  void _reorderCrew(DayEntry entry, int oldIndex, int newIndex) {
-    final repo = context.read<HomeRepository>();
-    final day = DateTime(widget.year, widget.month, widget.day);
-    final fresh = repo.getEntry(day) ?? entry;
-    // onReorderItem already provides the correct final index — no adjustment needed.
-    final member = fresh.crew.removeAt(oldIndex);
-    fresh.crew.insert(newIndex, member);
-    repo.saveEntry(fresh);
+  void _reorderPending(int oldIndex, int newIndex) {
+    setState(() {
+      if (_pendingCrew == null) return;
+      final m = _pendingCrew!.removeAt(oldIndex);
+      _pendingCrew!.insert(newIndex, m);
+    });
   }
 
   // ── Timeline mutations ────────────────────────────────────────────

@@ -306,6 +306,7 @@ class FirestoreService {
         'fockState': t.fockState,
         'motorOn': t.motorOn,
         'vesselStatusNote': t.vesselStatusNote,
+        'keelDown': t.keelDown,
       };
 
   static Map<String, dynamic> _crewToMap(CrewMember c) => {
@@ -352,6 +353,7 @@ class FirestoreService {
         fockState: d['fockState'] as String?,
         motorOn: d['motorOn'] as bool?,
         vesselStatusNote: d['vesselStatusNote'] as String?,
+        keelDown: d['keelDown'] as bool?,
       );
 
   static CrewMember _crewFromMap(Map<String, dynamic> d) => CrewMember(
