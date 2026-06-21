@@ -1,0 +1,241 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../data/home_repository.dart';
+import '../domain/crew_member.dart';
+import 'add_crew_member_dialog.dart';
+
+/// Bottom sheet for picking a crew member from the roster or creating a new one.
+///
+/// Returns the selected/created [CrewMember] via `Navigator.pop`, or null if
+/// the user cancels. New members are automatically saved to the roster.
+class CrewPickerSheet extends StatelessWidget {
+  final HomeRepository repo;
+  /// Names already present on today's entry — filtered out from the roster list.
+  final Set<String> excludeNames;
+
+  const CrewPickerSheet({
+    super.key,
+    required this.repo,
+    this.excludeNames = const {},
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: repo,
+      builder: (context, _) {
+        final cs = Theme.of(context).colorScheme;
+        final roster = repo.roster
+            .where((m) => !excludeNames.contains(m.name))
+            .toList();
+
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // drag handle
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.people_outline, size: 18, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Text(
+                      'BESATZUNG WÄHLEN',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (roster.isNotEmpty) ...[
+                const Divider(height: 1),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  ),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: roster.length,
+                    itemBuilder: (context, i) =>
+                        _RosterTile(member: roster[i], repo: repo),
+                  ),
+                ),
+              ],
+              const Divider(height: 1),
+              _NewPersonTile(repo: repo),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RosterTile extends StatelessWidget {
+  final CrewMember member;
+  final HomeRepository repo;
+
+  const _RosterTile({required this.member, required this.repo});
+
+  Future<void> _edit(BuildContext context) async {
+    final updated = await showDialog<CrewMember>(
+      context: context,
+      builder: (_) => AddCrewMemberDialog(initialMember: member),
+    );
+    if (!context.mounted || updated == null) return;
+    updated.id = member.id;
+    repo.saveRosterMember(updated);
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final cs = Theme.of(context).colorScheme;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Aus Besatzungsliste entfernen?'),
+        content: Text('${member.name} wird dauerhaft aus der Liste gelöscht.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Abbrechen')),
+          FilledButton(
+              style: FilledButton.styleFrom(
+                  backgroundColor: cs.error, foregroundColor: cs.onError),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Entfernen')),
+        ],
+      ),
+    );
+    if (!context.mounted || confirmed != true) return;
+    repo.deleteRosterMember(member.id!);
+  }
+
+  String _subtitle() {
+    final parts = <String>[];
+    if (member.bloodType != null) parts.add('Blutgruppe ${member.bloodType}');
+    if (member.allergies != null) parts.add(member.allergies!);
+    return parts.join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final sub = _subtitle();
+
+    return InkWell(
+      onTap: () => Navigator.pop(context, member),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: cs.primaryContainer,
+              child: Text(
+                member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                style: TextStyle(
+                    color: cs.onPrimaryContainer,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    member.name,
+                    style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface),
+                  ),
+                  if (sub.isNotEmpty)
+                    Text(
+                      sub,
+                      style: GoogleFonts.inter(
+                          fontSize: 12, color: cs.onSurfaceVariant),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.edit_outlined, size: 18, color: cs.outline),
+              onPressed: () => _edit(context),
+              tooltip: 'Bearbeiten',
+            ),
+            IconButton(
+              icon: Icon(Icons.delete_outline, size: 18, color: cs.error),
+              onPressed: () => _delete(context),
+              tooltip: 'Entfernen',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NewPersonTile extends StatelessWidget {
+  final HomeRepository repo;
+
+  const _NewPersonTile({required this.repo});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return InkWell(
+      onTap: () async {
+        final member = await showDialog<CrewMember>(
+          context: context,
+          builder: (_) => const AddCrewMemberDialog(),
+        );
+        if (!context.mounted || member == null) return;
+        repo.saveRosterMember(member);
+        if (context.mounted) Navigator.pop(context, member);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: cs.secondaryContainer,
+              child: Icon(Icons.person_add_outlined,
+                  size: 18, color: cs.onSecondaryContainer),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Neue Person…',
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: cs.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
