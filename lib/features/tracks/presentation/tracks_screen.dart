@@ -20,7 +20,7 @@ import '../../home/utils/trim_track.dart'
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 
-enum _FilterPreset { year1, months6, months3, custom }
+enum _FilterPreset { year1, month1, week1, custom }
 
 class TracksScreen extends StatefulWidget {
   const TracksScreen({super.key});
@@ -32,7 +32,7 @@ class TracksScreen extends StatefulWidget {
 class _TracksScreenState extends State<TracksScreen> {
   final MapController _mapController = MapController();
   int? _selectedIndex;
-  _FilterPreset _preset = _FilterPreset.months3;
+  _FilterPreset _preset = _FilterPreset.month1;
   DateTimeRange? _customRange;
   bool _satelliteView = false;
   @override
@@ -104,12 +104,12 @@ class _TracksScreenState extends State<TracksScreen> {
       case _FilterPreset.year1:
         return DateTimeRange(
             start: DateTime(now.year - 1, now.month, now.day), end: today);
-      case _FilterPreset.months6:
+      case _FilterPreset.month1:
         return DateTimeRange(
-            start: DateTime(now.year, now.month - 6, now.day), end: today);
-      case _FilterPreset.months3:
+            start: DateTime(now.year, now.month - 1, now.day), end: today);
+      case _FilterPreset.week1:
         return DateTimeRange(
-            start: DateTime(now.year, now.month - 3, now.day), end: today);
+            start: today.subtract(const Duration(days: 7)), end: today);
       case _FilterPreset.custom:
         return _customRange;
     }
@@ -173,13 +173,17 @@ class _TracksScreenState extends State<TracksScreen> {
     final now = DateTime.now();
     final initial = _effectiveRange ??
         DateTimeRange(
-            start: DateTime(now.year, now.month - 6, now.day), end: now);
+            start: DateTime(now.year, now.month - 1, now.day), end: now);
     final range = await showDateRangePicker(
       context: context,
       firstDate: DateTime(2000),
       lastDate: now,
       initialDateRange: initial,
       locale: const Locale('de', 'CH'),
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.0,
+        child: child!,
+      ),
     );
     if (range != null) _applyPreset(_FilterPreset.custom, custom: range);
   }
@@ -362,10 +366,10 @@ class _TracksScreenState extends State<TracksScreen> {
 
   // ── Filter strip ──────────────────────────────────────────────────
   Widget _buildFilterStrip(ColorScheme cs, List<_DayTrackData> displayed) {
-    final fmt = DateFormat('dd.MM.yy');
+    final fmt = DateFormat('d.M.yy');
     final customLabel =
         (_preset == _FilterPreset.custom && _customRange != null)
-            ? '${fmt.format(_customRange!.start)} – ${fmt.format(_customRange!.end)}'
+            ? '${fmt.format(_customRange!.start)}–${fmt.format(_customRange!.end)}'
             : 'EIGENE';
 
     return Container(
@@ -375,14 +379,13 @@ class _TracksScreenState extends State<TracksScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _chip('JAHR', _FilterPreset.year1, cs),
+            _chip('1 JAHR', _FilterPreset.year1, cs),
             const SizedBox(width: 8),
-            _chip('6 MON', _FilterPreset.months6, cs),
+            _chip('1 MONAT', _FilterPreset.month1, cs),
             const SizedBox(width: 8),
-            _chip('3 MON', _FilterPreset.months3, cs),
+            _chip('1 WOCHE', _FilterPreset.week1, cs),
             const SizedBox(width: 8),
-            _chip(customLabel, _FilterPreset.custom, cs,
-                isCustom: true),
+            _chip(customLabel, _FilterPreset.custom, cs, isCustom: true),
           ],
         ),
       ),
@@ -392,11 +395,12 @@ class _TracksScreenState extends State<TracksScreen> {
   Widget _chip(String label, _FilterPreset preset, ColorScheme cs,
       {bool isCustom = false}) {
     final isActive = _preset == preset;
+    final isDateRange = isCustom && _preset == preset && _customRange != null;
     return GestureDetector(
       onTap: () => isCustom ? _pickDateRange() : _applyPreset(preset),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isActive ? cs.primary : cs.surfaceContainer,
           borderRadius: BorderRadius.circular(999),
@@ -404,9 +408,9 @@ class _TracksScreenState extends State<TracksScreen> {
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 11,
+            fontSize: isDateRange ? 11 : 11,
             fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
+            letterSpacing: isDateRange ? 0.3 : 1.5,
             color: isActive ? cs.onPrimary : cs.outline,
           ),
         ),
@@ -623,7 +627,7 @@ class _TracksScreenState extends State<TracksScreen> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
           child: Row(
             children: [
-              Expanded(child: _statSummaryBox('${movingLegs.length}', 'Segeltage', Icons.route, cs, unit: 'Tage')),
+              Expanded(child: _statSummaryBox('${movingLegs.length}', 'Segeltage', Icons.sailing, cs, unit: 'Tage')),
               const SizedBox(width: 10),
               Expanded(
                 child: _statSummaryBox(
@@ -653,8 +657,15 @@ class _TracksScreenState extends State<TracksScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -674,7 +685,7 @@ class _TracksScreenState extends State<TracksScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                label,
+                label.toUpperCase(),
                 style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
