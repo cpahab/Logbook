@@ -397,22 +397,29 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
             const Spacer(),
             if (_crewEditing) ...[
-              GestureDetector(
-                onTap: _addPendingMember,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: cs.surfaceContainer,
+              Tooltip(
+                message: 'Besatzungsmitglied hinzufügen',
+                child: GestureDetector(
+                  onTap: _addPendingMember,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: cs.surfaceContainer,
+                    ),
+                    child: Icon(Icons.person_add, size: 20, color: cs.secondary),
                   ),
-                  child: Icon(Icons.person_add, size: 20, color: cs.secondary),
                 ),
               ),
             ] else ...[
-              GestureDetector(
-                onTap: entry.crew.isEmpty
-                    ? () => _addCrewMember(entry)
-                    : _enterCrewEditMode,
+              Tooltip(
+                message: entry.crew.isEmpty
+                    ? 'Besatzungsmitglied hinzufügen'
+                    : 'Besatzung bearbeiten',
+                child: GestureDetector(
+                  onTap: entry.crew.isEmpty
+                      ? () => _addCrewMember(entry)
+                      : _enterCrewEditMode,
                 child: Row(
                   children: [
                     Icon(
@@ -783,53 +790,59 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                 ],
                               ),
                             ),
-                            GestureDetector(
-                              onTap: () => _saveRoute(entry),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                child: Icon(
-                                  Icons.check_circle_outline,
-                                  size: 22,
-                                  color: cs.primary,
+                            Tooltip(
+                              message: 'Etappe speichern',
+                              child: GestureDetector(
+                                onTap: () => _saveRoute(entry),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.check_circle_outline,
+                                    size: 22,
+                                    color: cs.primary,
+                                  ),
                                 ),
                               ),
                             ),
                           ],
                         ),
                       )
-                    : InkWell(
-                        onTap: () => _startEditRoute(entry),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
-                              Icon(Icons.sailing,
-                                  size: 18, color: cs.secondary),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: routeLabel != null
-                                    ? Text(
-                                        routeLabel,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: cs.onSurface,
+                    : Tooltip(
+                        message: 'Etappe erfassen',
+                        child: InkWell(
+                          onTap: () => _startEditRoute(entry),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            child: Row(
+                              children: [
+                                Icon(Icons.sailing,
+                                    size: 18, color: cs.secondary),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: routeLabel != null
+                                      ? Text(
+                                          routeLabel,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: cs.onSurface,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        )
+                                      : Text(
+                                          'Etappe erfassen…',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15,
+                                            fontStyle: FontStyle.italic,
+                                            color: cs.onSurfaceVariant,
+                                          ),
                                         ),
-                                        overflow: TextOverflow.ellipsis,
-                                      )
-                                    : Text(
-                                        'Etappe erfassen…',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 15,
-                                          fontStyle: FontStyle.italic,
-                                          color: cs.onSurfaceVariant,
-                                        ),
-                                      ),
-                              ),
-                              Icon(Icons.edit,
-                                  size: 16, color: cs.secondary),
-                            ],
+                                ),
+                                Icon(Icons.edit,
+                                    size: 16, color: cs.secondary),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1139,16 +1152,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              GestureDetector(
-                onTap: () => _editTimelineEntry(entry, t),
-                child: Icon(Icons.edit_outlined,
-                    size: 16, color: cs.outline),
+              Tooltip(
+                message: 'Logeintrag bearbeiten',
+                child: GestureDetector(
+                  onTap: () => _editTimelineEntry(entry, t),
+                  child: Icon(Icons.edit_outlined,
+                      size: 16, color: cs.outline),
+                ),
               ),
               const SizedBox(width: 10),
-              GestureDetector(
-                onTap: () => _deleteTimelineEntry(entry, t),
-                child: Icon(Icons.close,
-                    size: 16, color: cs.outline),
+              Tooltip(
+                message: 'Logeintrag löschen',
+                child: GestureDetector(
+                  onTap: () => _deleteTimelineEntry(entry, t),
+                  child: Icon(Icons.close,
+                      size: 16, color: cs.outline),
+                ),
               ),
             ],
           ),
@@ -1242,15 +1261,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   child: CircularProgressIndicator(strokeWidth: 2, color: cs.secondary),
                 )
               else
-                GestureDetector(
-                  onTap: () => _addPhotos(entry),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: cs.surfaceContainer,
+                Tooltip(
+                  message: 'Fotos hinzufügen',
+                  child: GestureDetector(
+                    onTap: () => _addPhotos(entry),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: cs.surfaceContainer,
+                      ),
+                      child: Icon(Icons.add_a_photo_outlined, size: 20, color: cs.secondary),
                     ),
-                    child: Icon(Icons.add_a_photo_outlined, size: 20, color: cs.secondary),
                   ),
                 ),
             ],
@@ -1506,22 +1528,25 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: () => _editVesselStatus(entry),
-              child: Row(
-                children: [
-                  Icon(Icons.edit, size: 16, color: cs.secondary),
-                  const SizedBox(width: 4),
-                  Text(
-                    'AKTUALISIEREN',
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
-                      color: cs.secondary,
+            Tooltip(
+              message: 'Schiffsstatus aktualisieren',
+              child: GestureDetector(
+                onTap: () => _editVesselStatus(entry),
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 16, color: cs.secondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'AKTUALISIEREN',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                        color: cs.secondary,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

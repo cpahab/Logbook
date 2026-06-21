@@ -343,22 +343,25 @@ class _EditButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        children: [
-          Icon(Icons.edit, size: 14, color: cs.primary),
-          const SizedBox(width: 4),
-          Text(
-            'EDIT',
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1,
-              color: cs.primary,
+    return Tooltip(
+      message: 'Bearbeiten',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Row(
+          children: [
+            Icon(Icons.edit, size: 14, color: cs.primary),
+            const SizedBox(width: 4),
+            Text(
+              'EDIT',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
+                color: cs.primary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
