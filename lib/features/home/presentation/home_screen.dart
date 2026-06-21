@@ -485,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Expanded(
           child: _statCard(
-            icon: Icons.calendar_today,
+            icon: Icons.sailing,
             iconBg: cs.primaryContainer,
             iconColor: cs.onPrimaryContainer,
             label: 'Segeltage',
