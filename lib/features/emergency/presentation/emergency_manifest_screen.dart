@@ -31,6 +31,13 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
     });
   }
 
+  void _showVesselSafetyDialog(ThemeProvider vessel) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _EditVesselSafetyDialog(vessel: vessel),
+    );
+  }
+
   void _showAddFrequencyDialog() {
     final vessel = context.read<ThemeProvider>();
     final labels = [vessel.vhf1Label, vessel.vhf2Label, vessel.vhf3Label, vessel.vhf4Label];
@@ -150,7 +157,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
             children: [
               _SectionHeader(icon: Icons.directions_boat, label: 'VESSEL SAFETY INFO'),
               if (_editMode)
-                _EditButton(onTap: () => context.push('/settings')),
+                _EditButton(onTap: () => _showVesselSafetyDialog(vessel)),
             ],
           ),
           const SizedBox(height: 8),
@@ -171,7 +178,18 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           const SizedBox(height: 20),
 
           // ── Crew Medical Overview ───────────────────────────────────────────
-          _SectionHeader(icon: Icons.medical_services, label: 'CREW MEDICAL OVERVIEW'),
+          Row(
+            children: [
+              _SectionHeader(icon: Icons.medical_services, label: 'CREW MEDICAL OVERVIEW'),
+              const SizedBox(width: 6),
+              Tooltip(
+                message: 'Automatisch aus dem aktuellsten Logeintrag übernommen.\nBesatzungsdaten werden im Logbuch gepflegt.',
+                triggerMode: TooltipTriggerMode.tap,
+                showDuration: const Duration(seconds: 4),
+                child: Icon(Icons.info_outline, size: 14, color: cs.onSurfaceVariant),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           if (crew.isEmpty)
             _EmptyCrewHint()
@@ -748,13 +766,15 @@ class _VesselSafetyCard extends StatelessWidget {
                   title: 'Fire Suppression',
                   detail: vessel.fireSuppInfo,
                 ),
-              if (vessel.lifeRaftInfo.isEmpty &&
+              if (vessel.vesselMmsi.isEmpty &&
+                  vessel.vesselCallSign.isEmpty &&
+                  vessel.lifeRaftInfo.isEmpty &&
                   vessel.epirbInfo.isEmpty &&
                   vessel.fireSuppInfo.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'Tap Edit to add safety equipment details.',
+                    'Noch keine Sicherheitsdaten erfasst.',
                     style: GoogleFonts.inter(
                         fontSize: 13,
                         color: cs.onSurfaceVariant,
@@ -1294,6 +1314,110 @@ class _MedicalRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Edit Vessel Safety Dialog ────────────────────────────────────────────────
+
+class _EditVesselSafetyDialog extends StatefulWidget {
+  final ThemeProvider vessel;
+  const _EditVesselSafetyDialog({required this.vessel});
+
+  @override
+  State<_EditVesselSafetyDialog> createState() => _EditVesselSafetyDialogState();
+}
+
+class _EditVesselSafetyDialogState extends State<_EditVesselSafetyDialog> {
+  late final TextEditingController _mmsiCtrl;
+  late final TextEditingController _callSignCtrl;
+  late final TextEditingController _lifeRaftCtrl;
+  late final TextEditingController _epirbCtrl;
+  late final TextEditingController _fireSuppCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _mmsiCtrl      = TextEditingController(text: widget.vessel.vesselMmsi);
+    _callSignCtrl  = TextEditingController(text: widget.vessel.vesselCallSign);
+    _lifeRaftCtrl  = TextEditingController(text: widget.vessel.lifeRaftInfo);
+    _epirbCtrl     = TextEditingController(text: widget.vessel.epirbInfo);
+    _fireSuppCtrl  = TextEditingController(text: widget.vessel.fireSuppInfo);
+  }
+
+  @override
+  void dispose() {
+    _mmsiCtrl.dispose();
+    _callSignCtrl.dispose();
+    _lifeRaftCtrl.dispose();
+    _epirbCtrl.dispose();
+    _fireSuppCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AlertDialog(
+      title: Text(
+        'Schiffssicherheit',
+        style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _mmsiCtrl,
+              decoration: const InputDecoration(labelText: 'MMSI-Nummer'),
+              keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _callSignCtrl,
+              decoration: const InputDecoration(labelText: 'Rufzeichen'),
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _lifeRaftCtrl,
+              decoration: const InputDecoration(labelText: 'Rettungsinsel'),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _epirbCtrl,
+              decoration: const InputDecoration(labelText: 'EPIRB-Standort'),
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _fireSuppCtrl,
+              decoration: const InputDecoration(labelText: 'Feuerlöschanlage'),
+              textInputAction: TextInputAction.done,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Abbrechen', style: TextStyle(color: cs.onSurfaceVariant)),
+        ),
+        FilledButton(
+          onPressed: () {
+            widget.vessel.setVesselMmsi(_mmsiCtrl.text);
+            widget.vessel.setVesselCallSign(_callSignCtrl.text);
+            widget.vessel.setLifeRaftInfo(_lifeRaftCtrl.text);
+            widget.vessel.setEpirbInfo(_epirbCtrl.text);
+            widget.vessel.setFireSuppInfo(_fireSuppCtrl.text);
+            Navigator.pop(context);
+          },
+          child: const Text('Speichern'),
+        ),
+      ],
     );
   }
 }
