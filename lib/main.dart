@@ -23,6 +23,7 @@ import 'app.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('de_CH');
+  await initializeDateFormatting('en');
 
   await Hive.initFlutter();
 
