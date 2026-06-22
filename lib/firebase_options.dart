@@ -31,11 +31,9 @@ class DefaultFirebaseOptions {
     storageBucket: 'logbook-b19ed.firebasestorage.app',
     iosBundleId: 'com.ziegler.logbook',
   );
-  // Run `flutterfire configure --platforms=android` to register the Android app
-  // in Firebase Console and replace the appId below with the generated value.
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyB1sAEN7GS33LcsiOVUC5b3npgq6lxC--k',
-    appId: 'REPLACE_WITH_ANDROID_APP_ID',
+    apiKey: 'AIzaSyABHc8SlhoG9KcIq356CwJ3D2nLP-78kQk',
+    appId: '1:34296706111:android:885f3976d853be9eebf48a',
     messagingSenderId: '34296706111',
     projectId: 'logbook-b19ed',
     storageBucket: 'logbook-b19ed.firebasestorage.app',
