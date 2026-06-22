@@ -30,6 +30,8 @@
 	<string>NSApplication</string>
 	<key>NSDocumentsFolderUsageDescription</key>
 	<string>This app needs access to documents to import GPX files.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Your position is shown in the MAYDAY radio protocol so you can relay it to the Coast Guard.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your position is shown in the MAYDAY radio protocol so you can relay it to the Coast Guard.</string>
 	<key>NSCameraUsageDescription</key>

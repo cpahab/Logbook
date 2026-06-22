@@ -411,7 +411,7 @@ class _TracksScreenState extends State<TracksScreen> {
             fontSize: isDateRange ? 11 : 11,
             fontWeight: FontWeight.w700,
             letterSpacing: isDateRange ? 0.3 : 1.5,
-            color: isActive ? cs.onPrimary : cs.outline,
+            color: isActive ? cs.onPrimary : cs.onSurfaceVariant,
           ),
         ),
       ),

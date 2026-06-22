@@ -31,13 +31,6 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
     });
   }
 
-  void _showVesselSafetyDialog(ThemeProvider vessel) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => _EditVesselSafetyDialog(vessel: vessel),
-    );
-  }
-
   void _showAddFrequencyDialog() {
     final vessel = context.read<ThemeProvider>();
     final labels = [vessel.vhf1Label, vessel.vhf2Label, vessel.vhf3Label, vessel.vhf4Label];
@@ -152,16 +145,9 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           const SizedBox(height: 20),
 
           // ── Vessel Safety Info ──────────────────────────────────────────────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _SectionHeader(icon: Icons.directions_boat, label: 'VESSEL SAFETY INFO'),
-              if (_editMode)
-                _EditButton(onTap: () => _showVesselSafetyDialog(vessel)),
-            ],
-          ),
+          _SectionHeader(icon: Icons.directions_boat, label: 'VESSEL SAFETY INFO'),
           const SizedBox(height: 8),
-          _VesselSafetyCard(vessel: vessel),
+          _VesselSafetyCard(vessel: vessel, editMode: _editMode),
           const SizedBox(height: 20),
 
           // ── Coast Guard Frequencies ─────────────────────────────────────────
@@ -706,9 +692,53 @@ class _EditContactDialogState extends State<_EditContactDialog> {
 
 // ─── Vessel Safety Info Card ──────────────────────────────────────────────────
 
-class _VesselSafetyCard extends StatelessWidget {
+class _VesselSafetyCard extends StatefulWidget {
   final ThemeProvider vessel;
-  const _VesselSafetyCard({required this.vessel});
+  final bool editMode;
+  const _VesselSafetyCard({required this.vessel, required this.editMode});
+
+  @override
+  State<_VesselSafetyCard> createState() => _VesselSafetyCardState();
+}
+
+class _VesselSafetyCardState extends State<_VesselSafetyCard> {
+  late final TextEditingController _mmsiCtrl;
+  late final TextEditingController _callSignCtrl;
+  late final TextEditingController _lifeRaftCtrl;
+  late final TextEditingController _epirbCtrl;
+  late final TextEditingController _fireSuppCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _mmsiCtrl     = TextEditingController(text: widget.vessel.vesselMmsi);
+    _callSignCtrl = TextEditingController(text: widget.vessel.vesselCallSign);
+    _lifeRaftCtrl = TextEditingController(text: widget.vessel.lifeRaftInfo);
+    _epirbCtrl    = TextEditingController(text: widget.vessel.epirbInfo);
+    _fireSuppCtrl = TextEditingController(text: widget.vessel.fireSuppInfo);
+  }
+
+  @override
+  void didUpdateWidget(_VesselSafetyCard old) {
+    super.didUpdateWidget(old);
+    if (!old.editMode && widget.editMode) {
+      _mmsiCtrl.text     = widget.vessel.vesselMmsi;
+      _callSignCtrl.text = widget.vessel.vesselCallSign;
+      _lifeRaftCtrl.text = widget.vessel.lifeRaftInfo;
+      _epirbCtrl.text    = widget.vessel.epirbInfo;
+      _fireSuppCtrl.text = widget.vessel.fireSuppInfo;
+    }
+  }
+
+  @override
+  void dispose() {
+    _mmsiCtrl.dispose();
+    _callSignCtrl.dispose();
+    _lifeRaftCtrl.dispose();
+    _epirbCtrl.dispose();
+    _fireSuppCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -719,72 +749,173 @@ class _VesselSafetyCard extends StatelessWidget {
         color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -8,
-            top: -8,
-            child: Icon(Icons.anchor, size: 100,
-                color: cs.onSurface.withValues(alpha: 0.06)),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(child: _InfoField(
-                    label: 'MMSI NUMBER',
-                    value: vessel.vesselMmsi.isNotEmpty ? vessel.vesselMmsi : '—',
-                    mono: true,
-                  )),
-                  const SizedBox(width: 20),
-                  Expanded(child: _InfoField(
-                    label: 'CALL SIGN',
-                    value: vessel.vesselCallSign.isNotEmpty ? vessel.vesselCallSign : '—',
-                  )),
-                ],
+      child: widget.editMode ? _buildEditView(cs) : _buildReadView(cs),
+    );
+  }
+
+  Widget _buildEditView(ColorScheme cs) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: _VesselEditField(
+              label: 'MMSI NUMBER',
+              controller: _mmsiCtrl,
+              keyboardType: TextInputType.number,
+              onChanged: widget.vessel.setVesselMmsi,
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: _VesselEditField(
+              label: 'CALL SIGN',
+              controller: _callSignCtrl,
+              textCapitalization: TextCapitalization.characters,
+              onChanged: widget.vessel.setVesselCallSign,
+            )),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _VesselEditField(
+          label: 'LIFE RAFT',
+          controller: _lifeRaftCtrl,
+          onChanged: widget.vessel.setLifeRaftInfo,
+        ),
+        const SizedBox(height: 12),
+        _VesselEditField(
+          label: 'EPIRB LOCATION',
+          controller: _epirbCtrl,
+          onChanged: widget.vessel.setEpirbInfo,
+        ),
+        const SizedBox(height: 12),
+        _VesselEditField(
+          label: 'FIRE SUPPRESSION',
+          controller: _fireSuppCtrl,
+          onChanged: widget.vessel.setFireSuppInfo,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReadView(ColorScheme cs) {
+    final v = widget.vessel;
+    return Stack(
+      children: [
+        Positioned(
+          right: -8,
+          top: -8,
+          child: Icon(Icons.anchor, size: 100,
+              color: cs.onSurface.withValues(alpha: 0.06)),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(child: _InfoField(
+                  label: 'MMSI NUMBER',
+                  value: v.vesselMmsi.isNotEmpty ? v.vesselMmsi : '—',
+                  mono: true,
+                )),
+                const SizedBox(width: 20),
+                Expanded(child: _InfoField(
+                  label: 'CALL SIGN',
+                  value: v.vesselCallSign.isNotEmpty ? v.vesselCallSign : '—',
+                )),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (v.lifeRaftInfo.isNotEmpty)
+              _SafetyItem(
+                icon: Icons.water,
+                iconColor: cs.error,
+                title: 'Life Raft',
+                detail: v.lifeRaftInfo,
               ),
-              const SizedBox(height: 16),
-              if (vessel.lifeRaftInfo.isNotEmpty)
-                _SafetyItem(
-                  icon: Icons.water,
-                  iconColor: cs.error,
-                  title: 'Life Raft',
-                  detail: vessel.lifeRaftInfo,
+            if (v.epirbInfo.isNotEmpty)
+              _SafetyItem(
+                icon: Icons.sensors,
+                iconColor: cs.secondary,
+                title: 'EPIRB Location',
+                detail: v.epirbInfo,
+              ),
+            if (v.fireSuppInfo.isNotEmpty)
+              _SafetyItem(
+                icon: Icons.fire_extinguisher,
+                iconColor: cs.error,
+                title: 'Fire Suppression',
+                detail: v.fireSuppInfo,
+              ),
+            if (v.vesselMmsi.isEmpty &&
+                v.vesselCallSign.isEmpty &&
+                v.lifeRaftInfo.isEmpty &&
+                v.epirbInfo.isEmpty &&
+                v.fireSuppInfo.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Noch keine Sicherheitsdaten erfasst.',
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: cs.onSurfaceVariant,
+                      fontStyle: FontStyle.italic),
                 ),
-              if (vessel.epirbInfo.isNotEmpty)
-                _SafetyItem(
-                  icon: Icons.sensors,
-                  iconColor: cs.secondary,
-                  title: 'EPIRB Location',
-                  detail: vessel.epirbInfo,
-                ),
-              if (vessel.fireSuppInfo.isNotEmpty)
-                _SafetyItem(
-                  icon: Icons.fire_extinguisher,
-                  iconColor: cs.error,
-                  title: 'Fire Suppression',
-                  detail: vessel.fireSuppInfo,
-                ),
-              if (vessel.vesselMmsi.isEmpty &&
-                  vessel.vesselCallSign.isEmpty &&
-                  vessel.lifeRaftInfo.isEmpty &&
-                  vessel.epirbInfo.isEmpty &&
-                  vessel.fireSuppInfo.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Noch keine Sicherheitsdaten erfasst.',
-                    style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: cs.onSurfaceVariant,
-                        fontStyle: FontStyle.italic),
-                  ),
-                ),
-            ],
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _VesselEditField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+  final TextCapitalization textCapitalization;
+  final ValueChanged<String> onChanged;
+
+  const _VesselEditField({
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+    this.keyboardType = TextInputType.text,
+    this.textCapitalization = TextCapitalization.none,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+              color: cs.onSurfaceVariant),
+        ),
+        const SizedBox(height: 4),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          textCapitalization: textCapitalization,
+          onChanged: onChanged,
+          style: GoogleFonts.inter(fontSize: 13, color: cs.onSurface),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+            filled: true,
+            fillColor: cs.surfaceContainer,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: cs.outline),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -1314,110 +1445,6 @@ class _MedicalRow extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── Edit Vessel Safety Dialog ────────────────────────────────────────────────
-
-class _EditVesselSafetyDialog extends StatefulWidget {
-  final ThemeProvider vessel;
-  const _EditVesselSafetyDialog({required this.vessel});
-
-  @override
-  State<_EditVesselSafetyDialog> createState() => _EditVesselSafetyDialogState();
-}
-
-class _EditVesselSafetyDialogState extends State<_EditVesselSafetyDialog> {
-  late final TextEditingController _mmsiCtrl;
-  late final TextEditingController _callSignCtrl;
-  late final TextEditingController _lifeRaftCtrl;
-  late final TextEditingController _epirbCtrl;
-  late final TextEditingController _fireSuppCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _mmsiCtrl      = TextEditingController(text: widget.vessel.vesselMmsi);
-    _callSignCtrl  = TextEditingController(text: widget.vessel.vesselCallSign);
-    _lifeRaftCtrl  = TextEditingController(text: widget.vessel.lifeRaftInfo);
-    _epirbCtrl     = TextEditingController(text: widget.vessel.epirbInfo);
-    _fireSuppCtrl  = TextEditingController(text: widget.vessel.fireSuppInfo);
-  }
-
-  @override
-  void dispose() {
-    _mmsiCtrl.dispose();
-    _callSignCtrl.dispose();
-    _lifeRaftCtrl.dispose();
-    _epirbCtrl.dispose();
-    _fireSuppCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return AlertDialog(
-      title: Text(
-        'Schiffssicherheit',
-        style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600),
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _mmsiCtrl,
-              decoration: const InputDecoration(labelText: 'MMSI-Nummer'),
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _callSignCtrl,
-              decoration: const InputDecoration(labelText: 'Rufzeichen'),
-              textCapitalization: TextCapitalization.characters,
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _lifeRaftCtrl,
-              decoration: const InputDecoration(labelText: 'Rettungsinsel'),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _epirbCtrl,
-              decoration: const InputDecoration(labelText: 'EPIRB-Standort'),
-              textInputAction: TextInputAction.next,
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _fireSuppCtrl,
-              decoration: const InputDecoration(labelText: 'Feuerlöschanlage'),
-              textInputAction: TextInputAction.done,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Abbrechen', style: TextStyle(color: cs.onSurfaceVariant)),
-        ),
-        FilledButton(
-          onPressed: () {
-            widget.vessel.setVesselMmsi(_mmsiCtrl.text);
-            widget.vessel.setVesselCallSign(_callSignCtrl.text);
-            widget.vessel.setLifeRaftInfo(_lifeRaftCtrl.text);
-            widget.vessel.setEpirbInfo(_epirbCtrl.text);
-            widget.vessel.setFireSuppInfo(_fireSuppCtrl.text);
-            Navigator.pop(context);
-          },
-          child: const Text('Speichern'),
-        ),
-      ],
     );
   }
 }

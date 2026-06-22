@@ -130,4 +130,33 @@ final ThemeData lightTheme = ThemeData(
     foregroundColor: const Color(0xFFFFFFFF),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
   ),
+  datePickerTheme: DatePickerThemeData(
+    backgroundColor: const Color(0xFFFFFFFF),
+    headerBackgroundColor: _primary,
+    headerForegroundColor: const Color(0xFFFFFFFF),
+    headerHeadlineStyle: GoogleFonts.newsreader(
+        fontSize: 28, fontWeight: FontWeight.w600, color: Color(0xFFFFFFFF)),
+    weekdayStyle: GoogleFonts.inter(fontSize: 12, color: Color(0xFF43474E)),
+    dayStyle: GoogleFonts.inter(fontSize: 13, color: Color(0xFF1B1C1D)),
+    rangePickerBackgroundColor: const Color(0xFFFAF9FA),
+    rangePickerHeaderBackgroundColor: _primary,
+    rangePickerHeaderForegroundColor: const Color(0xFFFFFFFF),
+    rangePickerHeaderHelpStyle: GoogleFonts.inter(
+        fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFABC9F2),
+        letterSpacing: 1.2),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFFF5F3F4),
+      labelStyle: GoogleFonts.inter(fontSize: 12, color: Color(0xFF43474E)),
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF73777F)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF73777F)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: _primary, width: 2),
+      ),
+    ),
+  ),
 );
