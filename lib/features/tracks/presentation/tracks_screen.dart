@@ -20,6 +20,7 @@ import '../../home/utils/trim_track.dart'
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
+import '../../../core/constants/map_config.dart';
 
 enum _FilterPreset { year1, month1, week1, custom }
 
@@ -451,9 +452,7 @@ class _TracksScreenState extends State<TracksScreen> {
           ),
           children: [
             TileLayer(
-              urlTemplate: _satelliteView
-                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
               userAgentPackageName: 'com.logbook.app',
             ),
             Builder(builder: (ctx) {
@@ -486,22 +485,18 @@ class _TracksScreenState extends State<TracksScreen> {
             RichAttributionWidget(
               attributions: [
                 if (_satelliteView)
-                  TextSourceAttribution('© Esri World Imagery',
-                      onTap: () async {
-                    final uri = Uri.parse('https://www.esri.com');
+                  TextSourceAttribution('© MapTiler', onTap: () async {
+                    final uri = Uri.parse('https://www.maptiler.com/');
                     if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
                     }
                   })
                 else
-                  TextSourceAttribution('© OpenStreetMap contributors',
+                  TextSourceAttribution('© MapTiler © OpenStreetMap contributors',
                       onTap: () async {
-                    final uri = Uri.parse(
-                        'https://www.openstreetmap.org/copyright');
+                    final uri = Uri.parse('https://www.maptiler.com/copyright/');
                     if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
                     }
                   }),
               ],
@@ -1211,9 +1206,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
           ),
           children: [
             TileLayer(
-              urlTemplate: _satelliteView
-                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
               userAgentPackageName: 'com.logbook.app',
             ),
             Builder(builder: (ctx) {
@@ -1245,13 +1238,13 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(attributions: [
               if (_satelliteView)
-                TextSourceAttribution('© Esri World Imagery', onTap: () async {
-                  final uri = Uri.parse('https://www.esri.com');
+                TextSourceAttribution('© MapTiler', onTap: () async {
+                  final uri = Uri.parse('https://www.maptiler.com/');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 })
               else
-                TextSourceAttribution('© OpenStreetMap contributors', onTap: () async {
-                  final uri = Uri.parse('https://www.openstreetmap.org/copyright');
+                TextSourceAttribution('© MapTiler © OpenStreetMap contributors', onTap: () async {
+                  final uri = Uri.parse('https://www.maptiler.com/copyright/');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }),
             ]),
