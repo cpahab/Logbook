@@ -420,24 +420,25 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   onTap: entry.crew.isEmpty
                       ? () => _addCrewMember(entry)
                       : _enterCrewEditMode,
-                child: Row(
-                  children: [
-                    Icon(
-                      entry.crew.isEmpty ? Icons.person_add : Icons.edit,
-                      size: 16,
-                      color: cs.secondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      entry.crew.isEmpty ? 'HINZUFÜGEN' : 'ÄNDERN',
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
+                  child: Row(
+                    children: [
+                      Icon(
+                        entry.crew.isEmpty ? Icons.person_add : Icons.edit,
+                        size: 16,
                         color: cs.secondary,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        entry.crew.isEmpty ? 'HINZUFÜGEN' : 'ÄNDERN',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.5,
+                          color: cs.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -807,9 +808,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                           ],
                         ),
                       )
-                    : Tooltip(
-                        message: 'Etappe erfassen',
-                        child: InkWell(
+                    : InkWell(
                           onTap: () => _startEditRoute(entry),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
@@ -845,7 +844,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                             ),
                           ),
                         ),
-                      ),
                 // ── Map or GPX prompt ────────────────────────────
                 Container(
                   decoration: BoxDecoration(border: Border(top: div)),
