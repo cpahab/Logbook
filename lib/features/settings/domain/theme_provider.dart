@@ -43,6 +43,7 @@ class ThemeProvider extends ChangeNotifier {
   static const _makingWayThresholdKnKey    = 'filter_making_way_threshold_kn';
   static const _topSpeedPercentileKey      = 'filter_top_speed_percentile';
   static const _showRawTrackKey            = 'debug_show_raw_track';
+  static const _localeKey                  = 'locale';
 
   late Box<String> _box;
   FirestoreService? _firestore;
@@ -50,6 +51,7 @@ class ThemeProvider extends ChangeNotifier {
   StreamSubscription<Map<String, bool>?>?   _uiSub;
 
   ThemeMode _mode = ThemeMode.system;
+  Locale _locale = const Locale('de');
   StationaryMode _filterMode        = StationaryMode.speed;
   double _minStopMinutes            = 5.0;
   double _maxStopSpreadM            = 30.0;
@@ -77,6 +79,8 @@ class ThemeProvider extends ChangeNotifier {
   String _vhf4Desc  = 'Bridge to Bridge · 156.650 MHz';
 
   ThemeMode get themeMode               => _mode;
+  Locale    get locale                  => _locale;
+  String    get localeString            => _locale.languageCode == 'de' ? 'de_CH' : 'en';
   StationaryMode get filterMode         => _filterMode;
   double get minStopMinutes             => _minStopMinutes;
   double get maxStopSpreadM             => _maxStopSpreadM;
@@ -182,6 +186,7 @@ class ThemeProvider extends ChangeNotifier {
   Future<void> init() async {
     _box = await Hive.openBox<String>(_boxName);
     _mode                  = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
+    _locale                = _parseLocale(_box.get(_localeKey, defaultValue: 'de')!);
     _filterMode            = _parseFilterMode(_box.get(_filterModeKey, defaultValue: 'speed')!);
     _minStopMinutes        = double.tryParse(_box.get(_minStopMinutesKey,         defaultValue: '5.0')!)  ?? 5.0;
     _maxStopSpreadM        = double.tryParse(_box.get(_maxStopSpreadMKey,         defaultValue: '30.0')!) ?? 30.0;
@@ -239,6 +244,13 @@ class ThemeProvider extends ChangeNotifier {
     if (_mode == mode) return;
     _mode = mode;
     _box.put(_themeKey, _toString(mode));
+    notifyListeners();
+  }
+
+  void setLocale(Locale locale) {
+    if (_locale == locale) return;
+    _locale = locale;
+    _box.put(_localeKey, locale.languageCode);
     notifyListeners();
   }
 
@@ -551,6 +563,9 @@ class ThemeProvider extends ChangeNotifier {
     }
     return true;
   }
+
+  static Locale _parseLocale(String v) =>
+      v == 'en' ? const Locale('en') : const Locale('de');
 
   static ThemeMode _fromString(String v) => switch (v) {
         'light' => ThemeMode.light,
