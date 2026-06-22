@@ -128,4 +128,33 @@ final ThemeData darkTheme = ThemeData(
     foregroundColor: const Color(0xFFFFFFFF),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
   ),
+  datePickerTheme: DatePickerThemeData(
+    backgroundColor: const Color(0xFF1B1D22),           // surfaceContainer
+    headerBackgroundColor: const Color(0xFF17191D),     // surfaceContainerLow
+    headerForegroundColor: const Color(0xFFF2F0F1),     // onSurface
+    headerHeadlineStyle: GoogleFonts.newsreader(
+        fontSize: 28, fontWeight: FontWeight.w600, color: Color(0xFFF2F0F1)),
+    weekdayStyle: GoogleFonts.inter(fontSize: 12, color: Color(0xFFC3C6CF)),
+    dayStyle: GoogleFonts.inter(fontSize: 13, color: Color(0xFFF2F0F1)),
+    rangePickerBackgroundColor: const Color(0xFF0D1E33),
+    rangePickerHeaderBackgroundColor: const Color(0xFF0D1E33),
+    rangePickerHeaderForegroundColor: const Color(0xFFF2F0F1),
+    rangePickerHeaderHelpStyle: GoogleFonts.inter(
+        fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFC3C6CF),
+        letterSpacing: 1.2),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xFF25272C),
+      labelStyle: GoogleFonts.inter(fontSize: 12, color: Color(0xFFC3C6CF)),
+      border: const OutlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF8D9199)),
+      ),
+      enabledBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF8D9199)),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderSide: BorderSide(color: _lightBlue, width: 2),
+      ),
+    ),
+  ),
 );
