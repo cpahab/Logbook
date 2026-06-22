@@ -118,6 +118,7 @@
   "crewFieldAllergiesHint": "Bekannte Allergien auflisten…",
   "crewFieldConditions": "Erkrankungen / Medikamente",
   "crewFieldConditionsHint": "z.B. Benötigt Inhalator (Asthma)…",
+  "crewSectionRemarks": "Bemerkungen",
   "crewFieldRemarksHint": "Allgemeine Notizen zu dieser Person…",
   "crewButtonAddToCrew": "Zur Besatzung hinzufügen",
   "crewButtonRemoveFromCrew": "Besatzung entfernen",
@@ -217,6 +218,53 @@
   "tracksSatelliteView": "Satellitenansicht",
   "tracksNoTracks": "Keine Tracks vorhanden",
   "tracksNoTracksInPeriod": "Keine Tracks im gewählten Zeitraum",
+
+  "dayChangeDateTitle": "Falsches Datum?",
+  "dayChangeDateContent": "Der GPX-Track enthält hauptsächlich Daten vom {from}, nicht vom {to}.\n\nTrotzdem verschieben?",
+  "@dayChangeDateContent": {
+    "placeholders": {
+      "from": { "type": "String" },
+      "to": { "type": "String" }
+    }
+  },
+  "dayChangeDateConfirm": "Trotzdem verschieben",
+  "dayDateExistsError": "Für dieses Datum existiert bereits ein Eintrag.",
+  "dayGpxNoWaypoints": "GPX-File enthält keine Wegpunkte mit Zeitstempel.",
+  "dayGpxWrongDateContent": "Das GPX-File enthält hauptsächlich Daten vom {from}, nicht vom {to}.\n\nTrotzdem importieren?",
+  "@dayGpxWrongDateContent": {
+    "placeholders": {
+      "from": { "type": "String" },
+      "to": { "type": "String" }
+    }
+  },
+  "dayGpxImportConfirm": "Trotzdem importieren",
+  "dayGpxImported": "GPX-Track importiert für {date}.",
+  "@dayGpxImported": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "dayGpxExported": "GPX exportiert.",
+  "dayGpxDeleteTitle": "GPX-Track entfernen?",
+  "dayGpxDeleteContent": "GPX-Track für diesen Tag löschen?",
+  "dayGpxRemoved": "GPX-Track entfernt.",
+  "dayDeleteTitle": "Tag löschen?",
+  "dayDeleteContent": "Alle Daten für den {date} werden unwiderruflich gelöscht, inklusive Logeinträge und GPX-Track.",
+  "@dayDeleteContent": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "dayEntryDeleted": "Logeintrag gelöscht.",
+  "dayEntryUpdated": "Logeintrag aktualisiert.",
+  "dayUndo": "Rückgängig",
+  "dayFreeTextHint": "Freie Notizen für diesen Tag…",
+  "dayDiaryHint": "Tagebucheintrag für diesen Tag…",
+  "vesselStatusTitle": "Schiffsstatus",
+  "vesselOilLabel": "Motoröl",
+  "vesselFuelLabel": "Kraftstoff",
+  "vesselFullLabel": "Voll",
+  "vesselEmptyLabel": "Leer",
 
   "gpsConsentTitle": "GPS für den Notfall",
   "gpsConsentContent": "Beim Aktivieren des Funk-Notrufs ermittelt die App Ihren GPS-Standort und trägt ihn automatisch ins Mayday-Protokoll ein, damit Rettungskräfte Ihre genaue Position sofort erhalten. Der Standort wird ausschliesslich in diesem Moment genutzt.",

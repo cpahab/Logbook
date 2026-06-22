@@ -124,6 +124,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override String get crewFieldAllergiesHint => 'List known allergies…';
   @override String get crewFieldConditions => 'Conditions / Medication';
   @override String get crewFieldConditionsHint => 'e.g. Requires inhaler (asthma)…';
+  @override String get crewSectionRemarks => 'Remarks';
   @override String get crewFieldRemarksHint => 'General notes about this person…';
   @override String get crewButtonAddToCrew => 'Add to crew';
   @override String get crewButtonRemoveFromCrew => 'Remove from crew';
@@ -213,6 +214,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override String get tracksSatelliteView => 'Satellite view';
   @override String get tracksNoTracks => 'No tracks available';
   @override String get tracksNoTracksInPeriod => 'No tracks in selected period';
+
+  @override String get dayChangeDateTitle => 'Wrong date?';
+  @override String dayChangeDateContent(String from, String to) => 'The GPX track mainly contains data from $from, not $to.\n\nMove anyway?';
+  @override String get dayChangeDateConfirm => 'Move anyway';
+  @override String get dayDateExistsError => 'An entry already exists for this date.';
+  @override String get dayGpxNoWaypoints => 'GPX file contains no timestamped waypoints.';
+  @override String dayGpxWrongDateContent(String from, String to) => 'The GPX file mainly contains data from $from, not $to.\n\nImport anyway?';
+  @override String get dayGpxImportConfirm => 'Import anyway';
+  @override String dayGpxImported(String date) => 'GPX track imported for $date.';
+  @override String get dayGpxExported => 'GPX exported.';
+  @override String get dayGpxDeleteTitle => 'Remove GPX track?';
+  @override String get dayGpxDeleteContent => 'Delete GPX track for this day?';
+  @override String get dayGpxRemoved => 'GPX track removed.';
+  @override String get dayDeleteTitle => 'Delete day?';
+  @override String dayDeleteContent(String date) => 'All data for $date will be permanently deleted, including log entries and GPX track.';
+  @override String get dayEntryDeleted => 'Log entry deleted.';
+  @override String get dayEntryUpdated => 'Log entry updated.';
+  @override String get dayUndo => 'Undo';
+  @override String get dayFreeTextHint => 'Free notes for this day…';
+  @override String get dayDiaryHint => 'Diary entry for this day…';
+  @override String get vesselStatusTitle => 'Vessel status';
+  @override String get vesselOilLabel => 'Engine oil';
+  @override String get vesselFuelLabel => 'Fuel';
+  @override String get vesselFullLabel => 'Full';
+  @override String get vesselEmptyLabel => 'Empty';
 
   @override String get gpsConsentTitle => 'GPS for Emergencies';
   @override String get gpsConsentContent =>
