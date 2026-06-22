@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
+import '../../../core/constants/map_config.dart';
 import '../domain/crew_member.dart';
 import '../domain/day_entry.dart';
 import '../domain/timeline_entry.dart';
@@ -616,8 +617,16 @@ int _chooseZoom(double minLat, double maxLat, double minLon, double maxLon) {
 Future<ui.Image?> _fetchTile(int z, int tx, int ty, String base) async {
   try {
     final client = HttpClient()..userAgent = 'Logbuch/1.0 sailing logbook app';
+    // Supports both template URLs ({z}/{x}/{y} with optional query string)
+    // and plain base URLs (base/$z/$tx/$ty.png for OpenSeaMap-style servers).
+    final url = base.contains('{z}')
+        ? base
+            .replaceAll('{z}', '$z')
+            .replaceAll('{x}', '$tx')
+            .replaceAll('{y}', '$ty')
+        : '$base/$z/$tx/$ty.png';
     final req = await client
-        .getUrl(Uri.parse('$base/$z/$tx/$ty.png'))
+        .getUrl(Uri.parse(url))
         .timeout(const Duration(seconds: 8));
     final res = await req.close().timeout(const Duration(seconds: 8));
     if (res.statusCode != 200) { client.close(); return null; }
@@ -663,7 +672,7 @@ Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
       for (int ty = ty0; ty <= ty1; ty++) (tx, ty),
   ];
 
-  const osmUrl  = 'https://tile.openstreetmap.org';
+  const osmUrl  = kBaseTileUrl;
   const seamUrl = 'https://tiles.openseamap.org/seamark';
 
   final results = await Future.wait([

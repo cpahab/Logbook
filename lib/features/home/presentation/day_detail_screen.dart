@@ -35,6 +35,7 @@ import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
+import '../../../core/constants/map_config.dart';
 
 
 class DayDetailScreen extends StatefulWidget {
@@ -2047,9 +2048,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           ),
           children: [
             TileLayer(
-              urlTemplate: _satelliteView
-                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
               userAgentPackageName: 'com.logbook.app',
             ),
             _ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
@@ -2060,22 +2059,19 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             RichAttributionWidget(
               attributions: [
                 if (_satelliteView)
-                  TextSourceAttribution('© Esri World Imagery',
+                  TextSourceAttribution('© MapTiler',
                       onTap: () async {
-                    final uri = Uri.parse('https://www.esri.com');
+                    final uri = Uri.parse('https://www.maptiler.com/');
                     if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
                     }
                   })
                 else
                   TextSourceAttribution(
-                      '© OpenStreetMap contributors', onTap: () async {
-                    final uri = Uri.parse(
-                        'https://www.openstreetmap.org/copyright');
+                      '© MapTiler © OpenStreetMap contributors', onTap: () async {
+                    final uri = Uri.parse('https://www.maptiler.com/copyright/');
                     if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
                     }
                   }),
               ],
@@ -3242,9 +3238,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
           ),
           children: [
             TileLayer(
-              urlTemplate: _satelliteView
-                  ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                  : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
               userAgentPackageName: 'com.logbook.app',
             ),
             _ZoomAwareUncertaintyLayer(polygons: fsUncertaintyPolygons),
@@ -3254,13 +3248,13 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
             MarkerLayer(markers: markers),
             RichAttributionWidget(attributions: [
               if (_satelliteView)
-                TextSourceAttribution('© Esri World Imagery', onTap: () async {
-                  final uri = Uri.parse('https://www.esri.com');
+                TextSourceAttribution('© MapTiler', onTap: () async {
+                  final uri = Uri.parse('https://www.maptiler.com/');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 })
               else
-                TextSourceAttribution('© OpenStreetMap contributors', onTap: () async {
-                  final uri = Uri.parse('https://www.openstreetmap.org/copyright');
+                TextSourceAttribution('© MapTiler © OpenStreetMap contributors', onTap: () async {
+                  final uri = Uri.parse('https://www.maptiler.com/copyright/');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }),
             ]),
