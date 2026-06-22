@@ -55,6 +55,20 @@ class DayDetailScreen extends StatefulWidget {
 }
 
 class _DayDetailScreenState extends State<DayDetailScreen> {
+  // Detects crew notes stored with either the new sentinel ('crew:') or the
+  // legacy format ('Besatzung: ') so Firestore entries written before the
+  // sentinel rename continue to render correctly.
+  static bool _isCrewNote(String? note) =>
+      note?.startsWith('crew:') == true ||
+      note?.startsWith('Besatzung: ') == true;
+
+  // Returns the display string for a crew note, stripping the sentinel prefix
+  // and prepending a localisation-ready display label.
+  static String _crewNoteDisplay(String note) {
+    if (note.startsWith('crew:')) return 'Besatzung: ${note.substring(5)}';
+    return note; // legacy format already begins with 'Besatzung: '
+  }
+
   final MapController _mapController = MapController();
   bool _satelliteView = false;
   LatLng? _droppedMarkerLatLng;
@@ -1081,8 +1095,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final timeStr =
         '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
 
-    final bool isCrewEntry =
-        t.vesselStatusNote?.startsWith('Besatzung: ') == true;
+    final bool isCrewEntry = _isCrewNote(t.vesselStatusNote);
     final bool isStatusEntry = t.vesselStatusNote != null && !isCrewEntry;
     final String entryLabel;
     if (isCrewEntry) {
@@ -1185,7 +1198,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             if (t.vesselStatusNote != null) ...[
               const SizedBox(height: 8),
               Text(
-                t.vesselStatusNote!,
+                isCrewEntry
+                    ? _crewNoteDisplay(t.vesselStatusNote!)
+                    : t.vesselStatusNote!,
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   color: cs.onSurfaceVariant,
@@ -2402,7 +2417,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final fresh = repo.getEntry(day) ?? entry;
 
     final hadCrewLog = fresh.timeline
-        .any((t) => t.vesselStatusNote?.startsWith('Besatzung: ') == true);
+        .any((t) => _isCrewNote(t.vesselStatusNote));
 
     fresh.crew = List<CrewMember>.from(_pendingCrew!);
 
