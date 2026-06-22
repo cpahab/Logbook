@@ -118,6 +118,7 @@
   "crewFieldAllergiesHint": "List known allergies…",
   "crewFieldConditions": "Conditions / Medication",
   "crewFieldConditionsHint": "e.g. Requires inhaler (asthma)…",
+  "crewSectionRemarks": "Remarks",
   "crewFieldRemarksHint": "General notes about this person…",
   "crewButtonAddToCrew": "Add to crew",
   "crewButtonRemoveFromCrew": "Remove from crew",
@@ -217,6 +218,53 @@
   "tracksSatelliteView": "Satellite view",
   "tracksNoTracks": "No tracks available",
   "tracksNoTracksInPeriod": "No tracks in selected period",
+
+  "dayChangeDateTitle": "Wrong date?",
+  "dayChangeDateContent": "The GPX track mainly contains data from {from}, not {to}.\n\nMove anyway?",
+  "@dayChangeDateContent": {
+    "placeholders": {
+      "from": { "type": "String" },
+      "to": { "type": "String" }
+    }
+  },
+  "dayChangeDateConfirm": "Move anyway",
+  "dayDateExistsError": "An entry already exists for this date.",
+  "dayGpxNoWaypoints": "GPX file contains no timestamped waypoints.",
+  "dayGpxWrongDateContent": "The GPX file mainly contains data from {from}, not {to}.\n\nImport anyway?",
+  "@dayGpxWrongDateContent": {
+    "placeholders": {
+      "from": { "type": "String" },
+      "to": { "type": "String" }
+    }
+  },
+  "dayGpxImportConfirm": "Import anyway",
+  "dayGpxImported": "GPX track imported for {date}.",
+  "@dayGpxImported": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "dayGpxExported": "GPX exported.",
+  "dayGpxDeleteTitle": "Remove GPX track?",
+  "dayGpxDeleteContent": "Delete GPX track for this day?",
+  "dayGpxRemoved": "GPX track removed.",
+  "dayDeleteTitle": "Delete day?",
+  "dayDeleteContent": "All data for {date} will be permanently deleted, including log entries and GPX track.",
+  "@dayDeleteContent": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "dayEntryDeleted": "Log entry deleted.",
+  "dayEntryUpdated": "Log entry updated.",
+  "dayUndo": "Undo",
+  "dayFreeTextHint": "Free notes for this day…",
+  "dayDiaryHint": "Diary entry for this day…",
+  "vesselStatusTitle": "Vessel status",
+  "vesselOilLabel": "Engine oil",
+  "vesselFuelLabel": "Fuel",
+  "vesselFullLabel": "Full",
+  "vesselEmptyLabel": "Empty",
 
   "gpsConsentTitle": "GPS for Emergencies",
   "gpsConsentContent": "When activating the radio distress call, the app determines your GPS position and automatically enters it into the Mayday protocol so rescue services receive your exact location immediately. The position is used exclusively at this moment.",

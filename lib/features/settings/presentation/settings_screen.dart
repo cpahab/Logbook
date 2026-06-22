@@ -11,6 +11,7 @@ import '../../home/screens/crew_roster_screen.dart';
 import '../../home/utils/filter_settings.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../domain/theme_provider.dart';
+import '../../../l10n/l10n_extension.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -52,11 +53,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
   Future<void> _connectCode() async {
+    final l10n = context.l10n;
     final raw = _codeCtrl.text;
     final code = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (code.length < 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ungültiger Code.')),
+        SnackBar(content: Text(l10n.settingsInvalidCode)),
       );
       return;
     }
@@ -68,6 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
+        final cl = ctx.l10n;
         return AlertDialog(
           titleTextStyle: TextStyle(
             color: cs.onSurface,
@@ -78,19 +81,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: cs.onSurfaceVariant,
             fontSize: 14,
           ),
-          title: const Text('Logbuch verbinden'),
-          content: Text(
-            'Dieses Gerät wird mit dem Logbuch "$code" verbunden. '
-            'Alle lokalen Einträge werden gelöscht und durch die Cloud-Daten ersetzt.',
-          ),
+          title: Text(cl.settingsConnectLogbookTitle),
+          content: Text(cl.settingsConnectLogbookContent(code)),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Abbrechen'),
+              child: Text(cl.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Verbinden'),
+              child: Text(cl.connect),
             ),
           ],
         );
@@ -110,13 +110,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verbunden und synchronisiert.')),
+          SnackBar(content: Text(l10n.settingsConnectedAndSynced)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e')),
+          SnackBar(content: Text('${l10n.settingsError}: $e')),
         );
       }
     } finally {
@@ -128,6 +128,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final p = context.watch<ThemeProvider>();
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -160,7 +161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // ── Page header ───────────────────────────────────────────
             Text(
-              'Einstellungen',
+              l10n.settingsTitle,
               style: GoogleFonts.newsreader(
                 fontSize: 24,
                 fontWeight: FontWeight.w500,
@@ -170,7 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              'Navigationsumgebung konfigurieren',
+              l10n.settingsSubtitle,
               style: GoogleFonts.inter(
                 fontSize: 15,
                 color: cs.onSurfaceVariant,
@@ -228,7 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'SCHIFF',
+                        context.l10n.settingsVesselSection.toUpperCase(),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -242,9 +243,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   _vesselRow(
-                    label: 'Name',
+                    label: l10n.settingsFieldName,
                     controller: _vesselNameCtrl,
-                    hint: 'z.B. S.V. Adventure',
+                    hint: l10n.settingsFieldNameHint,
                     onChanged: p.setVesselName,
                     cs: cs,
                   ),
@@ -259,9 +260,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _rowDivider(cs),
                   _vesselRow(
-                    label: 'Rufzeichen',
+                    label: l10n.settingsFieldCallSign,
                     controller: _vesselCallSignCtrl,
-                    hint: 'z.B. HB-9-XY',
+                    hint: l10n.settingsFieldCallSignHint,
                     onChanged: p.setVesselCallSign,
                     cs: cs,
                     isLast: true,
@@ -356,7 +357,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'DARSTELLUNG',
+                l10n.settingsAppearanceSection.toUpperCase(),
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -370,7 +371,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'App-Design',
+            l10n.settingsThemeLabel,
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -386,9 +387,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             child: Row(
               children: [
-                _themeButton('System', ThemeMode.system, p, cs),
-                _themeButton('Hell', ThemeMode.light, p, cs),
-                _themeButton('Dunkel', ThemeMode.dark, p, cs),
+                _themeButton(l10n.settingsThemeSystem, ThemeMode.system, p, cs),
+                _themeButton(l10n.settingsThemeLight, ThemeMode.light, p, cs),
+                _themeButton(l10n.settingsThemeDark, ThemeMode.dark, p, cs),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.settingsLanguageLabel,
+            style: GoogleFonts.inter(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                _langButton(l10n.settingsLanguageDe, const Locale('de'), p, cs),
+                _langButton(l10n.settingsLanguageEn, const Locale('en'), p, cs),
               ],
             ),
           ),
@@ -403,6 +427,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () => p.setThemeMode(mode),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? cs.surfaceContainerLowest : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              color: isActive ? cs.primary : cs.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _langButton(
+      String label, Locale locale, ThemeProvider p, ColorScheme cs) {
+    final isActive = p.locale == locale;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => p.setLocale(locale),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -468,7 +528,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Row(
                 children: [
                   Text(
-                    'TRACKFILTER',
+                    context.l10n.settingsTrackFilterSection.toUpperCase(),
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -491,8 +551,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (!_trackFilterExpanded)
                     Text(
                       p.filterMode == StationaryMode.speed
-                          ? 'Liegeplatz & Anker'
-                          : 'Genaue Position',
+                          ? context.l10n.settingsFilterModeMooring
+                          : context.l10n.settingsFilterModeExact,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: cs.onSurfaceVariant,
@@ -524,7 +584,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Divider(color: cs.surfaceContainerHigh, height: 1, thickness: 1),
                   const SizedBox(height: 12),
                   Text(
-                    'Stationäre Erkennung',
+                    context.l10n.settingsStationaryLabel,
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -533,7 +593,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Bestimmt, wie Liegeplätze, Ankerstopps und Hafenbesuche erkannt und als Ankerpunkt dargestellt werden – am Anfang, Ende und unterwegs.',
+                    context.l10n.settingsStationaryDesc,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: cs.onSurfaceVariant,
@@ -549,14 +609,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Row(
                       children: [
                         _filterModeButton(
-                          label: 'Liegeplatz & Anker',
+                          label: context.l10n.settingsFilterModeMooring,
                           mode: StationaryMode.speed,
                           current: p.filterMode,
                           onTap: () => p.setFilterMode(StationaryMode.speed),
                           cs: cs,
                         ),
                         _filterModeButton(
-                          label: 'Genaue Position',
+                          label: context.l10n.settingsFilterModeExact,
                           mode: StationaryMode.both,
                           current: p.filterMode,
                           onTap: () => p.setFilterMode(StationaryMode.both),
@@ -568,8 +628,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 8),
                   Text(
                     p.filterMode == StationaryMode.speed
-                        ? 'Liegeplatz und Ankerpositionen werden als einzelner Punkt dargestellt. Auch ein weitausholender Ankerkreis wird zu einem Punkt zusammengefasst.'
-                        : 'Nur eng geclusterte Positionen gelten als stationär. Breite Ankerkreise bleiben sichtbar – besser für Ankerwache.',
+                        ? context.l10n.settingsMooringDesc
+                        : context.l10n.settingsExactPositionDesc,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
@@ -582,7 +642,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Min. Stopp-Dauer',
+                        context.l10n.settingsMinStopLabel,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -590,7 +650,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       Text(
-                        '${p.minStopMinutes.round()} min',
+                        '${p.minStopMinutes.round()} ${context.l10n.settingsMinUnit}',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -607,7 +667,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: p.setMinStopMinutes,
                   ),
                   Text(
-                    'Mindestdauer eines echten Stopps (Anker, Hafen). Kurze Langsamfahrten (Wende, Flaute) werden ignoriert.',
+                    context.l10n.settingsMinStopDesc,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
@@ -620,7 +680,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Max. Ankerschwung',
+                        context.l10n.settingsMaxAnchorLabel,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -628,7 +688,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       Text(
-                        '${p.maxStopSpreadM.round()} m',
+                        '${p.maxStopSpreadM.round()} ${context.l10n.settingsMetersUnit}',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -645,7 +705,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: p.setMaxStopSpreadM,
                   ),
                   Text(
-                    'Maximale Ausdehnung eines Stopps. Erhöhen bei weitem Ankerschwung über Nacht (Standard: 30 m).',
+                    context.l10n.settingsMaxAnchorDesc,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
@@ -658,7 +718,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Kaltstart-Trimmen',
+                        context.l10n.settingsColdStartLabel,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -672,7 +732,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   Text(
-                    'Entfernt ungenaue GPS-Fixes am Spuranfang, bevor der Empfänger eingeschwungen ist.',
+                    context.l10n.settingsColdStartDesc,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
@@ -685,7 +745,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Trim-Schärfe',
+                          context.l10n.settingsTrimSharpnessLabel,
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -710,7 +770,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: p.setColdStartSettleFactor,
                     ),
                     Text(
-                      'Niedrigerer Wert = aggressiver trimmen. Standard: 3.0.',
+                      context.l10n.settingsTrimSharpnessDesc,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontStyle: FontStyle.italic,
@@ -724,7 +784,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Unterwegs-Schwelle',
+                        context.l10n.settingsUnderwayLabel,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -749,7 +809,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: p.setMakingWayThresholdKn,
                   ),
                   Text(
-                    'Mindestgeschwindigkeit für den Fahrt-Durchschnitt. Driften unterhalb wird nicht mitgezählt.',
+                    context.l10n.settingsUnderwayDesc,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
@@ -762,7 +822,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Spitzenwert-Perzentil',
+                        context.l10n.settingsPercentileLabel,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -787,7 +847,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: p.setTopSpeedPercentile,
                   ),
                   Text(
-                    'p99 ignoriert das oberste 1 % der Messwerte und unterdrückt GPS-Ausreißer. p100 = echter Maximalwert.',
+                    context.l10n.settingsPercentileDesc,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
@@ -800,7 +860,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Ungefilterte Spur anzeigen',
+                        context.l10n.settingsShowRawTrackLabel,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -814,7 +874,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                   ),
                   Text(
-                    'Zeigt den Roh-GPX-Track zusätzlich zur gefilterten Spur an. Dient zur Fehleranalyse und zum Optimieren der Filtereinstellungen.',
+                    context.l10n.settingsShowRawTrackDesc,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
@@ -830,7 +890,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icon(Icons.restart_alt,
                             size: 16, color: cs.onSurfaceVariant),
                         label: Text(
-                          'Zurücksetzen',
+                          context.l10n.reset,
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             color: cs.onSurfaceVariant,
@@ -921,7 +981,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'BESATZUNGSLISTE',
+                            context.l10n.settingsCrewSection.toUpperCase(),
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -935,8 +995,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               final count = repo.roster.length;
                               return Text(
                                 count == 0
-                                    ? 'Noch keine Einträge'
-                                    : '$count ${count == 1 ? 'Person' : 'Personen'}',
+                                    ? context.l10n.settingsNoEntries
+                                    : '$count ${context.l10n.settingsPersonCount(count)}',
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
                                   color: cs.onSurfaceVariant,
@@ -981,7 +1041,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'SYNCHRONISIERUNG',
+                l10n.settingsSyncSection.toUpperCase(),
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -995,7 +1055,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           // Current code
           Text(
-            'LOGBUCH-CODE',
+            l10n.settingsLogbookCodeLabel.toUpperCase(),
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -1004,7 +1064,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Gib diesen Code auf einem anderen Gerät ein, um dasselbe Logbuch zu teilen.',
+            l10n.settingsLogbookCodeDesc,
             style: GoogleFonts.inter(
               fontSize: 13,
               color: cs.onSurfaceVariant,
@@ -1039,18 +1099,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: _formatCode(code)));
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Code kopiert.')),
+                    SnackBar(content: Text(l10n.settingsCodeCopied)),
                   );
                 },
                 icon: const Icon(Icons.copy_outlined),
-                tooltip: 'Kopieren',
+                tooltip: l10n.copy,
               ),
             ],
           ),
           const SizedBox(height: 20),
           // Connect to new logbook
           Text(
-            'LOGBOOK SYNC',
+            l10n.settingsLogbookSyncLabel.toUpperCase(),
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -1059,7 +1119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Mit einem anderen Logbuch via Firebase verbinden.',
+            l10n.settingsLogbookSyncDesc,
             style: GoogleFonts.inter(
               fontSize: 13,
               color: cs.onSurfaceVariant,
@@ -1073,7 +1133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: cs.onSurface,
             ),
             decoration: InputDecoration(
-              hintText: 'Sync-Code eingeben',
+              hintText: l10n.settingsEnterSyncCode,
               hintStyle: GoogleFonts.inter(
                 fontSize: 15,
                 color: cs.onSurfaceVariant,
@@ -1121,7 +1181,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: cs.onPrimary),
                     )
-                  : const Text('Synchronisieren'),
+                  : Text(l10n.settingsSynchronize),
             ),
           ),
         ],

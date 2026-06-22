@@ -19,6 +19,7 @@ import '../../home/utils/trim_track.dart'
         splitTrackSegments;
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
+import '../../../l10n/l10n_extension.dart';
 
 enum _FilterPreset { year1, month1, week1, custom }
 
@@ -179,7 +180,7 @@ class _TracksScreenState extends State<TracksScreen> {
       firstDate: DateTime(2000),
       lastDate: now,
       initialDateRange: initial,
-      locale: const Locale('de', 'CH'),
+      locale: context.read<ThemeProvider>().locale,
       builder: (context, child) => MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.0,
         child: child!,
@@ -321,7 +322,7 @@ class _TracksScreenState extends State<TracksScreen> {
         centerTitle: true,
         automaticallyImplyLeading: false,
         title: Text(
-          'Chronik',
+          context.l10n.tracksTitle,
           style: GoogleFonts.newsreader(
             fontSize: 24,
             fontWeight: FontWeight.w500,
@@ -370,7 +371,7 @@ class _TracksScreenState extends State<TracksScreen> {
     final customLabel =
         (_preset == _FilterPreset.custom && _customRange != null)
             ? '${fmt.format(_customRange!.start)}–${fmt.format(_customRange!.end)}'
-            : 'EIGENE';
+            : context.l10n.tracksCustom.toUpperCase();
 
     return Container(
       color: cs.surface,
@@ -379,11 +380,11 @@ class _TracksScreenState extends State<TracksScreen> {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _chip('1 JAHR', _FilterPreset.year1, cs),
+            _chip(context.l10n.tracksOneYear.toUpperCase(), _FilterPreset.year1, cs),
             const SizedBox(width: 8),
-            _chip('1 MONAT', _FilterPreset.month1, cs),
+            _chip(context.l10n.tracksOneMonth.toUpperCase(), _FilterPreset.month1, cs),
             const SizedBox(width: 8),
-            _chip('1 WOCHE', _FilterPreset.week1, cs),
+            _chip(context.l10n.tracksOneWeek.toUpperCase(), _FilterPreset.week1, cs),
             const SizedBox(width: 8),
             _chip(customLabel, _FilterPreset.custom, cs, isCustom: true),
           ],
@@ -519,7 +520,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   icon: Icons.add,
                   bgColor: cs.surfaceContainerLowest,
                   fgColor: cs.primary,
-                  tooltip: 'Vergrössern',
+                  tooltip: context.l10n.tracksZoomIn,
                   onTap: () => _mapController.move(
                     _mapController.camera.center,
                     _mapController.camera.zoom + 1,
@@ -530,7 +531,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   icon: Icons.remove,
                   bgColor: cs.surfaceContainerLowest,
                   fgColor: cs.primary,
-                  tooltip: 'Verkleinern',
+                  tooltip: context.l10n.tracksZoomOut,
                   onTap: () => _mapController.move(
                     _mapController.camera.center,
                     _mapController.camera.zoom - 1,
@@ -541,7 +542,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   icon: Icons.explore,
                   bgColor: cs.primary,
                   fgColor: cs.onPrimary,
-                  tooltip: 'Alle Tracks anzeigen',
+                  tooltip: context.l10n.tracksShowAll,
                   onTap: () {
                     setState(() => _selectedIndex = null);
                     _refitToDisplayed();
@@ -553,7 +554,7 @@ class _TracksScreenState extends State<TracksScreen> {
                 icon: Icons.fullscreen,
                 bgColor: cs.surfaceContainerLowest,
                 fgColor: cs.primary,
-                tooltip: 'Vollbild',
+                tooltip: context.l10n.tracksFullscreen,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -571,7 +572,7 @@ class _TracksScreenState extends State<TracksScreen> {
                 icon: _satelliteView ? Icons.map_outlined : Icons.satellite_alt,
                 bgColor: cs.surfaceContainerLowest,
                 fgColor: cs.primary,
-                tooltip: _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
+                tooltip: _satelliteView ? context.l10n.tracksMapView : context.l10n.tracksSatelliteView,
                 onTap: () => setState(() => _satelliteView = !_satelliteView),
               ),
             ],
@@ -627,11 +628,11 @@ class _TracksScreenState extends State<TracksScreen> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
           child: Row(
             children: [
-              Expanded(child: _statSummaryBox('${movingLegs.length}', 'Segeltage', Icons.sailing, cs, unit: 'Tage')),
+              Expanded(child: _statSummaryBox('${movingLegs.length}', context.l10n.statSailingDays, Icons.sailing, cs, unit: context.l10n.statDays)),
               const SizedBox(width: 10),
               Expanded(
                 child: _statSummaryBox(
-                  totalNm.toStringAsFixed(0), 'Distanz', Icons.straighten, cs, unit: 'nm'),
+                  totalNm.toStringAsFixed(0), context.l10n.statDistance, Icons.straighten, cs, unit: 'nm'),
               ),
             ],
           ),
@@ -729,7 +730,8 @@ class _TracksScreenState extends State<TracksScreen> {
     const cardHeight = 110.0;
 
     final isSelected = _selectedIndex == index;
-    final dateLabel = DateFormat('EEEE, d. MMM yyyy', 'de_CH').format(d.day);
+    final locStr = context.read<ThemeProvider>().localeString;
+    final dateLabel = DateFormat('EEEE, d. MMM yyyy', locStr).format(d.day);
     final fromHarbor = d.entry?.fromHarbor;
     final toHarbor = d.entry?.toHarbor;
     final routeTitle = (fromHarbor?.isNotEmpty ?? false) ||
@@ -738,7 +740,7 @@ class _TracksScreenState extends State<TracksScreen> {
             if (fromHarbor?.isNotEmpty ?? false) fromHarbor!,
             if (toHarbor?.isNotEmpty ?? false) toHarbor!,
           ].join(' → ')
-        : DateFormat('EEEE', 'de_CH').format(d.day);
+        : DateFormat('EEEE', locStr).format(d.day);
 
     final notes = d.entry?.notes ?? d.entry?.timeline.firstOrNull?.remarks;
     final wind = d.entry?.timeline.firstOrNull?.wind;
@@ -944,7 +946,7 @@ class _TracksScreenState extends State<TracksScreen> {
         children: [
           Icon(Icons.map_outlined, size: 48, color: cs.outlineVariant),
           const SizedBox(height: 12),
-          Text('Keine Tracks vorhanden',
+          Text(context.l10n.tracksNoTracks,
               style: Theme.of(context).textTheme.bodyLarge),
         ],
       ),
@@ -959,7 +961,7 @@ class _TracksScreenState extends State<TracksScreen> {
           Icon(Icons.filter_alt_outlined, size: 36, color: cs.outlineVariant),
           const SizedBox(height: 10),
           Text(
-            'Keine Tracks im gewählten Zeitraum',
+            context.l10n.tracksNoTracksInPeriod,
             style: Theme.of(context)
                 .textTheme
                 .bodyMedium
@@ -1194,7 +1196,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
             icon: Icons.fullscreen_exit,
             bgColor: cs.surfaceContainerLowest.withValues(alpha: 0.9),
             fgColor: cs.primary,
-            tooltip: 'Schließen',
+            tooltip: context.l10n.close,
             onTap: () => Navigator.pop(context),
           ),
         ),
@@ -1259,20 +1261,20 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
           right: 16, bottom: 16,
           child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             if (defaultTargetPlatform == TargetPlatform.macOS) ...[
-              _mapButton(icon: Icons.add,    bgColor: cs.surfaceContainerLowest, fgColor: cs.primary, tooltip: 'Vergrössern',
+              _mapButton(icon: Icons.add,    bgColor: cs.surfaceContainerLowest, fgColor: cs.primary, tooltip: context.l10n.tracksZoomIn,
                   onTap: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1)),
               const SizedBox(height: 8),
-              _mapButton(icon: Icons.remove, bgColor: cs.surfaceContainerLowest, fgColor: cs.primary, tooltip: 'Verkleinern',
+              _mapButton(icon: Icons.remove, bgColor: cs.surfaceContainerLowest, fgColor: cs.primary, tooltip: context.l10n.tracksZoomOut,
                   onTap: () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1)),
               const SizedBox(height: 8),
-              _mapButton(icon: Icons.explore, bgColor: cs.primary, fgColor: cs.onPrimary, tooltip: 'Alle Tracks anzeigen',
+              _mapButton(icon: Icons.explore, bgColor: cs.primary, fgColor: cs.onPrimary, tooltip: context.l10n.tracksShowAll,
                   onTap: refitAll),
               const SizedBox(height: 8),
             ],
             _mapButton(
               icon: _satelliteView ? Icons.map_outlined : Icons.satellite_alt,
               bgColor: cs.surfaceContainerLowest, fgColor: cs.primary,
-              tooltip: _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
+              tooltip: _satelliteView ? context.l10n.tracksMapView : context.l10n.tracksSatelliteView,
               onTap: () => setState(() => _satelliteView = !_satelliteView),
             ),
           ]),

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../data/home_repository.dart';
 import '../domain/crew_member.dart';
 import '../widgets/add_crew_member_dialog.dart';
+import '../../../l10n/l10n_extension.dart';
 
 class CrewRosterScreen extends StatelessWidget {
   const CrewRosterScreen({super.key});
@@ -23,7 +24,7 @@ class CrewRosterScreen extends StatelessWidget {
         shadowColor: Colors.black12,
         centerTitle: true,
         title: Text(
-          'Besatzungsliste',
+          context.l10n.crewRosterTitle,
           style: GoogleFonts.newsreader(
             fontSize: 22,
             fontStyle: FontStyle.italic,
@@ -37,6 +38,7 @@ class CrewRosterScreen extends StatelessWidget {
           final roster = repo.roster;
 
           if (roster.isEmpty) {
+            final l10n = context.l10n;
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -45,13 +47,13 @@ class CrewRosterScreen extends StatelessWidget {
                       size: 64, color: cs.outlineVariant),
                   const SizedBox(height: 16),
                   Text(
-                    'Noch keine Besatzungsmitglieder',
+                    l10n.crewRosterEmpty,
                     style: GoogleFonts.inter(
                         fontSize: 15, color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Tippe auf + um eine Person hinzuzufügen.',
+                    l10n.crewRosterEmptyHint,
                     style: GoogleFonts.inter(
                         fontSize: 13, color: cs.outline),
                   ),
@@ -72,7 +74,7 @@ class CrewRosterScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addMember(context),
-        tooltip: 'Neue Person',
+        tooltip: context.l10n.crewRosterNewPerson,
         child: const Icon(Icons.person_add_outlined),
       ),
     );
@@ -118,21 +120,21 @@ class _RosterListTile extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context, ColorScheme cs) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Person entfernen?'),
-        content: Text(
-            '${member.name} wird dauerhaft aus der Besatzungsliste gelöscht.'),
+        title: Text(l10n.crewRosterRemoveTitle),
+        content: Text(l10n.crewRosterRemoveContent(member.name)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Abbrechen')),
+              child: Text(l10n.cancel)),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: cs.error, foregroundColor: cs.onError),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Entfernen')),
+              child: Text(l10n.remove)),
         ],
       ),
     );

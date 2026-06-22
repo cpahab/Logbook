@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../domain/timeline_entry.dart';
+import '../../../l10n/l10n_extension.dart';
 
 class _CourseFormatter extends TextInputFormatter {
   @override
@@ -132,6 +133,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   @override
   Widget build(BuildContext context) {
     final cs     = Theme.of(context).colorScheme;
+    final l10n   = context.l10n;
     final isEdit = widget.initialEntry != null;
 
     return Dialog.fullscreen(
@@ -150,7 +152,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
             onPressed: () => Navigator.pop(context, null),
           ),
           title: Text(
-            isEdit ? 'Eintrag bearbeiten' : 'Neuer Eintrag',
+            isEdit ? l10n.entryDialogTitleEdit : l10n.entryDialogTitleNew,
             style: GoogleFonts.newsreader(
               fontSize: 22,
               fontStyle: FontStyle.italic,
@@ -175,13 +177,13 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── 1. Chronometrie ─────────────────────────────────
-                  _sectionHeader(Icons.schedule, 'Chronometrie', cs),
+                  _sectionHeader(Icons.schedule, l10n.entryDialogSectionTime, cs),
                   const SizedBox(height: 8),
                   _plainCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _labelSm('UHRZEIT', cs),
+                        _labelSm(l10n.entryDialogTimeLabel, cs),
                         const SizedBox(height: 4),
                         GestureDetector(
                           onTap: () async {
@@ -205,13 +207,13 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
 
                   const SizedBox(height: 16),
                   // ── 2. Navigation ────────────────────────────────────
-                  _sectionHeader(Icons.explore, 'Navigation', cs),
+                  _sectionHeader(Icons.explore, l10n.entryDialogSectionNav, cs),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: _navCard(
-                          label: 'KURS (°)',
+                          label: l10n.entryDialogCourseLabel,
                           unit: 'deg',
                           controller: courseCtrl,
                           placeholder: '000',
@@ -227,7 +229,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: _navCard(
-                          label: 'FAHRT (kn)',
+                          label: l10n.entryDialogSpeedLabel,
                           unit: 'kts',
                           controller: speedCtrl,
                           placeholder: '0.0',
@@ -245,14 +247,14 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
 
                   const SizedBox(height: 16),
                   // ── 3. Umgebung ──────────────────────────────────────
-                  _sectionHeader(Icons.air, 'Umgebung', cs),
+                  _sectionHeader(Icons.air, l10n.entryDialogSectionEnv, cs),
                   const SizedBox(height: 8),
                   // Wind: direction + strength
                   _plainCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _labelSm('WIND RICHTUNG & STÄRKE', cs),
+                        _labelSm(l10n.entryDialogWindLabel, cs),
                         const SizedBox(height: 6),
                         Row(
                           children: [
@@ -361,9 +363,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _labelSm('SEE', cs),
+                              _labelSm(l10n.entryDialogSeaLabel, cs),
                               const SizedBox(height: 4),
-                              _bareTextField(seaCtrl, 'z.B. Leicht', cs),
+                              _bareTextField(seaCtrl, l10n.entryDialogSeaHint, cs),
                             ],
                           ),
                           cs: cs,
@@ -375,9 +377,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _labelSm('WETTER', cs),
+                              _labelSm(l10n.entryDialogWeatherLabel, cs),
                               const SizedBox(height: 4),
-                              _bareTextField(weatherCtrl, 'z.B. Sonnig', cs),
+                              _bareTextField(weatherCtrl, l10n.entryDialogWeatherHint, cs),
                             ],
                           ),
                           cs: cs,
@@ -388,14 +390,14 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
 
                   const SizedBox(height: 16),
                   // ── 4. Segel & Motor ─────────────────────────────────
-                  _sectionHeader(Icons.sailing, 'Segel & Motor', cs),
+                  _sectionHeader(Icons.sailing, l10n.entryDialogSectionSails, cs),
                   const SizedBox(height: 8),
                   _plainCard(
                     cs: cs,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _labelSm('GROSS', cs),
+                        _labelSm(l10n.entryDialogMainSailLabel, cs),
                         const SizedBox(height: 6),
                         _sailChips(
                           options: const ['Voll gesetzt', '1. Reff', '2. Reff', 'Niedergeholt'],
@@ -404,7 +406,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           cs: cs,
                         ),
                         const SizedBox(height: 10),
-                        _labelSm('FOCK', cs),
+                        _labelSm(l10n.entryDialogJibSailLabel, cs),
                         const SizedBox(height: 6),
                         _sailChips(
                           options: const ['Voll gesetzt', '1. Reff', '2. Reff', 'Eingerollt'],
@@ -420,13 +422,13 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _labelSm('MOTOR', cs),
+                                  _labelSm(l10n.entryDialogMotorLabel, cs),
                                   const SizedBox(height: 6),
                                   Row(children: [
-                                    _stateChip('An',  _motorOn == true,
+                                    _stateChip(l10n.on,  _motorOn == true,
                                         () => setState(() => _motorOn = _motorOn == true  ? null : true),  cs),
                                     const SizedBox(width: 8),
-                                    _stateChip('Aus', _motorOn == false,
+                                    _stateChip(l10n.off, _motorOn == false,
                                         () => setState(() => _motorOn = _motorOn == false ? null : false), cs),
                                   ]),
                                 ],
@@ -437,7 +439,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _labelSm('KIEL', cs),
+                                  _labelSm(l10n.entryDialogKeelLabel, cs),
                                   const SizedBox(height: 6),
                                   Row(children: [
                                     _stateChip('Unten', _keelDown == true,
@@ -457,7 +459,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
 
                   const SizedBox(height: 16),
                   // ── 5. Bemerkungen ───────────────────────────────────
-                  _sectionHeader(Icons.edit_note, 'Bemerkungen', cs),
+                  _sectionHeader(Icons.edit_note, l10n.entryDialogSectionRemarks, cs),
                   const SizedBox(height: 8),
                   _plainCard(
                     child: TextField(
@@ -471,7 +473,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
-                        hintText: 'z.B. Beobachtung, Erlebnis…',
+                        hintText: l10n.entryDialogRemarksHint,
                         hintStyle: GoogleFonts.newsreader(
                           fontSize: 15,
                           fontStyle: FontStyle.italic,
@@ -502,7 +504,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                             fontSize: 15, fontWeight: FontWeight.w600),
                       ),
                       icon: const Icon(Icons.anchor, size: 20),
-                      label: Text(isEdit ? 'Änderungen speichern' : 'In Log eintragen'),
+                      label: Text(isEdit ? l10n.saveChanges : l10n.entryDialogSubmitNew),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -520,7 +522,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         textStyle: GoogleFonts.inter(
                             fontSize: 15, fontWeight: FontWeight.w600),
                       ),
-                      child: const Text('Abbrechen'),
+                      child: Text(l10n.cancel),
                     ),
                   ),
                 ],

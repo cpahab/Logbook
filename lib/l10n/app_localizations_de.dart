@@ -124,6 +124,7 @@ class AppLocalizationsDe extends AppLocalizations {
   @override String get crewFieldAllergiesHint => 'Bekannte Allergien auflisten…';
   @override String get crewFieldConditions => 'Erkrankungen / Medikamente';
   @override String get crewFieldConditionsHint => 'z.B. Benötigt Inhalator (Asthma)…';
+  @override String get crewSectionRemarks => 'Bemerkungen';
   @override String get crewFieldRemarksHint => 'Allgemeine Notizen zu dieser Person…';
   @override String get crewButtonAddToCrew => 'Zur Besatzung hinzufügen';
   @override String get crewButtonRemoveFromCrew => 'Besatzung entfernen';
@@ -214,6 +215,31 @@ class AppLocalizationsDe extends AppLocalizations {
   @override String get tracksSatelliteView => 'Satellitenansicht';
   @override String get tracksNoTracks => 'Keine Tracks vorhanden';
   @override String get tracksNoTracksInPeriod => 'Keine Tracks im gewählten Zeitraum';
+
+  @override String get dayChangeDateTitle => 'Falsches Datum?';
+  @override String dayChangeDateContent(String from, String to) => 'Der GPX-Track enthält hauptsächlich Daten vom $from, nicht vom $to.\n\nTrotzdem verschieben?';
+  @override String get dayChangeDateConfirm => 'Trotzdem verschieben';
+  @override String get dayDateExistsError => 'Für dieses Datum existiert bereits ein Eintrag.';
+  @override String get dayGpxNoWaypoints => 'GPX-File enthält keine Wegpunkte mit Zeitstempel.';
+  @override String dayGpxWrongDateContent(String from, String to) => 'Das GPX-File enthält hauptsächlich Daten vom $from, nicht vom $to.\n\nTrotzdem importieren?';
+  @override String get dayGpxImportConfirm => 'Trotzdem importieren';
+  @override String dayGpxImported(String date) => 'GPX-Track importiert für $date.';
+  @override String get dayGpxExported => 'GPX exportiert.';
+  @override String get dayGpxDeleteTitle => 'GPX-Track entfernen?';
+  @override String get dayGpxDeleteContent => 'GPX-Track für diesen Tag löschen?';
+  @override String get dayGpxRemoved => 'GPX-Track entfernt.';
+  @override String get dayDeleteTitle => 'Tag löschen?';
+  @override String dayDeleteContent(String date) => 'Alle Daten für den $date werden unwiderruflich gelöscht, inklusive Logeinträge und GPX-Track.';
+  @override String get dayEntryDeleted => 'Logeintrag gelöscht.';
+  @override String get dayEntryUpdated => 'Logeintrag aktualisiert.';
+  @override String get dayUndo => 'Rückgängig';
+  @override String get dayFreeTextHint => 'Freie Notizen für diesen Tag…';
+  @override String get dayDiaryHint => 'Tagebucheintrag für diesen Tag…';
+  @override String get vesselStatusTitle => 'Schiffsstatus';
+  @override String get vesselOilLabel => 'Motoröl';
+  @override String get vesselFuelLabel => 'Kraftstoff';
+  @override String get vesselFullLabel => 'Voll';
+  @override String get vesselEmptyLabel => 'Leer';
 
   @override String get gpsConsentTitle => 'GPS für den Notfall';
   @override String get gpsConsentContent =>
