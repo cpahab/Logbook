@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../domain/crew_member.dart';
+import '../../../l10n/l10n_extension.dart';
 
 class AddCrewMemberDialog extends StatefulWidget {
   final CrewMember? initialMember;
@@ -61,6 +62,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final isEdit = widget.initialMember != null;
 
     return Dialog.fullscreen(
@@ -75,7 +77,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
           centerTitle: true,
           automaticallyImplyLeading: false,
           title: Text(
-            isEdit ? 'Besatzung bearbeiten' : 'Besatzung hinzufügen',
+            isEdit ? l10n.crewDialogTitleEdit : l10n.crewDialogTitleAdd,
             style: GoogleFonts.newsreader(
               fontSize: 22,
               fontStyle: FontStyle.italic,
@@ -99,18 +101,18 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Identity ─────────────────────────────────────────
-                  _sectionHeader(Icons.person, 'Identität', cs),
+                  _sectionHeader(Icons.person, l10n.crewSectionIdentity, cs),
                   const SizedBox(height: 12),
                   _card(
                     cs: cs,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('VOLLSTÄNDIGER NAME', cs),
+                        _label(l10n.crewFieldFullName, cs),
                         const SizedBox(height: 6),
                         _field(
                           controller: _nameCtrl,
-                          hint: 'z.B. Thomas Müller',
+                          hint: l10n.crewFieldFullNameHint,
                           cs: cs,
                           autofocus: true,
                           capitalization: TextCapitalization.words,
@@ -121,18 +123,18 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
 
                   const SizedBox(height: 24),
                   // ── Medical Info ──────────────────────────────────────
-                  _sectionHeader(Icons.medical_services, 'Medizinische Info', cs),
+                  _sectionHeader(Icons.medical_services, l10n.crewSectionMedical, cs),
                   const SizedBox(height: 12),
                   _card(
                     cs: cs,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('BLUTGRUPPE', cs),
+                        _label(l10n.crewFieldBloodGroup, cs),
                         const SizedBox(height: 6),
                         _field(
                           controller: _bloodTypeCtrl,
-                          hint: 'z.B. 0+, A-',
+                          hint: l10n.crewFieldBloodGroupHint,
                           cs: cs,
                         ),
                       ],
@@ -144,11 +146,11 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('ALLERGIEN', cs),
+                        _label(l10n.crewFieldAllergies, cs),
                         const SizedBox(height: 6),
                         _field(
                           controller: _allergiesCtrl,
-                          hint: 'Bekannte Allergien auflisten…',
+                          hint: l10n.crewFieldAllergiesHint,
                           cs: cs,
                           maxLines: 2,
                           italic: true,
@@ -162,11 +164,11 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _label('ERKRANKUNGEN / MEDIKAMENTE', cs),
+                        _label(l10n.crewFieldConditions, cs),
                         const SizedBox(height: 6),
                         _field(
                           controller: _conditionsCtrl,
-                          hint: 'z.B. Benötigt Inhalator (Asthma)…',
+                          hint: l10n.crewFieldConditionsHint,
                           cs: cs,
                           maxLines: 2,
                           italic: true,
@@ -177,13 +179,13 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
 
                   const SizedBox(height: 24),
                   // ── Remarks ───────────────────────────────────────────
-                  _sectionHeader(Icons.description, 'Bemerkungen', cs),
+                  _sectionHeader(Icons.description, l10n.crewSectionRemarks, cs),
                   const SizedBox(height: 12),
                   _card(
                     cs: cs,
                     child: _field(
                       controller: _remarksCtrl,
-                      hint: 'Allgemeine Notizen zu dieser Person…',
+                      hint: l10n.crewFieldRemarksHint,
                       cs: cs,
                       maxLines: 3,
                       italic: true,
@@ -207,8 +209,8 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                       ),
                       icon: const Icon(Icons.anchor, size: 20),
                       label: Text(isEdit
-                          ? 'Änderungen speichern'
-                          : 'Zur Besatzung hinzufügen'),
+                          ? l10n.saveChanges
+                          : l10n.crewButtonAddToCrew),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -226,7 +228,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                         textStyle: GoogleFonts.inter(
                             fontSize: 15, fontWeight: FontWeight.w600),
                       ),
-                      child: const Text('Abbrechen'),
+                      child: Text(l10n.cancel),
                     ),
                   ),
                   if (isEdit && widget.onDelete != null) ...[
@@ -250,7 +252,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                         ),
                         icon: const Icon(Icons.person_remove_outlined,
                             size: 20),
-                        label: const Text('Besatzung entfernen'),
+                        label: Text(l10n.crewButtonRemoveFromCrew),
                       ),
                     ),
                   ],

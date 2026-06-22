@@ -34,6 +34,7 @@ import '../utils/pdf_exporter.dart';
 import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
 import '../../settings/domain/theme_provider.dart';
+import '../../../l10n/l10n_extension.dart';
 
 
 class DayDetailScreen extends StatefulWidget {
@@ -64,8 +65,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // Returns the display string for a crew note, stripping the sentinel prefix
   // and prepending a localisation-ready display label.
-  static String _crewNoteDisplay(String note) {
-    if (note.startsWith('crew:')) return 'Besatzung: ${note.substring(5)}';
+  static String _crewNoteDisplay(String note, String crewLabel) {
+    if (note.startsWith('crew:')) return '$crewLabel: ${note.substring(5)}';
     return note; // legacy format already begins with 'Besatzung: '
   }
 
@@ -115,9 +116,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       stats = computeDailyStats(track.points, settings: filterSettings);
     }
 
+    final l10n = context.l10n;
     final cs = Theme.of(context).colorScheme;
-    final dayName = DateFormat('EEEE', 'de_CH').format(day);
-    final dateStr = DateFormat('d. MMM yyyy', 'de_CH').format(day);
+    final localeStr = context.read<ThemeProvider>().localeString;
+    final dayName = DateFormat('EEEE', localeStr).format(day);
+    final dateStr = DateFormat('d. MMM yyyy', localeStr).format(day);
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -144,7 +147,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         actions: [
           if (entry != null)
             PopupMenuButton<String>(
-              tooltip: 'Optionen',
+              tooltip: l10n.dayMenuOptions,
               icon: Icon(Icons.more_vert, color: cs.primary),
               onSelected: (value) {
                 if (value == 'change_date') _changeDate(entry);
@@ -160,7 +163,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   child: Row(children: [
                     Icon(Icons.calendar_today_outlined, color: cs.onSurface),
                     const SizedBox(width: 12),
-                    Text('Datum ändern', style: TextStyle(color: cs.onSurface)),
+                    Text(l10n.dayMenuChangeDate, style: TextStyle(color: cs.onSurface)),
                   ]),
                 ),
                 PopupMenuItem<String>(
@@ -168,7 +171,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   child: Row(children: [
                     _gpxUploadIcon(),
                     const SizedBox(width: 12),
-                    Text('GPX importieren', style: TextStyle(color: cs.onSurface)),
+                    Text(l10n.dayMenuImportGpx, style: TextStyle(color: cs.onSurface)),
                   ]),
                 ),
                 if (track != null)
@@ -177,7 +180,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     child: Row(children: [
                       Icon(Icons.download_outlined, color: cs.onSurface),
                       const SizedBox(width: 12),
-                      Text('GPX exportieren', style: TextStyle(color: cs.onSurface)),
+                      Text(l10n.dayMenuExportGpx, style: TextStyle(color: cs.onSurface)),
                     ]),
                   ),
                 PopupMenuItem<String>(
@@ -185,7 +188,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   child: Row(children: [
                     Icon(Icons.picture_as_pdf_outlined, color: cs.onSurface),
                     const SizedBox(width: 12),
-                    Text('PDF exportieren', style: TextStyle(color: cs.onSurface)),
+                    Text(l10n.dayMenuExportPdf, style: TextStyle(color: cs.onSurface)),
                   ]),
                 ),
                 if (track != null)
@@ -194,7 +197,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     child: Row(children: [
                       Icon(Icons.delete_outline, color: cs.error),
                       const SizedBox(width: 12),
-                      Text('GPX löschen',
+                      Text(l10n.dayMenuDeleteGpx,
                           style: TextStyle(color: cs.error)),
                     ]),
                   ),
@@ -204,7 +207,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   child: Row(children: [
                     Icon(Icons.delete_forever_outlined, color: cs.error),
                     const SizedBox(width: 12),
-                    Text('Tag löschen',
+                    Text(l10n.dayMenuDeleteDay,
                         style: TextStyle(color: cs.error)),
                   ]),
                 ),
@@ -223,7 +226,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         },
       ),
       body: entry == null
-          ? const Center(child: Text('Kein Eintrag für diesen Tag'))
+          ? Center(child: Text(l10n.dayNoEntry))
           : _buildBody(entry, track, stats, cs),
     );
   }
@@ -264,7 +267,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'NOTIZEN',
+          context.l10n.sectionNotes.toUpperCase(),
           style: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -305,7 +308,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         else
           _emptyStateButton(
             Icons.notes,
-            'Notizen hinzufügen…',
+            context.l10n.dayAddNotes,
             () => _editFreeText(entry),
             cs,
           ),
@@ -318,9 +321,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (_) => _EditTextDialog(
-        title: 'Notizen',
+        title: context.l10n.sectionNotes,
         initialText: entry.freeText,
-        hintText: 'Freie Notizen für diesen Tag…',
+        hintText: context.l10n.dayFreeTextHint,
       ),
     );
     if (!mounted || result == null) return;
@@ -337,7 +340,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'TAGEBUCH',
+          context.l10n.sectionDiary.toUpperCase(),
           style: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -380,7 +383,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         else
           _emptyStateButton(
             Icons.edit_note,
-            'Tagebucheintrag hinzufügen…',
+            context.l10n.dayAddDiary,
             () => _editNotes(entry),
             cs,
           ),
@@ -401,7 +404,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         Row(
           children: [
             Text(
-              'BESATZUNG',
+              context.l10n.sectionCrew.toUpperCase(),
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -412,7 +415,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             const Spacer(),
             if (_crewEditing) ...[
               Tooltip(
-                message: 'Besatzungsmitglied hinzufügen',
+                message: context.l10n.dayAddCrewMember,
                 child: GestureDetector(
                   onTap: _addPendingMember,
                   child: Container(
@@ -428,8 +431,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ] else ...[
               Tooltip(
                 message: entry.crew.isEmpty
-                    ? 'Besatzungsmitglied hinzufügen'
-                    : 'Besatzung bearbeiten',
+                    ? context.l10n.dayAddCrewMember
+                    : context.l10n.dayEditCrew,
                 child: GestureDetector(
                   onTap: entry.crew.isEmpty
                       ? () => _addCrewMember(entry)
@@ -443,7 +446,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        entry.crew.isEmpty ? 'HINZUFÜGEN' : 'ÄNDERN',
+                        entry.crew.isEmpty ? context.l10n.add.toUpperCase() : context.l10n.change.toUpperCase(),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -545,14 +548,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         else if (_crewEditing)
           _emptyStateButton(
             Icons.groups,
-            'Besatzungsmitglied hinzufügen…',
+            context.l10n.dayAddCrewMember,
             _addPendingMember,
             cs,
           )
         else
           _emptyStateButton(
             Icons.groups,
-            'Besatzung hinzufügen…',
+            context.l10n.dayAddCrew,
             () => _addCrewMember(entry),
             cs,
           ),
@@ -574,7 +577,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     textStyle: GoogleFonts.inter(
                         fontSize: 13, fontWeight: FontWeight.w600),
                   ),
-                  child: const Text('Abbrechen'),
+                  child: Text(context.l10n.cancel),
                 ),
               ),
               const SizedBox(width: 8),
@@ -590,7 +593,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     textStyle: GoogleFonts.inter(
                         fontSize: 13, fontWeight: FontWeight.w600),
                   ),
-                  child: const Text('Übernehmen'),
+                  child: Text(context.l10n.apply),
                 ),
               ),
             ],
@@ -651,7 +654,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 Row(
                   children: [
                     Text(
-                      isFirst ? 'SKIPPER' : 'BESATZUNG',
+                      isFirst ? context.l10n.labelSkipper.toUpperCase() : context.l10n.labelCrewRole.toUpperCase(),
                       style: GoogleFonts.inter(
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
@@ -709,7 +712,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'ROUTE & PASSAGE',
+          context.l10n.sectionRoute.toUpperCase(),
           style: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w700,
@@ -756,7 +759,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                     controller: _fromHarborCtrl,
                                     autofocus: true,
                                     decoration: InputDecoration(
-                                      hintText: 'Starthafen',
+                                      hintText: context.l10n.dayDeparturePort,
                                       border: InputBorder.none,
                                       isDense: true,
                                       contentPadding: EdgeInsets.zero,
@@ -782,7 +785,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                   TextField(
                                     controller: _toHarborCtrl,
                                     decoration: InputDecoration(
-                                      hintText: 'Zielhafen',
+                                      hintText: context.l10n.dayDestinationPort,
                                       border: InputBorder.none,
                                       isDense: true,
                                       contentPadding: EdgeInsets.zero,
@@ -806,7 +809,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                               ),
                             ),
                             Tooltip(
-                              message: 'Etappe speichern',
+                              message: context.l10n.daySaveRoute,
                               child: GestureDetector(
                                 onTap: () => _saveRoute(entry),
                                 child: Container(
@@ -844,7 +847,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                           overflow: TextOverflow.ellipsis,
                                         )
                                       : Text(
-                                          'Etappe erfassen…',
+                                          context.l10n.dayCaptureRoute,
                                           style: GoogleFonts.inter(
                                             fontSize: 15,
                                             fontStyle: FontStyle.italic,
@@ -883,7 +886,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                     color: cs.onSurfaceVariant),
                                 const SizedBox(width: 8),
                                 Text(
-                                  'GPX Track hinzufügen…',
+                                  context.l10n.dayAddGpxTrack,
                                   style: GoogleFonts.inter(
                                     fontSize: 15,
                                     fontStyle: FontStyle.italic,
@@ -918,14 +921,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   decoration: BoxDecoration(border: Border(right: div)),
                   padding: const EdgeInsets.all(12),
                   child: _statCell(
-                      'DISTANZ', '${stats.distanceNm.toStringAsFixed(1)} NM', cs),
+                      context.l10n.statDistance.toUpperCase(), '${stats.distanceNm.toStringAsFixed(1)} NM', cs),
                 ),
               ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: _statCell(
-                      'Ø Geschwindigkeit', '${stats.avgOverGroundKn.toStringAsFixed(1)} kn', cs),
+                      context.l10n.statAvgSpeed, '${stats.avgOverGroundKn.toStringAsFixed(1)} kn', cs),
                 ),
               ),
             ],
@@ -940,14 +943,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       decoration: BoxDecoration(border: Border(right: div)),
                       padding: const EdgeInsets.all(12),
                       child: _statCell(
-                          'Ø Geschwindigkeit in Fahrt', '${stats.avgMakingWayKn.toStringAsFixed(1)} kn', cs),
+                          context.l10n.statAvgSpeedUnderway, '${stats.avgMakingWayKn.toStringAsFixed(1)} kn', cs),
                     ),
                   ),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: _statCell(
-                          'MAX', '${stats.maxSpeedKn.toStringAsFixed(1)} kn', cs),
+                          context.l10n.statMax.toUpperCase(), '${stats.maxSpeedKn.toStringAsFixed(1)} kn', cs),
                     ),
                   ),
                 ],
@@ -993,7 +996,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         Row(
           children: [
             Text(
-              'CHRONOLOGISCHE EINTRÄGE',
+              context.l10n.sectionLogEntries.toUpperCase(),
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -1003,7 +1006,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
             const Spacer(),
             Tooltip(
-              message: 'Eintrag hinzufügen',
+              message: context.l10n.dayAddLogEntry,
               child: GestureDetector(
                 onTap: () => _addTimelineEntry(context),
                 child: Container(
@@ -1022,7 +1025,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         if (entry.timeline.isEmpty)
           _emptyStateButton(
             Icons.add_circle_outline,
-            'Ersten Logeintrag hinzufügen…',
+            context.l10n.dayFirstLogEntry,
             () => _addTimelineEntry(context),
             cs,
           )
@@ -1099,17 +1102,17 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final bool isStatusEntry = t.vesselStatusNote != null && !isCrewEntry;
     final String entryLabel;
     if (isCrewEntry) {
-      entryLabel = 'BESATZUNG';
+      entryLabel = context.l10n.dataCrewNote.toUpperCase();
     } else if (isStatusEntry) {
-      entryLabel = 'SCHIFFSSTATUS';
+      entryLabel = context.l10n.sectionVesselStatus.toUpperCase();
     } else if (total == 1) {
-      entryLabel = 'EINTRAG';
+      entryLabel = context.l10n.labelEntry.toUpperCase();
     } else if (index == 0) {
-      entryLabel = 'ABFAHRT';
+      entryLabel = context.l10n.labelDeparture.toUpperCase();
     } else if (index == total - 1) {
-      entryLabel = 'ANKUNFT';
+      entryLabel = context.l10n.labelArrival.toUpperCase();
     } else {
-      entryLabel = 'VERLAUF';
+      entryLabel = context.l10n.labelProgress.toUpperCase();
     }
 
     return Container(
@@ -1164,7 +1167,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ),
               const SizedBox(width: 12),
               Tooltip(
-                message: 'Logeintrag bearbeiten',
+                message: context.l10n.dayEditLogEntry,
                 child: GestureDetector(
                   onTap: () => _editTimelineEntry(entry, t),
                   child: Icon(Icons.edit_outlined,
@@ -1173,7 +1176,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ),
               const SizedBox(width: 10),
               Tooltip(
-                message: 'Logeintrag löschen',
+                message: context.l10n.dayDeleteLogEntry,
                 child: GestureDetector(
                   onTap: () => _deleteTimelineEntry(entry, t),
                   child: Icon(Icons.close,
@@ -1199,7 +1202,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 isCrewEntry
-                    ? _crewNoteDisplay(t.vesselStatusNote!)
+                    ? _crewNoteDisplay(t.vesselStatusNote!, context.l10n.dataCrewNote)
                     : t.vesselStatusNote!,
                 style: GoogleFonts.inter(
                   fontSize: 13,
@@ -1221,16 +1224,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               Text(
                 [
                   if (t.course != null)
-                    'Kurs: ${t.course!.toStringAsFixed(0)}°',
+                    '${context.l10n.dataCourse}: ${t.course!.toStringAsFixed(0)}°',
                   if (t.speed != null)
-                    'Fahrt: ${t.speed!.toStringAsFixed(1)} kn',
-                  if (t.wind != null) 'Wind: ${t.wind!}',
-                  if (t.sea != null) 'See: ${t.sea!}',
-                  if (t.weather != null) 'Wetter: ${t.weather!}',
-                  if (t.grossState != null) 'Gross: ${t.grossState!}',
-                  if (t.fockState != null) 'Fock: ${t.fockState!}',
+                    '${context.l10n.dataSpeed}: ${t.speed!.toStringAsFixed(1)} kn',
+                  if (t.wind != null) '${context.l10n.dataWind}: ${t.wind!}',
+                  if (t.sea != null) '${context.l10n.dataSea}: ${t.sea!}',
+                  if (t.weather != null) '${context.l10n.dataWeather}: ${t.weather!}',
+                  if (t.grossState != null) '${context.l10n.dataMainSail}: ${t.grossState!}',
+                  if (t.fockState != null) '${context.l10n.dataJibSail}: ${t.fockState!}',
                   if (t.motorOn != null)
-                    'Motor: ${t.motorOn! ? 'An' : 'Aus'}',
+                    '${context.l10n.dataMotor}: ${t.motorOn! ? context.l10n.on : context.l10n.off}',
                 ].join(' · '),
                 style: GoogleFonts.inter(
                   fontSize: 13,
@@ -1258,7 +1261,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         Row(
           children: [
             Text(
-              'FOTOS',
+              context.l10n.sectionPhotos.toUpperCase(),
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -1275,7 +1278,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 )
               else
                 Tooltip(
-                  message: 'Fotos hinzufügen',
+                  message: context.l10n.dayAddPhotosTooltip,
                   child: GestureDetector(
                     onTap: () => _addPhotos(entry),
                     child: Container(
@@ -1310,7 +1313,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Fotos werden importiert…',
+                  context.l10n.dayImportingPhotos,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
@@ -1323,7 +1326,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         else
           _emptyStateButton(
             Icons.add_a_photo_outlined,
-            'Fotos hinzufügen…',
+            context.l10n.dayAddPhotosEmpty,
             () => _addPhotos(entry),
             cs,
           ),
@@ -1480,14 +1483,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               color: cs.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.w600),
-          title: const Text('Foto löschen?'),
+          title: Text(ctx.l10n.dayDeletePhoto),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: Text('Abbrechen', style: TextStyle(color: cs.primary))),
+                child: Text(ctx.l10n.cancel, style: TextStyle(color: cs.primary))),
             FilledButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Löschen')),
+                child: Text(ctx.l10n.delete)),
           ],
         );
       },
@@ -1532,7 +1535,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         Row(
           children: [
             Text(
-              'SCHIFFSSTATUS',
+              context.l10n.sectionVesselStatus.toUpperCase(),
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -1542,7 +1545,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
             const Spacer(),
             Tooltip(
-              message: 'Schiffsstatus aktualisieren',
+              message: context.l10n.dayUpdateVesselStatus,
               child: GestureDetector(
                 onTap: () => _editVesselStatus(entry),
                 child: Row(
@@ -1550,7 +1553,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     Icon(Icons.edit, size: 16, color: cs.secondary),
                     const SizedBox(width: 4),
                     Text(
-                      'AKTUALISIEREN',
+                      context.l10n.update.toUpperCase(),
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -1592,12 +1595,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     children: [
                       Expanded(
                         child: _vesselStatCell(
-                            'MOTORÖL', entry.oilLevel, Icons.check_circle, cs, cardFg),
+                            context.l10n.vesselOilLabel.toUpperCase(), entry.oilLevel, Icons.check_circle, cs, cardFg),
                       ),
                       const SizedBox(width: 20),
                       Expanded(
-                        child: _vesselStatCell('KRAFTSTOFF', entry.fuelLevel,
-                            Icons.local_gas_station, cs, cardFg),
+                        child: _vesselStatCell(context.l10n.vesselFuelLabel.toUpperCase(), entry.fuelLevel,
+                            Icons.local_gas_station, cs, cardFg, isFuel: true),
                       ),
                     ],
                   ),
@@ -1610,7 +1613,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'KIEL',
+                        context.l10n.entryDialogKeelLabel.toUpperCase(),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -1656,7 +1659,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   Widget _vesselStatCell(
-      String label, int? level, IconData icon, ColorScheme cs, Color onCard) {
+      String label, int? level, IconData icon, ColorScheme cs, Color onCard, {bool isFuel = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1703,7 +1706,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              label == 'KRAFTSTOFF' ? 'LEER' : 'MIN',
+              isFuel ? context.l10n.vesselEmptyLabel.toUpperCase() : 'MIN',
               style: GoogleFonts.inter(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
@@ -1712,7 +1715,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ),
             ),
             Text(
-              'VOLL',
+              context.l10n.vesselFullLabel.toUpperCase(),
               style: GoogleFonts.inter(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
@@ -2121,7 +2124,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     ),
                   ),
                 ),
-                tooltip: 'Vollbild',
+                tooltip: context.l10n.tracksFullscreen,
                 child: const Icon(Icons.fullscreen),
               ),
               const SizedBox(height: 6),
@@ -2129,8 +2132,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 heroTag: 'detail_satellite_button',
                 onPressed: () =>
                     setState(() => _satelliteView = !_satelliteView),
-                tooltip:
-                    _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
+                tooltip: _satelliteView
+                    ? context.l10n.tracksMapView
+                    : context.l10n.tracksSatelliteView,
                 child: Icon(_satelliteView
                     ? Icons.map_outlined
                     : Icons.satellite_alt),
@@ -2147,9 +2151,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (_) => _EditTextDialog(
-        title: 'Tagebucheintrag',
+        title: context.l10n.sectionDiary,
         initialText: entry.notes,
-        hintText: 'Notizen für diesen Tag…',
+        hintText: context.l10n.dayDiaryHint,
       ),
     );
     if (!mounted || result == null) return;
@@ -2166,7 +2170,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       initialDate: current,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      locale: const Locale('de', 'CH'),
+      locale: context.read<ThemeProvider>().locale,
     );
     if (!mounted || picked == null) return;
     final newDate = DateTime(picked.year, picked.month, picked.day);
@@ -2183,23 +2187,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       final dominantDate =
           counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
       if (dominantDate != newDate) {
+        final locStr = context.read<ThemeProvider>().localeString;
         final proceed = await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            title: const Text('Falsches Datum?'),
-            content: Text(
-              'Der GPX-Track enthält hauptsächlich Daten vom '
-              '${DateFormat('d. MMMM yyyy', 'de_CH').format(dominantDate)}, '
-              'nicht vom ${DateFormat('d. MMMM yyyy', 'de_CH').format(newDate)}.\n\n'
-              'Trotzdem verschieben?',
-            ),
+            title: Text(context.l10n.dayChangeDateTitle),
+            content: Text(context.l10n.dayChangeDateContent(
+              DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
+              DateFormat('d. MMMM yyyy', locStr).format(newDate),
+            )),
             actions: [
               TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Abbrechen')),
+                  child: Text(context.l10n.cancel)),
               FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Trotzdem verschieben')),
+                  child: Text(context.l10n.dayChangeDateConfirm)),
             ],
           ),
         );
@@ -2211,8 +2214,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final ok = await repo.changeEntryDate(current, newDate);
     if (!mounted) return;
     if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Für dieses Datum existiert bereits ein Eintrag.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.dayDateExistsError)));
       return;
     }
     context.go('/day/${newDate.year}/${newDate.month}/${newDate.day}');
@@ -2248,7 +2251,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           final cs = Theme.of(ctx).colorScheme;
           return AlertDialog(
             title: Text(
-              'Schiffsstatus',
+              context.l10n.vesselStatusTitle,
               style: GoogleFonts.newsreader(
                   fontSize: 18, fontWeight: FontWeight.w600,
                   color: cs.onSurface),
@@ -2259,7 +2262,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Motoröl', style: TextStyle(color: cs.onSurface)),
+                    Text(context.l10n.vesselOilLabel, style: TextStyle(color: cs.onSurface)),
                     Text('$oilVal%',
                         style: TextStyle(
                             fontWeight: FontWeight.w600, color: cs.onSurface)),
@@ -2276,7 +2279,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Kraftstoff', style: TextStyle(color: cs.onSurface)),
+                    Text(context.l10n.vesselFuelLabel, style: TextStyle(color: cs.onSurface)),
                     Text('$fuelVal%',
                         style: TextStyle(
                             fontWeight: FontWeight.w600, color: cs.onSurface)),
@@ -2292,7 +2295,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 const Divider(height: 24),
                 Row(
                   children: [
-                    Text('Kiel', style: TextStyle(color: cs.onSurface)),
+                    Text(context.l10n.entryDialogKeelLabel, style: TextStyle(color: cs.onSurface)),
                     const Spacer(),
                     Text(
                       keelVal == null ? '—' : (keelVal! ? 'Unten' : 'Oben'),
@@ -2311,12 +2314,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Abbrechen'),
+                child: Text(context.l10n.cancel),
               ),
               FilledButton.icon(
                 onPressed: () => Navigator.pop(ctx, true),
                 icon: const Icon(Icons.anchor, size: 18),
-                label: const Text('Speichern'),
+                label: Text(context.l10n.saveChanges),
               ),
             ],
           );
@@ -2515,9 +2518,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       repo.saveEntry(entry);
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: const Text('Logeintrag gelöscht'),
+      content: Text(context.l10n.dayEntryDeleted),
       action: SnackBarAction(
-        label: 'Rückgängig',
+        label: context.l10n.dayUndo,
         onPressed: () {
           if (!mounted) return;
           setState(() {
@@ -2550,7 +2553,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logeintrag aktualisiert')));
+        SnackBar(content: Text(context.l10n.dayEntryUpdated)));
   }
 
   // ── GPX ───────────────────────────────────────────────────────────
@@ -2581,9 +2584,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted) return;
 
     if (preview.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'GPX-File enthält keine Wegpunkte mit Zeitstempel')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.l10n.dayGpxNoWaypoints)));
       return;
     }
 
@@ -2598,23 +2600,24 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final targetDate = DateTime(day.year, day.month, day.day);
 
     if (dominantDate != targetDate) {
+      final locStr = context.read<ThemeProvider>().localeString;
       final proceed = await showDialog<bool>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Falsches Datum?'),
+          title: Text(context.l10n.dayChangeDateTitle),
           content: Text(
-            'Das GPX-File enthält hauptsächlich Daten vom '
-            '${DateFormat('d. MMMM yyyy', 'de_CH').format(dominantDate)}, '
-            'nicht vom ${DateFormat('d. MMMM yyyy', 'de_CH').format(targetDate)}.\n\n'
-            'Trotzdem importieren?',
+            context.l10n.dayGpxWrongDateContent(
+              DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
+              DateFormat('d. MMMM yyyy', locStr).format(targetDate),
+            ),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Abbrechen')),
+                child: Text(context.l10n.cancel)),
             FilledButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Trotzdem importieren')),
+                child: Text(context.l10n.dayGpxImportConfirm)),
           ],
         ),
       );
@@ -2631,8 +2634,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(
-            'GPX-Track importiert für ${DateFormat('d. MMMM yyyy', 'de_CH').format(day)}')));
+        content: Text(context.l10n.dayGpxImported(
+            DateFormat('d. MMMM yyyy', context.read<ThemeProvider>().localeString).format(day)))));
   }
 
   void _exportGpx(DailyTrack track, DateTime day) async {
@@ -2658,7 +2661,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     if (mounted && result != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('GPX exportiert.')),
+        SnackBar(content: Text(context.l10n.dayGpxExported)),
       );
     }
   }
@@ -2691,18 +2694,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('GPX-Track entfernen?'),
-        content: const Text('GPX-Track für diesen Tag löschen?'),
+        title: Text(context.l10n.dayGpxDeleteTitle),
+        content: Text(context.l10n.dayGpxDeleteContent),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Abbrechen')),
+              child: Text(context.l10n.cancel)),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.error,
                   foregroundColor: Theme.of(context).colorScheme.onError),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Löschen')),
+              child: Text(context.l10n.delete)),
         ],
       ),
     );
@@ -2710,35 +2713,34 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     await repo.removeGpx(day);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('GPX-Track entfernt')));
+        SnackBar(content: Text(context.l10n.dayGpxRemoved)));
   }
 
   void _deleteDay() async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
     final dateLabel =
-        DateFormat('d. MMMM yyyy', 'de_CH').format(day);
+        DateFormat('d. MMMM yyyy', context.read<ThemeProvider>().localeString).format(day);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         return AlertDialog(
-          title: Text('Tag löschen?', style: TextStyle(color: cs.onSurface)),
+          title: Text(context.l10n.dayDeleteTitle, style: TextStyle(color: cs.onSurface)),
           content: Text(
-            'Alle Daten für den $dateLabel werden unwiderruflich gelöscht, '
-            'inklusive Logeinträge und GPX-Track.',
+            context.l10n.dayDeleteContent(dateLabel),
             style: TextStyle(color: cs.onSurface),
           ),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Abbrechen')),
+                child: Text(context.l10n.cancel)),
             FilledButton(
                 style: FilledButton.styleFrom(
                     backgroundColor: cs.error,
                     foregroundColor: cs.onError),
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Löschen')),
+                child: Text(context.l10n.delete)),
           ],
         );
       },
@@ -3282,7 +3284,9 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
             FloatingActionButton.small(
               heroTag: 'fs_satellite',
               onPressed: () => setState(() => _satelliteView = !_satelliteView),
-              tooltip: _satelliteView ? 'Kartenansicht' : 'Satellitenansicht',
+              tooltip: _satelliteView
+                  ? context.l10n.tracksMapView
+                  : context.l10n.tracksSatelliteView,
               child: Icon(_satelliteView ? Icons.map_outlined : Icons.satellite_alt),
             ),
           ]),
@@ -3481,12 +3485,12 @@ class _EditTextDialogState extends State<_EditTextDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Abbrechen'),
+          child: Text(context.l10n.cancel),
         ),
         FilledButton.icon(
           onPressed: () => Navigator.pop(context, _ctrl.text),
           icon: const Icon(Icons.anchor, size: 18),
-          label: const Text('Speichern'),
+          label: Text(context.l10n.saveChanges),
         ),
       ],
     );

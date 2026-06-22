@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../data/home_repository.dart';
 import '../domain/crew_member.dart';
 import 'add_crew_member_dialog.dart';
+import '../../../l10n/l10n_extension.dart';
 
 /// Bottom sheet for picking a crew member from the roster or creating a new one.
 ///
@@ -51,7 +52,7 @@ class CrewPickerSheet extends StatelessWidget {
                     Icon(Icons.people_outline, size: 18, color: cs.primary),
                     const SizedBox(width: 8),
                     Text(
-                      'BESATZUNG WÄHLEN',
+                      context.l10n.crewPickerTitle,
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -105,20 +106,21 @@ class _RosterTile extends StatelessWidget {
 
   Future<void> _delete(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Aus Besatzungsliste entfernen?'),
-        content: Text('${member.name} wird dauerhaft aus der Liste gelöscht.'),
+        title: Text(l10n.crewPickerRemoveTitle),
+        content: Text(l10n.crewPickerRemoveContent(member.name)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Abbrechen')),
+              child: Text(l10n.cancel)),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: cs.error, foregroundColor: cs.onError),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Entfernen')),
+              child: Text(l10n.remove)),
         ],
       ),
     );
@@ -126,9 +128,9 @@ class _RosterTile extends StatelessWidget {
     repo.deleteRosterMember(member.id!);
   }
 
-  String _subtitle() {
+  String _subtitle(BuildContext context) {
     final parts = <String>[];
-    if (member.bloodType != null) parts.add('Blutgruppe ${member.bloodType}');
+    if (member.bloodType != null) parts.add('${context.l10n.crewFieldBloodGroup} ${member.bloodType}');
     if (member.allergies != null) parts.add(member.allergies!);
     return parts.join(' · ');
   }
@@ -136,7 +138,7 @@ class _RosterTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final sub = _subtitle();
+    final sub = _subtitle(context);
 
     return InkWell(
       onTap: () => Navigator.pop(context, member),
@@ -181,12 +183,12 @@ class _RosterTile extends StatelessWidget {
             IconButton(
               icon: Icon(Icons.edit_outlined, size: 18, color: cs.outline),
               onPressed: () => _edit(context),
-              tooltip: 'Bearbeiten',
+              tooltip: context.l10n.edit,
             ),
             IconButton(
               icon: Icon(Icons.delete_outline, size: 18, color: cs.error),
               onPressed: () => _delete(context),
-              tooltip: 'Entfernen',
+              tooltip: context.l10n.remove,
             ),
           ],
         ),
@@ -226,7 +228,7 @@ class _NewPersonTile extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              'Neue Person…',
+              context.l10n.crewPickerNewPerson,
               style: GoogleFonts.inter(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,

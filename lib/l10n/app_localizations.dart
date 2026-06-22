@@ -163,6 +163,7 @@ abstract class AppLocalizations {
   String get crewFieldAllergiesHint;
   String get crewFieldConditions;
   String get crewFieldConditionsHint;
+  String get crewSectionRemarks;
   String get crewFieldRemarksHint;
   String get crewButtonAddToCrew;
   String get crewButtonRemoveFromCrew;
@@ -251,6 +252,33 @@ abstract class AppLocalizations {
   String get tracksSatelliteView;
   String get tracksNoTracks;
   String get tracksNoTracksInPeriod;
+
+  // ── Day Detail operations ─────────────────────────────────────────
+  String get dayChangeDateTitle;
+  String dayChangeDateContent(String from, String to);
+  String get dayChangeDateConfirm;
+  String get dayDateExistsError;
+  String get dayGpxNoWaypoints;
+  String dayGpxWrongDateContent(String from, String to);
+  String get dayGpxImportConfirm;
+  String dayGpxImported(String date);
+  String get dayGpxExported;
+  String get dayGpxDeleteTitle;
+  String get dayGpxDeleteContent;
+  String get dayGpxRemoved;
+  String get dayDeleteTitle;
+  String dayDeleteContent(String date);
+  String get dayEntryDeleted;
+  String get dayEntryUpdated;
+  String get dayUndo;
+  String get dayFreeTextHint;
+  String get dayDiaryHint;
+  // ── Vessel Status ─────────────────────────────────────────────────
+  String get vesselStatusTitle;
+  String get vesselOilLabel;
+  String get vesselFuelLabel;
+  String get vesselFullLabel;
+  String get vesselEmptyLabel;
 
   // ── GPS Consent ───────────────────────────────────────────────────
   String get gpsConsentTitle;

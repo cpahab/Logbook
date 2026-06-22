@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../l10n/l10n_extension.dart';
+
 class GpsConsentService {
   /// Shows a purpose-explanation dialog once, then triggers the OS permission
   /// prompt.  Returns immediately if permission is already resolved.
@@ -18,30 +20,28 @@ class GpsConsentService {
       context: context,
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
+        final l10n = ctx.l10n;
         return AlertDialog(
           title: Text(
-            'GPS für den Notfall',
+            l10n.gpsConsentTitle,
             style: GoogleFonts.newsreader(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: cs.onSurface,
             ),
           ),
-          content: const Text(
-            'Beim Aktivieren des Funk-Notrufs ermittelt die App Ihren GPS-Standort '
-            'und trägt ihn automatisch ins Mayday-Protokoll ein, damit Rettungskräfte '
-            'Ihre genaue Position sofort erhalten. '
-            'Der Standort wird ausschliesslich in diesem Moment genutzt.',
-            style: TextStyle(fontSize: 14, height: 1.5),
+          content: Text(
+            l10n.gpsConsentContent,
+            style: const TextStyle(fontSize: 14, height: 1.5),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Später'),
+              child: Text(l10n.gpsConsentLater),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Zugriff erlauben'),
+              child: Text(l10n.gpsConsentAllow),
             ),
           ],
         );

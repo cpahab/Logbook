@@ -11,6 +11,7 @@ import '../utils/filter_settings.dart';
 import '../widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../core/services/gps_consent_service.dart';
+import '../../../l10n/l10n_extension.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -100,12 +101,12 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _menuPill(cs, Icons.calendar_today, 'Neuer Tag', () {
+                  _menuPill(cs, Icons.calendar_today, ctx.l10n.homeNewDay, () {
                     Navigator.of(ctx).pop();
                     _createNewEntry();
                   }),
                   const SizedBox(height: 12),
-                  _menuPill(cs, Icons.edit_square, 'Eintrag hinzufügen', () {
+                  _menuPill(cs, Icons.edit_square, ctx.l10n.homeAddEntry, () {
                     Navigator.of(ctx).pop();
                     _createTimelineEntry();
                   }),
@@ -350,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Row(
                           children: [
                             Text(
-                              'Letzte Einträge',
+                              context.l10n.homeRecentEntries,
                               style: GoogleFonts.newsreader(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
@@ -364,7 +365,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Text(
-                                    'ALLE',
+                                    context.l10n.homeAllButton.toUpperCase(),
                                     style: GoogleFonts.inter(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
@@ -481,6 +482,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Stats bento grid ─────────────────────────────────────────────
   Widget _buildStatsBento(
       double totalNm, int daysAtSea, ColorScheme cs) {
+    final l10n = context.l10n;
     return Row(
       children: [
         Expanded(
@@ -488,9 +490,9 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.sailing,
             iconBg: cs.primaryContainer,
             iconColor: cs.onPrimaryContainer,
-            label: 'Segeltage',
+            label: l10n.statSailingDays,
             value: '$daysAtSea',
-            unit: 'Tage',
+            unit: l10n.statDays,
             cs: cs,
           ),
         ),
@@ -500,7 +502,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icons.straighten,
             iconBg: cs.primaryContainer,
             iconColor: cs.onPrimaryContainer,
-            label: 'Distanz',
+            label: l10n.statDistance,
             value: totalNm >= 1000
                 ? '${(totalNm / 1000).toStringAsFixed(1)}k'
                 : totalNm.toStringAsFixed(0),
@@ -596,8 +598,8 @@ class _HomeScreenState extends State<HomeScreen> {
       Map<String, List<DayEntry>> grouped, ColorScheme cs) {
     final parts = monthKey.split('-');
     final dt = DateTime(int.parse(parts[0]), int.parse(parts[1]));
-    final label = DateFormat('MMMM yyyy', 'de_CH').format(dt).toUpperCase();
     final tp = context.read<ThemeProvider>();
+    final label = DateFormat('MMMM yyyy', tp.localeString).format(dt).toUpperCase();
     final expanded = tp.getMonthExpanded(monthKey, defaultOpen: isFirst);
     final count = grouped[monthKey]!.length;
 
@@ -716,7 +718,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                '${DateFormat('EEEE', 'de_CH').format(entry.date).toUpperCase()} · ${DateFormat('d. MMM yyyy', 'de_CH').format(entry.date).toUpperCase()}',
+                                '${DateFormat('EEEE', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()} · ${DateFormat('d. MMM yyyy', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()}',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
@@ -855,7 +857,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Icon(Icons.anchor_outlined, size: 48, color: cs.outlineVariant),
           const SizedBox(height: 12),
-          Text('Logbuch ist leer',
+          Text(context.l10n.homeEmpty,
               style: Theme.of(context).textTheme.bodyLarge),
         ],
       ),
