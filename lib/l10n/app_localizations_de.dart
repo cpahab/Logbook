@@ -1,0 +1,226 @@
+// GENERATED CODE – DO NOT EDIT BY HAND
+// ignore_for_file: type=lint
+
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+class AppLocalizationsDe extends AppLocalizations {
+  AppLocalizationsDe([super.locale = 'de']);
+
+  @override String get cancel => 'Abbrechen';
+  @override String get delete => 'Löschen';
+  @override String get edit => 'Bearbeiten';
+  @override String get add => 'Hinzufügen';
+  @override String get remove => 'Entfernen';
+  @override String get saveChanges => 'Änderungen speichern';
+  @override String get apply => 'Übernehmen';
+  @override String get connect => 'Verbinden';
+  @override String get close => 'Schließen';
+  @override String get reset => 'Zurücksetzen';
+  @override String get copy => 'Kopieren';
+  @override String get change => 'Ändern';
+  @override String get update => 'Aktualisieren';
+  @override String get later => 'Später';
+  @override String get on => 'An';
+  @override String get off => 'Aus';
+
+  @override String get statSailingDays => 'Segeltage';
+  @override String get statDays => 'Tage';
+  @override String get statDistance => 'Distanz';
+  @override String get statAvgSpeed => 'Ø Geschwindigkeit';
+  @override String get statAvgSpeedUnderway => 'Ø Geschwindigkeit in Fahrt';
+  @override String get statMax => 'Max';
+
+  @override String get homeNewDay => 'Neuer Tag';
+  @override String get homeAddEntry => 'Eintrag hinzufügen';
+  @override String get homeRecentEntries => 'Letzte Einträge';
+  @override String get homeAllButton => 'Alle';
+  @override String get homeEmpty => 'Logbuch ist leer';
+
+  @override String get dayMenuOptions => 'Optionen';
+  @override String get dayMenuChangeDate => 'Datum ändern';
+  @override String get dayMenuImportGpx => 'GPX importieren';
+  @override String get dayMenuExportGpx => 'GPX exportieren';
+  @override String get dayMenuExportPdf => 'PDF exportieren';
+  @override String get dayMenuDeleteGpx => 'GPX löschen';
+  @override String get dayMenuDeleteDay => 'Tag löschen';
+  @override String get dayNoEntry => 'Kein Eintrag für diesen Tag';
+  @override String get dayAddNotes => 'Notizen hinzufügen…';
+  @override String get dayAddDiary => 'Tagebucheintrag hinzufügen…';
+  @override String get dayAddCrewMember => 'Besatzungsmitglied hinzufügen';
+  @override String get dayEditCrew => 'Besatzung bearbeiten';
+  @override String get dayAddCrew => 'Besatzung hinzufügen…';
+  @override String get dayDeparturePort => 'Starthafen';
+  @override String get dayDestinationPort => 'Zielhafen';
+  @override String get dayCaptureRoute => 'Etappe erfassen…';
+  @override String get daySaveRoute => 'Etappe speichern';
+  @override String get dayAddGpxTrack => 'GPX Track hinzufügen…';
+  @override String get dayAddPhotosTooltip => 'Fotos hinzufügen';
+  @override String get dayAddPhotosEmpty => 'Fotos hinzufügen…';
+  @override String get dayImportingPhotos => 'Fotos werden importiert…';
+  @override String get dayFirstLogEntry => 'Ersten Logeintrag hinzufügen…';
+  @override String get dayDeletePhoto => 'Foto löschen?';
+  @override String get dayEditLogEntry => 'Logeintrag bearbeiten';
+  @override String get dayDeleteLogEntry => 'Logeintrag löschen';
+  @override String get dayUpdateVesselStatus => 'Schiffsstatus aktualisieren';
+  @override String get dayAddLogEntry => 'Eintrag hinzufügen';
+
+  @override String get sectionNotes => 'Notizen';
+  @override String get sectionDiary => 'Tagebuch';
+  @override String get sectionCrew => 'Besatzung';
+  @override String get sectionRoute => 'Route & Passage';
+  @override String get sectionPhotos => 'Fotos';
+  @override String get sectionVesselStatus => 'Schiffsstatus';
+  @override String get sectionLogEntries => 'Chronologische Einträge';
+
+  @override String get labelEntry => 'Eintrag';
+  @override String get labelDeparture => 'Abfahrt';
+  @override String get labelArrival => 'Ankunft';
+  @override String get labelProgress => 'Verlauf';
+  @override String get labelSkipper => 'Skipper';
+  @override String get labelCrewRole => 'Besatzung';
+
+  @override String get dataCrewNote => 'Besatzung';
+  @override String get dataCourse => 'Kurs';
+  @override String get dataSpeed => 'Fahrt';
+  @override String get dataWind => 'Wind';
+  @override String get dataSea => 'See';
+  @override String get dataWeather => 'Wetter';
+  @override String get dataMainSail => 'Gross';
+  @override String get dataJibSail => 'Fock';
+  @override String get dataMotor => 'Motor';
+
+  @override String get entryDialogTitleNew => 'Neuer Eintrag';
+  @override String get entryDialogTitleEdit => 'Eintrag bearbeiten';
+  @override String get entryDialogSectionTime => 'Chronometrie';
+  @override String get entryDialogSectionNav => 'Navigation';
+  @override String get entryDialogSectionEnv => 'Umgebung';
+  @override String get entryDialogSectionSails => 'Segel & Motor';
+  @override String get entryDialogSectionRemarks => 'Bemerkungen';
+  @override String get entryDialogTimeLabel => 'Uhrzeit';
+  @override String get entryDialogCourseLabel => 'Kurs (°)';
+  @override String get entryDialogSpeedLabel => 'Fahrt (kn)';
+  @override String get entryDialogWindLabel => 'Wind Richtung & Stärke';
+  @override String get entryDialogSeaLabel => 'See';
+  @override String get entryDialogSeaHint => 'z.B. Leicht';
+  @override String get entryDialogWeatherLabel => 'Wetter';
+  @override String get entryDialogWeatherHint => 'z.B. Sonnig';
+  @override String get entryDialogMainSailLabel => 'Gross';
+  @override String get entryDialogJibSailLabel => 'Fock';
+  @override String get entryDialogMotorLabel => 'Motor';
+  @override String get entryDialogKeelLabel => 'Kiel';
+  @override String get entryDialogRemarksHint => 'z.B. Beobachtung, Erlebnis…';
+  @override String get entryDialogSubmitNew => 'In Log eintragen';
+
+  @override String get crewDialogTitleAdd => 'Besatzung hinzufügen';
+  @override String get crewDialogTitleEdit => 'Besatzung bearbeiten';
+  @override String get crewSectionIdentity => 'Identität';
+  @override String get crewFieldFullName => 'Vollständiger Name';
+  @override String get crewFieldFullNameHint => 'z.B. Thomas Müller';
+  @override String get crewSectionMedical => 'Medizinische Info';
+  @override String get crewFieldBloodGroup => 'Blutgruppe';
+  @override String get crewFieldBloodGroupHint => 'z.B. 0+, A-';
+  @override String get crewFieldAllergies => 'Allergien';
+  @override String get crewFieldAllergiesHint => 'Bekannte Allergien auflisten…';
+  @override String get crewFieldConditions => 'Erkrankungen / Medikamente';
+  @override String get crewFieldConditionsHint => 'z.B. Benötigt Inhalator (Asthma)…';
+  @override String get crewFieldRemarksHint => 'Allgemeine Notizen zu dieser Person…';
+  @override String get crewButtonAddToCrew => 'Zur Besatzung hinzufügen';
+  @override String get crewButtonRemoveFromCrew => 'Besatzung entfernen';
+
+  @override String get crewPickerTitle => 'Besatzung wählen';
+  @override String get crewPickerRemoveTitle => 'Aus Besatzungsliste entfernen?';
+  @override String get crewPickerRemoveContent => 'wird dauerhaft aus der Liste gelöscht.';
+  @override String get crewPickerNewPerson => 'Neue Person…';
+
+  @override String get crewRosterTitle => 'Besatzungsliste';
+  @override String get crewRosterEmpty => 'Noch keine Besatzungsmitglieder';
+  @override String get crewRosterEmptyHint => 'Tippe auf + um eine Person hinzuzufügen.';
+  @override String get crewRosterNewPerson => 'Neue Person';
+  @override String get crewRosterRemoveTitle => 'Person entfernen?';
+  @override String crewRosterRemoveContent(String name) =>
+      '$name wird dauerhaft aus der Besatzungsliste gelöscht.';
+
+  @override String get settingsTitle => 'Einstellungen';
+  @override String get settingsSubtitle => 'Navigationsumgebung konfigurieren';
+  @override String get settingsVesselSection => 'Schiff';
+  @override String get settingsFieldName => 'Name';
+  @override String get settingsFieldNameHint => 'z.B. S.V. Adventure';
+  @override String get settingsFieldCallSign => 'Rufzeichen';
+  @override String get settingsFieldCallSignHint => 'z.B. HB-9-XY';
+  @override String get settingsAppearanceSection => 'Darstellung';
+  @override String get settingsThemeLabel => 'App-Design';
+  @override String get settingsThemeSystem => 'System';
+  @override String get settingsThemeLight => 'Hell';
+  @override String get settingsThemeDark => 'Dunkel';
+  @override String get settingsLanguageLabel => 'Sprache';
+  @override String get settingsLanguageDe => 'Deutsch';
+  @override String get settingsLanguageEn => 'English';
+  @override String get settingsTrackFilterSection => 'Trackfilter';
+  @override String get settingsFilterModeMooring => 'Liegeplatz & Anker';
+  @override String get settingsFilterModeExact => 'Genaue Position';
+  @override String get settingsStationaryLabel => 'Stationäre Erkennung';
+  @override String get settingsStationaryDesc => 'Bestimmt, wie Liegeplätze, Ankerstopps und Hafenbesuche erkannt und als Ankerpunkt dargestellt werden – am Anfang, Ende und unterwegs.';
+  @override String get settingsMooringDesc => 'Liegeplatz und Ankerpositionen werden als einzelner Punkt dargestellt. Auch ein weitausholender Ankerkreis wird zu einem Punkt zusammengefasst.';
+  @override String get settingsExactPositionDesc => 'Nur eng geclusterte Positionen gelten als stationär. Breite Ankerkreise bleiben sichtbar – besser für Ankerwache.';
+  @override String get settingsMinStopLabel => 'Min. Stopp-Dauer';
+  @override String get settingsMinUnit => 'min';
+  @override String get settingsMinStopDesc => 'Mindestdauer eines echten Stopps (Anker, Hafen). Kurze Langsamfahrten (Wende, Flaute) werden ignoriert.';
+  @override String get settingsMaxAnchorLabel => 'Max. Ankerschwung';
+  @override String get settingsMetersUnit => 'm';
+  @override String get settingsMaxAnchorDesc => 'Maximale Ausdehnung eines Stopps. Erhöhen bei weitem Ankerschwung über Nacht (Standard: 30 m).';
+  @override String get settingsColdStartLabel => 'Kaltstart-Trimmen';
+  @override String get settingsColdStartDesc => 'Entfernt ungenaue GPS-Fixes am Spuranfang, bevor der Empfänger eingeschwungen ist.';
+  @override String get settingsTrimSharpnessLabel => 'Trim-Schärfe';
+  @override String get settingsTrimSharpnessDesc => 'Niedrigerer Wert = aggressiver trimmen. Standard: 3.0.';
+  @override String get settingsUnderwayLabel => 'Unterwegs-Schwelle';
+  @override String get settingsUnderwayDesc => 'Mindestgeschwindigkeit für den Fahrt-Durchschnitt. Driften unterhalb wird nicht mitgezählt.';
+  @override String get settingsPercentileLabel => 'Spitzenwert-Perzentil';
+  @override String get settingsPercentileDesc => 'p99 ignoriert das oberste 1 % der Messwerte und unterdrückt GPS-Ausreißer. p100 = echter Maximalwert.';
+  @override String get settingsShowRawTrackLabel => 'Ungefilterte Spur anzeigen';
+  @override String get settingsShowRawTrackDesc => 'Zeigt den Roh-GPX-Track zusätzlich zur gefilterten Spur an. Dient zur Fehleranalyse und zum Optimieren der Filtereinstellungen.';
+  @override String get settingsCrewSection => 'Besatzungsliste';
+  @override String get settingsNoEntries => 'Noch keine Einträge';
+  @override String settingsPersonCount(int count) {
+    final f = intl.NumberFormat.compact(locale: localeName);
+    return intl.Intl.pluralLogic(count,
+        one: 'Person', other: 'Personen', locale: localeName);
+  }
+  @override String get settingsSyncSection => 'Synchronisierung';
+  @override String get settingsLogbookCodeLabel => 'Logbuch-Code';
+  @override String get settingsLogbookCodeDesc => 'Gib diesen Code auf einem anderen Gerät ein, um dasselbe Logbuch zu teilen.';
+  @override String get settingsCodeCopied => 'Code kopiert.';
+  @override String get settingsLogbookSyncLabel => 'Logbook Sync';
+  @override String get settingsLogbookSyncDesc => 'Mit einem anderen Logbuch via Firebase verbinden.';
+  @override String get settingsEnterSyncCode => 'Sync-Code eingeben';
+  @override String get settingsSynchronize => 'Synchronisieren';
+  @override String get settingsInvalidCode => 'Ungültiger Code.';
+  @override String get settingsConnectLogbookTitle => 'Logbuch verbinden';
+  @override String settingsConnectLogbookContent(String code) =>
+      'Dieses Gerät wird mit dem Logbuch "$code" verbunden. Alle lokalen Einträge werden gelöscht und durch die Cloud-Daten ersetzt.';
+  @override String get settingsConnectedAndSynced => 'Verbunden und synchronisiert.';
+  @override String get settingsError => 'Fehler';
+
+  @override String get tracksTitle => 'Chronik';
+  @override String get tracksOneYear => '1 Jahr';
+  @override String get tracksOneMonth => '1 Monat';
+  @override String get tracksOneWeek => '1 Woche';
+  @override String get tracksCustom => 'Eigene';
+  @override String get tracksZoomIn => 'Vergrössern';
+  @override String get tracksZoomOut => 'Verkleinern';
+  @override String get tracksShowAll => 'Alle Tracks anzeigen';
+  @override String get tracksFullscreen => 'Vollbild';
+  @override String get tracksMapView => 'Kartenansicht';
+  @override String get tracksSatelliteView => 'Satellitenansicht';
+  @override String get tracksNoTracks => 'Keine Tracks vorhanden';
+  @override String get tracksNoTracksInPeriod => 'Keine Tracks im gewählten Zeitraum';
+
+  @override String get gpsConsentTitle => 'GPS für den Notfall';
+  @override String get gpsConsentContent =>
+      'Beim Aktivieren des Funk-Notrufs ermittelt die App Ihren GPS-Standort '
+      'und trägt ihn automatisch ins Mayday-Protokoll ein, damit Rettungskräfte '
+      'Ihre genaue Position sofort erhalten. '
+      'Der Standort wird ausschliesslich in diesem Moment genutzt.';
+  @override String get gpsConsentLater => 'Später';
+  @override String get gpsConsentAllow => 'Zugriff erlauben';
+}
