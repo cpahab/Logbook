@@ -918,19 +918,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNoGuests => 'No guests';
 
   @override
-  String settingsSwitchTo(String name) => 'Switch to "$name"?';
+  String settingsSwitchTo(String name) {
+    return 'Switch to \"$name\"?';
+  }
 
   @override
-  String settingsDeleteLogbookConfirm(String name) =>
-      'Delete "$name"? This cannot be undone.';
+  String settingsDeleteLogbookConfirm(String name) {
+    return 'Delete \"$name\"? This cannot be undone.';
+  }
 
   @override
-  String settingsLeaveLogbookConfirm(String name) => 'Leave "$name"?';
+  String settingsLeaveLogbookConfirm(String name) {
+    return 'Leave \"$name\"?';
+  }
 
   @override
-  String settingsJoinContent(String name) =>
-      'Join "$name"? Your current logbook stays accessible — this adds a new one.';
+  String settingsJoinContent(String name) {
+    return 'Join \"$name\"? Your current logbook stays accessible — this adds a new one.';
+  }
 
   @override
-  String settingsJoinedLogbook(String name) => 'Connected to "$name".';
+  String settingsJoinedLogbook(String name) {
+    return 'Connected to \"$name\".';
+  }
 }

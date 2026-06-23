@@ -1736,26 +1736,130 @@ abstract class AppLocalizations {
   /// **'Konto löschen? Diese Aktion kann nicht rückgängig gemacht werden.'**
   String get authDeleteAccountConfirm;
 
+  /// No description provided for @settingsLogbooksSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbücher'**
   String get settingsLogbooksSection;
+
+  /// No description provided for @settingsMyLogbooks.
+  ///
+  /// In de, this message translates to:
+  /// **'Meine Logbücher'**
   String get settingsMyLogbooks;
+
+  /// No description provided for @settingsRoleOwner.
+  ///
+  /// In de, this message translates to:
+  /// **'Eigentümer'**
   String get settingsRoleOwner;
+
+  /// No description provided for @settingsRoleGuest.
+  ///
+  /// In de, this message translates to:
+  /// **'Gast'**
   String get settingsRoleGuest;
+
+  /// No description provided for @settingsNewLogbook.
+  ///
+  /// In de, this message translates to:
+  /// **'Neues Logbuch'**
   String get settingsNewLogbook;
+
+  /// No description provided for @settingsNewLogbookTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Neues Logbuch erstellen'**
   String get settingsNewLogbookTitle;
+
+  /// No description provided for @settingsNewLogbookHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuchname'**
   String get settingsNewLogbookHint;
+
+  /// No description provided for @settingsRename.
+  ///
+  /// In de, this message translates to:
+  /// **'Umbenennen'**
   String get settingsRename;
+
+  /// No description provided for @settingsShare.
+  ///
+  /// In de, this message translates to:
+  /// **'Teilen'**
   String get settingsShare;
+
+  /// No description provided for @settingsDeleteLogbook.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch löschen'**
   String get settingsDeleteLogbook;
+
+  /// No description provided for @settingsLeaveLogbook.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch verlassen'**
   String get settingsLeaveLogbook;
+
+  /// No description provided for @settingsShareCurrentLogbook.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuelles Logbuch teilen'**
   String get settingsShareCurrentLogbook;
+
+  /// No description provided for @settingsShowQrCode.
+  ///
+  /// In de, this message translates to:
+  /// **'QR-Code anzeigen'**
   String get settingsShowQrCode;
+
+  /// No description provided for @settingsScanOrEnterCode.
+  ///
+  /// In de, this message translates to:
+  /// **'QR scannen / Code eingeben'**
   String get settingsScanOrEnterCode;
+
+  /// No description provided for @settingsManageGuests.
+  ///
+  /// In de, this message translates to:
+  /// **'Gäste verwalten'**
   String get settingsManageGuests;
+
+  /// No description provided for @settingsNoGuests.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Gäste'**
   String get settingsNoGuests;
+
+  /// No description provided for @settingsSwitchTo.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu \"{name}\" wechseln?'**
   String settingsSwitchTo(String name);
+
+  /// No description provided for @settingsDeleteLogbookConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'\"{name}\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.'**
   String settingsDeleteLogbookConfirm(String name);
+
+  /// No description provided for @settingsLeaveLogbookConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'\"{name}\" verlassen?'**
   String settingsLeaveLogbookConfirm(String name);
+
+  /// No description provided for @settingsJoinContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu \"{name}\" beitreten? Dein aktuelles Logbuch bleibt erhalten – es wird ein neues hinzugefügt.'**
   String settingsJoinContent(String name);
+
+  /// No description provided for @settingsJoinedLogbook.
+  ///
+  /// In de, this message translates to:
+  /// **'Mit \"{name}\" verbunden.'**
   String settingsJoinedLogbook(String name);
 }
 
