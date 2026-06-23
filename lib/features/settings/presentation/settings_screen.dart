@@ -29,9 +29,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _vesselNameCtrl;
   late TextEditingController _vesselMmsiCtrl;
   late TextEditingController _vesselCallSignCtrl;
-  final TextEditingController _codeCtrl = TextEditingController();
   bool _syncing = false;
   bool _trackFilterExpanded = false;
+  List<Map<String, dynamic>> _boats = [];
+  bool _loadingBoats = false;
+  bool _guestsExpanded = false;
+  Future<List<Map<String, dynamic>>>? _guestsFuture;
 
   @override
   void initState() {
@@ -40,6 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _vesselNameCtrl = TextEditingController(text: p.vesselName);
     _vesselMmsiCtrl = TextEditingController(text: p.vesselMmsi);
     _vesselCallSignCtrl = TextEditingController(text: p.vesselCallSign);
+    _refreshBoats();
   }
 
   @override
@@ -47,7 +51,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _vesselNameCtrl.dispose();
     _vesselMmsiCtrl.dispose();
     _vesselCallSignCtrl.dispose();
-    _codeCtrl.dispose();
     super.dispose();
   }
 
@@ -57,24 +60,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
 
-  Future<void> _openScanner() async {
-    final code = await Navigator.push<String>(
-      context,
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => const _QrScannerScreen(),
-      ),
-    );
-    if (code != null && mounted) {
-      await _connectLogbook(code);
+  void _refreshBoats() async {
+    final user = context.read<AuthService>().currentUser;
+    if (user == null || !mounted) return;
+    setState(() => _loadingBoats = true);
+    try {
+      final boats = await BoatService().listBoats(user.uid);
+      if (mounted) setState(() { _boats = boats; _loadingBoats = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loadingBoats = false);
     }
   }
 
-  // [prefilledCode] comes from QR scan; omit to read from the text field.
-  Future<void> _connectLogbook([String? prefilledCode]) async {
+  Future<void> _reinitFirestore(String boatId) async {
+    final repo = context.read<HomeRepository>();
+    final themeProvider = context.read<ThemeProvider>();
+    final emergencyRepo = context.read<EmergencyRepository>();
+    final notifier = context.read<ValueNotifier<String?>>();
+    final firestore = FirestoreService(boatId: boatId);
+    final storage = StorageService(boatId: boatId);
+    await repo.reattachAndSync(firestore, storage);
+    await themeProvider.attachFirestore(firestore);
+    await emergencyRepo.attachFirestore(firestore);
+    if (mounted) notifier.value = boatId;
+  }
+
+  Future<void> _joinBoat(String rawCode) async {
     final l10n = context.l10n;
-    final raw = prefilledCode ?? _codeCtrl.text;
-    final code = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    final code = rawCode.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsInvalidCode)),
@@ -84,19 +97,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = context.read<AuthService>().currentUser;
     if (user == null) return;
 
-    // Phase 1: look up the boat by invite code.
     setState(() => _syncing = true);
     String? foundBoatId;
-    String? currentBoatId;
+    String? boatName;
     try {
-      foundBoatId = await BoatService().findBoatByInviteCode(code);
+      foundBoatId = await BoatService().findByShareCode(code);
       if (foundBoatId != null) {
-        currentBoatId = await BoatService().getBoatIdForUser(user.uid);
+        final alreadyMember =
+            await BoatService().isMember(foundBoatId, user.uid);
+        if (!mounted) return;
+        if (alreadyMember) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.settingsAlreadyConnected)),
+          );
+          return;
+        }
+        boatName = await BoatService().getBoatName(foundBoatId) ?? code;
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${context.l10n.settingsError}: $e')),
+          SnackBar(content: Text('${l10n.settingsError}: $e')),
         );
       }
       return;
@@ -111,14 +132,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       return;
     }
-    if (foundBoatId == currentBoatId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsAlreadyConnected)),
-      );
-      return;
-    }
 
-    // Phase 2: confirm and join.
+    final resolvedName = boatName ?? code;
+    final resolvedId = foundBoatId;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -126,25 +143,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cl = ctx.l10n;
         return AlertDialog(
           titleTextStyle: TextStyle(
-            color: cs.onSurface,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-          contentTextStyle: TextStyle(
-            color: cs.onSurfaceVariant,
-            fontSize: 14,
-          ),
+              color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w600),
+          contentTextStyle:
+              TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
           title: Text(cl.settingsSwitchLogbookTitle),
-          content: Text(cl.settingsSwitchLogbookContent),
+          content: Text(cl.settingsJoinContent(resolvedName)),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(cl.cancel),
-            ),
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(cl.cancel)),
             FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(cl.connect),
-            ),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(cl.connect)),
           ],
         );
       },
@@ -153,25 +163,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _syncing = true);
     try {
-      await BoatService().joinBoat(foundBoatId, user.uid);
+      await BoatService().joinBoat(resolvedId, user.uid);
       if (!mounted) return;
-
-      final themeProvider = context.read<ThemeProvider>();
-      final repo = context.read<HomeRepository>();
-      final emergencyRepo = context.read<EmergencyRepository>();
-      final firestore = FirestoreService(boatId: foundBoatId);
-      final storage = StorageService(boatId: foundBoatId);
-
-      // reattachAndSync clears local Hive data first, then fetches all entries
-      // from the new boat. This prevents local data from being uploaded to the
-      // new boat (which attachFirestore(initialSync: true) would do).
-      await repo.reattachAndSync(firestore, storage);
-      await themeProvider.attachFirestore(firestore);
-      await emergencyRepo.attachFirestore(firestore);
-
-      _codeCtrl.clear();
+      await _reinitFirestore(resolvedId);
       if (mounted) {
+        _guestsExpanded = false;
+        _refreshBoats();
         FocusScope.of(context).unfocus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsJoinedLogbook(resolvedName))),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.settingsError}: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  Future<void> _switchLogbook(Map<String, dynamic> boat, String uid) async {
+    final l10n = context.l10n;
+    final boatId = boat['boatId'] as String;
+    final name = boat['name'] as String;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final cl = ctx.l10n;
+        return AlertDialog(
+          titleTextStyle: TextStyle(
+              color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w600),
+          title: Text(cl.settingsSwitchTo(name)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(cl.cancel)),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(cl.connect)),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _syncing = true);
+    try {
+      await BoatService().setActiveBoat(uid, boatId);
+      if (!mounted) return;
+      await _reinitFirestore(boatId);
+      if (mounted) {
+        _guestsExpanded = false;
+        _refreshBoats();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.settingsConnected)),
         );
@@ -185,6 +233,357 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
+  }
+
+  void _showBoatOptionsSheet(Map<String, dynamic> boat, String uid) {
+    final boatId = boat['boatId'] as String;
+    final name = boat['name'] as String;
+    final shareCode = boat['shareCode'] as String? ?? '';
+    final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  Icon(Icons.drive_file_rename_outline, color: cs.onSurface),
+              title: Text(l10n.settingsRename),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showRenameDialog(boatId, name, uid);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.qr_code, color: cs.onSurface),
+              title: Text(l10n.settingsShare),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showQrModal(shareCode);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: cs.error),
+              title: Text(l10n.settingsDeleteLogbook,
+                  style: TextStyle(color: cs.error)),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showDeleteBoatDialog(boatId, name, uid);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showGuestOptionsSheet(Map<String, dynamic> boat, String uid) {
+    final boatId = boat['boatId'] as String;
+    final name = boat['name'] as String;
+    final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    showModalBottomSheet(
+      context: context,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.exit_to_app, color: cs.error),
+              title: Text(l10n.settingsLeaveLogbook,
+                  style: TextStyle(color: cs.error)),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showLeaveBoatDialog(boatId, name, uid);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showNewLogbookDialog(String uid) async {
+    final l10n = context.l10n;
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final cl = ctx.l10n;
+        return AlertDialog(
+          title: Text(cl.settingsNewLogbookTitle),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(hintText: cl.settingsNewLogbookHint),
+            onSubmitted: (v) {
+              if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
+            },
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: Text(cl.cancel)),
+            FilledButton(
+              onPressed: () {
+                final v = ctrl.text.trim();
+                if (v.isNotEmpty) Navigator.pop(ctx, v);
+              },
+              child: Text(cl.add),
+            ),
+          ],
+        );
+      },
+    );
+    ctrl.dispose();
+    if (name == null || name.isEmpty || !mounted) return;
+
+    setState(() => _syncing = true);
+    try {
+      final newBoatId = await BoatService().createBoat(uid, name);
+      if (!mounted) return;
+      await _reinitFirestore(newBoatId);
+      if (mounted) {
+        _guestsExpanded = false;
+        _refreshBoats();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsConnected)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.settingsError}: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  Future<void> _showRenameDialog(
+      String boatId, String currentName, String uid) async {
+    final l10n = context.l10n;
+    final ctrl = TextEditingController(text: currentName);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final cl = ctx.l10n;
+        return AlertDialog(
+          title: Text(cl.settingsRename),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(hintText: cl.settingsNewLogbookHint),
+            onSubmitted: (v) {
+              if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
+            },
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: Text(cl.cancel)),
+            FilledButton(
+              onPressed: () {
+                final v = ctrl.text.trim();
+                if (v.isNotEmpty) Navigator.pop(ctx, v);
+              },
+              child: Text(cl.saveChanges),
+            ),
+          ],
+        );
+      },
+    );
+    ctrl.dispose();
+    if (newName == null || newName == currentName || !mounted) return;
+
+    try {
+      await BoatService().renameBoat(boatId, newName);
+      if (mounted) _refreshBoats();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.settingsError}: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showDeleteBoatDialog(
+      String boatId, String name, String uid) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final cl = ctx.l10n;
+        return AlertDialog(
+          title: Text(cl.settingsDeleteLogbook),
+          content: Text(cl.settingsDeleteLogbookConfirm(name)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(cl.cancel)),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: cs.error),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(cl.delete),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _syncing = true);
+    try {
+      final activeId = context.read<ValueNotifier<String?>>().value;
+      await BoatService().deleteBoat(boatId, uid);
+      if (!mounted) return;
+      if (activeId == boatId) {
+        final newActiveId = await BoatService().getActiveBoatId(uid);
+        if (mounted && newActiveId != null) {
+          await _reinitFirestore(newActiveId);
+        }
+      }
+      if (mounted) {
+        _guestsExpanded = false;
+        _refreshBoats();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.settingsError}: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  Future<void> _showLeaveBoatDialog(
+      String boatId, String name, String uid) async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final cl = ctx.l10n;
+        return AlertDialog(
+          title: Text(cl.settingsLeaveLogbook),
+          content: Text(cl.settingsLeaveLogbookConfirm(name)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(cl.cancel)),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: cs.error),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(cl.remove),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _syncing = true);
+    try {
+      final activeId = context.read<ValueNotifier<String?>>().value;
+      await BoatService().removeMember(boatId, uid);
+      if (!mounted) return;
+      if (activeId == boatId) {
+        final newActiveId = await BoatService().getActiveBoatId(uid);
+        if (mounted && newActiveId != null) {
+          await _reinitFirestore(newActiveId);
+        }
+      }
+      if (mounted) {
+        _guestsExpanded = false;
+        _refreshBoats();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${l10n.settingsError}: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  void _showQrModal(String shareCode) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final cl = ctx.l10n;
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(cl.settingsShowQrCode,
+                    style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12)),
+                  child: QrImageView(
+                    data: 'logbook://join/$shareCode',
+                    version: QrVersions.auto,
+                    size: 200,
+                    backgroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _formatCode(shareCode),
+                  style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 6),
+                ),
+                const SizedBox(height: 16),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(cl.close)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showConnectSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.75,
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).colorScheme.surface,
+          borderRadius:
+              const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: _ConnectBottomSheet(onCode: _joinBoat),
+      ),
+    );
   }
 
   @override
@@ -262,8 +661,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildCrewRosterSection(cs),
             const SizedBox(height: 16),
 
-            // ── Connect Logbook ───────────────────────────────────────
-            _buildConnectSection(p, cs),
+            // ── Logbooks ──────────────────────────────────────────────
+            _buildLogbooksSection(cs),
             const SizedBox(height: 32),
 
           ],
@@ -1087,14 +1486,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Connect Logbook ──────────────────────────────────────────────────
-  Widget _buildConnectSection(ThemeProvider p, ColorScheme cs) {
+  // ── Logbooks ─────────────────────────────────────────────────────────
+  Widget _buildLogbooksSection(ColorScheme cs) {
     final l10n = context.l10n;
     final auth = context.watch<AuthService>();
-
     if (auth.currentUser == null) return const SizedBox.shrink();
 
-    final code = p.installationId;
+    final uid = auth.currentUser!.uid;
+    final activeBoatId = context.watch<ValueNotifier<String?>>().value;
+    final activeMeta = _boats.firstWhere(
+      (b) => b['boatId'] == activeBoatId,
+      orElse: () => {},
+    );
+    final isActiveOwner = activeMeta['role'] == 'owner';
+
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
@@ -1115,7 +1520,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                l10n.settingsSyncSection.toUpperCase(),
+                l10n.settingsLogbooksSection.toUpperCase(),
                 style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -1123,160 +1528,328 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: cs.secondary,
                 ),
               ),
-              Icon(Icons.link, size: 20, color: cs.outlineVariant),
+              Icon(Icons.menu_book_outlined, size: 20, color: cs.outlineVariant),
             ],
           ),
           const SizedBox(height: 12),
-          // ── Invite code display ──────────────────────────────────
           Text(
-            l10n.settingsInviteCodeLabel,
+            l10n.settingsMyLogbooks,
             style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 8),
+          if (_loadingBoats)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Center(
+                  child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))),
+            )
+          else if (_boats.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(l10n.settingsNoEntries,
+                  style: GoogleFonts.inter(
+                      fontSize: 13, color: cs.onSurfaceVariant)),
+            )
+          else
+            ...(_boats.map((boat) => _buildBoatRow(boat, activeBoatId, cs, uid))),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _syncing ? null : () => _showNewLogbookDialog(uid),
+              icon: const Icon(Icons.add, size: 18),
+              label: Text(l10n.settingsNewLogbook),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: cs.outlineVariant),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                textStyle: GoogleFonts.inter(fontSize: 14),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.settingsInviteCodeDesc,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: cs.onSurfaceVariant,
+          if (activeBoatId != null && isActiveOwner && activeMeta.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _buildShareSection(activeMeta, cs, uid),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBoatRow(Map<String, dynamic> boat, String? activeBoatId,
+      ColorScheme cs, String uid) {
+    final boatId = boat['boatId'] as String;
+    final name = boat['name'] as String;
+    final role = boat['role'] as String;
+    final isActive = boatId == activeBoatId;
+    final isOwner = role == 'owner';
+    final l10n = context.l10n;
+
+    return InkWell(
+      onTap: isActive || _syncing ? null : () => _switchLogbook(boat, uid),
+      onLongPress: () => isOwner
+          ? _showBoatOptionsSheet(boat, uid)
+          : _showGuestOptionsSheet(boat, uid),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive
+                    ? cs.primary
+                    : cs.outlineVariant.withValues(alpha: 0.4),
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    _formatCode(code),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onPrimaryContainer,
-                      letterSpacing: 6,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight:
+                          isActive ? FontWeight.w700 : FontWeight.w500,
+                      color: cs.onSurface,
                     ),
+                  ),
+                  Text(
+                    isOwner ? l10n.settingsRoleOwner : l10n.settingsRoleGuest,
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            if (isActive) Icon(Icons.check, size: 18, color: cs.primary),
+            const SizedBox(width: 4),
+            Icon(Icons.more_vert, size: 18, color: cs.outlineVariant),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShareSection(
+      Map<String, dynamic> activeMeta, ColorScheme cs, String uid) {
+    final l10n = context.l10n;
+    final shareCode = activeMeta['shareCode'] as String? ?? '';
+    final boatId = activeMeta['boatId'] as String;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              l10n.settingsShareCurrentLogbook.toUpperCase(),
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: cs.secondary,
+              ),
+            ),
+            Icon(Icons.share_outlined, size: 20, color: cs.outlineVariant),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: cs.primaryContainer,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _formatCode(shareCode),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: cs.onPrimaryContainer,
+                    letterSpacing: 6,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: _formatCode(code)));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.settingsCodeCopied)),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filled(
+              onPressed: () {
+                Clipboard.setData(
+                    ClipboardData(text: _formatCode(shareCode)));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.settingsCodeCopied)));
+              },
+              icon: const Icon(Icons.copy_outlined),
+              tooltip: l10n.copy,
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _showQrModal(shareCode),
+                icon: const Icon(Icons.qr_code, size: 18),
+                label: Text(l10n.settingsShowQrCode),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: cs.outlineVariant),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  textStyle: GoogleFonts.inter(fontSize: 13),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _syncing ? null : _showConnectSheet,
+                icon: const Icon(Icons.qr_code_scanner, size: 18),
+                label: Text(l10n.settingsScanOrEnterCode),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: cs.outlineVariant),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
+                  textStyle: GoogleFonts.inter(fontSize: 13),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildManageGuests(boatId, cs, uid),
+      ],
+    );
+  }
+
+  Widget _buildManageGuests(String boatId, ColorScheme cs, String uid) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () {
+            setState(() {
+              _guestsExpanded = !_guestsExpanded;
+              if (_guestsExpanded) {
+                _guestsFuture = BoatService().listMembers(boatId);
+              }
+            });
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.settingsManageGuests,
+                    style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface),
+                  ),
+                ),
+                Icon(
+                  _guestsExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: cs.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_guestsExpanded) ...[
+          const SizedBox(height: 8),
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: _guestsFuture,
+            builder: (ctx, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2)));
+              }
+              final members = (snap.data ?? [])
+                  .where((m) => m['role'] != 'owner')
+                  .toList();
+              if (members.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(l10n.settingsNoGuests,
+                      style: GoogleFonts.inter(
+                          fontSize: 13, color: cs.onSurfaceVariant)),
+                );
+              }
+              return Column(
+                children: members.map((m) {
+                  final memberUid = m['uid'] as String? ?? '';
+                  final shortId = memberUid.length > 8
+                      ? memberUid.substring(0, 8)
+                      : memberUid;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_outline,
+                            size: 16, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text('…$shortId',
+                              style: GoogleFonts.inter(
+                                  fontSize: 13, color: cs.onSurface)),
+                        ),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: cs.error,
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () async {
+                            await BoatService()
+                                .removeMember(boatId, memberUid);
+                            if (mounted) {
+                              setState(() {
+                                _guestsFuture =
+                                    BoatService().listMembers(boatId);
+                              });
+                            }
+                          },
+                          child: Text(l10n.remove),
+                        ),
+                      ],
+                    ),
                   );
-                },
-                icon: const Icon(Icons.copy_outlined),
-                tooltip: l10n.copy,
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // ── QR code for in-person sharing ────────────────────────
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: QrImageView(
-                data: 'logbook://join/$code',
-                version: QrVersions.auto,
-                size: 150,
-                backgroundColor: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          // ── Join another logbook ─────────────────────────────────
-          TextField(
-            controller: _codeCtrl,
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              color: cs.onSurface,
-            ),
-            decoration: InputDecoration(
-              hintText: l10n.settingsEnterInviteCode,
-              hintStyle: GoogleFonts.inter(
-                fontSize: 15,
-                color: cs.onSurfaceVariant,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: cs.outlineVariant),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: cs.outlineVariant),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: cs.primary),
-              ),
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 12),
-              filled: true,
-              fillColor: cs.surfaceContainerLow,
-            ),
-            textCapitalization: TextCapitalization.characters,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _connectLogbook(),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: FilledButton(
-              onPressed: _syncing ? null : _connectLogbook,
-              style: FilledButton.styleFrom(
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                textStyle: GoogleFonts.inter(
-                    fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-              child: _syncing
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: cs.onPrimary),
-                    )
-                  : Text(l10n.settingsConnectButton),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: OutlinedButton.icon(
-              onPressed: _syncing ? null : _openScanner,
-              icon: const Icon(Icons.qr_code_scanner, size: 20),
-              label: Text(l10n.settingsScanQr),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: cs.outline),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                textStyle: GoogleFonts.inter(
-                    fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-            ),
+                }).toList(),
+              );
+            },
           ),
         ],
-      ),
+      ],
     );
   }
 
@@ -1432,70 +2005,145 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// ── QR scanner screen ────────────────────────────────────────────────────────
+// ── Connect bottom sheet (scan / enter code) ─────────────────────────────────
 
-class _QrScannerScreen extends StatefulWidget {
-  const _QrScannerScreen();
+class _ConnectBottomSheet extends StatefulWidget {
+  final Future<void> Function(String code) onCode;
+  const _ConnectBottomSheet({required this.onCode});
 
   @override
-  State<_QrScannerScreen> createState() => _QrScannerScreenState();
+  State<_ConnectBottomSheet> createState() => _ConnectBottomSheetState();
 }
 
-class _QrScannerScreenState extends State<_QrScannerScreen> {
-  final MobileScannerController _ctrl = MobileScannerController();
-  bool _handled = false;
+class _ConnectBottomSheetState extends State<_ConnectBottomSheet>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  final MobileScannerController _scanCtrl = MobileScannerController();
+  final TextEditingController _codeCtrl = TextEditingController();
+  bool _scanHandled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) return;
+      if (_tabController.index == 0) {
+        _scanHandled = false;
+        _scanCtrl.start();
+      } else {
+        _scanCtrl.stop();
+      }
+    });
+  }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _tabController.dispose();
+    _scanCtrl.dispose();
+    _codeCtrl.dispose();
     super.dispose();
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (_handled) return;
+    if (_scanHandled) return;
     final raw = capture.barcodes.firstOrNull?.rawValue;
     if (raw == null || raw.isEmpty) return;
-    _handled = true;
-
-    // Accept both "logbook://join/CODE" deep links and raw 8-char codes.
+    _scanHandled = true;
     const scheme = 'logbook://join/';
     final code = raw.startsWith(scheme) ? raw.substring(scheme.length) : raw;
-    Navigator.pop(context, code.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), ''));
+    Navigator.pop(context);
+    widget.onCode(code);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context),
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        Container(
+          width: 36,
+          height: 4,
+          decoration: BoxDecoration(
+              color: cs.outlineVariant,
+              borderRadius: BorderRadius.circular(2)),
         ),
-        title: Text(
-          l10n.settingsScanTitle,
-          style: GoogleFonts.inter(color: Colors.white, fontSize: 16),
+        const SizedBox(height: 8),
+        TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(text: l10n.settingsScanTitle),
+            Tab(text: l10n.settingsEnterInviteCode),
+          ],
         ),
-      ),
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          MobileScanner(controller: _ctrl, onDetect: _onDetect),
-          // Viewfinder overlay
-          Container(
-            width: 220,
-            height: 220,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.white54, width: 2),
-              borderRadius: BorderRadius.circular(16),
-            ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // Scan tab
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child:
+                      MobileScanner(controller: _scanCtrl, onDetect: _onDetect),
+                ),
+              ),
+              // Enter code tab
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _codeCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        hintText: l10n.settingsEnterInviteCode,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide:
+                                BorderSide(color: cs.outlineVariant)),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: cs.primary)),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        filled: true,
+                        fillColor: cs.surfaceContainerLow,
+                      ),
+                      onSubmitted: (v) {
+                        if (v.trim().isNotEmpty) {
+                          Navigator.pop(context);
+                          widget.onCode(v);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    FilledButton(
+                      onPressed: () {
+                        final code = _codeCtrl.text;
+                        if (code.trim().isNotEmpty) {
+                          Navigator.pop(context);
+                          widget.onCode(code);
+                        }
+                      },
+                      child: Text(l10n.connect),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

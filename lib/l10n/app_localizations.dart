@@ -1735,6 +1735,28 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Konto löschen? Diese Aktion kann nicht rückgängig gemacht werden.'**
   String get authDeleteAccountConfirm;
+
+  String get settingsLogbooksSection;
+  String get settingsMyLogbooks;
+  String get settingsRoleOwner;
+  String get settingsRoleGuest;
+  String get settingsNewLogbook;
+  String get settingsNewLogbookTitle;
+  String get settingsNewLogbookHint;
+  String get settingsRename;
+  String get settingsShare;
+  String get settingsDeleteLogbook;
+  String get settingsLeaveLogbook;
+  String get settingsShareCurrentLogbook;
+  String get settingsShowQrCode;
+  String get settingsScanOrEnterCode;
+  String get settingsManageGuests;
+  String get settingsNoGuests;
+  String settingsSwitchTo(String name);
+  String settingsDeleteLogbookConfirm(String name);
+  String settingsLeaveLogbookConfirm(String name);
+  String settingsJoinContent(String name);
+  String settingsJoinedLogbook(String name);
 }
 
 class _AppLocalizationsDelegate
