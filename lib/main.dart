@@ -23,51 +23,31 @@ import 'firebase_options.dart';
 import 'app/router.dart';
 import 'app.dart';
 
-// Module-level references kept so _initFirestore can reach them without
-// threading every object through every call site.
-late HomeRepository _repo;
-late EmergencyRepository _emergencyRepo;
-late ThemeProvider _themeProvider;
-String? _activeBoatId;
-
-/// Resolves the boatId for [user], then (re-)attaches Firestore and Storage.
-///
-/// Guard: if the boatId hasn't changed since the last call, returns early so
-/// re-attaching is not triggered on every auth-state emission.
-/// Reset _activeBoatId to null on sign-out (see listener in main) so that
-/// a subsequent sign-in always re-runs this path.
-Future<void> _initFirestore(User user) async {
+Future<void> _initFirestore(
+    User user,
+    ThemeProvider themeProvider,
+    HomeRepository repo,
+    EmergencyRepository emergencyRepo) async {
   try {
-    // Detect account switch: if a different user signs in on this device,
-    // wipe local Hive data so the previous user's entries are not uploaded
-    // to the new user's boat.
-    final lastUid = _themeProvider.lastKnownUid;
-    if (lastUid != null && lastUid != user.uid) {
-      await _repo.clearLocalData();
-      await _emergencyRepo.clearLocalData();
-      _themeProvider.resetInitialSync();
+    final boatService = BoatService();
+    String? boatId = await boatService.getActiveBoatId(user.uid);
+    if (boatId == null) {
+      // First login: create an empty logbook named after the vessel.
+      final name = themeProvider.vesselName.isNotEmpty
+          ? themeProvider.vesselName
+          : 'My Logbook';
+      boatId = await boatService.createBoat(user.uid, name);
     }
-    _themeProvider.setLastKnownUid(user.uid);
-
-    final inviteCode = _themeProvider.installationId;
-    final boatId = await BoatService().resolveBoatId(user.uid, inviteCode);
-    if (_activeBoatId == boatId) return;
-    _activeBoatId = boatId;
-
-    final initialSync = _themeProvider.needsInitialSync;
     final firestore = FirestoreService(boatId: boatId);
     final storage = StorageService(boatId: boatId);
-
-    unawaited(
-      Future.wait([
-        _repo.attachFirestore(firestore, initialSync: initialSync),
-        _repo.attachStorage(storage, initialSync: initialSync),
-        _themeProvider.attachFirestore(firestore, initialSync: initialSync),
-        _emergencyRepo.attachFirestore(firestore, initialSync: initialSync),
-      ]).then((_) {
-        if (initialSync) _themeProvider.markInitialSyncDone();
-      }),
-    );
+    final initialSync = themeProvider.needsInitialSync;
+    await Future.wait([
+      repo.attachFirestore(firestore, initialSync: initialSync),
+      repo.attachStorage(storage, initialSync: initialSync),
+      themeProvider.attachFirestore(firestore, initialSync: initialSync),
+      emergencyRepo.attachFirestore(firestore, initialSync: initialSync),
+    ]);
+    if (initialSync) themeProvider.markInitialSyncDone();
   } catch (_) {
     // Offline or Firestore error — continue with local data, retry next launch.
   }
@@ -87,61 +67,54 @@ void main() async {
   Hive.registerAdapter(CrewMemberAdapter());
   Hive.registerAdapter(EmergencyContactAdapter());
 
-  _repo = HomeRepository();
-  await _repo.init();
+  final repo = HomeRepository();
+  await repo.init();
 
-  _emergencyRepo = EmergencyRepository();
-  await _emergencyRepo.init();
+  final emergencyRepo = EmergencyRepository();
+  await emergencyRepo.init();
 
-  _themeProvider = ThemeProvider();
-  await _themeProvider.init();
+  final themeProvider = ThemeProvider();
+  await themeProvider.init();
 
-  // Initialize Firebase and attach Firestore sync.
-  // FirestoreService.configure() must be called before Firebase.initializeApp
-  // so offline persistence settings are applied before any SDK code runs.
+  final authService = AuthService();
+
+  // FirestoreService.configure() must precede Firebase.initializeApp so that
+  // offline persistence is enabled before any SDK code runs.
   try {
+    FirestoreService.configure();
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
-    FirestoreService.configure();
 
-    // Resolve auth state synchronously (first emission from the stream).
-    // If the user is already signed in, initialize Firestore immediately.
-    // If not, the router redirects to /auth/login and the listener below
-    // handles initialization once sign-in completes.
-    final initialUser =
-        await FirebaseAuth.instance.authStateChanges().first;
+    final initialUser = FirebaseAuth.instance.currentUser;
     if (initialUser != null) {
-      await _initFirestore(initialUser);
+      unawaited(_initFirestore(initialUser, themeProvider, repo, emergencyRepo));
     }
 
-    // Watch for sign-in transitions after startup (null → User).
-    // _initFirestore deduplicates by boatId, so no double-init occurs
-    // when the stream re-emits the user that was already initialized above.
-    FirebaseAuth.instance.authStateChanges().listen((user) async {
-      if (user == null) {
-        _activeBoatId = null; // allow re-init on next sign-in
-        return;
+    // Trigger Firestore init on null → User transitions only.
+    User? lastAuthUser = initialUser;
+    authService.authStateChanges.listen((user) {
+      if (lastAuthUser == null && user != null) {
+        unawaited(_initFirestore(user, themeProvider, repo, emergencyRepo));
       }
-      await _initFirestore(user);
+      lastAuthUser = user;
     });
   } catch (_) {
     // Firebase unavailable — continue offline.
   }
 
-  final authService = AuthService();
-  final router = buildRouter(_themeProvider.lastRouteToday, authService);
+  final router = buildRouter(themeProvider.lastRouteToday, authService);
   router.routerDelegate.addListener(() {
     final location =
         router.routerDelegate.currentConfiguration.uri.toString();
-    _themeProvider.saveLastRoute(location);
+    themeProvider.saveLastRoute(location);
   });
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: _repo),
-        ChangeNotifierProvider.value(value: _themeProvider),
-        ChangeNotifierProvider.value(value: _emergencyRepo),
+        ChangeNotifierProvider.value(value: repo),
+        ChangeNotifierProvider.value(value: themeProvider),
+        ChangeNotifierProvider.value(value: emergencyRepo),
         ChangeNotifierProvider.value(value: authService),
       ],
       child: Logbook(router: router),
