@@ -85,20 +85,27 @@ class FirestoreService {
 
   // ── Real-time streams ──────────────────────────────────────────────────────
 
-  /// Stream of added/modified entries.
+  /// Stream of entry changes: upserted (added/modified) and removed entries.
   ///
-  /// The first emission contains *all* current entries (Firestore always
-  /// delivers the full collection state on first subscription).  Subsequent
-  /// emissions contain only changed documents — making this suitable for both
-  /// initial load and live updates.
-  Stream<List<DayEntry>> entryChanges() {
+  /// The first emission contains *all* current entries as upserted (Firestore
+  /// always delivers the full collection state on first subscription).
+  /// Subsequent emissions include deletions so that date-moves and explicit
+  /// deletes propagate to all connected devices.
+  Stream<({List<DayEntry> upserted, List<DateTime> removed})> entryChanges() {
     return _entriesRef.snapshots().map((snap) {
-      return _parseDocChanges(
+      final upserted = _parseDocChanges(
         snap.docChanges
             .where((c) => c.type != DocumentChangeType.removed)
             .toList(),
       );
-    }).where((list) => list.isNotEmpty).cast<List<DayEntry>>();
+      final removed = snap.docChanges
+          .where((c) => c.type == DocumentChangeType.removed)
+          .map((c) => DateTime.tryParse(c.doc.id))
+          .whereType<DateTime>()
+          .map((d) => DateTime(d.year, d.month, d.day))
+          .toList();
+      return (upserted: upserted, removed: removed);
+    }).where((r) => r.upserted.isNotEmpty || r.removed.isNotEmpty);
   }
 
   /// Stream of the settings document.  Emits null when the document is absent.
