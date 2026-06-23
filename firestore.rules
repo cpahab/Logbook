@@ -2,36 +2,60 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── User profiles ────────────────────────────────────────────────────────
-    // Each user can only read and write their own profile document.
+    // True if the requesting user is listed in the boat's members sub-collection.
+    function isMember(boatId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/boats/$(boatId)/members/$(request.auth.uid));
+    }
+
+    // True if the requesting user is the ownerId stored on the boat root document.
+    // Does NOT require the user to already appear in the members sub-collection,
+    // which allows BoatService to write the initial member entry immediately after
+    // creating the boat root document (two-step bootstrap, not a batch).
+    function isOwner(boatId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/boats/$(boatId)) &&
+        get(/databases/$(database)/documents/boats/$(boatId)).data.ownerId == request.auth.uid;
+    }
+
+    // ── User profiles ─────────────────────────────────────────────────────────
+    // Each authenticated user can only access their own profile document.
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // ── Boat root document ───────────────────────────────────────────────────
-    // A boat document may be created by any authenticated user, provided they
-    // include themselves as the first member and owner. This lets BootstrapService
-    // create the document on first launch without a chicken-and-egg problem.
-    //
-    // Reading, updating, or deleting requires the caller's uid to already be
-    // present in the `members` array of the existing document.
+    // ── Boat documents ────────────────────────────────────────────────────────
     match /boats/{boatId} {
-      allow create: if request.auth != null
-        && request.resource.data.ownerId == request.auth.uid
-        && request.auth.uid in request.resource.data.members;
+      // Any authenticated user may create a new boat (BoatService does this on
+      // first sign-in before the creator is in the members sub-collection).
+      allow create: if request.auth != null;
 
-      allow read, update, delete: if request.auth != null
-        && request.auth.uid in resource.data.members;
+      // Members can read the boat root (ownerId, inviteCode, createdAt).
+      allow read: if isMember(boatId);
 
-      // ── Boat subcollections (entries, meta/**) ───────────────────────────
-      // Any uid that appears in the parent boat's `members` array may read and
-      // write any subcollection document. The single `get()` call is billed as
-      // one Firestore read per security-rule evaluation.
-      match /{collection}/{document=**} {
-        allow read, write: if request.auth != null
-          && request.auth.uid in get(
-              /databases/$(database)/documents/boats/$(boatId)
-            ).data.members;
+      // Only the owner may update or delete the boat root document.
+      allow update, delete: if isOwner(boatId);
+
+      // ── Members sub-collection ────────────────────────────────────────────
+      // Any boat member may read the member list.
+      // Only the boat owner may add, update, or remove member documents.
+      // isOwner is satisfied during bootstrap because the boat root (ownerId)
+      // is committed before this write is attempted.
+      match /members/{memberId} {
+        allow read: if isMember(boatId);
+        allow write: if isOwner(boatId);
+      }
+
+      // ── Log entries ───────────────────────────────────────────────────────
+      match /entries/{date} {
+        allow read, write: if isMember(boatId);
+      }
+
+      // ── Settings, contacts, UI state, crew roster ─────────────────────────
+      // The meta sub-collection holds named documents (settings, contacts,
+      // ui, crew_roster, …). The {doc=**} wildcard covers any depth.
+      match /meta/{doc=**} {
+        allow read, write: if isMember(boatId);
       }
     }
 
