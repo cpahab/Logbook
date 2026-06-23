@@ -10,7 +10,6 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/boat_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
-import '../../auth/domain/auth_provider.dart';
 import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/screens/crew_roster_screen.dart';
@@ -82,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       return;
     }
-    final user = AuthService.currentUser;
+    final user = context.read<AuthService>().currentUser;
     if (user == null) return;
 
     // Phase 1: look up the boat by invite code.
@@ -1091,9 +1090,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Connect Logbook ──────────────────────────────────────────────────
   Widget _buildConnectSection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
-    final auth = context.watch<AuthProvider>();
+    final auth = context.watch<AuthService>();
 
-    if (!auth.isSignedIn) return const SizedBox.shrink();
+    if (auth.currentUser == null) return const SizedBox.shrink();
 
     final code = p.installationId;
     return Container(
@@ -1284,7 +1283,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Account ──────────────────────────────────────────────────────────
   Widget _buildAccountSection(ColorScheme cs) {
     final l10n = context.l10n;
-    final auth = context.watch<AuthProvider>();
+    final user = context.watch<AuthService>().currentUser;
 
     return Container(
       decoration: BoxDecoration(
@@ -1318,7 +1317,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (auth.isSignedIn) ...[
+          if (user != null) ...[
             Text(
               l10n.settingsAccountSignedInAs,
               style: GoogleFonts.inter(
@@ -1328,7 +1327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              auth.email ?? auth.displayName ?? '',
+              user.email ?? user.displayName ?? '',
               style: GoogleFonts.inter(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
@@ -1358,7 +1357,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                   );
-                  if (confirmed == true) await AuthService.signOut();
+                  if (confirmed == true && mounted) {
+                    await context.read<AuthService>().signOut();
+                  }
                 },
                 icon: Icon(Icons.logout, size: 18, color: cs.error),
                 label: Text(l10n.authSignOut,
@@ -1369,6 +1370,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                style: TextButton.styleFrom(foregroundColor: cs.error),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(l10n.authDeleteAccount),
+                      content: Text(l10n.authDeleteAccountConfirm),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(l10n.cancel),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(l10n.authDeleteAccount,
+                              style: TextStyle(color: cs.error)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true && mounted) {
+                    await context.read<AuthService>().deleteAccount();
+                  }
+                },
+                child: Text(l10n.authDeleteAccount),
               ),
             ),
           ] else ...[

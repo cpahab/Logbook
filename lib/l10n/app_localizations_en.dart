@@ -861,4 +861,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsAccountManage => 'Manage account';
+
+  @override
+  String get authDeleteAccount => 'Delete account';
+
+  @override
+  String get authDeleteAccountConfirm =>
+      'Delete account? This cannot be undone.';
 }

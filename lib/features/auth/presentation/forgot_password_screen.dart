@@ -2,8 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/services/auth_service.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../l10n/l10n_extension.dart';
 import 'auth_widgets.dart';
 
@@ -19,7 +21,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   bool _sent = false;
-  String? _error;
 
   @override
   void dispose() {
@@ -29,19 +30,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _send() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() => _loading = true);
     try {
-      await AuthService.sendPasswordResetEmail(_emailCtrl.text);
+      await context.read<AuthService>().sendPasswordReset(_emailCtrl.text);
       if (mounted) setState(() => _sent = true);
     } on FirebaseAuthException catch (e) {
       if (mounted) {
         final l10n = context.l10n;
-        setState(() => _error = switch (AuthService.codeToKey(e.code)) {
+        final msg = switch (AuthService.codeToKey(e.code)) {
           'authErrorInvalidEmail' => l10n.authErrorInvalidEmail,
           'authErrorUserNotFound' => l10n.authErrorUserNotFound,
           'authErrorNetworkFailed' => l10n.authErrorNetworkFailed,
           _ => l10n.authErrorGeneric,
-        });
+        };
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -70,7 +73,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildForm(ColorScheme cs, dynamic l10n) {
+  Widget _buildForm(ColorScheme cs, AppLocalizations l10n) {
     return Form(
       key: _formKey,
       child: Column(
@@ -101,12 +104,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               return null;
             },
           ),
-
-          if (_error != null) ...[
-            const SizedBox(height: 12),
-            Text(_error!,
-                style: GoogleFonts.inter(fontSize: 13, color: cs.error)),
-          ],
           const SizedBox(height: 20),
 
           SizedBox(
@@ -133,7 +130,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
-  Widget _buildConfirmation(ColorScheme cs, dynamic l10n) {
+  Widget _buildConfirmation(ColorScheme cs, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

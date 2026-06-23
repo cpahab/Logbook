@@ -1,7 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/services/auth_service.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
@@ -13,22 +12,16 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/tracks/presentation/tracks_screen.dart';
 
-// Routes that are accessible without signing in.
-const _publicRoutes = {'/auth/login', '/auth/register', '/auth/forgot-password'};
-
-GoRouter buildRouter(String initialLocation) {
-  // Refresh the router whenever auth state changes.
-  final authNotifier = _AuthNotifier();
-
+GoRouter buildRouter(String initialLocation, AuthService authService) {
   return GoRouter(
     initialLocation: initialLocation,
-    refreshListenable: authNotifier,
+    refreshListenable: authService,
     redirect: (context, state) {
-      final signedIn = FirebaseAuth.instance.currentUser != null;
-      final onPublic = _publicRoutes.contains(state.matchedLocation);
+      final signedIn = authService.currentUser != null;
+      final onAuth = state.matchedLocation.startsWith('/auth');
 
-      if (!signedIn && !onPublic) return '/auth/login';
-      if (signedIn && onPublic) return '/';
+      if (!signedIn && !onAuth) return '/auth/login';
+      if (signedIn && onAuth) return '/';
       return null;
     },
     routes: [
@@ -84,11 +77,4 @@ GoRouter buildRouter(String initialLocation) {
       ),
     ],
   );
-}
-
-// Bridges FirebaseAuth stream → GoRouter's refreshListenable.
-class _AuthNotifier extends ChangeNotifier {
-  _AuthNotifier() {
-    FirebaseAuth.instance.authStateChanges().listen((_) => notifyListeners());
-  }
 }
