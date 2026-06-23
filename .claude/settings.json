@@ -45,7 +45,13 @@
       "Bash(python3 -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
       "Bash(identify /Users/ursziegler/development/Logbook/assets/icon/app_icon.png)",
       "Bash(sips -g all /Users/ursziegler/development/Logbook/assets/icon/app_icon.png)",
-      "Bash(sips -g hasAlpha /Users/ursziegler/development/Logbook/assets/icon/app_icon_dark.png)"
+      "Bash(sips -g hasAlpha /Users/ursziegler/development/Logbook/assets/icon/app_icon_dark.png)",
+      "Bash(git fetch *)",
+      "Bash(flutter gen-l10n *)",
+      "Bash(grep -v \"^--$\")",
+      "Bash(codesign -d --entitlements - /Users/ursziegler/development/Logbook/build/macos/Build/Products/Debug/Logbuch.app)",
+      "Bash(codesign -dv /Users/ursziegler/development/Logbook/build/macos/Build/Products/Debug/Logbuch.app)",
+      "Bash(git add *)"
     ],
     "additionalDirectories": [
       "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358",

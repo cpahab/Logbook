@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/services/auth_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../auth/domain/auth_provider.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/screens/crew_roster_screen.dart';
 import '../../home/utils/filter_settings.dart';
@@ -105,8 +107,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _syncing = true);
     try {
       await repo.reattachAndSync(
-        FirestoreService(installationId: code),
-        StorageService(installationId: code),
+        FirestoreService(boatId: code),
+        StorageService(boatId: code),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -179,6 +181,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 20),
 
+            // ── Account ───────────────────────────────────────────────
+            _buildAccountSection(cs),
+            const SizedBox(height: 16),
+
             // ── Vessel Information ────────────────────────────────────
             _buildVesselSection(p, cs),
             const SizedBox(height: 16),
@@ -207,6 +213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Vessel Information ──────────────────────────────────────────────
   Widget _buildVesselSection(ThemeProvider p, ColorScheme cs) {
+    final l10n = context.l10n;
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
@@ -337,6 +344,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Display & Appearance ────────────────────────────────────────────
   Widget _buildDisplaySection(ThemeProvider p, ColorScheme cs) {
+    final l10n = context.l10n;
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
@@ -1020,6 +1028,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Synchronization ─────────────────────────────────────────────────
   Widget _buildSyncSection(ThemeProvider p, ColorScheme cs) {
+    final l10n = context.l10n;
     final code = p.logbookCode;
     return Container(
       decoration: BoxDecoration(
@@ -1184,6 +1193,123 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   : Text(l10n.settingsSynchronize),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccountSection(ColorScheme cs) {
+    final l10n = context.l10n;
+    final auth = context.watch<AuthProvider>();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l10n.settingsAccountSection.toUpperCase(),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: cs.secondary,
+                ),
+              ),
+              Icon(Icons.person_outline, size: 20, color: cs.outlineVariant),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (auth.isSignedIn) ...[
+            Text(
+              l10n.settingsAccountSignedInAs,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              auth.email ?? auth.displayName ?? '',
+              style: GoogleFonts.inter(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(l10n.authSignOut),
+                      content: Text(l10n.authSignOutConfirmDesc),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(l10n.cancel),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(l10n.authSignOut,
+                              style: TextStyle(color: cs.error)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) await AuthService.signOut();
+                },
+                icon: Icon(Icons.logout, size: 18, color: cs.error),
+                label: Text(l10n.authSignOut,
+                    style: GoogleFonts.inter(
+                        fontSize: 14, color: cs.error)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: cs.outlineVariant),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ),
+          ] else ...[
+            Text(
+              l10n.settingsAccountNotSignedIn,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () => context.push('/auth/login'),
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(l10n.settingsAccountManage,
+                    style: GoogleFonts.inter(
+                        fontSize: 14, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
         ],
       ),
     );

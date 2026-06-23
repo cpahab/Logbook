@@ -484,20 +484,14 @@ class _TracksScreenState extends State<TracksScreen> {
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(
               attributions: [
-                if (_satelliteView)
-                  TextSourceAttribution('© MapTiler', onTap: () async {
-                    final uri = Uri.parse('https://www.maptiler.com/');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
-                  })
-                else
-                  TextSourceAttribution('© MapTiler © OpenStreetMap contributors',
-                      onTap: () async {
-                    final uri = Uri.parse('https://www.maptiler.com/copyright/');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
+                TextSourceAttribution('MapTiler', onTap: () async {
+                  final uri = Uri.parse('https://www.maptiler.com/copyright/');
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }),
+                if (!_satelliteView)
+                  TextSourceAttribution('OpenStreetMap contributors', onTap: () async {
+                    final uri = Uri.parse('https://www.openstreetmap.org/copyright');
+                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                   }),
               ],
             ),
@@ -1237,14 +1231,13 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
             PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(attributions: [
-              if (_satelliteView)
-                TextSourceAttribution('© MapTiler', onTap: () async {
-                  final uri = Uri.parse('https://www.maptiler.com/');
-                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                })
-              else
-                TextSourceAttribution('© MapTiler © OpenStreetMap contributors', onTap: () async {
-                  final uri = Uri.parse('https://www.maptiler.com/copyright/');
+              TextSourceAttribution('MapTiler', onTap: () async {
+                final uri = Uri.parse('https://www.maptiler.com/copyright/');
+                if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }),
+              if (!_satelliteView)
+                TextSourceAttribution('OpenStreetMap contributors', onTap: () async {
+                  final uri = Uri.parse('https://www.openstreetmap.org/copyright');
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }),
             ]),
