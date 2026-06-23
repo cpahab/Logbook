@@ -30,8 +30,10 @@ service cloud.firestore {
       // first sign-in before the creator is in the members sub-collection).
       allow create: if request.auth != null;
 
-      // Members can read the boat root (ownerId, inviteCode, createdAt).
-      allow read: if isMember(boatId);
+      // Any authenticated user can read the boat root doc (ownerId, inviteCode,
+      // createdAt). This enables the invite-code lookup query: the root doc
+      // holds no logbook data. All sub-collections still require membership.
+      allow read: if request.auth != null;
 
       // Only the owner may update or delete the boat root document.
       allow update, delete: if isOwner(boatId);

@@ -521,6 +521,26 @@ class HomeRepository extends ChangeNotifier {
     }
   }
 
+  /// Wipes all local Hive data and in-memory caches without re-attaching.
+  ///
+  /// Call this before [attachFirestore] when a different user signs in, so that
+  /// the previous user's entries are not uploaded to the new user's boat.
+  Future<void> clearLocalData() async {
+    await _entrySub?.cancel();
+    _entrySub = null;
+    await _rosterSub?.cancel();
+    _rosterSub = null;
+    for (final t in _syncTimers.values) { t.cancel(); }
+    _syncTimers.clear();
+    await _dayBox.clear();
+    await _trackBox.clear();
+    await _syncStateBox.clear();
+    await _rosterBox.clear();
+    _entries.clear();
+    dailyTracks.clear();
+    notifyListeners();
+  }
+
   /// Switches to a different logbook code: wipes local data and pulls from cloud.
   Future<void> reattachAndSync(
       FirestoreService firestoreService, StorageService storageService) async {

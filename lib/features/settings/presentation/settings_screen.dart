@@ -78,6 +78,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (foundBoatId != null) {
         currentBoatId = await BoatService().getBoatIdForUser(user.uid);
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.l10n.settingsError}: $e')),
+        );
+      }
+      return;
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
@@ -140,13 +147,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final firestore = FirestoreService(boatId: foundBoatId);
       final storage = StorageService(boatId: foundBoatId);
 
-      await Future.wait([
-        repo.attachFirestore(firestore, initialSync: true),
-        repo.attachStorage(storage, initialSync: true),
-        themeProvider.attachFirestore(firestore, initialSync: true),
-        emergencyRepo.attachFirestore(firestore, initialSync: true),
-      ]);
-      themeProvider.markInitialSyncDone();
+      // reattachAndSync clears local Hive data first, then fetches all entries
+      // from the new boat. This prevents local data from being uploaded to the
+      // new boat (which attachFirestore(initialSync: true) would do).
+      await repo.reattachAndSync(firestore, storage);
+      await themeProvider.attachFirestore(firestore);
+      await emergencyRepo.attachFirestore(firestore);
 
       _codeCtrl.clear();
       if (mounted) {
