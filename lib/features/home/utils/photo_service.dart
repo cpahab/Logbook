@@ -23,11 +23,12 @@ class PhotoService {
       storagePath.split('/').last;
 
   /// Picks images, compresses them (max 1920 px, JPEG 85 %), caches locally
-  /// and uploads to Firebase Storage. Returns the Storage paths of successes.
+  /// and uploads to Firebase Storage under the boat's namespace.
+  /// Returns the Storage paths of successes.
   ///
   /// Uses [withData: true] so that [f.bytes] is always populated — this is the
   /// only reliable path on iOS where PHAsset-backed picks may have no [f.path].
-  static Future<List<String>> pickAndUpload(DateTime day) async {
+  static Future<List<String>> pickAndUpload(DateTime day, String boatId) async {
     final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: true,
@@ -47,7 +48,7 @@ class PhotoService {
       if (srcBytes == null || srcBytes.isEmpty) continue;
 
       final id = '${DateTime.now().millisecondsSinceEpoch}';
-      final storagePath = 'photos/$dateStr/$id.jpg';
+      final storagePath = 'boats/$boatId/photos/$dateStr/$id.jpg';
       try {
         final compressed = await FlutterImageCompress.compressWithList(
           srcBytes,

@@ -1,0 +1,19 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Per-boat files: GPS tracks and photos.
+    // Any authenticated user may read/write under their boat's prefix.
+    // Boat-level membership is enforced by the app; Storage rules guard
+    // against unauthenticated access only.
+    match /boats/{boatId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Legacy photos uploaded before boat-scoped paths were introduced.
+    // Kept so that existing storagePaths stored in Firestore continue to resolve.
+    match /photos/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
