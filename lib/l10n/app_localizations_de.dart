@@ -568,6 +568,35 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsError => 'Fehler';
 
   @override
+  String get settingsInviteCodeLabel => 'Dein Einladungscode';
+
+  @override
+  String get settingsInviteCodeDesc =>
+      'Teile diesen Code mit einem Crewmitglied, um Zugang zu diesem Logbuch zu gewähren.';
+
+  @override
+  String get settingsEnterInviteCode => 'Einladungscode eingeben';
+
+  @override
+  String get settingsConnectButton => 'Mit Logbuch verbinden';
+
+  @override
+  String get settingsCodeNotFound => 'Code nicht gefunden.';
+
+  @override
+  String get settingsAlreadyConnected => 'Bereits verbunden.';
+
+  @override
+  String get settingsConnected => 'Verbunden.';
+
+  @override
+  String get settingsSwitchLogbookTitle => 'Logbuch wechseln?';
+
+  @override
+  String get settingsSwitchLogbookContent =>
+      'Die lokalen Daten werden durch die Daten des verbundenen Logbuchs ersetzt.';
+
+  @override
   String get tracksTitle => 'Chronik';
 
   @override
