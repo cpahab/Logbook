@@ -23,6 +23,11 @@ class CrewRosterScreen extends StatelessWidget {
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
         centerTitle: true,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: cs.primary),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: Text(
           context.l10n.crewRosterTitle,
           style: GoogleFonts.newsreader(

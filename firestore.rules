@@ -24,8 +24,12 @@ service cloud.firestore {
 
     // Boat document: any member reads; only owner writes meta.
     match /boats/{boatId} {
-      allow read:  if isMember(boatId);
-      allow write: if isOwner(boatId);
+      allow read:   if isMember(boatId);
+      // Creating a new boat: the caller must declare themselves as ownerUid.
+      // (isOwner() calls get() on a non-existent doc which returns null → false,
+      // so we need a separate create rule using request.resource.data.)
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow update, delete: if isOwner(boatId);
 
       // Logbook data: any member reads and writes.
       match /{collection}/{document=**} {
