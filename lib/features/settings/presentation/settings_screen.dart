@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/boat_service.dart';
@@ -56,9 +58,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
 
-  Future<void> _connectLogbook() async {
+  Future<void> _openScanner() async {
+    final code = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const _QrScannerScreen(),
+      ),
+    );
+    if (code != null && mounted) {
+      await _connectLogbook(code);
+    }
+  }
+
+  // [prefilledCode] comes from QR scan; omit to read from the text field.
+  Future<void> _connectLogbook([String? prefilledCode]) async {
     final l10n = context.l10n;
-    final raw = _codeCtrl.text;
+    final raw = prefilledCode ?? _codeCtrl.text;
     final code = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1166,6 +1182,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          // ── QR code for in-person sharing ────────────────────────
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: QrImageView(
+                data: 'logbook://join/$code',
+                version: QrVersions.auto,
+                size: 150,
+                backgroundColor: Colors.white,
+              ),
+            ),
+          ),
           const SizedBox(height: 20),
           // ── Join another logbook ─────────────────────────────────
           TextField(
@@ -1226,11 +1259,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   : Text(l10n.settingsConnectButton),
             ),
           ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: _syncing ? null : _openScanner,
+              icon: const Icon(Icons.qr_code_scanner, size: 20),
+              label: Text(l10n.settingsScanQr),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: cs.outline),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                textStyle: GoogleFonts.inter(
+                    fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
+  // ── Account ──────────────────────────────────────────────────────────
   Widget _buildAccountSection(ColorScheme cs) {
     final l10n = context.l10n;
     final auth = context.watch<AuthProvider>();
@@ -1343,6 +1394,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── QR scanner screen ────────────────────────────────────────────────────────
+
+class _QrScannerScreen extends StatefulWidget {
+  const _QrScannerScreen();
+
+  @override
+  State<_QrScannerScreen> createState() => _QrScannerScreenState();
+}
+
+class _QrScannerScreenState extends State<_QrScannerScreen> {
+  final MobileScannerController _ctrl = MobileScannerController();
+  bool _handled = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_handled) return;
+    final raw = capture.barcodes.firstOrNull?.rawValue;
+    if (raw == null || raw.isEmpty) return;
+    _handled = true;
+
+    // Accept both "logbook://join/CODE" deep links and raw 8-char codes.
+    const scheme = 'logbook://join/';
+    final code = raw.startsWith(scheme) ? raw.substring(scheme.length) : raw;
+    Navigator.pop(context, code.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), ''));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          l10n.settingsScanTitle,
+          style: GoogleFonts.inter(color: Colors.white, fontSize: 16),
+        ),
+      ),
+      body: Stack(
+        alignment: Alignment.center,
+        children: [
+          MobileScanner(controller: _ctrl, onDetect: _onDetect),
+          // Viewfinder overlay
+          Container(
+            width: 220,
+            height: 220,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white54, width: 2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
         ],
       ),
     );
