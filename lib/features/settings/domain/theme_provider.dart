@@ -156,6 +156,39 @@ class ThemeProvider extends ChangeNotifier {
   void markInitialSyncDone() => _box.put(_initialSyncDoneKey, 'true');
   void resetInitialSync()    => _box.delete(_initialSyncDoneKey);
 
+  /// Resets all synced vessel / VHF settings to defaults in memory and Hive,
+  /// cancels live Firestore streams, and clears modification timestamps.
+  /// Call before [attachFirestore] when a different user account signs in so
+  /// that stale data is never pushed to the new account's Firestore.
+  Future<void> clearVesselSettings() async {
+    await _settingsSub?.cancel();
+    _settingsSub = null;
+    await _uiSub?.cancel();
+    _uiSub = null;
+
+    _vesselName = '';  _vesselMmsi = '';  _vesselCallSign = '';
+    _lifeRaftInfo = ''; _epirbInfo = ''; _fireSuppInfo = '';
+    _vhf1Label = 'Channel 16'; _vhf1Desc  = 'Distress · 156.800 MHz';
+    _vhf2Label = 'Channel 67'; _vhf2Desc  = 'Ship to Ship · 156.375 MHz';
+    _vhf3Label = 'Channel 06'; _vhf3Desc  = 'Search & Rescue · 156.300 MHz';
+    _vhf4Label = 'Channel 13'; _vhf4Desc  = 'Bridge to Bridge · 156.650 MHz';
+
+    for (final k in [
+      _vesselNameKey, _vesselMmsiKey, _vesselCallSignKey,
+      _lifeRaftKey, _epirbKey, _fireSuppKey,
+      _vhf1LabelKey, _vhf1DescKey, _vhf2LabelKey, _vhf2DescKey,
+      _vhf3LabelKey, _vhf3DescKey, _vhf4LabelKey, _vhf4DescKey,
+      _settingsModifiedKey, _uiModifiedKey,
+    ]) {
+      _box.delete(k);
+    }
+    // Clear month-expansion UI state.
+    final mexKeys = _box.keys.where((k) => k is String && k.startsWith('mex_')).toList();
+    for (final k in mexKeys) { _box.delete(k); }
+
+    notifyListeners();
+  }
+
   String get lastRouteToday {
     if (_box.get(_lastRouteDateKey) != _todayStr()) return '/';
     return _box.get(_lastRouteKey) ?? '/';
@@ -450,11 +483,11 @@ class ThemeProvider extends ChangeNotifier {
 
     try {
       if (initialSync) {
-        // Push local only if there is something worth migrating.
-        // A fresh device install has empty fields — pushing blanks would
-        // overwrite the real data already on the server from another device.
-        final hasLocalData = _toSettingsMap().values.any((v) => v.isNotEmpty);
-        if (hasLocalData) {
+        // Only push if the user has actually modified settings on this device.
+        // A fresh install — or after clearVesselSettings() on account switch —
+        // has no modification timestamp, so we skip the push and let
+        // localMod stay null, which makes remoteIsNewer unconditionally true.
+        if (_settingsModifiedAt != null) {
           await service.saveSettings(_toSettingsMap());
           _markSettingsModified();
         }

@@ -30,14 +30,20 @@ Future<void> _initFirestore(
     EmergencyRepository emergencyRepo,
     ValueNotifier<String?> boatIdNotifier) async {
   try {
+    // Detect account switch: a different UID signed in while local Hive data
+    // from the previous account is still cached. Wipe everything so we never
+    // push the old account's data to the new account's Firestore.
+    final previousUid = themeProvider.lastKnownUid;
+    if (previousUid != null && previousUid != user.uid) {
+      await repo.clearLocalData();
+      await emergencyRepo.clearLocalData();
+      await themeProvider.clearVesselSettings();
+      themeProvider.resetInitialSync();
+    }
+
     final boatService = BoatService();
     String? boatId = await boatService.getActiveBoatId(user.uid);
-    if (boatId == null) {
-      final name = themeProvider.vesselName.isNotEmpty
-          ? themeProvider.vesselName
-          : 'My Logbook';
-      boatId = await boatService.createBoat(user.uid, name);
-    }
+    boatId ??= await boatService.createBoat(user.uid, 'My Logbook');
     final firestore = FirestoreService(boatId: boatId);
     final storage = StorageService(boatId: boatId);
     final initialSync = themeProvider.needsInitialSync;
@@ -48,6 +54,7 @@ Future<void> _initFirestore(
       emergencyRepo.attachFirestore(firestore, initialSync: initialSync),
     ]);
     if (initialSync) themeProvider.markInitialSyncDone();
+    themeProvider.setLastKnownUid(user.uid);
     boatIdNotifier.value = boatId;
   } catch (_) {
     // Offline or Firestore error — continue with local data, retry next launch.
