@@ -5,9 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/boat_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../auth/domain/auth_provider.dart';
+import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/screens/crew_roster_screen.dart';
 import '../../home/utils/filter_settings.dart';
@@ -54,20 +56,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
 
-  Future<void> _connectCode() async {
+  Future<void> _connectLogbook() async {
     final l10n = context.l10n;
     final raw = _codeCtrl.text;
     final code = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
-    if (code.length < 4) {
+    if (code.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsInvalidCode)),
       );
       return;
     }
+    final user = AuthService.currentUser;
+    if (user == null) return;
 
-    final themeProvider = context.read<ThemeProvider>();
-    final repo = context.read<HomeRepository>();
+    // Phase 1: look up the boat by invite code.
+    setState(() => _syncing = true);
+    String? foundBoatId;
+    String? currentBoatId;
+    try {
+      foundBoatId = await BoatService().findBoatByInviteCode(code);
+      if (foundBoatId != null) {
+        currentBoatId = await BoatService().getBoatIdForUser(user.uid);
+      }
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+    if (!mounted) return;
 
+    if (foundBoatId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsCodeNotFound)),
+      );
+      return;
+    }
+    if (foundBoatId == currentBoatId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsAlreadyConnected)),
+      );
+      return;
+    }
+
+    // Phase 2: confirm and join.
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -83,8 +112,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             color: cs.onSurfaceVariant,
             fontSize: 14,
           ),
-          title: Text(cl.settingsConnectLogbookTitle),
-          content: Text(cl.settingsConnectLogbookContent(code)),
+          title: Text(cl.settingsSwitchLogbookTitle),
+          content: Text(cl.settingsSwitchLogbookContent),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -98,21 +127,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-    if (confirmed != true) return;
-
-    themeProvider.setLogbookCode(code);
-    _codeCtrl.clear();
-    if (mounted) FocusScope.of(context).unfocus();
+    if (confirmed != true || !mounted) return;
 
     setState(() => _syncing = true);
     try {
-      await repo.reattachAndSync(
-        FirestoreService(boatId: code),
-        StorageService(boatId: code),
-      );
+      await BoatService().joinBoat(foundBoatId, user.uid);
+      if (!mounted) return;
+
+      final themeProvider = context.read<ThemeProvider>();
+      final repo = context.read<HomeRepository>();
+      final emergencyRepo = context.read<EmergencyRepository>();
+      final firestore = FirestoreService(boatId: foundBoatId);
+      final storage = StorageService(boatId: foundBoatId);
+
+      await Future.wait([
+        repo.attachFirestore(firestore, initialSync: true),
+        repo.attachStorage(storage, initialSync: true),
+        themeProvider.attachFirestore(firestore, initialSync: true),
+        emergencyRepo.attachFirestore(firestore, initialSync: true),
+      ]);
+      themeProvider.markInitialSyncDone();
+
+      _codeCtrl.clear();
       if (mounted) {
+        FocusScope.of(context).unfocus();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.settingsConnectedAndSynced)),
+          SnackBar(content: Text(l10n.settingsConnected)),
         );
       }
     } catch (e) {
@@ -201,8 +241,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildCrewRosterSection(cs),
             const SizedBox(height: 16),
 
-            // ── Synchronization ───────────────────────────────────────
-            _buildSyncSection(p, cs),
+            // ── Connect Logbook ───────────────────────────────────────
+            _buildConnectSection(p, cs),
             const SizedBox(height: 32),
 
           ],
@@ -1026,10 +1066,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Synchronization ─────────────────────────────────────────────────
-  Widget _buildSyncSection(ThemeProvider p, ColorScheme cs) {
+  // ── Connect Logbook ──────────────────────────────────────────────────
+  Widget _buildConnectSection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
-    final code = p.logbookCode;
+    final auth = context.watch<AuthProvider>();
+
+    if (!auth.isSignedIn) return const SizedBox.shrink();
+
+    final code = p.installationId;
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
@@ -1058,13 +1102,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: cs.secondary,
                 ),
               ),
-              Icon(Icons.sync, size: 20, color: cs.outlineVariant),
+              Icon(Icons.link, size: 20, color: cs.outlineVariant),
             ],
           ),
           const SizedBox(height: 12),
-          // Current code
+          // ── Invite code display ──────────────────────────────────
           Text(
-            l10n.settingsLogbookCodeLabel.toUpperCase(),
+            l10n.settingsInviteCodeLabel,
             style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -1073,7 +1117,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            l10n.settingsLogbookCodeDesc,
+            l10n.settingsInviteCodeDesc,
             style: GoogleFonts.inter(
               fontSize: 13,
               color: cs.onSurfaceVariant,
@@ -1117,24 +1161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          // Connect to new logbook
-          Text(
-            l10n.settingsLogbookSyncLabel.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.settingsLogbookSyncDesc,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 10),
+          // ── Join another logbook ─────────────────────────────────
           TextField(
             controller: _codeCtrl,
             style: GoogleFonts.inter(
@@ -1142,7 +1169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: cs.onSurface,
             ),
             decoration: InputDecoration(
-              hintText: l10n.settingsEnterSyncCode,
+              hintText: l10n.settingsEnterInviteCode,
               hintStyle: GoogleFonts.inter(
                 fontSize: 15,
                 color: cs.onSurfaceVariant,
@@ -1167,14 +1194,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             textCapitalization: TextCapitalization.characters,
             textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _connectCode(),
+            onSubmitted: (_) => _connectLogbook(),
           ),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             height: 48,
             child: FilledButton(
-              onPressed: _syncing ? null : _connectCode,
+              onPressed: _syncing ? null : _connectLogbook,
               style: FilledButton.styleFrom(
                 backgroundColor: cs.primary,
                 foregroundColor: cs.onPrimary,
@@ -1190,7 +1217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: cs.onPrimary),
                     )
-                  : Text(l10n.settingsSynchronize),
+                  : Text(l10n.settingsConnectButton),
             ),
           ),
         ],
