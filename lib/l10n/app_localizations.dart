@@ -1,8 +1,5 @@
-// GENERATED CODE – DO NOT EDIT BY HAND
-// Regenerate with: flutter gen-l10n  (runs automatically on flutter pub get)
-// ignore_for_file: type=lint
-
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -11,9 +8,62 @@ import 'package:intl/intl.dart' as intl;
 import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
 
+// ignore_for_file: type=lint
+
+/// Callers can lookup localized strings with an instance of AppLocalizations
+/// returned by `AppLocalizations.of(context)`.
+///
+/// Applications need to include `AppLocalizations.delegate()` in their app's
+/// `localizationDelegates` list, and the locales they support in the app's
+/// `supportedLocales` list. For example:
+///
+/// ```dart
+/// import 'l10n/app_localizations.dart';
+///
+/// return MaterialApp(
+///   localizationsDelegates: AppLocalizations.localizationsDelegates,
+///   supportedLocales: AppLocalizations.supportedLocales,
+///   home: MyApplicationHome(),
+/// );
+/// ```
+///
+/// ## Update pubspec.yaml
+///
+/// Please make sure to update your pubspec.yaml to include the following
+/// packages:
+///
+/// ```yaml
+/// dependencies:
+///   # Internationalization support.
+///   flutter_localizations:
+///     sdk: flutter
+///   intl: any # Use the pinned version from flutter_localizations
+///
+///   # Rest of dependencies
+/// ```
+///
+/// ## iOS Applications
+///
+/// iOS applications define key application metadata, including supported
+/// locales, in an Info.plist file that is built into the application bundle.
+/// To configure the locales supported by your app, you’ll need to edit this
+/// file.
+///
+/// First, open your project’s ios/Runner.xcworkspace Xcode workspace file.
+/// Then, in the Project Navigator, open the Info.plist file under the Runner
+/// project’s Runner folder.
+///
+/// Next, select the Information Property List item, select Add Item from the
+/// Editor menu, then select Localizations from the pop-up menu.
+///
+/// Select and expand the newly-created Localizations item then, for each
+/// locale your application supports, add a new item and select the locale
+/// you wish to add from the pop-up menu in the Value field. This list should
+/// be consistent with the languages listed in the AppLocalizations.supportedLocales
+/// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale);
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -24,267 +74,1589 @@ abstract class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
+  /// A list of this localizations delegate along with the default localizations
+  /// delegates.
+  ///
+  /// Returns a list of localizations delegates containing this delegate along with
+  /// GlobalMaterialLocalizations.delegate, GlobalCupertinoLocalizations.delegate,
+  /// and GlobalWidgetsLocalizations.delegate.
+  ///
+  /// Additional delegates can be added by appending to this list in
+  /// MaterialApp. This list does not have to be used at all if a custom list
+  /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
+  /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('de'),
     Locale('en'),
   ];
 
-  // ── Common ────────────────────────────────────────────────────────
+  /// No description provided for @appTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch'**
+  String get appTitle;
+
+  /// No description provided for @cancel.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbrechen'**
   String get cancel;
+
+  /// No description provided for @delete.
+  ///
+  /// In de, this message translates to:
+  /// **'Löschen'**
   String get delete;
+
+  /// No description provided for @edit.
+  ///
+  /// In de, this message translates to:
+  /// **'Bearbeiten'**
   String get edit;
+
+  /// No description provided for @add.
+  ///
+  /// In de, this message translates to:
+  /// **'Hinzufügen'**
   String get add;
+
+  /// No description provided for @remove.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernen'**
   String get remove;
+
+  /// No description provided for @saveChanges.
+  ///
+  /// In de, this message translates to:
+  /// **'Änderungen speichern'**
   String get saveChanges;
+
+  /// No description provided for @apply.
+  ///
+  /// In de, this message translates to:
+  /// **'Übernehmen'**
   String get apply;
+
+  /// No description provided for @connect.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbinden'**
   String get connect;
+
+  /// No description provided for @close.
+  ///
+  /// In de, this message translates to:
+  /// **'Schließen'**
   String get close;
+
+  /// No description provided for @reset.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurücksetzen'**
   String get reset;
+
+  /// No description provided for @copy.
+  ///
+  /// In de, this message translates to:
+  /// **'Kopieren'**
   String get copy;
+
+  /// No description provided for @change.
+  ///
+  /// In de, this message translates to:
+  /// **'Ändern'**
   String get change;
+
+  /// No description provided for @update.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisieren'**
   String get update;
+
+  /// No description provided for @later.
+  ///
+  /// In de, this message translates to:
+  /// **'Später'**
   String get later;
+
+  /// No description provided for @on.
+  ///
+  /// In de, this message translates to:
+  /// **'An'**
   String get on;
+
+  /// No description provided for @off.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus'**
   String get off;
 
-  // ── Stats ─────────────────────────────────────────────────────────
+  /// No description provided for @statSailingDays.
+  ///
+  /// In de, this message translates to:
+  /// **'Segeltage'**
   String get statSailingDays;
+
+  /// No description provided for @statDays.
+  ///
+  /// In de, this message translates to:
+  /// **'Tage'**
   String get statDays;
+
+  /// No description provided for @statDistance.
+  ///
+  /// In de, this message translates to:
+  /// **'Distanz'**
   String get statDistance;
+
+  /// No description provided for @statAvgSpeed.
+  ///
+  /// In de, this message translates to:
+  /// **'Ø Geschwindigkeit'**
   String get statAvgSpeed;
+
+  /// No description provided for @statAvgSpeedUnderway.
+  ///
+  /// In de, this message translates to:
+  /// **'Ø Geschwindigkeit in Fahrt'**
   String get statAvgSpeedUnderway;
+
+  /// No description provided for @statMax.
+  ///
+  /// In de, this message translates to:
+  /// **'Max'**
   String get statMax;
 
-  // ── Home ──────────────────────────────────────────────────────────
+  /// No description provided for @homeNewDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Tag'**
   String get homeNewDay;
+
+  /// No description provided for @homeAddEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Eintrag hinzufügen'**
   String get homeAddEntry;
+
+  /// No description provided for @homeRecentEntries.
+  ///
+  /// In de, this message translates to:
+  /// **'Letzte Einträge'**
   String get homeRecentEntries;
+
+  /// No description provided for @homeAllButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle'**
   String get homeAllButton;
+
+  /// No description provided for @homeEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch ist leer'**
   String get homeEmpty;
 
-  // ── Day Detail ───────────────────────────────────────────────────
+  /// No description provided for @dayMenuOptions.
+  ///
+  /// In de, this message translates to:
+  /// **'Optionen'**
   String get dayMenuOptions;
+
+  /// No description provided for @dayMenuChangeDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Datum ändern'**
   String get dayMenuChangeDate;
+
+  /// No description provided for @dayMenuImportGpx.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX importieren'**
   String get dayMenuImportGpx;
+
+  /// No description provided for @dayMenuExportGpx.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX exportieren'**
   String get dayMenuExportGpx;
+
+  /// No description provided for @dayMenuExportPdf.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF exportieren'**
   String get dayMenuExportPdf;
+
+  /// No description provided for @dayMenuDeleteGpx.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX löschen'**
   String get dayMenuDeleteGpx;
+
+  /// No description provided for @dayMenuDeleteDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Tag löschen'**
   String get dayMenuDeleteDay;
+
+  /// No description provided for @dayNoEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Eintrag für diesen Tag'**
   String get dayNoEntry;
+
+  /// No description provided for @dayAddNotes.
+  ///
+  /// In de, this message translates to:
+  /// **'Notizen hinzufügen…'**
   String get dayAddNotes;
+
+  /// No description provided for @dayAddDiary.
+  ///
+  /// In de, this message translates to:
+  /// **'Tagebucheintrag hinzufügen…'**
   String get dayAddDiary;
+
+  /// No description provided for @dayAddCrewMember.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzungsmitglied hinzufügen'**
   String get dayAddCrewMember;
+
+  /// No description provided for @dayEditCrew.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung bearbeiten'**
   String get dayEditCrew;
+
+  /// No description provided for @dayAddCrew.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung hinzufügen…'**
   String get dayAddCrew;
+
+  /// No description provided for @dayDeparturePort.
+  ///
+  /// In de, this message translates to:
+  /// **'Starthafen'**
   String get dayDeparturePort;
+
+  /// No description provided for @dayDestinationPort.
+  ///
+  /// In de, this message translates to:
+  /// **'Zielhafen'**
   String get dayDestinationPort;
+
+  /// No description provided for @dayCaptureRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'Etappe erfassen…'**
   String get dayCaptureRoute;
+
+  /// No description provided for @daySaveRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'Etappe speichern'**
   String get daySaveRoute;
+
+  /// No description provided for @dayAddGpxTrack.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX Track hinzufügen…'**
   String get dayAddGpxTrack;
+
+  /// No description provided for @dayAddPhotosTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Fotos hinzufügen'**
   String get dayAddPhotosTooltip;
+
+  /// No description provided for @dayAddPhotosEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Fotos hinzufügen…'**
   String get dayAddPhotosEmpty;
+
+  /// No description provided for @dayImportingPhotos.
+  ///
+  /// In de, this message translates to:
+  /// **'Fotos werden importiert…'**
   String get dayImportingPhotos;
+
+  /// No description provided for @dayFirstLogEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Ersten Logeintrag hinzufügen…'**
   String get dayFirstLogEntry;
+
+  /// No description provided for @dayDeletePhoto.
+  ///
+  /// In de, this message translates to:
+  /// **'Foto löschen?'**
   String get dayDeletePhoto;
+
+  /// No description provided for @dayEditLogEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Logeintrag bearbeiten'**
   String get dayEditLogEntry;
+
+  /// No description provided for @dayDeleteLogEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Logeintrag löschen'**
   String get dayDeleteLogEntry;
+
+  /// No description provided for @dayUpdateVesselStatus.
+  ///
+  /// In de, this message translates to:
+  /// **'Schiffsstatus aktualisieren'**
   String get dayUpdateVesselStatus;
+
+  /// No description provided for @dayAddLogEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Eintrag hinzufügen'**
   String get dayAddLogEntry;
 
-  // ── Sections ──────────────────────────────────────────────────────
+  /// No description provided for @sectionNotes.
+  ///
+  /// In de, this message translates to:
+  /// **'Notizen'**
   String get sectionNotes;
+
+  /// No description provided for @sectionDiary.
+  ///
+  /// In de, this message translates to:
+  /// **'Tagebuch'**
   String get sectionDiary;
+
+  /// No description provided for @sectionCrew.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung'**
   String get sectionCrew;
+
+  /// No description provided for @sectionRoute.
+  ///
+  /// In de, this message translates to:
+  /// **'Route & Passage'**
   String get sectionRoute;
+
+  /// No description provided for @sectionPhotos.
+  ///
+  /// In de, this message translates to:
+  /// **'Fotos'**
   String get sectionPhotos;
+
+  /// No description provided for @sectionVesselStatus.
+  ///
+  /// In de, this message translates to:
+  /// **'Schiffsstatus'**
   String get sectionVesselStatus;
+
+  /// No description provided for @sectionLogEntries.
+  ///
+  /// In de, this message translates to:
+  /// **'Chronologische Einträge'**
   String get sectionLogEntries;
 
-  // ── Labels ────────────────────────────────────────────────────────
+  /// No description provided for @labelEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Eintrag'**
   String get labelEntry;
+
+  /// No description provided for @labelDeparture.
+  ///
+  /// In de, this message translates to:
+  /// **'Abfahrt'**
   String get labelDeparture;
+
+  /// No description provided for @labelArrival.
+  ///
+  /// In de, this message translates to:
+  /// **'Ankunft'**
   String get labelArrival;
+
+  /// No description provided for @labelProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'Verlauf'**
   String get labelProgress;
+
+  /// No description provided for @labelSkipper.
+  ///
+  /// In de, this message translates to:
+  /// **'Skipper'**
   String get labelSkipper;
+
+  /// No description provided for @labelCrewRole.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung'**
   String get labelCrewRole;
 
-  // ── Data labels ───────────────────────────────────────────────────
+  /// No description provided for @dataCrewNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung'**
   String get dataCrewNote;
+
+  /// No description provided for @dataCourse.
+  ///
+  /// In de, this message translates to:
+  /// **'Kurs'**
   String get dataCourse;
+
+  /// No description provided for @dataSpeed.
+  ///
+  /// In de, this message translates to:
+  /// **'Fahrt'**
   String get dataSpeed;
+
+  /// No description provided for @dataWind.
+  ///
+  /// In de, this message translates to:
+  /// **'Wind'**
   String get dataWind;
+
+  /// No description provided for @dataSea.
+  ///
+  /// In de, this message translates to:
+  /// **'See'**
   String get dataSea;
+
+  /// No description provided for @dataWeather.
+  ///
+  /// In de, this message translates to:
+  /// **'Wetter'**
   String get dataWeather;
+
+  /// No description provided for @dataMainSail.
+  ///
+  /// In de, this message translates to:
+  /// **'Gross'**
   String get dataMainSail;
+
+  /// No description provided for @dataJibSail.
+  ///
+  /// In de, this message translates to:
+  /// **'Fock'**
   String get dataJibSail;
+
+  /// No description provided for @dataMotor.
+  ///
+  /// In de, this message translates to:
+  /// **'Motor'**
   String get dataMotor;
 
-  // ── Entry Dialog ──────────────────────────────────────────────────
+  /// No description provided for @entryDialogTitleNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Neuer Eintrag'**
   String get entryDialogTitleNew;
+
+  /// No description provided for @entryDialogTitleEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Eintrag bearbeiten'**
   String get entryDialogTitleEdit;
+
+  /// No description provided for @entryDialogSectionTime.
+  ///
+  /// In de, this message translates to:
+  /// **'Chronometrie'**
   String get entryDialogSectionTime;
+
+  /// No description provided for @entryDialogSectionNav.
+  ///
+  /// In de, this message translates to:
+  /// **'Navigation'**
   String get entryDialogSectionNav;
+
+  /// No description provided for @entryDialogSectionEnv.
+  ///
+  /// In de, this message translates to:
+  /// **'Umgebung'**
   String get entryDialogSectionEnv;
+
+  /// No description provided for @entryDialogSectionSails.
+  ///
+  /// In de, this message translates to:
+  /// **'Segel & Motor'**
   String get entryDialogSectionSails;
+
+  /// No description provided for @entryDialogSectionRemarks.
+  ///
+  /// In de, this message translates to:
+  /// **'Bemerkungen'**
   String get entryDialogSectionRemarks;
+
+  /// No description provided for @entryDialogTimeLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Uhrzeit'**
   String get entryDialogTimeLabel;
+
+  /// No description provided for @entryDialogCourseLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Kurs (°)'**
   String get entryDialogCourseLabel;
+
+  /// No description provided for @entryDialogSpeedLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Fahrt (kn)'**
   String get entryDialogSpeedLabel;
+
+  /// No description provided for @entryDialogWindLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Wind Richtung & Stärke'**
   String get entryDialogWindLabel;
+
+  /// No description provided for @entryDialogSeaLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'See'**
   String get entryDialogSeaLabel;
+
+  /// No description provided for @entryDialogSeaHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Leicht'**
   String get entryDialogSeaHint;
+
+  /// No description provided for @entryDialogWeatherLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Wetter'**
   String get entryDialogWeatherLabel;
+
+  /// No description provided for @entryDialogWeatherHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Sonnig'**
   String get entryDialogWeatherHint;
+
+  /// No description provided for @entryDialogMainSailLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Gross'**
   String get entryDialogMainSailLabel;
+
+  /// No description provided for @entryDialogJibSailLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Fock'**
   String get entryDialogJibSailLabel;
+
+  /// No description provided for @entryDialogMotorLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Motor'**
   String get entryDialogMotorLabel;
+
+  /// No description provided for @entryDialogKeelLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Kiel'**
   String get entryDialogKeelLabel;
+
+  /// No description provided for @entryDialogRemarksHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Beobachtung, Erlebnis…'**
   String get entryDialogRemarksHint;
+
+  /// No description provided for @entryDialogSubmitNew.
+  ///
+  /// In de, this message translates to:
+  /// **'In Log eintragen'**
   String get entryDialogSubmitNew;
 
-  // ── Crew Dialog ───────────────────────────────────────────────────
+  /// No description provided for @crewDialogTitleAdd.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung hinzufügen'**
   String get crewDialogTitleAdd;
+
+  /// No description provided for @crewDialogTitleEdit.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung bearbeiten'**
   String get crewDialogTitleEdit;
+
+  /// No description provided for @crewSectionIdentity.
+  ///
+  /// In de, this message translates to:
+  /// **'Identität'**
   String get crewSectionIdentity;
+
+  /// No description provided for @crewFieldFullName.
+  ///
+  /// In de, this message translates to:
+  /// **'Vollständiger Name'**
   String get crewFieldFullName;
+
+  /// No description provided for @crewFieldFullNameHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Thomas Müller'**
   String get crewFieldFullNameHint;
+
+  /// No description provided for @crewSectionMedical.
+  ///
+  /// In de, this message translates to:
+  /// **'Medizinische Info'**
   String get crewSectionMedical;
+
+  /// No description provided for @crewFieldBloodGroup.
+  ///
+  /// In de, this message translates to:
+  /// **'Blutgruppe'**
   String get crewFieldBloodGroup;
+
+  /// No description provided for @crewFieldBloodGroupHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. 0+, A-'**
   String get crewFieldBloodGroupHint;
+
+  /// No description provided for @crewFieldAllergies.
+  ///
+  /// In de, this message translates to:
+  /// **'Allergien'**
   String get crewFieldAllergies;
+
+  /// No description provided for @crewFieldAllergiesHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Bekannte Allergien auflisten…'**
   String get crewFieldAllergiesHint;
+
+  /// No description provided for @crewFieldConditions.
+  ///
+  /// In de, this message translates to:
+  /// **'Erkrankungen / Medikamente'**
   String get crewFieldConditions;
+
+  /// No description provided for @crewFieldConditionsHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Benötigt Inhalator (Asthma)…'**
   String get crewFieldConditionsHint;
+
+  /// No description provided for @crewSectionRemarks.
+  ///
+  /// In de, this message translates to:
+  /// **'Bemerkungen'**
   String get crewSectionRemarks;
+
+  /// No description provided for @crewFieldRemarksHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Allgemeine Notizen zu dieser Person…'**
   String get crewFieldRemarksHint;
+
+  /// No description provided for @crewButtonAddToCrew.
+  ///
+  /// In de, this message translates to:
+  /// **'Zur Besatzung hinzufügen'**
   String get crewButtonAddToCrew;
+
+  /// No description provided for @crewButtonRemoveFromCrew.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung entfernen'**
   String get crewButtonRemoveFromCrew;
 
-  // ── Crew Picker ───────────────────────────────────────────────────
+  /// No description provided for @crewPickerTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzung wählen'**
   String get crewPickerTitle;
+
+  /// No description provided for @crewPickerRemoveTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus Besatzungsliste entfernen?'**
   String get crewPickerRemoveTitle;
+
+  /// No description provided for @crewPickerRemoveContent.
+  ///
+  /// In de, this message translates to:
+  /// **'wird dauerhaft aus der Liste gelöscht.'**
   String get crewPickerRemoveContent;
+
+  /// No description provided for @crewPickerNewPerson.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Person…'**
   String get crewPickerNewPerson;
 
-  // ── Crew Roster ───────────────────────────────────────────────────
+  /// No description provided for @crewRosterTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzungsliste'**
   String get crewRosterTitle;
+
+  /// No description provided for @crewRosterEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Besatzungsmitglieder'**
   String get crewRosterEmpty;
+
+  /// No description provided for @crewRosterEmptyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Tippe auf + um eine Person hinzuzufügen.'**
   String get crewRosterEmptyHint;
+
+  /// No description provided for @crewRosterNewPerson.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Person'**
   String get crewRosterNewPerson;
+
+  /// No description provided for @crewRosterRemoveTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Person entfernen?'**
   String get crewRosterRemoveTitle;
+
+  /// No description provided for @crewRosterRemoveContent.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} wird dauerhaft aus der Besatzungsliste gelöscht.'**
   String crewRosterRemoveContent(String name);
 
-  // ── Settings ──────────────────────────────────────────────────────
+  /// No description provided for @settingsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen'**
   String get settingsTitle;
+
+  /// No description provided for @settingsSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Navigationsumgebung konfigurieren'**
   String get settingsSubtitle;
+
+  /// No description provided for @settingsVesselSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Schiff'**
   String get settingsVesselSection;
+
+  /// No description provided for @settingsFieldName.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
   String get settingsFieldName;
+
+  /// No description provided for @settingsFieldNameHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. S.V. Adventure'**
   String get settingsFieldNameHint;
+
+  /// No description provided for @settingsFieldCallSign.
+  ///
+  /// In de, this message translates to:
+  /// **'Rufzeichen'**
   String get settingsFieldCallSign;
+
+  /// No description provided for @settingsFieldCallSignHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. HB-9-XY'**
   String get settingsFieldCallSignHint;
+
+  /// No description provided for @settingsAppearanceSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Darstellung'**
   String get settingsAppearanceSection;
+
+  /// No description provided for @settingsThemeLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'App-Design'**
   String get settingsThemeLabel;
+
+  /// No description provided for @settingsThemeSystem.
+  ///
+  /// In de, this message translates to:
+  /// **'System'**
   String get settingsThemeSystem;
+
+  /// No description provided for @settingsThemeLight.
+  ///
+  /// In de, this message translates to:
+  /// **'Hell'**
   String get settingsThemeLight;
+
+  /// No description provided for @settingsThemeDark.
+  ///
+  /// In de, this message translates to:
+  /// **'Dunkel'**
   String get settingsThemeDark;
+
+  /// No description provided for @settingsLanguageLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Sprache'**
   String get settingsLanguageLabel;
+
+  /// No description provided for @settingsLanguageDe.
+  ///
+  /// In de, this message translates to:
+  /// **'Deutsch'**
   String get settingsLanguageDe;
+
+  /// No description provided for @settingsLanguageEn.
+  ///
+  /// In de, this message translates to:
+  /// **'English'**
   String get settingsLanguageEn;
+
+  /// No description provided for @settingsTrackFilterSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Trackfilter'**
   String get settingsTrackFilterSection;
+
+  /// No description provided for @settingsFilterModeMooring.
+  ///
+  /// In de, this message translates to:
+  /// **'Liegeplatz & Anker'**
   String get settingsFilterModeMooring;
+
+  /// No description provided for @settingsFilterModeExact.
+  ///
+  /// In de, this message translates to:
+  /// **'Genaue Position'**
   String get settingsFilterModeExact;
+
+  /// No description provided for @settingsStationaryLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Stationäre Erkennung'**
   String get settingsStationaryLabel;
+
+  /// No description provided for @settingsStationaryDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestimmt, wie Liegeplätze, Ankerstopps und Hafenbesuche erkannt und als Ankerpunkt dargestellt werden – am Anfang, Ende und unterwegs.'**
   String get settingsStationaryDesc;
+
+  /// No description provided for @settingsMooringDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Liegeplatz und Ankerpositionen werden als einzelner Punkt dargestellt. Auch ein weitausholender Ankerkreis wird zu einem Punkt zusammengefasst.'**
   String get settingsMooringDesc;
+
+  /// No description provided for @settingsExactPositionDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Nur eng geclusterte Positionen gelten als stationär. Breite Ankerkreise bleiben sichtbar – besser für Ankerwache.'**
   String get settingsExactPositionDesc;
+
+  /// No description provided for @settingsMinStopLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Min. Stopp-Dauer'**
   String get settingsMinStopLabel;
+
+  /// No description provided for @settingsMinUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'min'**
   String get settingsMinUnit;
+
+  /// No description provided for @settingsMinStopDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestdauer eines echten Stopps (Anker, Hafen). Kurze Langsamfahrten (Wende, Flaute) werden ignoriert.'**
   String get settingsMinStopDesc;
+
+  /// No description provided for @settingsMaxAnchorLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Max. Ankerschwung'**
   String get settingsMaxAnchorLabel;
+
+  /// No description provided for @settingsMetersUnit.
+  ///
+  /// In de, this message translates to:
+  /// **'m'**
   String get settingsMetersUnit;
+
+  /// No description provided for @settingsMaxAnchorDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Maximale Ausdehnung eines Stopps. Erhöhen bei weitem Ankerschwung über Nacht (Standard: 30 m).'**
   String get settingsMaxAnchorDesc;
+
+  /// No description provided for @settingsColdStartLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Kaltstart-Trimmen'**
   String get settingsColdStartLabel;
+
+  /// No description provided for @settingsColdStartDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernt ungenaue GPS-Fixes am Spuranfang, bevor der Empfänger eingeschwungen ist.'**
   String get settingsColdStartDesc;
+
+  /// No description provided for @settingsTrimSharpnessLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Trim-Schärfe'**
   String get settingsTrimSharpnessLabel;
+
+  /// No description provided for @settingsTrimSharpnessDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Niedrigerer Wert = aggressiver trimmen. Standard: 3.0.'**
   String get settingsTrimSharpnessDesc;
+
+  /// No description provided for @settingsUnderwayLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Unterwegs-Schwelle'**
   String get settingsUnderwayLabel;
+
+  /// No description provided for @settingsUnderwayDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Mindestgeschwindigkeit für den Fahrt-Durchschnitt. Driften unterhalb wird nicht mitgezählt.'**
   String get settingsUnderwayDesc;
+
+  /// No description provided for @settingsPercentileLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Spitzenwert-Perzentil'**
   String get settingsPercentileLabel;
+
+  /// No description provided for @settingsPercentileDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'p99 ignoriert das oberste 1 % der Messwerte und unterdrückt GPS-Ausreißer. p100 = echter Maximalwert.'**
   String get settingsPercentileDesc;
+
+  /// No description provided for @settingsShowRawTrackLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungefilterte Spur anzeigen'**
   String get settingsShowRawTrackLabel;
+
+  /// No description provided for @settingsShowRawTrackDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeigt den Roh-GPX-Track zusätzlich zur gefilterten Spur an. Dient zur Fehleranalyse und zum Optimieren der Filtereinstellungen.'**
   String get settingsShowRawTrackDesc;
+
+  /// No description provided for @settingsCrewSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzungsliste'**
   String get settingsCrewSection;
+
+  /// No description provided for @settingsNoEntries.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Einträge'**
   String get settingsNoEntries;
+
+  /// No description provided for @settingsPersonCount.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, one{Person} other{Personen}}'**
   String settingsPersonCount(int count);
+
+  /// No description provided for @settingsSyncSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Synchronisierung'**
   String get settingsSyncSection;
+
+  /// No description provided for @settingsLogbookCodeLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch-Code'**
   String get settingsLogbookCodeLabel;
+
+  /// No description provided for @settingsLogbookCodeDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Gib diesen Code auf einem anderen Gerät ein, um dasselbe Logbuch zu teilen.'**
   String get settingsLogbookCodeDesc;
+
+  /// No description provided for @settingsCodeCopied.
+  ///
+  /// In de, this message translates to:
+  /// **'Code kopiert.'**
   String get settingsCodeCopied;
+
+  /// No description provided for @settingsLogbookSyncLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbook Sync'**
   String get settingsLogbookSyncLabel;
+
+  /// No description provided for @settingsLogbookSyncDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Mit einem anderen Logbuch via Firebase verbinden.'**
   String get settingsLogbookSyncDesc;
+
+  /// No description provided for @settingsEnterSyncCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Sync-Code eingeben'**
   String get settingsEnterSyncCode;
+
+  /// No description provided for @settingsSynchronize.
+  ///
+  /// In de, this message translates to:
+  /// **'Synchronisieren'**
   String get settingsSynchronize;
+
+  /// No description provided for @settingsInvalidCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültiger Code.'**
   String get settingsInvalidCode;
+
+  /// No description provided for @settingsConnectLogbookTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch verbinden'**
   String get settingsConnectLogbookTitle;
+
+  /// No description provided for @settingsConnectLogbookContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Gerät wird mit dem Logbuch \"{code}\" verbunden. Alle lokalen Einträge werden gelöscht und durch die Cloud-Daten ersetzt.'**
   String settingsConnectLogbookContent(String code);
+
+  /// No description provided for @settingsConnectedAndSynced.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbunden und synchronisiert.'**
   String get settingsConnectedAndSynced;
+
+  /// No description provided for @settingsError.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler'**
   String get settingsError;
 
-  // ── Tracks ────────────────────────────────────────────────────────
+  /// No description provided for @tracksTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Chronik'**
   String get tracksTitle;
+
+  /// No description provided for @tracksOneYear.
+  ///
+  /// In de, this message translates to:
+  /// **'1 Jahr'**
   String get tracksOneYear;
+
+  /// No description provided for @tracksOneMonth.
+  ///
+  /// In de, this message translates to:
+  /// **'1 Monat'**
   String get tracksOneMonth;
+
+  /// No description provided for @tracksOneWeek.
+  ///
+  /// In de, this message translates to:
+  /// **'1 Woche'**
   String get tracksOneWeek;
+
+  /// No description provided for @tracksCustom.
+  ///
+  /// In de, this message translates to:
+  /// **'Eigene'**
   String get tracksCustom;
+
+  /// No description provided for @tracksZoomIn.
+  ///
+  /// In de, this message translates to:
+  /// **'Vergrössern'**
   String get tracksZoomIn;
+
+  /// No description provided for @tracksZoomOut.
+  ///
+  /// In de, this message translates to:
+  /// **'Verkleinern'**
   String get tracksZoomOut;
+
+  /// No description provided for @tracksShowAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Tracks anzeigen'**
   String get tracksShowAll;
+
+  /// No description provided for @tracksFullscreen.
+  ///
+  /// In de, this message translates to:
+  /// **'Vollbild'**
   String get tracksFullscreen;
+
+  /// No description provided for @tracksMapView.
+  ///
+  /// In de, this message translates to:
+  /// **'Kartenansicht'**
   String get tracksMapView;
+
+  /// No description provided for @tracksSatelliteView.
+  ///
+  /// In de, this message translates to:
+  /// **'Satellitenansicht'**
   String get tracksSatelliteView;
+
+  /// No description provided for @tracksNoTracks.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Tracks vorhanden'**
   String get tracksNoTracks;
+
+  /// No description provided for @tracksNoTracksInPeriod.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Tracks im gewählten Zeitraum'**
   String get tracksNoTracksInPeriod;
 
-  // ── Day Detail operations ─────────────────────────────────────────
+  /// No description provided for @dayChangeDateTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Falsches Datum?'**
   String get dayChangeDateTitle;
+
+  /// No description provided for @dayChangeDateContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Der GPX-Track enthält hauptsächlich Daten vom {from}, nicht vom {to}.\n\nTrotzdem verschieben?'**
   String dayChangeDateContent(String from, String to);
+
+  /// No description provided for @dayChangeDateConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Trotzdem verschieben'**
   String get dayChangeDateConfirm;
+
+  /// No description provided for @dayDateExistsError.
+  ///
+  /// In de, this message translates to:
+  /// **'Für dieses Datum existiert bereits ein Eintrag.'**
   String get dayDateExistsError;
+
+  /// No description provided for @dayGpxNoWaypoints.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX-File enthält keine Wegpunkte mit Zeitstempel.'**
   String get dayGpxNoWaypoints;
+
+  /// No description provided for @dayGpxWrongDateContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Das GPX-File enthält hauptsächlich Daten vom {from}, nicht vom {to}.\n\nTrotzdem importieren?'**
   String dayGpxWrongDateContent(String from, String to);
+
+  /// No description provided for @dayGpxImportConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Trotzdem importieren'**
   String get dayGpxImportConfirm;
+
+  /// No description provided for @dayGpxImported.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX-Track importiert für {date}.'**
   String dayGpxImported(String date);
+
+  /// No description provided for @dayGpxExported.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX exportiert.'**
   String get dayGpxExported;
+
+  /// No description provided for @dayGpxDeleteTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX-Track entfernen?'**
   String get dayGpxDeleteTitle;
+
+  /// No description provided for @dayGpxDeleteContent.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX-Track für diesen Tag löschen?'**
   String get dayGpxDeleteContent;
+
+  /// No description provided for @dayGpxRemoved.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX-Track entfernt.'**
   String get dayGpxRemoved;
+
+  /// No description provided for @dayDeleteTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Tag löschen?'**
   String get dayDeleteTitle;
+
+  /// No description provided for @dayDeleteContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Daten für den {date} werden unwiderruflich gelöscht, inklusive Logeinträge und GPX-Track.'**
   String dayDeleteContent(String date);
+
+  /// No description provided for @dayEntryDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'Logeintrag gelöscht.'**
   String get dayEntryDeleted;
+
+  /// No description provided for @dayEntryUpdated.
+  ///
+  /// In de, this message translates to:
+  /// **'Logeintrag aktualisiert.'**
   String get dayEntryUpdated;
+
+  /// No description provided for @dayUndo.
+  ///
+  /// In de, this message translates to:
+  /// **'Rückgängig'**
   String get dayUndo;
+
+  /// No description provided for @dayFreeTextHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Freie Notizen für diesen Tag…'**
   String get dayFreeTextHint;
+
+  /// No description provided for @dayDiaryHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Tagebucheintrag für diesen Tag…'**
   String get dayDiaryHint;
-  // ── Vessel Status ─────────────────────────────────────────────────
+
+  /// No description provided for @vesselStatusTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Schiffsstatus'**
   String get vesselStatusTitle;
+
+  /// No description provided for @vesselOilLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Motoröl'**
   String get vesselOilLabel;
+
+  /// No description provided for @vesselFuelLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Kraftstoff'**
   String get vesselFuelLabel;
+
+  /// No description provided for @vesselFullLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Voll'**
   String get vesselFullLabel;
+
+  /// No description provided for @vesselEmptyLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Leer'**
   String get vesselEmptyLabel;
 
-  // ── GPS Consent ───────────────────────────────────────────────────
+  /// No description provided for @gpsConsentTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'GPS für den Notfall'**
   String get gpsConsentTitle;
+
+  /// No description provided for @gpsConsentContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Beim Aktivieren des Funk-Notrufs ermittelt die App Ihren GPS-Standort und trägt ihn automatisch ins Mayday-Protokoll ein, damit Rettungskräfte Ihre genaue Position sofort erhalten. Der Standort wird ausschliesslich in diesem Moment genutzt.'**
   String get gpsConsentContent;
+
+  /// No description provided for @gpsConsentLater.
+  ///
+  /// In de, this message translates to:
+  /// **'Später'**
   String get gpsConsentLater;
+
+  /// No description provided for @gpsConsentAllow.
+  ///
+  /// In de, this message translates to:
+  /// **'Zugriff erlauben'**
   String get gpsConsentAllow;
+
+  /// No description provided for @authLoginTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Willkommen zurück'**
+  String get authLoginTitle;
+
+  /// No description provided for @authLoginSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Melde dich an, um dein Logbuch geräteübergreifend zu synchronisieren.'**
+  String get authLoginSubtitle;
+
+  /// No description provided for @authEmailLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'E-Mail'**
+  String get authEmailLabel;
+
+  /// No description provided for @authEmailHint.
+  ///
+  /// In de, this message translates to:
+  /// **'kapitaen@beispiel.com'**
+  String get authEmailHint;
+
+  /// No description provided for @authPasswordLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort'**
+  String get authPasswordLabel;
+
+  /// No description provided for @authPasswordHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein Passwort'**
+  String get authPasswordHint;
+
+  /// No description provided for @authSignIn.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmelden'**
+  String get authSignIn;
+
+  /// No description provided for @authSignInWithGoogle.
+  ///
+  /// In de, this message translates to:
+  /// **'Mit Google fortfahren'**
+  String get authSignInWithGoogle;
+
+  /// No description provided for @authSignInWithApple.
+  ///
+  /// In de, this message translates to:
+  /// **'Mit Apple fortfahren'**
+  String get authSignInWithApple;
+
+  /// No description provided for @authOrDivider.
+  ///
+  /// In de, this message translates to:
+  /// **'oder'**
+  String get authOrDivider;
+
+  /// No description provided for @authNoAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch kein Konto?'**
+  String get authNoAccount;
+
+  /// No description provided for @authRegisterLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Registrieren'**
+  String get authRegisterLink;
+
+  /// No description provided for @authForgotPasswordLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort vergessen?'**
+  String get authForgotPasswordLink;
+
+  /// No description provided for @authRegisterTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto erstellen'**
+  String get authRegisterTitle;
+
+  /// No description provided for @authRegisterSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Logbuchdaten bleiben auf dem Gerät und werden über dein Konto synchronisiert.'**
+  String get authRegisterSubtitle;
+
+  /// No description provided for @authConfirmPasswordLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort bestätigen'**
+  String get authConfirmPasswordLabel;
+
+  /// No description provided for @authConfirmPasswordHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort wiederholen'**
+  String get authConfirmPasswordHint;
+
+  /// No description provided for @authPasswordMismatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Die Passwörter stimmen nicht überein.'**
+  String get authPasswordMismatch;
+
+  /// No description provided for @authPasswordTooShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Passwort muss mindestens 6 Zeichen lang sein.'**
+  String get authPasswordTooShort;
+
+  /// No description provided for @authCreateAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto erstellen'**
+  String get authCreateAccount;
+
+  /// No description provided for @authAlreadyHaveAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Bereits ein Konto?'**
+  String get authAlreadyHaveAccount;
+
+  /// No description provided for @authSignInLink.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmelden'**
+  String get authSignInLink;
+
+  /// No description provided for @authForgotPasswordTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Passwort zurücksetzen'**
+  String get authForgotPasswordTitle;
+
+  /// No description provided for @authForgotPasswordDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen deines Passworts.'**
+  String get authForgotPasswordDesc;
+
+  /// No description provided for @authSendResetEmail.
+  ///
+  /// In de, this message translates to:
+  /// **'Link senden'**
+  String get authSendResetEmail;
+
+  /// No description provided for @authResetEmailSent.
+  ///
+  /// In de, this message translates to:
+  /// **'Link gesendet — bitte prüfe deinen Posteingang.'**
+  String get authResetEmailSent;
+
+  /// No description provided for @authBackToSignIn.
+  ///
+  /// In de, this message translates to:
+  /// **'Zurück zur Anmeldung'**
+  String get authBackToSignIn;
+
+  /// No description provided for @authSignOut.
+  ///
+  /// In de, this message translates to:
+  /// **'Abmelden'**
+  String get authSignOut;
+
+  /// No description provided for @authSignOutConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Von deinem Konto abmelden?'**
+  String get authSignOutConfirm;
+
+  /// No description provided for @authSignOutConfirmDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Deine Logbuchdaten bleiben auf diesem Gerät.'**
+  String get authSignOutConfirmDesc;
+
+  /// No description provided for @authErrorInvalidEmail.
+  ///
+  /// In de, this message translates to:
+  /// **'Ungültige E-Mail-Adresse.'**
+  String get authErrorInvalidEmail;
+
+  /// No description provided for @authErrorWrongPassword.
+  ///
+  /// In de, this message translates to:
+  /// **'Falsches Passwort.'**
+  String get authErrorWrongPassword;
+
+  /// No description provided for @authErrorUserNotFound.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Konto für diese E-Mail gefunden.'**
+  String get authErrorUserNotFound;
+
+  /// No description provided for @authErrorEmailInUse.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein Konto mit dieser E-Mail existiert bereits.'**
+  String get authErrorEmailInUse;
+
+  /// No description provided for @authErrorWeakPassword.
+  ///
+  /// In de, this message translates to:
+  /// **'Das Passwort ist zu schwach.'**
+  String get authErrorWeakPassword;
+
+  /// No description provided for @authErrorGeneric.
+  ///
+  /// In de, this message translates to:
+  /// **'Etwas ist schiefgelaufen. Bitte versuche es erneut.'**
+  String get authErrorGeneric;
+
+  /// No description provided for @authErrorNetworkFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Internetverbindung.'**
+  String get authErrorNetworkFailed;
+
+  /// No description provided for @settingsAccountSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto'**
+  String get settingsAccountSection;
+
+  /// No description provided for @settingsAccountSignedInAs.
+  ///
+  /// In de, this message translates to:
+  /// **'Angemeldet als'**
+  String get settingsAccountSignedInAs;
+
+  /// No description provided for @settingsAccountNotSignedIn.
+  ///
+  /// In de, this message translates to:
+  /// **'Nicht angemeldet'**
+  String get settingsAccountNotSignedIn;
+
+  /// No description provided for @settingsAccountManage.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto verwalten'**
+  String get settingsAccountManage;
 }
 
 class _AppLocalizationsDelegate
@@ -293,8 +1665,7 @@ class _AppLocalizationsDelegate
 
   @override
   Future<AppLocalizations> load(Locale locale) {
-    return SynchronousFuture<AppLocalizations>(
-        lookupAppLocalizations(locale));
+    return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
   }
 
   @override
@@ -306,13 +1677,18 @@ class _AppLocalizationsDelegate
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+  // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
     case 'de':
       return AppLocalizationsDe();
     case 'en':
       return AppLocalizationsEn();
   }
+
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale".',
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
   );
 }

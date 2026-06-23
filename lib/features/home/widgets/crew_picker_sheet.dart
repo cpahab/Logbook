@@ -111,7 +111,7 @@ class _RosterTile extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: Text(l10n.crewPickerRemoveTitle),
-        content: Text(l10n.crewPickerRemoveContent(member.name)),
+        content: Text('${member.name} ${l10n.crewPickerRemoveContent}'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),

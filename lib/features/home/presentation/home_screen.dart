@@ -298,7 +298,7 @@ class _HomeScreenState extends State<HomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'LOGBUCH',
+              context.l10n.appTitle.toUpperCase(),
               style: GoogleFonts.newsreader(
                 color: cs.primary,
                 fontSize: 28,

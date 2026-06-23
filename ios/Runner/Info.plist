@@ -24,9 +24,6 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<!-- Google Sign-In: replace the string below with REVERSED_CLIENT_ID
-	     from ios/Runner/GoogleService-Info.plist (re-download from Firebase
-	     Console after enabling Google Sign-in provider). -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -34,7 +31,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>PASTE_REVERSED_CLIENT_ID_HERE</string>
+				<string>com.googleusercontent.apps.238354943592-c4i2ndgeife35unb4bvp0ah5mj16sra9</string>
 			</array>
 		</dict>
 	</array>
