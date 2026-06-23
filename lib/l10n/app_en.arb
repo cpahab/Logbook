@@ -215,6 +215,8 @@
   "settingsConnected": "Connected.",
   "settingsSwitchLogbookTitle": "Switch logbook?",
   "settingsSwitchLogbookContent": "Your local data will be replaced with the data from the connected logbook.",
+  "settingsScanQr": "Scan QR Code",
+  "settingsScanTitle": "Scan logbook QR code",
 
   "tracksTitle": "Charts",
   "tracksOneYear": "1 Year",

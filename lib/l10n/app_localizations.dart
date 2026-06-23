@@ -1220,6 +1220,18 @@ abstract class AppLocalizations {
   /// **'Die lokalen Daten werden durch die Daten des verbundenen Logbuchs ersetzt.'**
   String get settingsSwitchLogbookContent;
 
+  /// No description provided for @settingsScanQr.
+  ///
+  /// In de, this message translates to:
+  /// **'QR-Code scannen'**
+  String get settingsScanQr;
+
+  /// No description provided for @settingsScanTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch-QR-Code scannen'**
+  String get settingsScanTitle;
+
   /// No description provided for @tracksTitle.
   ///
   /// In de, this message translates to:
