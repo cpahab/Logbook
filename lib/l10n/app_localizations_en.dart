@@ -603,7 +603,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsScanTitle => 'Scan logbook QR code';
 
   @override
-  String get tracksTitle => 'Charts';
+  String get tracksTitle => 'Voyage Tracks';
 
   @override
   String get tracksOneYear => '1 Year';
@@ -851,6 +851,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authErrorNetworkFailed => 'No internet connection.';
 
   @override
+  String get authErrorRequiresRecentLogin =>
+      'Please sign out and sign back in before deleting your account.';
+
+  @override
   String get settingsAccountSection => 'Account';
 
   @override
@@ -879,7 +883,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsRoleOwner => 'owner';
 
   @override
-  String get settingsRoleGuest => 'guest';
+  String get settingsRoleGuest => 'contributor';
 
   @override
   String get settingsNewLogbook => 'New logbook';
@@ -912,10 +916,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsScanOrEnterCode => 'Scan QR / Enter code';
 
   @override
-  String get settingsManageGuests => 'Manage guests';
+  String get settingsManageGuests => 'Manage contributors';
 
   @override
-  String get settingsNoGuests => 'No guests';
+  String get settingsNoGuests => 'No contributors';
 
   @override
   String settingsSwitchTo(String name) {

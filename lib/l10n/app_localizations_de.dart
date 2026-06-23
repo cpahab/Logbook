@@ -603,7 +603,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsScanTitle => 'Logbuch-QR-Code scannen';
 
   @override
-  String get tracksTitle => 'Chronik';
+  String get tracksTitle => 'Fahrtstrecken';
 
   @override
   String get tracksOneYear => '1 Jahr';
@@ -856,6 +856,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get authErrorNetworkFailed => 'Keine Internetverbindung.';
 
   @override
+  String get authErrorRequiresRecentLogin =>
+      'Bitte melde dich ab und wieder an, bevor du dein Konto löschst.';
+
+  @override
   String get settingsAccountSection => 'Konto';
 
   @override
@@ -884,7 +888,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsRoleOwner => 'Eigentümer';
 
   @override
-  String get settingsRoleGuest => 'Gast';
+  String get settingsRoleGuest => 'Beitragender';
 
   @override
   String get settingsNewLogbook => 'Neues Logbuch';
@@ -917,10 +921,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsScanOrEnterCode => 'QR scannen / Code eingeben';
 
   @override
-  String get settingsManageGuests => 'Gäste verwalten';
+  String get settingsManageGuests => 'Beitragende verwalten';
 
   @override
-  String get settingsNoGuests => 'Keine Gäste';
+  String get settingsNoGuests => 'Keine Beitragenden';
 
   @override
   String settingsSwitchTo(String name) {
