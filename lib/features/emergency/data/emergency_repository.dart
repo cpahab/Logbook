@@ -56,8 +56,13 @@ class EmergencyRepository extends ChangeNotifier {
 
     try {
       if (initialSync) {
-        await _pushToFirestore(service);
-        _markModified();
+        // Only push if this device has locally modified contacts.
+        // After clearLocalData() the meta box is empty (_localModifiedAt == null),
+        // so we skip the push and let remoteIsNewer win below.
+        if (_localModifiedAt != null) {
+          await _pushToFirestore(service);
+          _markModified();
+        }
       }
 
       final (:contacts, :updatedAt) = await service.fetchContactsWithMeta();
