@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../l10n/l10n_extension.dart';
+
 enum NavTab { journal, map, settings, safety }
 
 class AppBottomNav extends StatelessWidget {
@@ -55,7 +57,7 @@ class AppBottomNav extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(child: Center(child: _tab(context, cs, NavTab.journal, Icons.auto_stories, 'Journal'))),
-                  Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, 'Chronik - Karte'))),
+                  Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, context.l10n.tracksTitle))),
                   const SizedBox(width: 64),
                   Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, 'Einstellungen'))),
                   Expanded(child: Center(child: _tab(context, cs, NavTab.safety, Icons.health_and_safety, 'Sicherheit'))),

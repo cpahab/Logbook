@@ -181,18 +181,28 @@ class BoatService {
   // ── Delete ─────────────────────────────────────────────────────────────────
 
   Future<void> deleteBoat(String boatId, String ownerUid) async {
-    final membersSnap = await _db
-        .collection('boats')
-        .doc(boatId)
-        .collection('members')
-        .get();
+    final boatRef = _db.collection('boats').doc(boatId);
+
+    // Delete all entries (may be large — chunked).
+    await _deleteCollectionInChunks(boatRef.collection('entries'));
+
+    // Delete known meta documents.
+    for (final id in ['settings', 'contacts', 'ui', 'crew_roster']) {
+      try {
+        await boatRef.collection('meta').doc(id).delete();
+      } catch (_) {}
+    }
+
+    // Delete all members + the boat doc itself.
+    final membersSnap = await boatRef.collection('members').get();
     final batch = _db.batch();
     for (final doc in membersSnap.docs) {
       batch.delete(doc.reference);
     }
-    batch.delete(_db.collection('boats').doc(boatId));
+    batch.delete(boatRef);
     await batch.commit();
 
+    // Remove from owner's boat list.
     final userDoc = await _db.collection('users').doc(ownerUid).get();
     final data = userDoc.data();
     final remaining =
@@ -207,6 +217,60 @@ class BoatService {
         .collection('users')
         .doc(ownerUid)
         .set(update, SetOptions(merge: true));
+  }
+
+  /// Deletes every Firestore document and user data associated with [uid].
+  /// Owned boats are fully wiped; guest-only boats remove the member entry.
+  /// Does NOT delete the Firebase Auth account — call that separately.
+  Future<void> deleteUserAndAllBoats(String uid) async {
+    final userDoc = await _db.collection('users').doc(uid).get();
+    final boatIds =
+        List<String>.from(userDoc.data()?['boats'] as List? ?? []);
+
+    for (final boatId in boatIds) {
+      try {
+        final memberDoc = await _db
+            .collection('boats')
+            .doc(boatId)
+            .collection('members')
+            .doc(uid)
+            .get();
+        final role = memberDoc.data()?['role'] as String?;
+        if (role == 'owner') {
+          await deleteBoat(boatId, uid);
+        } else {
+          // Guest: just remove self from the boat.
+          await _db
+              .collection('boats')
+              .doc(boatId)
+              .collection('members')
+              .doc(uid)
+              .delete();
+        }
+      } catch (_) {}
+    }
+
+    // Delete the user profile document.
+    try {
+      await _db.collection('users').doc(uid).delete();
+    } catch (_) {}
+  }
+
+  /// Deletes all documents in [col] in chunks to stay within Firestore's
+  /// 500-write-per-batch limit.
+  Future<void> _deleteCollectionInChunks(
+      CollectionReference<Map<String, dynamic>> col) async {
+    const chunkSize = 400;
+    while (true) {
+      final snap = await col.limit(chunkSize).get();
+      if (snap.docs.isEmpty) break;
+      final batch = _db.batch();
+      for (final doc in snap.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+      if (snap.docs.length < chunkSize) break;
+    }
   }
 
   // ── Member queries ─────────────────────────────────────────────────────────

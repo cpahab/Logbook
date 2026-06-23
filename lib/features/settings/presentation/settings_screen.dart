@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -35,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loadingBoats = false;
   bool _guestsExpanded = false;
   Future<List<Map<String, dynamic>>>? _guestsFuture;
+  late ValueNotifier<String?> _boatIdNotifier;
 
   @override
   void initState() {
@@ -43,11 +45,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _vesselNameCtrl = TextEditingController(text: p.vesselName);
     _vesselMmsiCtrl = TextEditingController(text: p.vesselMmsi);
     _vesselCallSignCtrl = TextEditingController(text: p.vesselCallSign);
+    _boatIdNotifier = context.read<ValueNotifier<String?>>();
+    // Refresh list whenever the active boat changes (e.g. async init completes)
+    _boatIdNotifier.addListener(_refreshBoats);
     _refreshBoats();
   }
 
   @override
   void dispose() {
+    _boatIdNotifier.removeListener(_refreshBoats);
     _vesselNameCtrl.dispose();
     _vesselMmsiCtrl.dispose();
     _vesselCallSignCtrl.dispose();
@@ -77,6 +83,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final themeProvider = context.read<ThemeProvider>();
     final emergencyRepo = context.read<EmergencyRepository>();
     final notifier = context.read<ValueNotifier<String?>>();
+
+    // Clear all per-boat local caches so the new boat's remote data always wins.
+    await emergencyRepo.clearLocalData();
+    await themeProvider.clearVesselSettings();
+    themeProvider.resetInitialSync();
+
     final firestore = FirestoreService(boatId: boatId);
     final storage = StorageService(boatId: boatId);
     await repo.reattachAndSync(firestore, storage);
@@ -312,13 +324,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) {
         final cl = ctx.l10n;
+        final dcs = Theme.of(ctx).colorScheme;
         return AlertDialog(
-          title: Text(cl.settingsNewLogbookTitle),
+          backgroundColor: dcs.surface,
+          surfaceTintColor: Colors.transparent,
+          title: Text(cl.settingsNewLogbookTitle,
+              style: TextStyle(color: dcs.onSurface)),
           content: TextField(
             controller: ctrl,
             autofocus: true,
             textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(hintText: cl.settingsNewLogbookHint),
+            style: TextStyle(color: dcs.onSurface),
+            decoration: InputDecoration(
+              hintText: cl.settingsNewLogbookHint,
+              hintStyle: TextStyle(color: dcs.onSurfaceVariant),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: dcs.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: dcs.primary, width: 2),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
             onSubmitted: (v) {
               if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
             },
@@ -1559,19 +1589,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
           else
             ...(_boats.map((boat) => _buildBoatRow(boat, activeBoatId, cs, uid))),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _syncing ? null : () => _showNewLogbookDialog(uid),
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(l10n.settingsNewLogbook),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: cs.outlineVariant),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8)),
-                textStyle: GoogleFonts.inter(fontSize: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _syncing ? null : () => _showNewLogbookDialog(uid),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(l10n.settingsNewLogbook),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: cs.outlineVariant),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    textStyle: GoogleFonts.inter(fontSize: 13),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _syncing ? null : _showConnectSheet,
+                  icon: const Icon(Icons.qr_code_scanner, size: 18),
+                  label: Text(l10n.settingsScanOrEnterCode),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: cs.outlineVariant),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    textStyle: GoogleFonts.inter(fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
           ),
           if (activeBoatId != null && isActiveOwner && activeMeta.isNotEmpty) ...[
             const SizedBox(height: 20),
@@ -1593,12 +1640,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return InkWell(
       onTap: isActive || _syncing ? null : () => _switchLogbook(boat, uid),
-      onLongPress: () => isOwner
-          ? _showBoatOptionsSheet(boat, uid)
-          : _showGuestOptionsSheet(boat, uid),
       borderRadius: BorderRadius.circular(8),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         child: Row(
           children: [
             Container(
@@ -1634,8 +1678,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             if (isActive) Icon(Icons.check, size: 18, color: cs.primary),
-            const SizedBox(width: 4),
-            Icon(Icons.more_vert, size: 18, color: cs.outlineVariant),
+            IconButton(
+              icon: Icon(Icons.more_vert, size: 18, color: cs.outlineVariant),
+              onPressed: () => isOwner
+                  ? _showBoatOptionsSheet(boat, uid)
+                  : _showGuestOptionsSheet(boat, uid),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              visualDensity: VisualDensity.compact,
+            ),
           ],
         ),
       ),
@@ -1950,29 +2001,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
               alignment: Alignment.centerLeft,
               child: TextButton(
                 style: TextButton.styleFrom(foregroundColor: cs.error),
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: Text(l10n.authDeleteAccount),
-                      content: Text(l10n.authDeleteAccountConfirm),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: Text(l10n.cancel),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: Text(l10n.authDeleteAccount,
-                              style: TextStyle(color: cs.error)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirmed == true && mounted) {
-                    await context.read<AuthService>().deleteAccount();
-                  }
-                },
+                onPressed: _syncing
+                    ? null
+                    : () async {
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (ctx) {
+                            final dcs = Theme.of(ctx).colorScheme;
+                            return AlertDialog(
+                              backgroundColor: dcs.surface,
+                              surfaceTintColor: Colors.transparent,
+                              title: Text(l10n.authDeleteAccount,
+                                  style: TextStyle(color: dcs.onSurface)),
+                              content: Text(l10n.authDeleteAccountConfirm,
+                                  style: TextStyle(color: dcs.onSurfaceVariant)),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, false),
+                                  child: Text(l10n.cancel),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx, true),
+                                  child: Text(l10n.authDeleteAccount,
+                                      style: TextStyle(color: dcs.error)),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                        if (confirmed != true || !mounted) return;
+                        setState(() => _syncing = true);
+                        // Capture refs before any await.
+                        final repo = context.read<HomeRepository>();
+                        final emergencyRepo = context.read<EmergencyRepository>();
+                        final themeProvider = context.read<ThemeProvider>();
+                        final authService = context.read<AuthService>();
+                        try {
+                          final uid = user.uid;
+                          // 1. Delete all Firestore data for this user.
+                          await BoatService().deleteUserAndAllBoats(uid);
+                          // 2. Wipe all local caches.
+                          await repo.clearLocalData();
+                          await emergencyRepo.clearLocalData();
+                          await themeProvider.clearVesselSettings();
+                          themeProvider.resetInitialSync();
+                          // 3. Delete the Firebase Auth account.
+                          // Router redirect to /auth/login happens automatically via
+                          // authService.notifyListeners() inside deleteAccount().
+                          await authService.deleteAccount();
+                        } on FirebaseAuthException catch (e) {
+                          if (!mounted) return;
+                          setState(() => _syncing = false);
+                          final msg = e.code == 'requires-recent-login'
+                              ? l10n.authErrorRequiresRecentLogin
+                              : (e.message ?? l10n.authErrorGeneric);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(msg)));
+                        } catch (_) {
+                          if (mounted) setState(() => _syncing = false);
+                        }
+                      },
                 child: Text(l10n.authDeleteAccount),
               ),
             ),

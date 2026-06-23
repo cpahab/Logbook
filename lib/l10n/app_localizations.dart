@@ -1235,7 +1235,7 @@ abstract class AppLocalizations {
   /// No description provided for @tracksTitle.
   ///
   /// In de, this message translates to:
-  /// **'Chronik'**
+  /// **'Fahrtstrecken'**
   String get tracksTitle;
 
   /// No description provided for @tracksOneYear.
@@ -1700,6 +1700,12 @@ abstract class AppLocalizations {
   /// **'Keine Internetverbindung.'**
   String get authErrorNetworkFailed;
 
+  /// No description provided for @authErrorRequiresRecentLogin.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte melde dich ab und wieder an, bevor du dein Konto löschst.'**
+  String get authErrorRequiresRecentLogin;
+
   /// No description provided for @settingsAccountSection.
   ///
   /// In de, this message translates to:
@@ -1757,7 +1763,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsRoleGuest.
   ///
   /// In de, this message translates to:
-  /// **'Gast'**
+  /// **'Beitragender'**
   String get settingsRoleGuest;
 
   /// No description provided for @settingsNewLogbook.
@@ -1823,13 +1829,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsManageGuests.
   ///
   /// In de, this message translates to:
-  /// **'Gäste verwalten'**
+  /// **'Beitragende verwalten'**
   String get settingsManageGuests;
 
   /// No description provided for @settingsNoGuests.
   ///
   /// In de, this message translates to:
-  /// **'Keine Gäste'**
+  /// **'Keine Beitragenden'**
   String get settingsNoGuests;
 
   /// No description provided for @settingsSwitchTo.
