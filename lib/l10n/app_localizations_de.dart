@@ -866,4 +866,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsAccountManage => 'Konto verwalten';
+
+  @override
+  String get authDeleteAccount => 'Konto löschen';
+
+  @override
+  String get authDeleteAccountConfirm =>
+      'Konto löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
 }

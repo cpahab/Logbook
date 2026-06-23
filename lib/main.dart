@@ -5,7 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
-import 'features/auth/domain/auth_provider.dart' as app_auth;
+import 'core/services/auth_service.dart';
 import 'features/home/data/home_repository.dart';
 import 'features/home/domain/day_entry.dart';
 import 'features/home/domain/timeline_entry.dart';
@@ -128,7 +128,8 @@ void main() async {
     // Firebase unavailable — continue offline.
   }
 
-  final router = buildRouter(_themeProvider.lastRouteToday);
+  final authService = AuthService();
+  final router = buildRouter(_themeProvider.lastRouteToday, authService);
   router.routerDelegate.addListener(() {
     final location =
         router.routerDelegate.currentConfiguration.uri.toString();
@@ -141,7 +142,7 @@ void main() async {
         ChangeNotifierProvider.value(value: _repo),
         ChangeNotifierProvider.value(value: _themeProvider),
         ChangeNotifierProvider.value(value: _emergencyRepo),
-        ChangeNotifierProvider(create: (_) => app_auth.AuthProvider()),
+        ChangeNotifierProvider.value(value: authService),
       ],
       child: Logbook(router: router),
     ),

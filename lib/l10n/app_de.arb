@@ -324,5 +324,7 @@
   "settingsAccountSection": "Konto",
   "settingsAccountSignedInAs": "Angemeldet als",
   "settingsAccountNotSignedIn": "Nicht angemeldet",
-  "settingsAccountManage": "Konto verwalten"
+  "settingsAccountManage": "Konto verwalten",
+  "authDeleteAccount": "Konto löschen",
+  "authDeleteAccountConfirm": "Konto löschen? Diese Aktion kann nicht rückgängig gemacht werden."
 }

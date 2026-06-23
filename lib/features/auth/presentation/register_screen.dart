@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -22,7 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading = false;
   bool _obscure = true;
   bool _obscureConfirm = true;
-  String? _error;
 
   @override
   void dispose() {
@@ -32,41 +33,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  String _localizedError(FirebaseAuthException e) {
+    final l10n = context.l10n;
+    return switch (AuthService.codeToKey(e.code)) {
+      'authErrorInvalidEmail' => l10n.authErrorInvalidEmail,
+      'authErrorEmailInUse' => l10n.authErrorEmailInUse,
+      'authErrorWeakPassword' => l10n.authErrorWeakPassword,
+      'authErrorNetworkFailed' => l10n.authErrorNetworkFailed,
+      _ => l10n.authErrorGeneric,
+    };
+  }
+
   Future<void> _register() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() => _loading = true);
     try {
-      await AuthService.registerWithEmail(_emailCtrl.text, _passwordCtrl.text);
+      await context
+          .read<AuthService>()
+          .registerWithEmail(_emailCtrl.text, _passwordCtrl.text);
       if (mounted) context.go('/');
     } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() => _error = _msg(e.code));
+      _showError(_localizedError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _signInGoogle() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() => _loading = true);
+    final auth = context.read<AuthService>();
+    final genericError = context.l10n.authErrorGeneric;
     try {
-      final result = await AuthService.signInWithGoogle();
-      if (result != null && mounted) context.go('/');
+      await auth.signInWithGoogle();
+      if (mounted) context.go('/');
     } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() => _error = _msg(e.code));
+      _showError(_localizedError(e));
     } catch (_) {
-      if (mounted) setState(() => _error = context.l10n.authErrorGeneric);
+      _showError(genericError);
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  String _msg(String code) {
-    final l10n = context.l10n;
-    switch (AuthService.codeToKey(code)) {
-      case 'authErrorInvalidEmail': return l10n.authErrorInvalidEmail;
-      case 'authErrorEmailInUse': return l10n.authErrorEmailInUse;
-      case 'authErrorWeakPassword': return l10n.authErrorWeakPassword;
-      case 'authErrorNetworkFailed': return l10n.authErrorNetworkFailed;
-      default: return l10n.authErrorGeneric;
     }
   }
 
@@ -74,6 +85,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
+    final showGoogle = defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.android;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -113,7 +126,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return l10n.authErrorInvalidEmail;
+                    if (v == null || v.trim().isEmpty) {
+                      return l10n.authErrorInvalidEmail;
+                    }
                     return null;
                   },
                 ),
@@ -154,12 +169,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                   ),
                 ),
-
-                if (_error != null) ...[
-                  const SizedBox(height: 12),
-                  Text(_error!,
-                      style: GoogleFonts.inter(fontSize: 13, color: cs.error)),
-                ],
                 const SizedBox(height: 20),
 
                 SizedBox(
@@ -183,15 +192,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                AuthOrDivider(label: l10n.authOrDivider),
-                const SizedBox(height: 16),
-
-                AuthSocialButton(
-                  onPressed: _loading ? null : _signInGoogle,
-                  label: l10n.authSignInWithGoogle,
-                  icon: const GoogleLogo(),
-                ),
-                const SizedBox(height: 32),
+                if (showGoogle) ...[
+                  AuthOrDivider(label: l10n.authOrDivider),
+                  const SizedBox(height: 16),
+                  AuthSocialButton(
+                    onPressed: _loading ? null : _signInGoogle,
+                    label: l10n.authSignInWithGoogle,
+                    icon: const GoogleLogo(),
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

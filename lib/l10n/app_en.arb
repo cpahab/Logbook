@@ -324,5 +324,7 @@
   "settingsAccountSection": "Account",
   "settingsAccountSignedInAs": "Signed in as",
   "settingsAccountNotSignedIn": "Not signed in",
-  "settingsAccountManage": "Manage account"
+  "settingsAccountManage": "Manage account",
+  "authDeleteAccount": "Delete account",
+  "authDeleteAccountConfirm": "Delete account? This cannot be undone."
 }

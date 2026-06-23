@@ -1723,6 +1723,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Konto verwalten'**
   String get settingsAccountManage;
+
+  /// No description provided for @authDeleteAccount.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto löschen'**
+  String get authDeleteAccount;
+
+  /// No description provided for @authDeleteAccountConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'Konto löschen? Diese Aktion kann nicht rückgängig gemacht werden.'**
+  String get authDeleteAccountConfirm;
 }
 
 class _AppLocalizationsDelegate

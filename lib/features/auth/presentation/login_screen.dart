@@ -1,9 +1,9 @@
-import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -22,7 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
   bool _obscure = true;
-  String? _error;
 
   @override
   void dispose() {
@@ -31,55 +30,64 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  String _localizedError(FirebaseAuthException e) {
+    final l10n = context.l10n;
+    return switch (AuthService.codeToKey(e.code)) {
+      'authErrorInvalidEmail' => l10n.authErrorInvalidEmail,
+      'authErrorWrongPassword' => l10n.authErrorWrongPassword,
+      'authErrorUserNotFound' => l10n.authErrorUserNotFound,
+      'authErrorNetworkFailed' => l10n.authErrorNetworkFailed,
+      _ => l10n.authErrorGeneric,
+    };
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _signIn() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() => _loading = true);
     try {
-      await AuthService.signInWithEmail(_emailCtrl.text, _passwordCtrl.text);
-      if (mounted) context.go('/');
+      await context
+          .read<AuthService>()
+          .signInWithEmail(_emailCtrl.text, _passwordCtrl.text);
     } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() => _error = _msg(e.code));
+      _showError(_localizedError(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _signInGoogle() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() => _loading = true);
+    final auth = context.read<AuthService>();
+    final genericError = context.l10n.authErrorGeneric;
     try {
-      final result = await AuthService.signInWithGoogle();
-      if (result != null && mounted) context.go('/');
+      await auth.signInWithGoogle();
     } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() => _error = _msg(e.code));
+      _showError(_localizedError(e));
     } catch (_) {
-      if (mounted) setState(() => _error = context.l10n.authErrorGeneric);
+      _showError(genericError);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _signInApple() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() => _loading = true);
+    final auth = context.read<AuthService>();
+    final genericError = context.l10n.authErrorGeneric;
     try {
-      final result = await AuthService.signInWithApple();
-      if (result != null && mounted) context.go('/');
+      await auth.signInWithApple();
     } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() => _error = _msg(e.code));
+      _showError(_localizedError(e));
     } catch (_) {
-      if (mounted) setState(() => _error = context.l10n.authErrorGeneric);
+      _showError(genericError);
     } finally {
       if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  String _msg(String code) {
-    final l10n = context.l10n;
-    switch (AuthService.codeToKey(code)) {
-      case 'authErrorInvalidEmail': return l10n.authErrorInvalidEmail;
-      case 'authErrorWrongPassword': return l10n.authErrorWrongPassword;
-      case 'authErrorUserNotFound': return l10n.authErrorUserNotFound;
-      case 'authErrorNetworkFailed': return l10n.authErrorNetworkFailed;
-      default: return l10n.authErrorGeneric;
     }
   }
 
@@ -87,6 +95,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
+    final platform = defaultTargetPlatform;
+    final showGoogle = platform == TargetPlatform.iOS ||
+        platform == TargetPlatform.android;
+    final showApple = platform == TargetPlatform.iOS ||
+        platform == TargetPlatform.macOS;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -122,7 +135,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return l10n.authErrorInvalidEmail;
+                    if (v == null || v.trim().isEmpty) {
+                      return l10n.authErrorInvalidEmail;
+                    }
                     return null;
                   },
                 ),
@@ -156,13 +171,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
-                if (_error != null) ...[
-                  const SizedBox(height: 4),
-                  Text(_error!,
-                      style: GoogleFonts.inter(fontSize: 13, color: cs.error)),
-                  const SizedBox(height: 8),
-                ],
-
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -184,25 +192,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                AuthOrDivider(label: l10n.authOrDivider),
-                const SizedBox(height: 16),
+                if (showGoogle || showApple) ...[
+                  AuthOrDivider(label: l10n.authOrDivider),
+                  const SizedBox(height: 16),
+                ],
 
-                if (!Platform.isMacOS)
+                if (showGoogle) ...[
                   AuthSocialButton(
                     onPressed: _loading ? null : _signInGoogle,
                     label: l10n.authSignInWithGoogle,
                     icon: const GoogleLogo(),
                   ),
-
-                if (AuthService.isAppleAvailable && !Platform.isMacOS) ...[
                   const SizedBox(height: 10),
+                ],
+
+                if (showApple) ...[
                   AuthSocialButton(
                     onPressed: _loading ? null : _signInApple,
                     label: l10n.authSignInWithApple,
                     icon: Icon(Icons.apple, size: 20, color: cs.onSurface),
                   ),
+                  const SizedBox(height: 10),
                 ],
-                const SizedBox(height: 32),
+
+                const SizedBox(height: 22),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
