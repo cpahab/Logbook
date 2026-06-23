@@ -873,4 +873,69 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get authDeleteAccountConfirm =>
       'Konto löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get settingsLogbooksSection => 'Logbücher';
+
+  @override
+  String get settingsMyLogbooks => 'Meine Logbücher';
+
+  @override
+  String get settingsRoleOwner => 'Eigentümer';
+
+  @override
+  String get settingsRoleGuest => 'Gast';
+
+  @override
+  String get settingsNewLogbook => 'Neues Logbuch';
+
+  @override
+  String get settingsNewLogbookTitle => 'Neues Logbuch erstellen';
+
+  @override
+  String get settingsNewLogbookHint => 'Logbuchname';
+
+  @override
+  String get settingsRename => 'Umbenennen';
+
+  @override
+  String get settingsShare => 'Teilen';
+
+  @override
+  String get settingsDeleteLogbook => 'Logbuch löschen';
+
+  @override
+  String get settingsLeaveLogbook => 'Logbuch verlassen';
+
+  @override
+  String get settingsShareCurrentLogbook => 'Aktuelles Logbuch teilen';
+
+  @override
+  String get settingsShowQrCode => 'QR-Code anzeigen';
+
+  @override
+  String get settingsScanOrEnterCode => 'QR scannen / Code eingeben';
+
+  @override
+  String get settingsManageGuests => 'Gäste verwalten';
+
+  @override
+  String get settingsNoGuests => 'Keine Gäste';
+
+  @override
+  String settingsSwitchTo(String name) => 'Zu "$name" wechseln?';
+
+  @override
+  String settingsDeleteLogbookConfirm(String name) =>
+      '"$name" löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
+
+  @override
+  String settingsLeaveLogbookConfirm(String name) => '"$name" verlassen?';
+
+  @override
+  String settingsJoinContent(String name) =>
+      'Zu "$name" beitreten? Dein aktuelles Logbuch bleibt erhalten – es wird ein neues hinzugefügt.';
+
+  @override
+  String settingsJoinedLogbook(String name) => 'Mit "$name" verbunden.';
 }

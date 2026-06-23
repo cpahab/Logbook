@@ -868,4 +868,69 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get authDeleteAccountConfirm =>
       'Delete account? This cannot be undone.';
+
+  @override
+  String get settingsLogbooksSection => 'Logbooks';
+
+  @override
+  String get settingsMyLogbooks => 'My Logbooks';
+
+  @override
+  String get settingsRoleOwner => 'owner';
+
+  @override
+  String get settingsRoleGuest => 'guest';
+
+  @override
+  String get settingsNewLogbook => 'New logbook';
+
+  @override
+  String get settingsNewLogbookTitle => 'Create new logbook';
+
+  @override
+  String get settingsNewLogbookHint => 'Logbook name';
+
+  @override
+  String get settingsRename => 'Rename';
+
+  @override
+  String get settingsShare => 'Share';
+
+  @override
+  String get settingsDeleteLogbook => 'Delete logbook';
+
+  @override
+  String get settingsLeaveLogbook => 'Leave logbook';
+
+  @override
+  String get settingsShareCurrentLogbook => 'Share Current Logbook';
+
+  @override
+  String get settingsShowQrCode => 'Show QR code';
+
+  @override
+  String get settingsScanOrEnterCode => 'Scan QR / Enter code';
+
+  @override
+  String get settingsManageGuests => 'Manage guests';
+
+  @override
+  String get settingsNoGuests => 'No guests';
+
+  @override
+  String settingsSwitchTo(String name) => 'Switch to "$name"?';
+
+  @override
+  String settingsDeleteLogbookConfirm(String name) =>
+      'Delete "$name"? This cannot be undone.';
+
+  @override
+  String settingsLeaveLogbookConfirm(String name) => 'Leave "$name"?';
+
+  @override
+  String settingsJoinContent(String name) =>
+      'Join "$name"? Your current logbook stays accessible — this adds a new one.';
+
+  @override
+  String settingsJoinedLogbook(String name) => 'Connected to "$name".';
 }

@@ -27,12 +27,12 @@ Future<void> _initFirestore(
     User user,
     ThemeProvider themeProvider,
     HomeRepository repo,
-    EmergencyRepository emergencyRepo) async {
+    EmergencyRepository emergencyRepo,
+    ValueNotifier<String?> boatIdNotifier) async {
   try {
     final boatService = BoatService();
     String? boatId = await boatService.getActiveBoatId(user.uid);
     if (boatId == null) {
-      // First login: create an empty logbook named after the vessel.
       final name = themeProvider.vesselName.isNotEmpty
           ? themeProvider.vesselName
           : 'My Logbook';
@@ -48,6 +48,7 @@ Future<void> _initFirestore(
       emergencyRepo.attachFirestore(firestore, initialSync: initialSync),
     ]);
     if (initialSync) themeProvider.markInitialSyncDone();
+    boatIdNotifier.value = boatId;
   } catch (_) {
     // Offline or Firestore error — continue with local data, retry next launch.
   }
@@ -78,6 +79,8 @@ void main() async {
 
   final authService = AuthService();
 
+  final boatIdNotifier = ValueNotifier<String?>(null);
+
   // FirestoreService.configure() must precede Firebase.initializeApp so that
   // offline persistence is enabled before any SDK code runs.
   try {
@@ -87,14 +90,16 @@ void main() async {
 
     final initialUser = FirebaseAuth.instance.currentUser;
     if (initialUser != null) {
-      unawaited(_initFirestore(initialUser, themeProvider, repo, emergencyRepo));
+      unawaited(_initFirestore(
+          initialUser, themeProvider, repo, emergencyRepo, boatIdNotifier));
     }
 
     // Trigger Firestore init on null → User transitions only.
     User? lastAuthUser = initialUser;
     authService.authStateChanges.listen((user) {
       if (lastAuthUser == null && user != null) {
-        unawaited(_initFirestore(user, themeProvider, repo, emergencyRepo));
+        unawaited(_initFirestore(
+            user, themeProvider, repo, emergencyRepo, boatIdNotifier));
       }
       lastAuthUser = user;
     });
@@ -116,6 +121,7 @@ void main() async {
         ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider.value(value: emergencyRepo),
         ChangeNotifierProvider.value(value: authService),
+        ChangeNotifierProvider.value(value: boatIdNotifier),
       ],
       child: Logbook(router: router),
     ),
