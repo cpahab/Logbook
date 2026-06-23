@@ -221,17 +221,26 @@ class HomeRepository extends ChangeNotifier {
         .listen((_) {}, onError: (_) {});
   }
 
-  /// Applies a batch of entries received from Firestore.
+  /// Applies a batch of entry changes received from Firestore.
   ///
   /// Entries with an active debounce timer are skipped — the user is actively
   /// editing that entry locally and the Firestore push is pending.
-  Future<void> _applyRemoteEntries(List<DayEntry> entries) async {
+  /// Removed dates (from date-moves or explicit deletes) are erased locally.
+  Future<void> _applyRemoteEntries(
+      ({List<DayEntry> upserted, List<DateTime> removed}) changes) async {
     var changed = false;
-    for (final e in entries) {
+    for (final e in changes.upserted) {
       if (_syncTimers.containsKey(e.date)) continue;
       _entries[e.date] = e;
       await _dayBox.put(e.date.toIso8601String(), e);
       changed = true;
+    }
+    for (final date in changes.removed) {
+      if (_syncTimers.containsKey(date)) continue;
+      if (_entries.remove(date) != null) {
+        await _dayBox.delete(date.toIso8601String());
+        changed = true;
+      }
     }
     if (changed) {
       _setLastSyncAt();
