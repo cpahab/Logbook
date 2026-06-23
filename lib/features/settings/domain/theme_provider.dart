@@ -44,6 +44,7 @@ class ThemeProvider extends ChangeNotifier {
   static const _topSpeedPercentileKey      = 'filter_top_speed_percentile';
   static const _showRawTrackKey            = 'debug_show_raw_track';
   static const _localeKey                  = 'locale';
+  static const _lastUidKey                 = 'last_known_uid';
 
   late Box<String> _box;
   FirestoreService? _firestore;
@@ -116,6 +117,8 @@ class ThemeProvider extends ChangeNotifier {
   String get vhf4Label          => _vhf4Label;
   String get vhf4Desc           => _vhf4Desc;
   String get installationId     => _logbookCode;
+  String? get lastKnownUid      => _box.get(_lastUidKey);
+  void setLastKnownUid(String uid) => _box.put(_lastUidKey, uid);
 
   /// Returns whether [monthKey] (format `"yyyy-M"`) is expanded.
   /// Defaults to [defaultOpen] when the user has never explicitly set it.

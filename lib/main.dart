@@ -38,6 +38,17 @@ String? _activeBoatId;
 /// a subsequent sign-in always re-runs this path.
 Future<void> _initFirestore(User user) async {
   try {
+    // Detect account switch: if a different user signs in on this device,
+    // wipe local Hive data so the previous user's entries are not uploaded
+    // to the new user's boat.
+    final lastUid = _themeProvider.lastKnownUid;
+    if (lastUid != null && lastUid != user.uid) {
+      await _repo.clearLocalData();
+      await _emergencyRepo.clearLocalData();
+      _themeProvider.resetInitialSync();
+    }
+    _themeProvider.setLastKnownUid(user.uid);
+
     final inviteCode = _themeProvider.installationId;
     final boatId = await BoatService().resolveBoatId(user.uid, inviteCode);
     if (_activeBoatId == boatId) return;

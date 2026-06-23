@@ -139,6 +139,17 @@ class EmergencyRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Wipes all local Hive data without re-attaching.
+  ///
+  /// Call this before [attachFirestore] when a different user signs in.
+  Future<void> clearLocalData() async {
+    await _contactsSub?.cancel();
+    _contactsSub = null;
+    await _box.clear();
+    await _metaBox.clear();
+    notifyListeners();
+  }
+
   /// Returns true if [remote] contains the same contacts (by name/role/phone)
   /// as the local box — used to skip echoes from our own Firestore pushes.
   bool _contactsEqual(List<Map<String, String>> remote) {
