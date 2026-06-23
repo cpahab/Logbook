@@ -46,6 +46,8 @@
 	<string>Logbook needs access to your photo library to import GPX or image files.</string>
 	<key>NSPhotoLibraryAddOnlyUsageDescription</key>
 	<string>Logbook needs access to save files to your photo library.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Logbook uses the camera to scan QR codes for joining a shared logbook.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

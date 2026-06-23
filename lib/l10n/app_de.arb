@@ -215,6 +215,8 @@
   "settingsConnected": "Verbunden.",
   "settingsSwitchLogbookTitle": "Logbuch wechseln?",
   "settingsSwitchLogbookContent": "Die lokalen Daten werden durch die Daten des verbundenen Logbuchs ersetzt.",
+  "settingsScanQr": "QR-Code scannen",
+  "settingsScanTitle": "Logbuch-QR-Code scannen",
 
   "tracksTitle": "Chronik",
   "tracksOneYear": "1 Jahr",

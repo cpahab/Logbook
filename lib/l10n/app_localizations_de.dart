@@ -597,6 +597,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Die lokalen Daten werden durch die Daten des verbundenen Logbuchs ersetzt.';
 
   @override
+  String get settingsScanQr => 'QR-Code scannen';
+
+  @override
+  String get settingsScanTitle => 'Logbuch-QR-Code scannen';
+
+  @override
   String get tracksTitle => 'Chronik';
 
   @override
