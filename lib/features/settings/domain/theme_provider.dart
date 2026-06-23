@@ -450,9 +450,14 @@ class ThemeProvider extends ChangeNotifier {
 
     try {
       if (initialSync) {
-        // Migration: push everything we have, then pull (remote wins if newer).
-        await service.saveSettings(_toSettingsMap());
-        _markSettingsModified();
+        // Push local only if there is something worth migrating.
+        // A fresh device install has empty fields — pushing blanks would
+        // overwrite the real data already on the server from another device.
+        final hasLocalData = _toSettingsMap().values.any((v) => v.isNotEmpty);
+        if (hasLocalData) {
+          await service.saveSettings(_toSettingsMap());
+          _markSettingsModified();
+        }
       }
 
       final (:data, :updatedAt) = await service.fetchSettingsWithMeta();
