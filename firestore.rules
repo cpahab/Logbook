@@ -2,66 +2,47 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // True if the requesting user is listed in the boat's members sub-collection.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
     function isMember(boatId) {
-      return request.auth != null &&
-        exists(/databases/$(database)/documents/boats/$(boatId)/members/$(request.auth.uid));
+      return isSignedIn() && exists(
+        /databases/$(database)/documents/boats/$(boatId)/members/$(request.auth.uid));
     }
 
-    // True if the requesting user is the ownerId stored on the boat root document.
-    // Does NOT require the user to already appear in the members sub-collection,
-    // which allows BoatService to write the initial member entry immediately after
-    // creating the boat root document (two-step bootstrap, not a batch).
     function isOwner(boatId) {
-      return request.auth != null &&
-        exists(/databases/$(database)/documents/boats/$(boatId)) &&
-        get(/databases/$(database)/documents/boats/$(boatId)).data.ownerId == request.auth.uid;
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/boats/$(boatId))
+          .data.ownerUid == request.auth.uid;
     }
 
-    // ── User profiles ─────────────────────────────────────────────────────────
-    // Each authenticated user can only access their own profile document.
+    // User profile: only the user themselves.
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, write: if request.auth.uid == uid;
     }
 
-    // ── Boat documents ────────────────────────────────────────────────────────
+    // Boat document: any member reads; only owner writes meta.
     match /boats/{boatId} {
-      // Any authenticated user may create a new boat (BoatService does this on
-      // first sign-in before the creator is in the members sub-collection).
-      allow create: if request.auth != null;
+      allow read:  if isMember(boatId);
+      allow write: if isOwner(boatId);
 
-      // Any authenticated user can read the boat root doc (ownerId, inviteCode,
-      // createdAt). This enables the invite-code lookup query: the root doc
-      // holds no logbook data. All sub-collections still require membership.
-      allow read: if request.auth != null;
+      // Logbook data: any member reads and writes.
+      match /{collection}/{document=**} {
+        allow read, write: if isMember(boatId);
+      }
 
-      // Only the owner may update or delete the boat root document.
-      allow update, delete: if isOwner(boatId);
-
-      // ── Members sub-collection ────────────────────────────────────────────
-      // Any boat member may read the member list.
-      // The owner may write any member document (add/remove crew).
-      // Any authenticated user may write their own member document — this
-      // enables the invite-code join flow (self-add) without a Cloud Function.
+      // Members sub-collection.
       match /members/{uid} {
+        // Owner can add/remove anyone.
+        allow write: if isOwner(boatId);
+        // Anyone signed in can add themselves (join flow).
+        allow create: if isSignedIn()
+                      && request.auth.uid == uid
+                      && request.resource.data.role == 'guest';
+        // Members can read the members list.
         allow read: if isMember(boatId);
-        allow write: if isOwner(boatId) ||
-                        (request.auth != null && request.auth.uid == uid);
-      }
-
-      // ── Log entries ───────────────────────────────────────────────────────
-      match /entries/{date} {
-        allow read, write: if isMember(boatId);
-      }
-
-      // ── Settings, contacts, UI state, crew roster ─────────────────────────
-      // The meta sub-collection holds named documents (settings, contacts,
-      // ui, crew_roster, …). The {doc=**} wildcard covers any depth.
-      match /meta/{doc=**} {
-        allow read, write: if isMember(boatId);
       }
     }
-
-    // All other paths are denied by default.
   }
 }
