@@ -81,12 +81,11 @@ void main() async {
 
   final boatIdNotifier = ValueNotifier<String?>(null);
 
-  // FirestoreService.configure() must precede Firebase.initializeApp so that
-  // offline persistence is enabled before any SDK code runs.
   try {
-    FirestoreService.configure();
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
+    // Configure offline persistence immediately after init, before any reads.
+    FirestoreService.configure();
 
     final initialUser = FirebaseAuth.instance.currentUser;
     if (initialUser != null) {
