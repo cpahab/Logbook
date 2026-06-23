@@ -160,6 +160,76 @@ class BoatService {
     return List.generate(8, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
+  // ── Name lookup ───────────────────────────────────────────────────────────
+
+  Future<String?> getBoatName(String boatId) async {
+    final doc = await _db.collection('boats').doc(boatId).get();
+    return doc.data()?['name'] as String?;
+  }
+
+  // ── Rename / regenerate ────────────────────────────────────────────────────
+
+  Future<void> renameBoat(String boatId, String name) =>
+      _db.collection('boats').doc(boatId).update({'name': name});
+
+  Future<String> regenerateShareCode(String boatId) async {
+    final code = _generateShareCode();
+    await _db.collection('boats').doc(boatId).update({'shareCode': code});
+    return code;
+  }
+
+  // ── Delete ─────────────────────────────────────────────────────────────────
+
+  Future<void> deleteBoat(String boatId, String ownerUid) async {
+    final membersSnap = await _db
+        .collection('boats')
+        .doc(boatId)
+        .collection('members')
+        .get();
+    final batch = _db.batch();
+    for (final doc in membersSnap.docs) {
+      batch.delete(doc.reference);
+    }
+    batch.delete(_db.collection('boats').doc(boatId));
+    await batch.commit();
+
+    final userDoc = await _db.collection('users').doc(ownerUid).get();
+    final data = userDoc.data();
+    final remaining =
+        List<String>.from(data?['boats'] as List? ?? [])..remove(boatId);
+    final Map<String, dynamic> update = {
+      'boats': FieldValue.arrayRemove([boatId]),
+    };
+    if (data?['activeBoatId'] == boatId) {
+      update['activeBoatId'] = remaining.isNotEmpty ? remaining.first : null;
+    }
+    await _db
+        .collection('users')
+        .doc(ownerUid)
+        .set(update, SetOptions(merge: true));
+  }
+
+  // ── Member queries ─────────────────────────────────────────────────────────
+
+  Future<List<Map<String, dynamic>>> listMembers(String boatId) async {
+    final snap = await _db
+        .collection('boats')
+        .doc(boatId)
+        .collection('members')
+        .get();
+    return snap.docs.map((d) => {...d.data(), 'uid': d.id}).toList();
+  }
+
+  Future<bool> isMember(String boatId, String uid) async {
+    final doc = await _db
+        .collection('boats')
+        .doc(boatId)
+        .collection('members')
+        .doc(uid)
+        .get();
+    return doc.exists;
+  }
+
   // ── Backward-compatible aliases (used by settings screen) ─────────────────
 
   /// Alias for [findByShareCode] — queries shareCode field.
