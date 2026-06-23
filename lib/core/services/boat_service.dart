@@ -1,40 +1,32 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Manages boat identity and membership in the new data model.
+/// Manages boat identity and membership.
 ///
 /// Firestore layout:
-///   boats/{boatId}             — root: { ownerId, inviteCode, createdAt }
-///   boats/{boatId}/members/{uid} — { role, joinedAt }
-///   users/{uid}                — profile: { boatId, role }
+///   users/{uid}                    { activeBoatId, boats: [] }
+///   boats/{boatId}                 { name, ownerUid, shareCode, createdAt }
+///   boats/{boatId}/members/{uid}   { role: 'owner'|'guest', joinedAt }
 class BoatService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Returns the canonical boatId for [uid].
-  ///
-  /// If users/{uid} already has a boatId stored, that value is returned
-  /// immediately. Otherwise a new boat is created with [inviteCode] as its
-  /// human-readable code, the calling user is added as owner, and the new
-  /// boatId (a Firestore auto-generated UUID) is returned.
-  Future<String> resolveBoatId(String uid, String inviteCode) async {
-    final profileDoc = await _db.collection('users').doc(uid).get();
-    final existing = profileDoc.data();
-    if (existing != null && existing['boatId'] is String) {
-      return existing['boatId'] as String;
-    }
+  // ── Create ─────────────────────────────────────────────────────────────────
 
-    // New boat: use an auto-generated Firestore document ID.
+  /// Creates a new logbook boat for [uid] with the given [name].
+  /// Returns the new boatId.
+  Future<String> createBoat(String uid, String name) async {
     final boatRef = _db.collection('boats').doc();
     final boatId = boatRef.id;
+    final shareCode = _generateShareCode();
 
-    // Step 1: Create the boat root document so the members rule can verify
-    // ownerId in step 2 (security rules evaluate committed state).
     await boatRef.set({
-      'ownerId': uid,
-      'inviteCode': inviteCode,
+      'name': name,
+      'ownerUid': uid,
+      'shareCode': shareCode,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // Step 2: Add the creator as owner-member and write the user profile.
     final batch = _db.batch();
     batch.set(
       boatRef.collection('members').doc(uid),
@@ -42,54 +34,137 @@ class BoatService {
     );
     batch.set(
       _db.collection('users').doc(uid),
-      {'boatId': boatId, 'role': 'owner'},
+      {
+        'activeBoatId': boatId,
+        'boats': FieldValue.arrayUnion([boatId]),
+      },
+      SetOptions(merge: true),
     );
     await batch.commit();
 
     return boatId;
   }
 
-  /// Returns the boatId stored in users/{uid}, or null if no profile exists.
-  Future<String?> getBoatIdForUser(String uid) async {
+  // ── Read ───────────────────────────────────────────────────────────────────
+
+  /// Returns the active boatId for [uid], or null if no profile exists.
+  Future<String?> getActiveBoatId(String uid) async {
     final doc = await _db.collection('users').doc(uid).get();
-    return doc.data()?['boatId'] as String?;
+    return doc.data()?['activeBoatId'] as String?;
   }
 
-  /// Adds [uid] to [boatId] as a member with [role] and overwrites
-  /// their users/{uid} profile with the new boatId and role.
-  Future<void> addMemberToBoat(
-      String boatId, String uid, String role) async {
+  /// Returns the list of boats accessible to [uid] with metadata.
+  /// Each map contains: boatId, name, role, shareCode.
+  Future<List<Map<String, dynamic>>> listBoats(String uid) async {
+    final userDoc = await _db.collection('users').doc(uid).get();
+    final boatIds = List<String>.from(
+        userDoc.data()?['boats'] as List? ?? []);
+
+    final result = <Map<String, dynamic>>[];
+    for (final boatId in boatIds) {
+      final boatDoc = await _db.collection('boats').doc(boatId).get();
+      if (!boatDoc.exists) continue;
+      final data = boatDoc.data()!;
+
+      final memberDoc = await _db
+          .collection('boats')
+          .doc(boatId)
+          .collection('members')
+          .doc(uid)
+          .get();
+      final role = memberDoc.data()?['role'] as String? ?? 'guest';
+
+      result.add({
+        'boatId': boatId,
+        'name': data['name'] as String? ?? '',
+        'role': role,
+        'shareCode': data['shareCode'] as String? ?? '',
+      });
+    }
+    return result;
+  }
+
+  // ── Update ─────────────────────────────────────────────────────────────────
+
+  /// Sets [boatId] as the active logbook for [uid].
+  Future<void> setActiveBoat(String uid, String boatId) =>
+      _db.collection('users').doc(uid).set(
+            {'activeBoatId': boatId},
+            SetOptions(merge: true),
+          );
+
+  // ── Share code lookup ──────────────────────────────────────────────────────
+
+  /// Finds a boat by its [shareCode]. Returns the boatId or null.
+  Future<String?> findByShareCode(String shareCode) async {
+    final snap = await _db
+        .collection('boats')
+        .where('shareCode', isEqualTo: shareCode)
+        .limit(1)
+        .get();
+    return snap.docs.isEmpty ? null : snap.docs.first.id;
+  }
+
+  // ── Join / Remove ──────────────────────────────────────────────────────────
+
+  /// Adds [uid] to [boatId] as a guest and sets it as their active boat.
+  Future<void> joinBoat(String boatId, String uid) async {
     final batch = _db.batch();
     batch.set(
       _db.collection('boats').doc(boatId).collection('members').doc(uid),
-      {'role': role, 'joinedAt': FieldValue.serverTimestamp()},
+      {'role': 'guest', 'joinedAt': FieldValue.serverTimestamp()},
     );
     batch.set(
       _db.collection('users').doc(uid),
-      {'boatId': boatId, 'role': role},
+      {
+        'activeBoatId': boatId,
+        'boats': FieldValue.arrayUnion([boatId]),
+      },
+      SetOptions(merge: true),
     );
     await batch.commit();
   }
 
-  /// Finds a boat by its human-readable [inviteCode].
-  ///
-  /// Queries the top-level `boats` collection for a document whose
-  /// `inviteCode` field matches. Returns the boatId (document ID) or null.
-  Future<String?> findBoatByInviteCode(String inviteCode) async {
-    final snap = await _db
+  /// Removes [uid] from [boatId]. Updates activeBoatId if this was the active boat.
+  Future<void> removeMember(String boatId, String uid) async {
+    await _db
         .collection('boats')
-        .where('inviteCode', isEqualTo: inviteCode)
-        .limit(1)
-        .get();
-    if (snap.docs.isEmpty) return null;
-    return snap.docs.first.id;
+        .doc(boatId)
+        .collection('members')
+        .doc(uid)
+        .delete();
+
+    final userDoc = await _db.collection('users').doc(uid).get();
+    final data = userDoc.data();
+    final remaining = List<String>.from(data?['boats'] as List? ?? [])
+      ..remove(boatId);
+
+    final Map<String, dynamic> update = {
+      'boats': FieldValue.arrayRemove([boatId]),
+    };
+    if (data?['activeBoatId'] == boatId) {
+      update['activeBoatId'] = remaining.isNotEmpty ? remaining.first : null;
+    }
+
+    await _db.collection('users').doc(uid).set(
+          update,
+          SetOptions(merge: true),
+        );
   }
 
-  /// Adds [uid] to [boatId] as a crew member and updates their user profile.
-  ///
-  /// The caller is responsible for re-attaching Firestore/Storage services
-  /// with the returned boatId after this call completes.
-  Future<void> joinBoat(String boatId, String uid) async {
-    await addMemberToBoat(boatId, uid, 'crew');
+  // ── Code generation ────────────────────────────────────────────────────────
+
+  static String _generateShareCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final rand = Random.secure();
+    return List.generate(8, (_) => chars[rand.nextInt(chars.length)]).join();
   }
+
+  // ── Backward-compatible aliases (used by settings screen) ─────────────────
+
+  /// Alias for [findByShareCode] — queries shareCode field.
+  Future<String?> findBoatByInviteCode(String code) => findByShareCode(code);
+
+  /// Alias for [getActiveBoatId].
+  Future<String?> getBoatIdForUser(String uid) => getActiveBoatId(uid);
 }
