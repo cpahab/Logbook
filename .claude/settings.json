@@ -51,7 +51,13 @@
       "Bash(grep -v \"^--$\")",
       "Bash(codesign -d --entitlements - /Users/ursziegler/development/Logbook/build/macos/Build/Products/Debug/Logbuch.app)",
       "Bash(codesign -dv /Users/ursziegler/development/Logbook/build/macos/Build/Products/Debug/Logbuch.app)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git -C /Users/ursziegler/development/Logbook status)",
+      "Bash(git -C /Users/ursziegler/development/Logbook add firestore.rules lib/core/services/boat_service.dart lib/features/settings/presentation/settings_screen.dart lib/l10n/app_de.arb lib/l10n/app_en.arb lib/l10n/app_localizations.dart lib/l10n/app_localizations_de.dart lib/l10n/app_localizations_en.dart)",
+      "Bash(git -C /Users/ursziegler/development/Logbook commit -m ' *)",
+      "Bash(git -C /Users/ursziegler/development/Logbook push)"
     ],
     "additionalDirectories": [
       "/Users/ursziegler/Library/Android/sdk/ndk/28.2.13676358",
