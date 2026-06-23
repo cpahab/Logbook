@@ -923,19 +923,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsNoGuests => 'Keine Gäste';
 
   @override
-  String settingsSwitchTo(String name) => 'Zu "$name" wechseln?';
+  String settingsSwitchTo(String name) {
+    return 'Zu \"$name\" wechseln?';
+  }
 
   @override
-  String settingsDeleteLogbookConfirm(String name) =>
-      '"$name" löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
+  String settingsDeleteLogbookConfirm(String name) {
+    return '\"$name\" löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
+  }
 
   @override
-  String settingsLeaveLogbookConfirm(String name) => '"$name" verlassen?';
+  String settingsLeaveLogbookConfirm(String name) {
+    return '\"$name\" verlassen?';
+  }
 
   @override
-  String settingsJoinContent(String name) =>
-      'Zu "$name" beitreten? Dein aktuelles Logbuch bleibt erhalten – es wird ein neues hinzugefügt.';
+  String settingsJoinContent(String name) {
+    return 'Zu \"$name\" beitreten? Dein aktuelles Logbuch bleibt erhalten – es wird ein neues hinzugefügt.';
+  }
 
   @override
-  String settingsJoinedLogbook(String name) => 'Mit "$name" verbunden.';
+  String settingsJoinedLogbook(String name) {
+    return 'Mit \"$name\" verbunden.';
+  }
 }
