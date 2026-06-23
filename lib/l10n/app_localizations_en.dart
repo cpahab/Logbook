@@ -568,6 +568,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsError => 'Error';
 
   @override
+  String get settingsInviteCodeLabel => 'Your invite code';
+
+  @override
+  String get settingsInviteCodeDesc =>
+      'Share this code with a crew member to give them access to this logbook.';
+
+  @override
+  String get settingsEnterInviteCode => 'Enter invite code';
+
+  @override
+  String get settingsConnectButton => 'Connect to logbook';
+
+  @override
+  String get settingsCodeNotFound => 'Code not found.';
+
+  @override
+  String get settingsAlreadyConnected => 'Already connected.';
+
+  @override
+  String get settingsConnected => 'Connected.';
+
+  @override
+  String get settingsSwitchLogbookTitle => 'Switch logbook?';
+
+  @override
+  String get settingsSwitchLogbookContent =>
+      'Your local data will be replaced with the data from the connected logbook.';
+
+  @override
   String get tracksTitle => 'Charts';
 
   @override

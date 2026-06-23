@@ -70,4 +70,26 @@ class BoatService {
     );
     await batch.commit();
   }
+
+  /// Finds a boat by its human-readable [inviteCode].
+  ///
+  /// Queries the top-level `boats` collection for a document whose
+  /// `inviteCode` field matches. Returns the boatId (document ID) or null.
+  Future<String?> findBoatByInviteCode(String inviteCode) async {
+    final snap = await _db
+        .collection('boats')
+        .where('inviteCode', isEqualTo: inviteCode)
+        .limit(1)
+        .get();
+    if (snap.docs.isEmpty) return null;
+    return snap.docs.first.id;
+  }
+
+  /// Adds [uid] to [boatId] as a crew member and updates their user profile.
+  ///
+  /// The caller is responsible for re-attaching Firestore/Storage services
+  /// with the returned boatId after this call completes.
+  Future<void> joinBoat(String boatId, String uid) async {
+    await addMemberToBoat(boatId, uid, 'crew');
+  }
 }

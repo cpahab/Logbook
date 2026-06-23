@@ -38,12 +38,13 @@ service cloud.firestore {
 
       // ── Members sub-collection ────────────────────────────────────────────
       // Any boat member may read the member list.
-      // Only the boat owner may add, update, or remove member documents.
-      // isOwner is satisfied during bootstrap because the boat root (ownerId)
-      // is committed before this write is attempted.
-      match /members/{memberId} {
+      // The owner may write any member document (add/remove crew).
+      // Any authenticated user may write their own member document — this
+      // enables the invite-code join flow (self-add) without a Cloud Function.
+      match /members/{uid} {
         allow read: if isMember(boatId);
-        allow write: if isOwner(boatId);
+        allow write: if isOwner(boatId) ||
+                        (request.auth != null && request.auth.uid == uid);
       }
 
       // ── Log entries ───────────────────────────────────────────────────────

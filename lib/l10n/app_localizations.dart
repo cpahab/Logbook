@@ -1166,6 +1166,60 @@ abstract class AppLocalizations {
   /// **'Fehler'**
   String get settingsError;
 
+  /// No description provided for @settingsInviteCodeLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Dein Einladungscode'**
+  String get settingsInviteCodeLabel;
+
+  /// No description provided for @settingsInviteCodeDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Teile diesen Code mit einem Crewmitglied, um Zugang zu diesem Logbuch zu gewähren.'**
+  String get settingsInviteCodeDesc;
+
+  /// No description provided for @settingsEnterInviteCode.
+  ///
+  /// In de, this message translates to:
+  /// **'Einladungscode eingeben'**
+  String get settingsEnterInviteCode;
+
+  /// No description provided for @settingsConnectButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Mit Logbuch verbinden'**
+  String get settingsConnectButton;
+
+  /// No description provided for @settingsCodeNotFound.
+  ///
+  /// In de, this message translates to:
+  /// **'Code nicht gefunden.'**
+  String get settingsCodeNotFound;
+
+  /// No description provided for @settingsAlreadyConnected.
+  ///
+  /// In de, this message translates to:
+  /// **'Bereits verbunden.'**
+  String get settingsAlreadyConnected;
+
+  /// No description provided for @settingsConnected.
+  ///
+  /// In de, this message translates to:
+  /// **'Verbunden.'**
+  String get settingsConnected;
+
+  /// No description provided for @settingsSwitchLogbookTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch wechseln?'**
+  String get settingsSwitchLogbookTitle;
+
+  /// No description provided for @settingsSwitchLogbookContent.
+  ///
+  /// In de, this message translates to:
+  /// **'Die lokalen Daten werden durch die Daten des verbundenen Logbuchs ersetzt.'**
+  String get settingsSwitchLogbookContent;
+
   /// No description provided for @tracksTitle.
   ///
   /// In de, this message translates to:
