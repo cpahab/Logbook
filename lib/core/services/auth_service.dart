@@ -1,69 +1,101 @@
-import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
-class AuthService {
+class AuthService extends ChangeNotifier {
   static final _auth = FirebaseAuth.instance;
 
-  static Stream<User?> get authStateChanges => _auth.authStateChanges();
-  static User? get currentUser => _auth.currentUser;
+  User? get currentUser => _auth.currentUser;
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // ── Email / Password ───────────────────────────────────────────────
 
-  static Future<UserCredential> signInWithEmail(
-      String email, String password) =>
-      _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
-
-  static Future<UserCredential> registerWithEmail(
-      String email, String password) =>
-      _auth.createUserWithEmailAndPassword(
+  Future<void> signInWithEmail(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(
           email: email.trim(), password: password);
+      notifyListeners();
+    } on FirebaseAuthException {
+      rethrow;
+    }
+  }
 
-  static Future<void> sendPasswordResetEmail(String email) =>
-      _auth.sendPasswordResetEmail(email: email.trim());
+  Future<void> registerWithEmail(String email, String password) async {
+    try {
+      await _auth.createUserWithEmailAndPassword(
+          email: email.trim(), password: password);
+      notifyListeners();
+    } on FirebaseAuthException {
+      rethrow;
+    }
+  }
+
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException {
+      rethrow;
+    }
+  }
 
   // ── Google ─────────────────────────────────────────────────────────
 
-  static Future<UserCredential?> signInWithGoogle() async {
-    final googleUser = await GoogleSignIn().signIn();
-    if (googleUser == null) return null; // user cancelled
-    final googleAuth = await googleUser.authentication;
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-    return _auth.signInWithCredential(credential);
+  Future<void> signInWithGoogle() async {
+    try {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) return; // user cancelled
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await _auth.signInWithCredential(credential);
+      notifyListeners();
+    } on FirebaseAuthException {
+      rethrow;
+    }
   }
 
   // ── Apple ──────────────────────────────────────────────────────────
 
-  static bool get isAppleAvailable =>
-      Platform.isIOS || Platform.isMacOS;
-
-  static Future<UserCredential?> signInWithApple() async {
-    final appleCredential = await SignInWithApple.getAppleIDCredential(
-      scopes: [
-        AppleIDAuthorizationScopes.email,
-        AppleIDAuthorizationScopes.fullName,
-      ],
-    );
-    final oauthCredential = OAuthProvider('apple.com').credential(
-      idToken: appleCredential.identityToken,
-      accessToken: appleCredential.authorizationCode,
-    );
-    return _auth.signInWithCredential(oauthCredential);
+  Future<void> signInWithApple() async {
+    try {
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+      await _auth.signInWithCredential(oauthCredential);
+      notifyListeners();
+    } on FirebaseAuthException {
+      rethrow;
+    }
   }
 
-  // ── Sign out ───────────────────────────────────────────────────────
+  // ── Sign out / Delete ──────────────────────────────────────────────
 
-  static Future<void> signOut() async {
+  Future<void> signOut() async {
     await GoogleSignIn().signOut();
     await _auth.signOut();
+    notifyListeners();
   }
 
-  // ── Error messages ─────────────────────────────────────────────────
+  Future<void> deleteAccount() async {
+    try {
+      await _auth.currentUser?.delete();
+      notifyListeners();
+    } on FirebaseAuthException {
+      rethrow;
+    }
+  }
+
+  // ── Error mapping ──────────────────────────────────────────────────
 
   static String codeToKey(String code) {
     switch (code) {
