@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,7 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/boat_service.dart';
+import '../../../core/services/logbook_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../emergency/data/emergency_repository.dart';
@@ -32,11 +33,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _vesselCallSignCtrl;
   bool _syncing = false;
   bool _trackFilterExpanded = false;
-  List<Map<String, dynamic>> _boats = [];
-  bool _loadingBoats = false;
+  List<Map<String, dynamic>> _logbooks = [];
+  bool _loadingLogbooks = false;
   bool _guestsExpanded = false;
   Future<List<Map<String, dynamic>>>? _guestsFuture;
-  late ValueNotifier<String?> _boatIdNotifier;
+  late ValueNotifier<String?> _logbookIdNotifier;
 
   @override
   void initState() {
@@ -45,15 +46,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _vesselNameCtrl = TextEditingController(text: p.vesselName);
     _vesselMmsiCtrl = TextEditingController(text: p.vesselMmsi);
     _vesselCallSignCtrl = TextEditingController(text: p.vesselCallSign);
-    _boatIdNotifier = context.read<ValueNotifier<String?>>();
+    _logbookIdNotifier = context.read<ValueNotifier<String?>>();
     // Refresh list whenever the active boat changes (e.g. async init completes)
-    _boatIdNotifier.addListener(_refreshBoats);
-    _refreshBoats();
+    _logbookIdNotifier.addListener(_refreshLogbooks);
+    _refreshLogbooks();
   }
 
   @override
   void dispose() {
-    _boatIdNotifier.removeListener(_refreshBoats);
+    _logbookIdNotifier.removeListener(_refreshLogbooks);
     _vesselNameCtrl.dispose();
     _vesselMmsiCtrl.dispose();
     _vesselCallSignCtrl.dispose();
@@ -66,19 +67,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
 
-  void _refreshBoats() async {
+  void _refreshLogbooks() async {
     final user = context.read<AuthService>().currentUser;
     if (user == null || !mounted) return;
-    setState(() => _loadingBoats = true);
+    setState(() => _loadingLogbooks = true);
     try {
-      final boats = await BoatService().listBoats(user.uid);
-      if (mounted) setState(() { _boats = boats; _loadingBoats = false; });
+      final boats = await LogbookService().listLogbooks(user.uid);
+      if (mounted) setState(() { _logbooks = boats; _loadingLogbooks = false; });
     } catch (_) {
-      if (mounted) setState(() => _loadingBoats = false);
+      if (mounted) setState(() => _loadingLogbooks = false);
     }
   }
 
-  Future<void> _reinitFirestore(String boatId) async {
+  Future<void> _reinitFirestore(String logbookId) async {
     final repo = context.read<HomeRepository>();
     final themeProvider = context.read<ThemeProvider>();
     final emergencyRepo = context.read<EmergencyRepository>();
@@ -89,15 +90,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await themeProvider.clearVesselSettings();
     themeProvider.resetInitialSync();
 
-    final firestore = FirestoreService(boatId: boatId);
-    final storage = StorageService(boatId: boatId);
+    final firestore = FirestoreService(logbookId: logbookId);
+    final storage = StorageService(logbookId: logbookId);
     await repo.reattachAndSync(firestore, storage);
     await themeProvider.attachFirestore(firestore);
     await emergencyRepo.attachFirestore(firestore);
-    if (mounted) notifier.value = boatId;
+    if (mounted) notifier.value = logbookId;
   }
 
-  Future<void> _joinBoat(String rawCode) async {
+  Future<void> _joinLogbook(String rawCode) async {
     final l10n = context.l10n;
     final code = rawCode.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (code.isEmpty) {
@@ -110,13 +111,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (user == null) return;
 
     setState(() => _syncing = true);
-    String? foundBoatId;
-    String? boatName;
+    String? foundLogbookId;
+    String? logbookName;
     try {
-      foundBoatId = await BoatService().findByShareCode(code);
-      if (foundBoatId != null) {
+      foundLogbookId = await LogbookService().findByShareCode(code);
+      if (foundLogbookId != null) {
         final alreadyMember =
-            await BoatService().isMember(foundBoatId, user.uid);
+            await LogbookService().isMember(foundLogbookId, user.uid);
         if (!mounted) return;
         if (alreadyMember) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -124,7 +125,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
           return;
         }
-        boatName = await BoatService().getBoatName(foundBoatId) ?? code;
+        logbookName = await LogbookService().getLogbookName(foundLogbookId) ?? code;
       }
     } catch (e) {
       if (mounted) {
@@ -138,15 +139,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     if (!mounted) return;
 
-    if (foundBoatId == null) {
+    if (foundLogbookId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsCodeNotFound)),
       );
       return;
     }
 
-    final resolvedName = boatName ?? code;
-    final resolvedId = foundBoatId;
+    final resolvedName = logbookName ?? code;
+    final resolvedId = foundLogbookId;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -175,12 +176,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _syncing = true);
     try {
-      await BoatService().joinBoat(resolvedId, user.uid);
+      await LogbookService().joinLogbook(resolvedId, user.uid);
       if (!mounted) return;
       await _reinitFirestore(resolvedId);
       if (mounted) {
         _guestsExpanded = false;
-        _refreshBoats();
+        _refreshLogbooks();
         FocusScope.of(context).unfocus();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.settingsJoinedLogbook(resolvedName))),
@@ -197,10 +198,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _switchLogbook(Map<String, dynamic> boat, String uid) async {
+  Future<void> _switchLogbook(Map<String, dynamic> logbook, String uid) async {
     final l10n = context.l10n;
-    final boatId = boat['boatId'] as String;
-    final name = boat['name'] as String;
+    final logbookId = logbook['logbookId'] as String;
+    final name = logbook['name'] as String;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -226,12 +227,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _syncing = true);
     try {
-      await BoatService().setActiveBoat(uid, boatId);
+      await LogbookService().setActiveLogbook(uid, logbookId);
       if (!mounted) return;
-      await _reinitFirestore(boatId);
+      await _reinitFirestore(logbookId);
       if (mounted) {
         _guestsExpanded = false;
-        _refreshBoats();
+        _refreshLogbooks();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.settingsConnected)),
         );
@@ -247,10 +248,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _showBoatOptionsSheet(Map<String, dynamic> boat, String uid) {
-    final boatId = boat['boatId'] as String;
-    final name = boat['name'] as String;
-    final shareCode = boat['shareCode'] as String? ?? '';
+  void _showLogbookOptionsSheet(Map<String, dynamic> logbook, String uid) {
+    final logbookId = logbook['logbookId'] as String;
+    final name = logbook['name'] as String;
+    final shareCode = logbook['shareCode'] as String? ?? '';
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     showModalBottomSheet(
@@ -266,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: Text(l10n.settingsRename),
               onTap: () {
                 Navigator.pop(sheetCtx);
-                _showRenameDialog(boatId, name, uid);
+                _showRenameDialog(logbookId, name, uid);
               },
             ),
             ListTile(
@@ -283,7 +284,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(color: cs.error)),
               onTap: () {
                 Navigator.pop(sheetCtx);
-                _showDeleteBoatDialog(boatId, name, uid);
+                _showDeleteLogbookDialog(logbookId, name, uid);
               },
             ),
           ],
@@ -292,9 +293,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showGuestOptionsSheet(Map<String, dynamic> boat, String uid) {
-    final boatId = boat['boatId'] as String;
-    final name = boat['name'] as String;
+  void _showGuestOptionsSheet(Map<String, dynamic> logbook, String uid) {
+    final logbookId = logbook['logbookId'] as String;
+    final name = logbook['name'] as String;
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     showModalBottomSheet(
@@ -310,7 +311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(color: cs.error)),
               onTap: () {
                 Navigator.pop(sheetCtx);
-                _showLeaveBoatDialog(boatId, name, uid);
+                _showLeaveLogbookDialog(logbookId, name, uid);
               },
             ),
           ],
@@ -322,50 +323,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _showNewLogbookDialog(String uid) async {
     final l10n = context.l10n;
     final ctrl = TextEditingController();
-    final name = await showDialog<String>(
+    final name = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
         final cl = ctx.l10n;
-        final dcs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          backgroundColor: dcs.surface,
-          surfaceTintColor: Colors.transparent,
-          title: Text(cl.settingsNewLogbookTitle,
-              style: TextStyle(color: dcs.onSurface)),
-          content: TextField(
-            controller: ctrl,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            style: TextStyle(color: dcs.onSurface),
-            decoration: InputDecoration(
-              hintText: cl.settingsNewLogbookHint,
-              hintStyle: TextStyle(color: dcs.onSurfaceVariant),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: dcs.outlineVariant),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: dcs.primary, width: 2),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            onSubmitted: (v) {
-              if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
-            },
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: cs.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  cl.settingsNewLogbookTitle,
+                  style: GoogleFonts.newsreader(
+                    fontSize: 20,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w500,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: ctrl,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  style: TextStyle(color: cs.onSurface, fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: cl.settingsNewLogbookHint,
+                    hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: cs.outlineVariant),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: cs.primary, width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  onSubmitted: (v) {
+                    if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(cl.cancel),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {
+                          final v = ctrl.text.trim();
+                          if (v.isNotEmpty) Navigator.pop(ctx, v);
+                        },
+                        child: Text(cl.add),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx), child: Text(cl.cancel)),
-            FilledButton(
-              onPressed: () {
-                final v = ctrl.text.trim();
-                if (v.isNotEmpty) Navigator.pop(ctx, v);
-              },
-              child: Text(cl.add),
-            ),
-          ],
         );
       },
     );
@@ -374,12 +419,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _syncing = true);
     try {
-      final newBoatId = await BoatService().createBoat(uid, name);
+      final newLogbookId = await LogbookService().createLogbook(uid, name);
       if (!mounted) return;
-      await _reinitFirestore(newBoatId);
+      await _reinitFirestore(newLogbookId);
       if (mounted) {
         _guestsExpanded = false;
-        _refreshBoats();
+        _refreshLogbooks();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.settingsConnected)),
         );
@@ -396,7 +441,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showRenameDialog(
-      String boatId, String currentName, String uid) async {
+      String logbookId, String currentName, String uid) async {
     final l10n = context.l10n;
     final ctrl = TextEditingController(text: currentName);
     final newName = await showDialog<String>(
@@ -448,8 +493,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (newName == null || newName == currentName || !mounted) return;
 
     try {
-      await BoatService().renameBoat(boatId, newName);
-      if (mounted) _refreshBoats();
+      await LogbookService().renameLogbook(logbookId, newName);
+      if (mounted) _refreshLogbooks();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -459,8 +504,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _showDeleteBoatDialog(
-      String boatId, String name, String uid) async {
+  Future<void> _showDeleteLogbookDialog(
+      String logbookId, String name, String uid) async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -492,17 +537,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _syncing = true);
     try {
       final activeId = context.read<ValueNotifier<String?>>().value;
-      await BoatService().deleteBoat(boatId, uid);
+      await LogbookService().deleteLogbook(logbookId, uid);
       if (!mounted) return;
-      if (activeId == boatId) {
-        final newActiveId = await BoatService().getActiveBoatId(uid);
+      if (activeId == logbookId) {
+        final newActiveId = await LogbookService().getActiveLogbookId(uid);
         if (mounted && newActiveId != null) {
           await _reinitFirestore(newActiveId);
         }
       }
       if (mounted) {
         _guestsExpanded = false;
-        _refreshBoats();
+        _refreshLogbooks();
       }
     } catch (e) {
       if (mounted) {
@@ -515,8 +560,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _showLeaveBoatDialog(
-      String boatId, String name, String uid) async {
+  Future<void> _showLeaveLogbookDialog(
+      String logbookId, String name, String uid) async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -548,17 +593,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _syncing = true);
     try {
       final activeId = context.read<ValueNotifier<String?>>().value;
-      await BoatService().removeMember(boatId, uid);
+      await LogbookService().removeMember(logbookId, uid);
       if (!mounted) return;
-      if (activeId == boatId) {
-        final newActiveId = await BoatService().getActiveBoatId(uid);
+      if (activeId == logbookId) {
+        final newActiveId = await LogbookService().getActiveLogbookId(uid);
         if (mounted && newActiveId != null) {
           await _reinitFirestore(newActiveId);
         }
       }
       if (mounted) {
         _guestsExpanded = false;
-        _refreshBoats();
+        _refreshLogbooks();
       }
     } catch (e) {
       if (mounted) {
@@ -640,7 +685,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           borderRadius:
               const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: _ConnectBottomSheet(onCode: _joinBoat),
+        child: _ConnectBottomSheet(onCode: _joinLogbook),
       ),
     );
   }
@@ -1552,9 +1597,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (auth.currentUser == null) return const SizedBox.shrink();
 
     final uid = auth.currentUser!.uid;
-    final activeBoatId = context.watch<ValueNotifier<String?>>().value;
-    final activeMeta = _boats.firstWhere(
-      (b) => b['boatId'] == activeBoatId,
+    final activeLogbookId = context.watch<ValueNotifier<String?>>().value;
+    final activeMeta = _logbooks.firstWhere(
+      (b) => b['logbookId'] == activeLogbookId,
       orElse: () => {},
     );
     final isActiveOwner = activeMeta['role'] == 'owner';
@@ -1587,19 +1632,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: cs.secondary,
                 ),
               ),
-              Icon(Icons.menu_book_outlined, size: 20, color: cs.outlineVariant),
+              Tooltip(
+                message: l10n.settingsNewLogbook,
+                child: GestureDetector(
+                  onTap: _syncing ? null : () => _showNewLogbookDialog(uid),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: cs.surfaceContainer,
+                    ),
+                    child: Icon(Icons.add, size: 18, color: cs.secondary),
+                  ),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            l10n.settingsMyLogbooks,
-            style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(height: 8),
-          if (_loadingBoats)
+          if (_loadingLogbooks)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Center(
@@ -1608,48 +1658,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2))),
             )
-          else if (_boats.isEmpty)
+          else if (_logbooks.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(l10n.settingsNoEntries,
+              child: Text(l10n.settingsNoLogbooks,
                   style: GoogleFonts.inter(
                       fontSize: 13, color: cs.onSurfaceVariant)),
             )
           else
-            ...(_boats.map((boat) => _buildBoatRow(boat, activeBoatId, cs, uid))),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _syncing ? null : () => _showNewLogbookDialog(uid),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: Text(l10n.settingsNewLogbook),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: cs.outlineVariant),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    textStyle: GoogleFonts.inter(fontSize: 13),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _syncing ? null : _showConnectSheet,
-                  icon: const Icon(Icons.qr_code_scanner, size: 18),
-                  label: Text(l10n.settingsScanOrEnterCode),
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: cs.outlineVariant),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    textStyle: GoogleFonts.inter(fontSize: 13),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (activeBoatId != null && isActiveOwner && activeMeta.isNotEmpty) ...[
+            ...(_logbooks.map((logbook) => _buildBoatRow(logbook, activeLogbookId, cs, uid))),
+          if (activeLogbookId != null && isActiveOwner && activeMeta.isNotEmpty) ...[
             const SizedBox(height: 20),
             _buildShareSection(activeMeta, cs, uid),
           ],
@@ -1658,17 +1676,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildBoatRow(Map<String, dynamic> boat, String? activeBoatId,
+  Widget _buildBoatRow(Map<String, dynamic> logbook, String? activeLogbookId,
       ColorScheme cs, String uid) {
-    final boatId = boat['boatId'] as String;
-    final name = boat['name'] as String;
-    final role = boat['role'] as String;
-    final isActive = boatId == activeBoatId;
+    final logbookId = logbook['logbookId'] as String;
+    final name = logbook['name'] as String;
+    final role = logbook['role'] as String;
+    final isActive = logbookId == activeLogbookId;
     final isOwner = role == 'owner';
     final l10n = context.l10n;
 
     return InkWell(
-      onTap: isActive || _syncing ? null : () => _switchLogbook(boat, uid),
+      onTap: isActive || _syncing ? null : () => _switchLogbook(logbook, uid),
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
@@ -1710,8 +1728,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             IconButton(
               icon: Icon(Icons.more_vert, size: 18, color: cs.outlineVariant),
               onPressed: () => isOwner
-                  ? _showBoatOptionsSheet(boat, uid)
-                  : _showGuestOptionsSheet(boat, uid),
+                  ? _showLogbookOptionsSheet(logbook, uid)
+                  : _showGuestOptionsSheet(logbook, uid),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               visualDensity: VisualDensity.compact,
@@ -1726,7 +1744,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       Map<String, dynamic> activeMeta, ColorScheme cs, String uid) {
     final l10n = context.l10n;
     final shareCode = activeMeta['shareCode'] as String? ?? '';
-    final boatId = activeMeta['boatId'] as String;
+    final logbookId = activeMeta['logbookId'] as String;
+    final logbookName = activeMeta['name'] as String? ?? '';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1736,13 +1755,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              l10n.settingsShareCurrentLogbook.toUpperCase(),
-              style: GoogleFonts.inter(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
-                color: cs.secondary,
+            Expanded(
+              child: Text(
+                '$logbookName · ${l10n.settingsShare}'.toUpperCase(),
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.5,
+                  color: cs.secondary,
+                ),
               ),
             ),
             Icon(Icons.share_outlined, size: 20, color: cs.outlineVariant),
@@ -1818,12 +1839,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        _buildManageGuests(boatId, cs, uid),
+        _buildManageGuests(logbookId, cs, uid),
       ],
     );
   }
 
-  Widget _buildManageGuests(String boatId, ColorScheme cs, String uid) {
+  Widget _buildManageGuests(String logbookId, ColorScheme cs, String uid) {
     final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1833,7 +1854,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             setState(() {
               _guestsExpanded = !_guestsExpanded;
               if (_guestsExpanded) {
-                _guestsFuture = BoatService().listMembers(boatId);
+                _guestsFuture = LogbookService().listMembers(logbookId);
               }
             });
           },
@@ -1910,12 +1931,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             visualDensity: VisualDensity.compact,
                           ),
                           onPressed: () async {
-                            await BoatService()
-                                .removeMember(boatId, memberUid);
+                            await LogbookService()
+                                .removeMember(logbookId, memberUid);
                             if (mounted) {
                               setState(() {
                                 _guestsFuture =
-                                    BoatService().listMembers(boatId);
+                                    LogbookService().listMembers(logbookId);
                               });
                             }
                           },
@@ -1992,6 +2013,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () async {
+                  final results = await Connectivity().checkConnectivity();
+                  final isOffline = results.every(
+                      (r) => r == ConnectivityResult.none);
+                  if (!mounted) return;
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
@@ -2000,7 +2025,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
                       contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                       title: Text(l10n.authSignOut),
-                      content: Text(l10n.authSignOutConfirmDesc),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(l10n.authSignOutConfirmDesc),
+                          if (isOffline) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.wifi_off, size: 14,
+                                    color: cs.error),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    l10n.authSignOutOfflineWarning,
+                                    style: TextStyle(
+                                        color: cs.error, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, false),
@@ -2072,7 +2121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         try {
                           final uid = user.uid;
                           // 1. Delete all Firestore data for this user.
-                          await BoatService().deleteUserAndAllBoats(uid);
+                          await LogbookService().deleteUserAndAllLogbooks(uid);
                           // 2. Wipe all local caches.
                           await repo.clearLocalData();
                           await emergencyRepo.clearLocalData();

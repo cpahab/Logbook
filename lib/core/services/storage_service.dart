@@ -4,16 +4,16 @@ import 'package:firebase_storage/firebase_storage.dart';
 /// Stores raw GPX files in Firebase Storage.
 ///
 /// Path layout:
-///   boats/{boatId}/tracks/{yyyy-MM-dd}.gpx
+///   logbooks/{logbookId}/tracks/{yyyy-MM-dd}.gpx
 class StorageService {
   final FirebaseStorage _storage;
-  final String boatId;
+  final String logbookId;
 
-  StorageService({required this.boatId})
+  StorageService({required this.logbookId})
       : _storage = FirebaseStorage.instance;
 
   Reference _ref(DateTime date) => _storage
-      .ref('boats/$boatId/tracks/${_dateKey(date)}.gpx');
+      .ref('logbooks/$logbookId/tracks/${_dateKey(date)}.gpx');
 
   // ------------------------------------------------------------------
   // Write
@@ -34,7 +34,7 @@ class StorageService {
   /// Returns dates that have a GPX file in Storage.
   Future<List<DateTime>> listTrackDates() async {
     final result = await _storage
-        .ref('boats/$boatId/tracks')
+        .ref('logbooks/$logbookId/tracks')
         .listAll();
     return result.items
         .map((r) => DateTime.tryParse(r.name.replaceFirst('.gpx', '')))

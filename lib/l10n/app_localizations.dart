@@ -1082,6 +1082,12 @@ abstract class AppLocalizations {
   /// **'Noch keine Einträge'**
   String get settingsNoEntries;
 
+  /// No description provided for @settingsNoLogbooks.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Logbücher'**
+  String get settingsNoLogbooks;
+
   /// No description provided for @settingsPersonCount.
   ///
   /// In de, this message translates to:
@@ -1657,6 +1663,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Deine Logbuchdaten bleiben auf diesem Gerät.'**
   String get authSignOutConfirmDesc;
+
+  /// No description provided for @authSignOutOfflineWarning.
+  ///
+  /// In de, this message translates to:
+  /// **'Du bist offline. Ohne Verbindung kannst du dich danach nicht wieder anmelden.'**
+  String get authSignOutOfflineWarning;
 
   /// No description provided for @authErrorInvalidEmail.
   ///

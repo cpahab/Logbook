@@ -16,7 +16,7 @@ import 'features/home/domain/crew_member.dart';
 import 'features/emergency/domain/emergency_contact.dart';
 import 'features/emergency/data/emergency_repository.dart';
 import 'features/settings/domain/theme_provider.dart';
-import 'core/services/boat_service.dart';
+import 'core/services/logbook_service.dart';
 import 'core/services/firestore_service.dart';
 import 'core/services/storage_service.dart';
 import 'firebase_options.dart';
@@ -29,7 +29,7 @@ Future<void> _initFirestore(
     ThemeProvider themeProvider,
     HomeRepository repo,
     EmergencyRepository emergencyRepo,
-    ValueNotifier<String?> boatIdNotifier) async {
+    ValueNotifier<String?> logbookIdNotifier) async {
   try {
     // Detect account switch: a different UID signed in while local Hive data
     // from the previous account is still cached. Wipe everything so we never
@@ -42,11 +42,11 @@ Future<void> _initFirestore(
       themeProvider.resetInitialSync();
     }
 
-    final boatService = BoatService();
-    String? boatId = await boatService.getActiveBoatId(user.uid);
-    boatId ??= await boatService.createBoat(user.uid, 'My Logbook');
-    final firestore = FirestoreService(boatId: boatId);
-    final storage = StorageService(boatId: boatId);
+    final logbookService = LogbookService();
+    String? logbookId = await logbookService.getActiveLogbookId(user.uid);
+    logbookId ??= await logbookService.createLogbook(user.uid, 'My Logbook');
+    final firestore = FirestoreService(logbookId: logbookId);
+    final storage = StorageService(logbookId: logbookId);
     final initialSync = themeProvider.needsInitialSync;
     await Future.wait([
       repo.attachFirestore(firestore, initialSync: initialSync),
@@ -56,7 +56,7 @@ Future<void> _initFirestore(
     ]);
     if (initialSync) themeProvider.markInitialSyncDone();
     themeProvider.setLastKnownUid(user.uid);
-    boatIdNotifier.value = boatId;
+    logbookIdNotifier.value = logbookId;
   } catch (_) {
     // Offline or Firestore error — continue with local data, retry next launch.
   }
@@ -87,7 +87,7 @@ void main() async {
 
   final authService = AuthService();
 
-  final boatIdNotifier = ValueNotifier<String?>(null);
+  final logbookIdNotifier = ValueNotifier<String?>(null);
 
   try {
     await Firebase.initializeApp(
@@ -98,7 +98,7 @@ void main() async {
     final initialUser = FirebaseAuth.instance.currentUser;
     if (initialUser != null) {
       unawaited(_initFirestore(
-          initialUser, themeProvider, repo, emergencyRepo, boatIdNotifier));
+          initialUser, themeProvider, repo, emergencyRepo, logbookIdNotifier));
     }
 
     // Trigger Firestore init on null → User transitions only.
@@ -106,7 +106,7 @@ void main() async {
     authService.authStateChanges.listen((user) {
       if (lastAuthUser == null && user != null) {
         unawaited(_initFirestore(
-            user, themeProvider, repo, emergencyRepo, boatIdNotifier));
+            user, themeProvider, repo, emergencyRepo, logbookIdNotifier));
       }
       lastAuthUser = user;
     });
@@ -116,9 +116,9 @@ void main() async {
       final hasConnection =
           results.any((r) => r != ConnectivityResult.none);
       final user = FirebaseAuth.instance.currentUser;
-      if (hasConnection && boatIdNotifier.value == null && user != null) {
+      if (hasConnection && logbookIdNotifier.value == null && user != null) {
         unawaited(_initFirestore(
-            user, themeProvider, repo, emergencyRepo, boatIdNotifier));
+            user, themeProvider, repo, emergencyRepo, logbookIdNotifier));
       }
     });
   } catch (_) {
@@ -139,7 +139,7 @@ void main() async {
         ChangeNotifierProvider.value(value: themeProvider),
         ChangeNotifierProvider.value(value: emergencyRepo),
         ChangeNotifierProvider.value(value: authService),
-        ChangeNotifierProvider.value(value: boatIdNotifier),
+        ChangeNotifierProvider.value(value: logbookIdNotifier),
       ],
       child: Logbook(router: router),
     ),

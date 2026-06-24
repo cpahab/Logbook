@@ -9,7 +9,6 @@ import '../domain/day_entry.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../widgets/nav_bar.dart';
-import '../widgets/offline_banner.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../core/services/gps_consent_service.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -423,7 +422,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const OfflineBanner(),
         ],
       ),
     );

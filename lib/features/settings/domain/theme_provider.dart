@@ -268,12 +268,12 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Called by [BootstrapService] when the Firestore profile's boatId differs
-  /// from the local logbook code (e.g. user signed in from a different device).
+  /// Called when the Firestore profile's logbookId differs from the local
+  /// logbook code (e.g. user signed in from a different device).
   /// Unlike [setLogbookCode] this does NOT reset the initial-sync flag, because
   /// this is an identity reconciliation, not a deliberate logbook switch.
-  void reconcileBoatId(String boatId) {
-    final normalized = boatId.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+  void reconcileLogbookId(String logbookId) {
+    final normalized = logbookId.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
     if (normalized.isEmpty || normalized == _logbookCode) return;
     _logbookCode = normalized;
     _box.put(_logbookCodeKey, normalized);

@@ -182,6 +182,7 @@
   "settingsShowRawTrackDesc": "Shows the raw GPX track in addition to the filtered track. Useful for diagnosing and tuning filter settings.",
   "settingsCrewSection": "Crew roster",
   "settingsNoEntries": "No entries yet",
+  "settingsNoLogbooks": "No logbooks yet",
   "settingsPersonCount": "{count, plural, one{Person} other{People}}",
   "@settingsPersonCount": {
     "placeholders": {
@@ -314,6 +315,7 @@
   "authSignOut": "Sign out",
   "authSignOutConfirm": "Sign out of your account?",
   "authSignOutConfirmDesc": "Your logbook data remains on this device.",
+  "authSignOutOfflineWarning": "You are currently offline. You will not be able to sign back in until a connection is available.",
   "authErrorInvalidEmail": "Invalid e-mail address.",
   "authErrorWrongPassword": "Incorrect password.",
   "authErrorUserNotFound": "No account found for this e-mail.",
