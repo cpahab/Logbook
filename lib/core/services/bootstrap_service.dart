@@ -4,25 +4,25 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// One-time setup that runs on every authenticated launch.
 ///
 /// Firestore layout created/maintained here:
-///   users/{uid}              — profile: { boatId, email, createdAt }
-///   boats/{boatId}           — boat root: { members:[uid,...], ownerId, createdAt }
+///   users/{uid}              — profile: { logbookId, email, createdAt }
+///   logbooks/{logbookId}        — logbook root: { members:[uid,...], ownerId, createdAt }
 ///
-/// [boatId] is always the app's logbook code (ThemeProvider.installationId).
+/// [logbookId] is always the app's logbook code (ThemeProvider.installationId).
 /// For a first-time sign-in this matches the local code; for a subsequent
-/// sign-in on a different device it reads the stored boatId from the user's
+/// sign-in on a different device it reads the stored logbookId from the user's
 /// profile and returns it so the caller can reconcile services.
 class BootstrapService {
   static final _db = FirebaseFirestore.instance;
 
-  /// Returns the canonical boatId for [uid].
+  /// Returns the canonical logbookId for [uid].
   ///
-  /// If the user profile does not exist it is created with [fallbackBoatId]
-  /// as the boatId. The boat document is likewise created/updated so the uid
+  /// If the user profile does not exist it is created with [fallbackLogbookId]
+  /// as the logbookId. The boat document is likewise created/updated so the uid
   /// is present in its `members` array.
-  static Future<String> ensureUserAndBoat({
+  static Future<String> ensureUserAndLogbook({
     required String uid,
     required String email,
-    required String fallbackBoatId,
+    required String fallbackLogbookId,
   }) async {
     final userRef = _db.collection('users').doc(uid);
     late DocumentSnapshot<Map<String, dynamic>> userSnap;
@@ -35,24 +35,24 @@ class BootstrapService {
     }
 
     if (userSnap.exists) {
-      // Profile already exists — trust the stored boatId.
-      final boatId = (userSnap.data()?['boatId'] as String?) ?? fallbackBoatId;
+      // Profile already exists — trust the stored logbookId.
+      final logbookId = (userSnap.data()?['logbookId'] as String?) ?? fallbackLogbookId;
       // Ensure the uid is in the boat's members list (idempotent).
-      await _ensureBoatMember(boatId: boatId, uid: uid);
-      return boatId;
+      await _ensureLogbookMember(logbookId: logbookId, uid: uid);
+      return logbookId;
     }
 
-    // First authenticated launch from this account: use the local code as boatId.
-    final boatId = fallbackBoatId;
+    // First authenticated launch from this account: use the local code as logbookId.
+    final logbookId = fallbackLogbookId;
     final batch = _db.batch();
 
     batch.set(userRef, {
-      'boatId': boatId,
+      'logbookId': logbookId,
       'email': email,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    final boatRef = _db.collection('boats').doc(boatId);
+    final boatRef = _db.collection('logbooks').doc(logbookId);
     late DocumentSnapshot<Map<String, dynamic>> boatSnap;
     try {
       boatSnap = await boatRef
@@ -76,16 +76,16 @@ class BootstrapService {
     }
 
     await batch.commit().timeout(const Duration(seconds: 10));
-    return boatId;
+    return logbookId;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  static Future<void> _ensureBoatMember({
-    required String boatId,
+  static Future<void> _ensureLogbookMember({
+    required String logbookId,
     required String uid,
   }) async {
-    final boatRef = _db.collection('boats').doc(boatId);
+    final boatRef = _db.collection('logbooks').doc(logbookId);
     late DocumentSnapshot<Map<String, dynamic>> boatSnap;
     try {
       boatSnap = await boatRef
@@ -115,15 +115,15 @@ class BootstrapService {
 
   // ── Current user helpers ─────────────────────────────────────────────────────
 
-  /// Convenience: runs [ensureUserAndBoat] for the currently signed-in user.
+  /// Convenience: runs [ensureUserAndLogbook] for the currently signed-in user.
   /// Returns null if no user is signed in.
-  static Future<String?> bootstrapCurrentUser(String fallbackBoatId) async {
+  static Future<String?> bootstrapCurrentLogbook(String fallbackLogbookId) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
-    return ensureUserAndBoat(
+    return ensureUserAndLogbook(
       uid: user.uid,
       email: user.email ?? '',
-      fallbackBoatId: fallbackBoatId,
+      fallbackLogbookId: fallbackLogbookId,
     );
   }
 }
