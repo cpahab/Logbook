@@ -193,6 +193,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   ]),
                 ),
                 if (track != null)
+                  const PopupMenuDivider(),
+                if (track != null)
                   PopupMenuItem<String>(
                     value: 'delete_gpx',
                     child: Row(children: [
