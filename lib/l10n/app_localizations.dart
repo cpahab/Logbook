@@ -1868,6 +1868,8 @@ abstract class AppLocalizations {
   /// **'Mit \"{name}\" verbunden.'**
   String settingsJoinedLogbook(String name);
 
+  /// No description provided for @offlineBanner.
+  ///
   /// In de, this message translates to:
   /// **'Offline — Änderungen lokal gespeichert'**
   String get offlineBanner;
