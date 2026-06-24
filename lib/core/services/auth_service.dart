@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -5,6 +7,21 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class AuthService extends ChangeNotifier {
   static final _auth = FirebaseAuth.instance;
+
+  late final StreamSubscription<User?> _authSub;
+
+  AuthService() {
+    // Forward every Firebase Auth state change to GoRouter's refreshListenable.
+    // This handles the case where currentUser is null at startup (Keychain not
+    // yet loaded) but Firebase Auth resolves a valid session moments later.
+    _authSub = _auth.authStateChanges().listen((_) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    _authSub.cancel();
+    super.dispose();
+  }
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
