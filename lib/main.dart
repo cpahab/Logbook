@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -108,6 +109,17 @@ void main() async {
             user, themeProvider, repo, emergencyRepo, boatIdNotifier));
       }
       lastAuthUser = user;
+    });
+
+    // Retry Firestore init when connectivity is restored after an offline start.
+    Connectivity().onConnectivityChanged.listen((results) {
+      final hasConnection =
+          results.any((r) => r != ConnectivityResult.none);
+      final user = FirebaseAuth.instance.currentUser;
+      if (hasConnection && boatIdNotifier.value == null && user != null) {
+        unawaited(_initFirestore(
+            user, themeProvider, repo, emergencyRepo, boatIdNotifier));
+      }
     });
   } catch (_) {
     // Firebase unavailable — continue offline.
