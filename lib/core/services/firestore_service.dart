@@ -7,17 +7,17 @@ import '../../features/home/domain/timeline_entry.dart';
 /// Syncs DayEntry, settings and emergency contacts to/from Firestore.
 ///
 /// Firestore path layout:
-///   boats/{boatId}/entries/{yyyy-MM-dd}   — daily journal entries
-///   boats/{boatId}/meta/settings           — vessel / VHF settings
-///   boats/{boatId}/meta/contacts           — emergency contacts
+///   logbooks/{logbookId}/entries/{yyyy-MM-dd}   — daily journal entries
+///   logbooks/{logbookId}/meta/settings           — vessel / VHF settings
+///   logbooks/{logbookId}/meta/contacts           — emergency contacts
 ///
 /// GPS tracks (DailyTrack) are kept local-only in Hive / Firebase Storage
 /// because they can be arbitrarily large.
 class FirestoreService {
   final FirebaseFirestore _db;
-  final String boatId;
+  final String logbookId;
 
-  FirestoreService({required this.boatId})
+  FirestoreService({required this.logbookId})
       : _db = FirebaseFirestore.instance;
 
   // ── Static configuration ───────────────────────────────────────────────────
@@ -35,12 +35,12 @@ class FirestoreService {
   // ── Ref helpers ────────────────────────────────────────────────────────────
 
   CollectionReference<Map<String, dynamic>> get _entriesRef => _db
-      .collection('boats')
-      .doc(boatId)
+      .collection('logbooks')
+      .doc(logbookId)
       .collection('entries');
 
   DocumentReference<Map<String, dynamic>> _metaDoc(String name) =>
-      _db.collection('boats').doc(boatId).collection('meta').doc(name);
+      _db.collection('logbooks').doc(logbookId).collection('meta').doc(name);
 
   // ── Write ──────────────────────────────────────────────────────────────────
 

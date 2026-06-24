@@ -182,6 +182,7 @@
   "settingsShowRawTrackDesc": "Zeigt den Roh-GPX-Track zusätzlich zur gefilterten Spur an. Dient zur Fehleranalyse und zum Optimieren der Filtereinstellungen.",
   "settingsCrewSection": "Besatzungsliste",
   "settingsNoEntries": "Noch keine Einträge",
+  "settingsNoLogbooks": "Noch keine Logbücher",
   "settingsPersonCount": "{count, plural, one{Person} other{Personen}}",
   "@settingsPersonCount": {
     "placeholders": {
@@ -314,6 +315,7 @@
   "authSignOut": "Abmelden",
   "authSignOutConfirm": "Von deinem Konto abmelden?",
   "authSignOutConfirmDesc": "Deine Logbuchdaten bleiben auf diesem Gerät.",
+  "authSignOutOfflineWarning": "Du bist offline. Ohne Verbindung kannst du dich danach nicht wieder anmelden.",
   "authErrorInvalidEmail": "Ungültige E-Mail-Adresse.",
   "authErrorWrongPassword": "Falsches Passwort.",
   "authErrorUserNotFound": "Kein Konto für diese E-Mail gefunden.",

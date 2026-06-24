@@ -6,15 +6,23 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isMember(boatId) {
+    function isMember(logbookId) {
       return isSignedIn() && exists(
-        /databases/$(database)/documents/boats/$(boatId)/members/$(request.auth.uid));
+        /databases/$(database)/documents/logbooks/$(logbookId)/members/$(request.auth.uid));
     }
 
-    function isOwner(boatId) {
+    function isOwner(logbookId) {
       return isSignedIn() &&
-        get(/databases/$(database)/documents/boats/$(boatId))
+        get(/databases/$(database)/documents/logbooks/$(logbookId))
           .data.ownerUid == request.auth.uid;
+    }
+
+    // Share-code lookup: any signed-in user can read (needed for QR join flow).
+    match /shareCodes/{code} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && isMember(resource.data.logbookId);
+      allow delete: if isSignedIn() && isMember(resource.data.logbookId);
     }
 
     // User profile: only the user themselves.
@@ -22,30 +30,27 @@ service cloud.firestore {
       allow read, write: if request.auth.uid == uid;
     }
 
-    // Boat document: any member reads; only owner writes meta.
-    match /boats/{boatId} {
-      allow read:   if isMember(boatId);
-      // Creating a new boat: the caller must declare themselves as ownerUid.
-      // (isOwner() calls get() on a non-existent doc which returns null → false,
-      // so we need a separate create rule using request.resource.data.)
+    // Logbook document: any member reads; only owner writes meta.
+    match /logbooks/{logbookId} {
+      allow read:   if isMember(logbookId);
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-      allow update, delete: if isOwner(boatId);
+      allow update, delete: if isOwner(logbookId);
 
       // Logbook data: any member reads and writes.
       match /{collection}/{document=**} {
-        allow read, write: if isMember(boatId);
+        allow read, write: if isMember(logbookId);
       }
 
       // Members sub-collection.
       match /members/{uid} {
         // Owner can add/remove anyone.
-        allow write: if isOwner(boatId);
+        allow write: if isOwner(logbookId);
         // Anyone signed in can add themselves (join flow).
         allow create: if isSignedIn()
                       && request.auth.uid == uid
                       && request.resource.data.role == 'guest';
         // Members can read the members list.
-        allow read: if isMember(boatId);
+        allow read: if isMember(logbookId);
       }
     }
   }

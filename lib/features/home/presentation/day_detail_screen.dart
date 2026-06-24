@@ -1460,14 +1460,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _addPhotos(DayEntry entry) async {
     if (_importingPhotos) return;
     setState(() => _importingPhotos = true);
-    final boatId = context.read<ValueNotifier<String?>>().value;
-    if (boatId == null) {
+    final logbookId = context.read<ValueNotifier<String?>>().value;
+    if (logbookId == null) {
       setState(() => _importingPhotos = false);
       return;
     }
     final day = DateTime(widget.year, widget.month, widget.day);
     try {
-      final paths = await PhotoService.pickAndUpload(day, boatId);
+      final paths = await PhotoService.pickAndUpload(day, logbookId);
       if (!mounted || paths.isEmpty) return;
       // Re-fetch: a Firestore sync may have replaced the entry object in the
       // Hive box during the await, making the original reference invalid.

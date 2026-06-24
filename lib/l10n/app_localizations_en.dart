@@ -514,6 +514,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNoEntries => 'No entries yet';
 
   @override
+  String get settingsNoLogbooks => 'No logbooks yet';
+
+  @override
   String settingsPersonCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -827,6 +830,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get authSignOutConfirmDesc =>
       'Your logbook data remains on this device.';
+
+  @override
+  String get authSignOutOfflineWarning =>
+      'You are currently offline. You will not be able to sign back in until a connection is available.';
 
   @override
   String get authErrorInvalidEmail => 'Invalid e-mail address.';
