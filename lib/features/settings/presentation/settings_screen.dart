@@ -255,6 +255,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = context.l10n;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cs.surface,
       builder: (sheetCtx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -298,6 +299,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = context.l10n;
     showModalBottomSheet(
       context: context,
+      backgroundColor: cs.surface,
       builder: (sheetCtx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -401,13 +403,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) {
         final cl = ctx.l10n;
+        final dcs = Theme.of(ctx).colorScheme;
         return AlertDialog(
-          title: Text(cl.settingsRename),
+          backgroundColor: dcs.surface,
+          surfaceTintColor: Colors.transparent,
+          title: Text(cl.settingsRename, style: TextStyle(color: dcs.onSurface)),
           content: TextField(
             controller: ctrl,
             autofocus: true,
             textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(hintText: cl.settingsNewLogbookHint),
+            style: TextStyle(color: dcs.onSurface),
+            decoration: InputDecoration(
+              hintText: cl.settingsNewLogbookHint,
+              hintStyle: TextStyle(color: dcs.onSurfaceVariant),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: dcs.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: dcs.primary, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
             onSubmitted: (v) {
               if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
             },
@@ -450,6 +468,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cs = Theme.of(ctx).colorScheme;
         final cl = ctx.l10n;
         return AlertDialog(
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
+          contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
           title: Text(cl.settingsDeleteLogbook),
           content: Text(cl.settingsDeleteLogbookConfirm(name)),
           actions: [
@@ -502,6 +524,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cs = Theme.of(ctx).colorScheme;
         final cl = ctx.l10n;
         return AlertDialog(
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
+          contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
           title: Text(cl.settingsLeaveLogbook),
           content: Text(cl.settingsLeaveLogbookConfirm(name)),
           actions: [
@@ -552,6 +578,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cs = Theme.of(ctx).colorScheme;
         final cl = ctx.l10n;
         return Dialog(
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Padding(
@@ -580,10 +608,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 Text(
                   _formatCode(shareCode),
-                  style: const TextStyle(
+                  style: TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
+                      color: cs.onSurface,
                       letterSpacing: 6),
                 ),
                 const SizedBox(height: 16),
@@ -1966,6 +1995,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
+                      backgroundColor: cs.surface,
+                      surfaceTintColor: Colors.transparent,
+                      titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
+                      contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
                       title: Text(l10n.authSignOut),
                       content: Text(l10n.authSignOutConfirmDesc),
                       actions: [
@@ -2190,8 +2223,10 @@ class _ConnectBottomSheetState extends State<_ConnectBottomSheet>
                     TextField(
                       controller: _codeCtrl,
                       textCapitalization: TextCapitalization.characters,
+                      style: TextStyle(color: cs.onSurface),
                       decoration: InputDecoration(
                         hintText: l10n.settingsEnterInviteCode,
+                        hintStyle: TextStyle(color: cs.onSurfaceVariant),
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8)),
                         enabledBorder: OutlineInputBorder(
@@ -2200,7 +2235,7 @@ class _ConnectBottomSheetState extends State<_ConnectBottomSheet>
                                 BorderSide(color: cs.outlineVariant)),
                         focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: cs.primary)),
+                            borderSide: BorderSide(color: cs.primary, width: 2)),
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),

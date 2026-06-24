@@ -22,6 +22,8 @@ class GpsConsentService {
         final cs = Theme.of(ctx).colorScheme;
         final l10n = ctx.l10n;
         return AlertDialog(
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
           title: Text(
             l10n.gpsConsentTitle,
             style: GoogleFonts.newsreader(
@@ -32,7 +34,7 @@ class GpsConsentService {
           ),
           content: Text(
             l10n.gpsConsentContent,
-            style: const TextStyle(fontSize: 14, height: 1.5),
+            style: TextStyle(fontSize: 14, height: 1.5, color: cs.onSurfaceVariant),
           ),
           actions: [
             TextButton(

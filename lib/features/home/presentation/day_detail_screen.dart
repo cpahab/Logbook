@@ -2184,21 +2184,28 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         final locStr = context.read<ThemeProvider>().localeString;
         final proceed = await showDialog<bool>(
           context: context,
-          builder: (_) => AlertDialog(
-            title: Text(context.l10n.dayChangeDateTitle),
-            content: Text(context.l10n.dayChangeDateContent(
-              DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
-              DateFormat('d. MMMM yyyy', locStr).format(newDate),
-            )),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(context.l10n.cancel)),
-              FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(context.l10n.dayChangeDateConfirm)),
-            ],
-          ),
+          builder: (ctx) {
+            final cs = Theme.of(ctx).colorScheme;
+            return AlertDialog(
+              backgroundColor: cs.surface,
+              surfaceTintColor: Colors.transparent,
+              titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
+              contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+              title: Text(context.l10n.dayChangeDateTitle),
+              content: Text(context.l10n.dayChangeDateContent(
+                DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
+                DateFormat('d. MMMM yyyy', locStr).format(newDate),
+              )),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: Text(context.l10n.cancel)),
+                FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: Text(context.l10n.dayChangeDateConfirm)),
+              ],
+            );
+          },
         );
         if (!mounted || proceed != true) return;
       }
@@ -2597,23 +2604,30 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       final locStr = context.read<ThemeProvider>().localeString;
       final proceed = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
-          title: Text(context.l10n.dayChangeDateTitle),
-          content: Text(
-            context.l10n.dayGpxWrongDateContent(
-              DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
-              DateFormat('d. MMMM yyyy', locStr).format(targetDate),
+        builder: (ctx) {
+          final cs = Theme.of(ctx).colorScheme;
+          return AlertDialog(
+            backgroundColor: cs.surface,
+            surfaceTintColor: Colors.transparent,
+            titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
+            contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+            title: Text(context.l10n.dayChangeDateTitle),
+            content: Text(
+              context.l10n.dayGpxWrongDateContent(
+                DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
+                DateFormat('d. MMMM yyyy', locStr).format(targetDate),
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(context.l10n.cancel)),
-            FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(context.l10n.dayGpxImportConfirm)),
-          ],
-        ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(context.l10n.cancel)),
+              FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(context.l10n.dayGpxImportConfirm)),
+            ],
+          );
+        },
       );
       if (!mounted || proceed != true) return;
     }
@@ -2687,21 +2701,28 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final day = DateTime(widget.year, widget.month, widget.day);
     final shouldDelete = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(context.l10n.dayGpxDeleteTitle),
-        content: Text(context.l10n.dayGpxDeleteContent),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(context.l10n.cancel)),
-          FilledButton(
-              style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Theme.of(context).colorScheme.onError),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(context.l10n.delete)),
-        ],
-      ),
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
+          contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+          title: Text(context.l10n.dayGpxDeleteTitle),
+          content: Text(context.l10n.dayGpxDeleteContent),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(context.l10n.cancel)),
+            FilledButton(
+                style: FilledButton.styleFrom(
+                    backgroundColor: cs.error,
+                    foregroundColor: cs.onError),
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(context.l10n.delete)),
+          ],
+        );
+      },
     );
     if (!mounted || shouldDelete != true) return;
     await repo.removeGpx(day);
@@ -3453,9 +3474,11 @@ class _EditTextDialogState extends State<_EditTextDialog> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return AlertDialog(
+      backgroundColor: cs.surface,
+      surfaceTintColor: Colors.transparent,
       title: Text(
         widget.title,
-        style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600),
+        style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface),
       ),
       content: SizedBox(
         width: double.maxFinite,
