@@ -87,7 +87,7 @@ class AppBottomNav extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.add, color: Colors.white, size: 30),
+                    child: Icon(Icons.add, color: cs.onPrimaryContainer, size: 30),
                   ),
                 ),
               ),

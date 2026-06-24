@@ -129,6 +129,10 @@ class _RosterListTile extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        backgroundColor: cs.surface,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
+        contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
         title: Text(l10n.crewRosterRemoveTitle),
         content: Text(l10n.crewRosterRemoveContent(member.name)),
         actions: [
