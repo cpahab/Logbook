@@ -354,5 +354,7 @@
   "settingsJoinContent": "Zu \"{name}\" beitreten? Dein aktuelles Logbuch bleibt erhalten – es wird ein neues hinzugefügt.",
   "@settingsJoinContent": { "placeholders": { "name": { "type": "String" } } },
   "settingsJoinedLogbook": "Mit \"{name}\" verbunden.",
-  "@settingsJoinedLogbook": { "placeholders": { "name": { "type": "String" } } }
+  "@settingsJoinedLogbook": { "placeholders": { "name": { "type": "String" } } },
+  "offlineBanner": "Offline — Änderungen lokal gespeichert",
+  "@offlineBanner": {}
 }

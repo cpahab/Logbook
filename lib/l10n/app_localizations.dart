@@ -1867,6 +1867,10 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Mit \"{name}\" verbunden.'**
   String settingsJoinedLogbook(String name);
+
+  /// In de, this message translates to:
+  /// **'Offline — Änderungen lokal gespeichert'**
+  String get offlineBanner;
 }
 
 class _AppLocalizationsDelegate
