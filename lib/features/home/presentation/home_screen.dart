@@ -9,6 +9,7 @@ import '../domain/day_entry.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../widgets/nav_bar.dart';
+import '../widgets/offline_banner.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../core/services/gps_consent_service.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -331,9 +332,12 @@ class _HomeScreenState extends State<HomeScreen> {
           if (tab == NavTab.safety) context.push('/emergency');
         },
       ),
-      body: entries.isEmpty
-          ? _buildEmpty(cs)
-          : CustomScrollView(
+      body: Column(
+        children: [
+          Expanded(
+            child: entries.isEmpty
+                ? _buildEmpty(cs)
+                : CustomScrollView(
               controller: _scrollController,
               slivers: [
                 SliverToBoxAdapter(
@@ -418,6 +422,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
+          ),
+          const OfflineBanner(),
+        ],
+      ),
     );
   }
 
