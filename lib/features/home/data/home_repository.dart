@@ -229,8 +229,14 @@ class HomeRepository extends ChangeNotifier {
   Future<void> _applyRemoteEntries(
       ({List<DayEntry> upserted, List<DateTime> removed}) changes) async {
     var changed = false;
+    final lastSync = _lastSyncAt;
     for (final e in changes.upserted) {
       if (_syncTimers.containsKey(e.date)) continue;
+      // Skip entries edited locally after the last confirmed server sync —
+      // the cache stream reflects pre-offline state and must not overwrite
+      // pending local writes that haven't reached the server yet.
+      final localEdit = _localEditTime(e.date);
+      if (localEdit != null && localEdit.isAfter(lastSync)) continue;
       _entries[e.date] = e;
       await _dayBox.put(e.date.toIso8601String(), e);
       changed = true;

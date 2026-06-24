@@ -25,8 +25,14 @@ class BootstrapService {
     required String fallbackBoatId,
   }) async {
     final userRef = _db.collection('users').doc(uid);
-    final userSnap = await userRef.get(const GetOptions(source: Source.server))
-        .timeout(const Duration(seconds: 10));
+    late DocumentSnapshot<Map<String, dynamic>> userSnap;
+    try {
+      userSnap = await userRef
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      userSnap = await userRef.get(const GetOptions(source: Source.cache));
+    }
 
     if (userSnap.exists) {
       // Profile already exists — trust the stored boatId.
@@ -47,9 +53,14 @@ class BootstrapService {
     });
 
     final boatRef = _db.collection('boats').doc(boatId);
-    final boatSnap = await boatRef
-        .get(const GetOptions(source: Source.server))
-        .timeout(const Duration(seconds: 10));
+    late DocumentSnapshot<Map<String, dynamic>> boatSnap;
+    try {
+      boatSnap = await boatRef
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      boatSnap = await boatRef.get(const GetOptions(source: Source.cache));
+    }
 
     if (boatSnap.exists) {
       // Boat already exists (e.g. created by another device). Join as member.
@@ -75,9 +86,14 @@ class BootstrapService {
     required String uid,
   }) async {
     final boatRef = _db.collection('boats').doc(boatId);
-    final boatSnap = await boatRef
-        .get(const GetOptions(source: Source.server))
-        .timeout(const Duration(seconds: 10));
+    late DocumentSnapshot<Map<String, dynamic>> boatSnap;
+    try {
+      boatSnap = await boatRef
+          .get(const GetOptions(source: Source.server))
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      boatSnap = await boatRef.get(const GetOptions(source: Source.cache));
+    }
 
     if (!boatSnap.exists) {
       // Boat doc missing — recreate defensively.
