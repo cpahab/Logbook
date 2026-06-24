@@ -574,7 +574,7 @@ pw.Widget _buildTrackMap(Uint8List imageBytes, pw.Font bold, pw.Font regular) {
       ),
       pw.SizedBox(height: 3),
       pw.Text(
-        '© OpenStreetMap  ·  © OpenSeaMap',
+        '© MapTiler  ·  © OpenStreetMap contributors',
         style: pw.TextStyle(font: regular, fontSize: 6, color: _rule),
       ),
     ],
@@ -666,21 +666,15 @@ Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
   final canvasW = (tx1 - tx0 + 1) * 256.0;
   final canvasH = (ty1 - ty0 + 1) * 256.0;
 
-  // Fetch OSM base + OpenSeaMap overlay in parallel
+  // Fetch MapTiler tiles (same style as the daily map screen)
   final coords = [
     for (int tx = tx0; tx <= tx1; tx++)
       for (int ty = ty0; ty <= ty1; ty++) (tx, ty),
   ];
 
-  const osmUrl  = kBaseTileUrl;
-  const seamUrl = 'https://tiles.openseamap.org/seamark';
-
-  final results = await Future.wait([
-    for (final (tx, ty) in coords) _fetchTile(zoom, tx, ty, osmUrl),
-    for (final (tx, ty) in coords) _fetchTile(zoom, tx, ty, seamUrl),
+  final tileImages = await Future.wait([
+    for (final (tx, ty) in coords) _fetchTile(zoom, tx, ty, kBaseTileUrl),
   ]);
-  final osmImages  = results.sublist(0, coords.length);
-  final seamImages = results.sublist(coords.length);
 
   final recorder = ui.PictureRecorder();
   final canvas   = ui.Canvas(recorder);
@@ -691,23 +685,10 @@ Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
     ui.Paint()..color = const ui.Color(0xFFD8E8F0),
   );
 
-  // Draw OSM tiles
+  // Draw MapTiler tiles
   for (int i = 0; i < coords.length; i++) {
     final (tx, ty) = coords[i];
-    final img = osmImages[i];
-    if (img != null) {
-      canvas.drawImage(
-        img,
-        ui.Offset((tx - tx0) * 256.0, (ty - ty0) * 256.0),
-        ui.Paint(),
-      );
-    }
-  }
-
-  // Draw OpenSeaMap overlay tiles
-  for (int i = 0; i < coords.length; i++) {
-    final (tx, ty) = coords[i];
-    final img = seamImages[i];
+    final img = tileImages[i];
     if (img != null) {
       canvas.drawImage(
         img,
