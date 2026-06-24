@@ -1843,12 +1843,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         .toList();
 
     final trackPolylines = <Polyline>[];
+    final trackColor = _satelliteView ? cs.secondaryFixed : cs.primary;
     for (final seg in display.segments) {
       if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
         trackPolylines.add(Polyline(
           points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
           strokeWidth: 4,
-          color: cs.primary,
+          color: trackColor,
+          borderStrokeWidth: _satelliteView ? 1.5 : 0,
+          borderColor: Colors.black.withValues(alpha: 0.45),
         ));
       } else if ((seg.kind == SegmentKind.stopEntry ||
                   seg.kind == SegmentKind.stopExit) &&
@@ -1856,7 +1859,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         trackPolylines.add(Polyline(
           points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
           strokeWidth: 2.5,
-          color: cs.primary.withValues(alpha: 0.40),
+          color: trackColor.withValues(alpha: 0.50),
+          borderStrokeWidth: _satelliteView ? 1.0 : 0,
+          borderColor: Colors.black.withValues(alpha: 0.35),
         ));
       }
       // teleportBreak: no polyline drawn — gap is the visual signal
@@ -3077,12 +3082,15 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
         .toList();
 
     final fsTrackPolylines = <Polyline>[];
+    final fsTrackColor = _satelliteView ? cs.secondaryFixed : cs.primary;
     for (final seg in display.segments) {
       if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
         fsTrackPolylines.add(Polyline(
           points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
           strokeWidth: 4,
-          color: cs.primary,
+          color: fsTrackColor,
+          borderStrokeWidth: _satelliteView ? 1.5 : 0,
+          borderColor: Colors.black.withValues(alpha: 0.45),
         ));
       } else if ((seg.kind == SegmentKind.stopEntry ||
                   seg.kind == SegmentKind.stopExit) &&
@@ -3090,7 +3098,9 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
         fsTrackPolylines.add(Polyline(
           points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
           strokeWidth: 2.5,
-          color: cs.primary.withValues(alpha: 0.40),
+          color: fsTrackColor.withValues(alpha: 0.50),
+          borderStrokeWidth: _satelliteView ? 1.0 : 0,
+          borderColor: Colors.black.withValues(alpha: 0.35),
         ));
       }
     }
