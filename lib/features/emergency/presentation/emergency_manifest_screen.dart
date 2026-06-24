@@ -535,26 +535,31 @@ class _AddContactDialogState extends State<_AddContactDialog> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return AlertDialog(
+      backgroundColor: cs.surface,
+      surfaceTintColor: Colors.transparent,
       title: Text('Notfallkontakt hinzufügen',
-          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600)),
+          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _nameCtrl,
-            decoration: const InputDecoration(labelText: 'Name'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _roleCtrl,
-            decoration: const InputDecoration(labelText: 'Rolle (z.B. Partner, Arzt)'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Rolle (z.B. Partner, Arzt)', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
-            decoration: const InputDecoration(labelText: 'Telefonnummer'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Telefonnummer', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             keyboardType: TextInputType.phone,
           ),
         ],
@@ -620,26 +625,31 @@ class _EditContactDialogState extends State<_EditContactDialog> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return AlertDialog(
+      backgroundColor: cs.surface,
+      surfaceTintColor: Colors.transparent,
       title: Text('Kontakt bearbeiten',
-          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600)),
+          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _nameCtrl,
-            decoration: const InputDecoration(labelText: 'Name'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _roleCtrl,
-            decoration: const InputDecoration(labelText: 'Role (e.g. Spouse, Doctor)'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Role (e.g. Spouse, Doctor)', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
-            decoration: const InputDecoration(labelText: 'Phone number'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Phone number', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             keyboardType: TextInputType.phone,
           ),
         ],
@@ -1152,21 +1162,25 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return AlertDialog(
+      backgroundColor: cs.surface,
+      surfaceTintColor: Colors.transparent,
       title: Text('Add Frequency',
-          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600)),
+          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _labelCtrl,
-            decoration: const InputDecoration(labelText: 'Channel'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Channel', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _descCtrl,
-            decoration: const InputDecoration(labelText: 'Description'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textInputAction: TextInputAction.done,
           ),
         ],
@@ -1228,21 +1242,25 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return AlertDialog(
+      backgroundColor: cs.surface,
+      surfaceTintColor: Colors.transparent,
       title: Text('Frequenz bearbeiten',
-          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600)),
+          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _labelCtrl,
-            decoration: const InputDecoration(labelText: 'Channel'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Channel', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _descCtrl,
-            decoration: const InputDecoration(labelText: 'Description'),
+            style: TextStyle(color: cs.onSurface),
+            decoration: InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textInputAction: TextInputAction.done,
           ),
         ],
