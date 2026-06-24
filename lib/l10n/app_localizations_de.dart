@@ -950,4 +950,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsJoinedLogbook(String name) {
     return 'Mit \"$name\" verbunden.';
   }
+
+  @override
+  String get offlineBanner => 'Offline — Änderungen lokal gespeichert';
 }
