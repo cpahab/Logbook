@@ -64,6 +64,10 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
         builder: (context, state) => const TracksScreen(),
       ),
       GoRoute(
+        path: '/tracks/fullscreen',
+        builder: tracksFullScreenRouteBuilder,
+      ),
+      GoRoute(
         path: '/emergency',
         builder: (context, state) => const EmergencyManifestScreen(),
       ),

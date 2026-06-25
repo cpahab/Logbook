@@ -91,8 +91,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        elevation: 0,
         scrolledUnderElevation: 0,
         leading: BackButton(color: cs.primary),
       ),
