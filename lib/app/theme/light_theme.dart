@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'theme_extensions.dart';
+
 // Light theme
 const _primary            = Color(0xFF002444); // Deep Navy
 const _primaryContainer   = Color(0xFF1A3A5C);
-const _gold               = Color(0xFFFFE088); // Captain's Gold  (secondaryContainer)
 const _seafoam            = Color(0xFFB7C8DE); // Seafoam accent  (tertiaryFixedDim)
 
 TextTheme _buildTextTheme() {
@@ -91,24 +92,18 @@ final ThemeData lightTheme = ThemeData(
     surfaceTintColor: Colors.transparent,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
   ),
-  appBarTheme: AppBarTheme(
-    backgroundColor: _primary,
-    foregroundColor: const Color(0xFFFFFFFF),
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Color(0xFFFAF9FA), // surface
+    foregroundColor: Color(0xFF002444), // primary (Deep Navy)
     elevation: 0,
-    scrolledUnderElevation: 0,
-    centerTitle: false,
-    // headline-sm with +3px letter-spacing per design spec
-    titleTextStyle: GoogleFonts.newsreader(
-      color: _gold,
-      fontSize: 18,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 3,
-    ),
-    iconTheme:        const IconThemeData(color: Color(0xFFFFFFFF)),
-    actionsIconTheme: const IconThemeData(color: Color(0xFFFFFFFF)),
+    scrolledUnderElevation: 1,
+    shadowColor: Colors.black12,
+    centerTitle: true, // top-level tabs and sub-screens alike — consistent centring
+    iconTheme:        IconThemeData(color: Color(0xFF002444)),
+    actionsIconTheme: IconThemeData(color: Color(0xFF002444)),
   ),
   cardTheme: const CardThemeData(
-    elevation: 0,
+    elevation: 1,
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -159,4 +154,17 @@ final ThemeData lightTheme = ThemeData(
       ),
     ),
   ),
+  extensions: const [
+    LogbookTimelineColors(
+      crewAccent:      Color(0xFF725C10), // cs.secondary — Captain's Gold
+      dividerColor:    Color(0x4DC3C6CF), // cs.outlineVariant @ 30 %
+      cardShadowColor: Color(0x0A000000), // black @ 4 %
+    ),
+    LogbookEmergencyColors(
+      criticalColor:      Color(0xFFBA1A1A), // cs.error
+      criticalBgColor:    Color(0xFFFFDAD6), // cs.errorContainer
+      criticalMutedColor: Color(0x33BA1A1A), // cs.error @ 20 %
+      cardShadowColor:    Color(0x0A000000), // black @ 4 %
+    ),
+  ],
 );

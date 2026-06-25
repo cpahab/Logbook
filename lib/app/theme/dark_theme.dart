@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'theme_extensions.dart';
+
 // Dark theme
 const _darkNavy = Color(0xFF0D1E33); // Very dark background
 const _lightBlue = Color(0xFF7DB3F0); // Primary (light)
-const _gold = Color(0xFFFFE088); // Captain's Gold
 const _cyan = Color(0xFF4CC9D4); // Secondary (cyan)
 
 TextTheme _buildDarkTextTheme() {
@@ -91,20 +92,15 @@ final ThemeData darkTheme = ThemeData(
     surfaceTintColor: Colors.transparent,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
   ),
-  appBarTheme: AppBarTheme(
-    backgroundColor: _darkNavy,
-    foregroundColor: _lightBlue,
+  appBarTheme: const AppBarTheme(
+    backgroundColor: Color(0xFF0D1E33), // surface (Dark Navy)
+    foregroundColor: Color(0xFF7DB3F0), // primary (Light Blue)
     elevation: 0,
-    scrolledUnderElevation: 0,
-    centerTitle: false,
-    titleTextStyle: GoogleFonts.newsreader(
-      color: _gold,
-      fontSize: 18,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 3,
-    ),
-    iconTheme: const IconThemeData(color: _lightBlue),
-    actionsIconTheme: const IconThemeData(color: _lightBlue),
+    scrolledUnderElevation: 1,
+    shadowColor: Colors.black12,
+    centerTitle: true, // top-level tabs and sub-screens alike — consistent centring
+    iconTheme:        IconThemeData(color: Color(0xFF7DB3F0)),
+    actionsIconTheme: IconThemeData(color: Color(0xFF7DB3F0)),
   ),
   cardTheme: const CardThemeData(
     elevation: 2,
@@ -157,4 +153,17 @@ final ThemeData darkTheme = ThemeData(
       ),
     ),
   ),
+  extensions: const [
+    LogbookTimelineColors(
+      crewAccent:      Color(0xFF4CC9D4), // cs.secondary — Cyan
+      dividerColor:    Color(0x4D49454E), // cs.outlineVariant @ 30 %
+      cardShadowColor: Color(0x0DFFFFFF), // white @ 5 %
+    ),
+    LogbookEmergencyColors(
+      criticalColor:      Color(0xFFFFB4AB), // cs.error (dark)
+      criticalBgColor:    Color(0xFF93000A), // cs.errorContainer (dark)
+      criticalMutedColor: Color(0x33FFB4AB), // cs.error @ 20 %
+      cardShadowColor:    Color(0x0DFFFFFF), // white @ 5 %
+    ),
+  ],
 );
