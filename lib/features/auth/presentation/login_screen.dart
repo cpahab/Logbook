@@ -69,7 +69,8 @@ class _LoginScreenState extends State<LoginScreen> {
       await auth.signInWithGoogle();
     } on FirebaseAuthException catch (e) {
       _showError(_localizedError(e));
-    } catch (_) {
+    } catch (e) {
+      debugPrint('sign-in error: $e');
       _showError(genericError);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -84,7 +85,8 @@ class _LoginScreenState extends State<LoginScreen> {
       await auth.signInWithApple();
     } on FirebaseAuthException catch (e) {
       _showError(_localizedError(e));
-    } catch (_) {
+    } catch (e) {
+      debugPrint('sign-in error: $e');
       _showError(genericError);
     } finally {
       if (mounted) setState(() => _loading = false);

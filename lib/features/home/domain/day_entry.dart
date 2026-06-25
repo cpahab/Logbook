@@ -5,6 +5,9 @@ import 'crew_member.dart';
 
 part 'day_entry.g.dart';
 
+// MIGRATION INVARIANT: Never change an existing @HiveField index or typeId.
+// Retired indices must stay as tombstone comments so they are never reused.
+// New fields must get the next unused index and be nullable so old objects deserialise safely.
 @HiveType(typeId: 11)
 class DayEntry extends HiveObject {
   @HiveField(0)
@@ -40,13 +43,10 @@ class DayEntry extends HiveObject {
   @HiveField(10)
   double maxSpeedKnots;
 
-  // @HiveField(11) participants — retired, do not reuse index
-  // @HiveField(12) controlled  — retired, do not reuse index
-
-  @HiveField(13)
-  List<String> participantsList;
-
-  // @HiveField(14) checkedItems — retired, do not reuse index
+  // @HiveField(11) participants      — retired, do not reuse index
+  // @HiveField(12) controlled        — retired, do not reuse index
+  // @HiveField(13) participantsList  — retired, do not reuse index
+  // @HiveField(14) checkedItems      — retired, do not reuse index
 
   @HiveField(15)
   String? notes;
@@ -85,7 +85,6 @@ class DayEntry extends HiveObject {
     this.movingDurationSeconds = 0,
     this.avgSpeedKnots = 0.0,
     this.maxSpeedKnots = 0.0,
-    List<String>? participantsList,
     this.notes,
     this.oilLevel,
     this.fuelLevel,
@@ -93,8 +92,7 @@ class DayEntry extends HiveObject {
     this.freeText,
     this.keelDown,
     List<String>? photos,
-  })  : participantsList = participantsList ?? <String>[],
-        crew = crew ?? <CrewMember>[],
+  })  : crew = crew ?? <CrewMember>[],
         photos = photos ?? <String>[];
 
   // Convenience getters
