@@ -2,11 +2,19 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // Mirrors the Firestore isMember() check: user must be in the
+    // logbooks/{logbookId}/members/{uid} sub-collection.
+    function isMember(logbookId) {
+      return request.auth != null
+          && firestore.exists(
+               /databases/(default)/documents/logbooks/$(logbookId)/members/$(request.auth.uid));
+    }
+
     // All logbook files (GPS tracks + photos) live under logbooks/{logbookId}/.
-    // Membership is enforced by Firestore rules; Storage rules guard
-    // against unauthenticated access only.
+    // Only logbook members may read or write — prevents any authenticated user
+    // who guesses a logbookId from accessing files they don't belong to.
     match /logbooks/{logbookId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isMember(logbookId);
     }
   }
 }

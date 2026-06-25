@@ -67,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
 
-  void _refreshLogbooks() async {
+  Future<void> _refreshLogbooks() async {
     final user = context.read<AuthService>().currentUser;
     if (user == null || !mounted) return;
     setState(() => _loadingLogbooks = true);
@@ -75,7 +75,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final boats = await LogbookService().listLogbooks(user.uid);
       if (mounted) setState(() { _logbooks = boats; _loadingLogbooks = false; });
     } catch (_) {
-      if (mounted) setState(() => _loadingLogbooks = false);
+      if (!mounted) return;
+      setState(() => _loadingLogbooks = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.authErrorGeneric)),
+      );
     }
   }
 
@@ -699,12 +703,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.primary,
-        iconTheme: IconThemeData(color: cs.primary),
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        shadowColor: Colors.black12,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/'),
@@ -716,11 +714,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         showFab: false,
         onSelect: (tab) {
           if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.push('/tracks');
-          if (tab == NavTab.safety) context.push('/emergency');
+          if (tab == NavTab.map) context.go('/tracks');
+          if (tab == NavTab.safety) context.go('/emergency');
         },
       ),
-      body: SingleChildScrollView(
+      body: RefreshIndicator(
+        onRefresh: _refreshLogbooks,
+        child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -771,6 +772,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           ],
         ),
+      ),
       ),
     );
   }
@@ -2112,24 +2114,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           },
                         );
                         if (confirmed != true || !mounted) return;
+
+                        // Block deletion when offline — Firestore cleanup would
+                        // fail silently and the Auth account would still be deleted.
+                        final connResults = await Connectivity().checkConnectivity();
+                        if (!mounted) return;
+                        if (connResults.every((r) => r == ConnectivityResult.none)) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.authErrorNetworkFailed)),
+                          );
+                          return;
+                        }
+
                         setState(() => _syncing = true);
                         // Capture refs before any await.
                         final repo = context.read<HomeRepository>();
                         final emergencyRepo = context.read<EmergencyRepository>();
                         final themeProvider = context.read<ThemeProvider>();
                         final authService = context.read<AuthService>();
+                        final uid = user.uid;
+
+                        // 1. Delete all Firestore data. Abort if any cleanup fails —
+                        //    do NOT delete the Auth account and leave orphaned data.
                         try {
-                          final uid = user.uid;
-                          // 1. Delete all Firestore data for this user.
                           await LogbookService().deleteUserAndAllLogbooks(uid);
-                          // 2. Wipe all local caches.
-                          await repo.clearLocalData();
-                          await emergencyRepo.clearLocalData();
-                          await themeProvider.clearVesselSettings();
-                          themeProvider.resetInitialSync();
-                          // 3. Delete the Firebase Auth account.
-                          // Router redirect to /auth/login happens automatically via
-                          // authService.notifyListeners() inside deleteAccount().
+                        } catch (_) {
+                          if (!mounted) return;
+                          setState(() => _syncing = false);
+                          await showDialog<void>(
+                            context: context,
+                            builder: (ctx) {
+                              final dcs = Theme.of(ctx).colorScheme;
+                              return AlertDialog(
+                                backgroundColor: dcs.surface,
+                                surfaceTintColor: Colors.transparent,
+                                icon: Icon(Icons.cloud_off_rounded,
+                                    color: dcs.error),
+                                title: Text(
+                                  l10n.authDeleteCleanupFailedTitle,
+                                  style: GoogleFonts.newsreader(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: dcs.onSurface,
+                                  ),
+                                ),
+                                content: Text(
+                                  l10n.authDeleteCleanupFailedBody,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    height: 1.5,
+                                    color: dcs.onSurfaceVariant,
+                                  ),
+                                ),
+                                actions: [
+                                  FilledButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: Text(l10n.done),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                          return;
+                        }
+
+                        // 2. Wipe all local caches.
+                        await repo.clearLocalData();
+                        await emergencyRepo.clearLocalData();
+                        await themeProvider.clearVesselSettings();
+                        themeProvider.resetInitialSync();
+
+                        // 3. Delete the Firebase Auth account only if Firestore
+                        //    cleanup succeeded. Router redirect to /auth/login
+                        //    happens automatically via authService.notifyListeners().
+                        try {
                           await authService.deleteAccount();
                         } on FirebaseAuthException catch (e) {
                           if (!mounted) return;
