@@ -217,13 +217,46 @@ Pass criteria:
 
 ### 10. Run unit tests (on Mac, not device)
 
-Execute before or after device testing to confirm the sentinel logic:
+Execute before or after device testing to confirm the sentinel logic.
+
+**Run all tests in the project:**
+
+```
+flutter test
+```
+
+**Run only the sentinel/PDF tests:**
 
 ```
 flutter test test/sail_state_utils_test.dart
 ```
 
-Expected: **20 tests passed**
+**Run with full per-test output:**
+
+```
+flutter test --reporter expanded
+```
+
+Expected output: **21 tests passed** (1 placeholder + 20 sentinel/PDF tests)
+
+#### What `flutter test` does vs `flutter build` / `flutter run`
+
+- `flutter test` — compiles only the Dart code and runs it on your Mac in a
+  headless Dart VM. No simulator, no device, no Firebase, no network needed.
+  Takes about 2–5 seconds for this suite.
+- `flutter build` — compiles the full app for a target platform (Android/iOS).
+  Takes minutes.
+- `flutter run` — builds and deploys to a connected device or simulator.
+
+The tests never touch Firebase, Hive, or the network. They are pure Dart
+function calls with known inputs checked against expected outputs.
+
+#### When to run them
+
+Run `flutter test` before every commit that touches sentinel or PDF parsing
+logic. If you later add a new sail state or a new vessel-status key, add a test
+case alongside the code change — `flutter test` tells you immediately whether
+the logic is correct, before touching a device.
 
 ---
 
