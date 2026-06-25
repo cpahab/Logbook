@@ -17,12 +17,6 @@ class CrewRosterScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.primary,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        shadowColor: Colors.black12,
-        centerTitle: true,
         automaticallyImplyLeading: false,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: cs.primary),
@@ -102,9 +96,9 @@ class _RosterListTile extends StatelessWidget {
 
   const _RosterListTile({required this.member, required this.repo});
 
-  String _subtitle() {
+  String _subtitle(BuildContext context) {
     final parts = <String>[];
-    if (member.bloodType != null) parts.add('BG ${member.bloodType}');
+    if (member.bloodType != null) parts.add('${context.l10n.crewBloodGroupPrefix} ${member.bloodType}');
     if (member.allergies != null) parts.add(member.allergies!);
     if (member.conditions != null) parts.add(member.conditions!);
     return parts.join(' · ');
@@ -154,7 +148,7 @@ class _RosterListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final sub = _subtitle();
+    final sub = _subtitle(context);
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
