@@ -35,7 +35,9 @@ import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/constants/map_config.dart';
+import '../../../app/theme/theme_extensions.dart';
 
 
 class DayDetailScreen extends StatefulWidget {
@@ -69,6 +71,29 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   static String _crewNoteDisplay(String note, String crewLabel) {
     if (note.startsWith('crew:')) return '$crewLabel: ${note.substring(5)}';
     return note; // legacy format already begins with 'Besatzung: '
+  }
+
+  // Parses a vessel-status sentinel note (`vs:oil=75,fuel=60`, `vs:keel=down`)
+  // and returns a localised display string. Legacy notes (no `vs:` prefix) are
+  // returned verbatim so old Firestore documents continue to display correctly.
+  static String _vesselStatusDisplay(String note, AppLocalizations l10n) {
+    if (!note.startsWith('vs:')) return note;
+    final parts = <String>[];
+    for (final kv in note.substring(3).split(',')) {
+      final idx = kv.indexOf('=');
+      if (idx < 0) continue;
+      final key = kv.substring(0, idx);
+      final val = kv.substring(idx + 1);
+      switch (key) {
+        case 'oil':
+          parts.add('${l10n.vesselOilLabel}: $val%');
+        case 'fuel':
+          parts.add('${l10n.vesselFuelLabel}: $val%');
+        case 'keel':
+          parts.add('${l10n.entryDialogKeelLabel}: ${val == 'down' ? l10n.vesselKeelDown : l10n.vesselKeelUp}');
+      }
+    }
+    return parts.join(' · ');
   }
 
   final MapController _mapController = MapController();
@@ -126,11 +151,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.primary,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        shadowColor: Colors.black12,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: cs.primary),
           onPressed: () => context.go('/'),
@@ -265,6 +285,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Free Text ─────────────────────────────────────────────────────
   Widget _buildFreeText(DayEntry entry, ColorScheme cs) {
+    final tl = Theme.of(context).extension<LogbookTimelineColors>()!;
     final hasText = entry.freeText?.isNotEmpty ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,11 +308,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               decoration: BoxDecoration(
                 color: cs.surfaceContainerLowest,
                 border: Border.all(
-                    color: cs.outlineVariant.withValues(alpha: 0.3)),
+                    color: tl.dividerColor),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: tl.cardShadowColor,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -338,6 +359,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Daily Reflection ──────────────────────────────────────────────
   Widget _buildReflection(DayEntry entry, ColorScheme cs) {
+    final tl = Theme.of(context).extension<LogbookTimelineColors>()!;
     final hasNotes = entry.notes?.isNotEmpty ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,11 +382,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               decoration: BoxDecoration(
                 color: cs.surfaceContainerLowest,
                 border: Border.all(
-                    color: cs.outlineVariant.withValues(alpha: 0.3)),
+                    color: tl.dividerColor),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                    color: tl.cardShadowColor,
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -397,6 +419,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Crew List ─────────────────────────────────────────────────────
   Widget _buildCrewList(DayEntry entry, ColorScheme cs) {
+    final tl = Theme.of(context).extension<LogbookTimelineColors>()!;
     final displayCrew =
         _crewEditing ? (_pendingCrew ?? <CrewMember>[]) : entry.crew;
 
@@ -472,11 +495,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             decoration: BoxDecoration(
               color: cs.surfaceContainerLowest,
               border: Border.all(
-                  color: cs.outlineVariant.withValues(alpha: 0.3)),
+                  color: tl.dividerColor),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: tl.cardShadowColor,
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -513,7 +536,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                           ),
                           if (!isLast)
                             Divider(
-                              color: cs.outlineVariant.withValues(alpha: 0.3),
+                              color: tl.dividerColor,
                               height: 16,
                             ),
                         ],
@@ -539,7 +562,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                             if (!isLast)
                               Divider(
                                 color:
-                                    cs.outlineVariant.withValues(alpha: 0.3),
+                                    tl.dividerColor,
                                 height: 16,
                               ),
                           ],
@@ -703,13 +726,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   // ── Route & Map ───────────────────────────────────────────────────
   Widget _buildRouteMap(
       DayEntry entry, DailyTrack? track, DailyStats? stats, ColorScheme cs) {
+    final tl = Theme.of(context).extension<LogbookTimelineColors>()!;
     final hasTrack = track != null && track.points.isNotEmpty;
     final fromH = entry.fromHarbor?.isNotEmpty ?? false;
     final toH = entry.toHarbor?.isNotEmpty ?? false;
     final routeLabel = (fromH || toH)
         ? [if (fromH) entry.fromHarbor!, if (toH) entry.toHarbor!].join(' → ')
         : null;
-    final div = BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3));
+    final div = BorderSide(color: tl.dividerColor);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -730,11 +754,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             decoration: BoxDecoration(
               color: cs.surfaceContainerLowest,
               border: Border.all(
-                  color: cs.outlineVariant.withValues(alpha: 0.3)),
+                  color: tl.dividerColor),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
+                  color: tl.cardShadowColor,
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -911,7 +935,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   Widget _buildStatsGrid(DailyStats stats, ColorScheme cs) {
-    final div = BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3));
+    final tl = Theme.of(context).extension<LogbookTimelineColors>()!;
+    final div = BorderSide(color: tl.dividerColor);
 
     return Container(
       decoration: BoxDecoration(border: Border(top: div)),
@@ -1098,6 +1123,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   Widget _buildLogEntryCard(DayEntry entry, TimelineEntry t, int index,
       int total, TrackPoint? trackedPoint, ColorScheme cs) {
+    final tl = Theme.of(context).extension<LogbookTimelineColors>()!;
     final timeStr =
         '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
 
@@ -1122,11 +1148,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
         border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: 0.3)),
+            color: tl.dividerColor),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: tl.cardShadowColor,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -1206,7 +1232,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               Text(
                 isCrewEntry
                     ? _crewNoteDisplay(t.vesselStatusNote!, context.l10n.dataCrewNote)
-                    : t.vesselStatusNote!,
+                    : _vesselStatusDisplay(t.vesselStatusNote!, context.l10n),
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   color: cs.onSurfaceVariant,
@@ -1644,7 +1670,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                           Text(
                             entry.keelDown == null
                                 ? '—'
-                                : (entry.keelDown! ? 'UNTEN' : 'OBEN'),
+                                : (entry.keelDown! ? context.l10n.vesselKeelDown.toUpperCase() : context.l10n.vesselKeelUp.toUpperCase()),
                             style: GoogleFonts.newsreader(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -1714,7 +1740,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              isFuel ? context.l10n.vesselEmptyLabel.toUpperCase() : 'MIN',
+              context.l10n.vesselEmptyLabel.toUpperCase(),
               style: GoogleFonts.inter(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
@@ -1878,7 +1904,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         height: 20,
         alignment: Alignment.center,
         child: Tooltip(
-          richMessage: TextSpan(text: _buildEntryTooltip(t)),
+          richMessage: TextSpan(text: _buildEntryTooltip(t, context.l10n)),
           preferBelow: false,
           triggerMode: TooltipTriggerMode.tap,
           showDuration: const Duration(seconds: 5),
@@ -2306,7 +2332,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     Text(context.l10n.entryDialogKeelLabel, style: TextStyle(color: cs.onSurface)),
                     const Spacer(),
                     Text(
-                      keelVal == null ? '—' : (keelVal! ? 'Unten' : 'Oben'),
+                      keelVal == null ? '—' : (keelVal! ? context.l10n.vesselKeelDown : context.l10n.vesselKeelUp),
                       style: TextStyle(
                           fontWeight: FontWeight.w600, color: cs.onSurface),
                     ),
@@ -2347,13 +2373,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (oilVal != oldOil || fuelVal != oldFuel) {
         entry.timeline.add(TimelineEntry(
           time: entryTime,
-          vesselStatusNote: 'Motoröl: $oilVal% · Kraftstoff: $fuelVal%',
+          vesselStatusNote: 'vs:oil=$oilVal,fuel=$fuelVal',
         ));
       }
       if (keelVal != oldKeel && keelVal != null) {
         entry.timeline.add(TimelineEntry(
           time: entryTime,
-          vesselStatusNote: keelVal! ? 'Kiel: Unten' : 'Kiel: Oben',
+          vesselStatusNote: keelVal! ? 'vs:keel=down' : 'vs:keel=up',
         ));
       }
       entry.timeline.sort((a, b) => a.time.compareTo(b.time));
@@ -3116,7 +3142,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       return Marker(
         point: LatLng(p.lat, p.lon), width: 20, height: 20, alignment: Alignment.center,
         child: Tooltip(
-          richMessage: TextSpan(text: _buildEntryTooltip(t)),
+          richMessage: TextSpan(text: _buildEntryTooltip(t, context.l10n)),
           preferBelow: false,
           triggerMode: TooltipTriggerMode.tap,
           showDuration: const Duration(seconds: 5),
@@ -3327,29 +3353,34 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
 // ── Shared map helpers ────────────────────────────────────────────────────────
 
 /// Full timeline entry as a multi-line tooltip string.
-String _buildEntryTooltip(TimelineEntry t) {
+String _buildEntryTooltip(TimelineEntry t, AppLocalizations l10n) {
   final buf = StringBuffer(DateFormat('HH:mm').format(t.time.toLocal()));
 
   final nav = <String>[];
-  if (t.course != null) nav.add('Kurs: ${t.course!.toStringAsFixed(0)}°');
-  if (t.speed  != null) nav.add('Fahrt: ${t.speed!.toStringAsFixed(1)} kn');
+  // Course/speed: strip unit annotation from dialog label (e.g. "Course (°)" → "Course")
+  final courseLabel = l10n.entryDialogCourseLabel.split(' ').first;
+  final speedLabel  = l10n.entryDialogSpeedLabel.split(' ').first;
+  if (t.course != null) nav.add('$courseLabel: ${t.course!.toStringAsFixed(0)}°');
+  if (t.speed  != null) nav.add('$speedLabel: ${t.speed!.toStringAsFixed(1)} kn');
   if (nav.isNotEmpty) buf.write('\n${nav.join(' · ')}');
 
   final cond = <String>[];
-  if (t.wind?.isNotEmpty    == true) cond.add('Wind: ${t.wind!}');
-  if (t.sea?.isNotEmpty     == true) cond.add('See: ${t.sea!}');
-  if (t.weather?.isNotEmpty == true) cond.add('Wetter: ${t.weather!}');
+  if (t.wind?.isNotEmpty    == true) cond.add('${l10n.entryDialogWindLabel.split(' ').first}: ${t.wind!}');
+  if (t.sea?.isNotEmpty     == true) cond.add('${l10n.entryDialogSeaLabel}: ${t.sea!}');
+  if (t.weather?.isNotEmpty == true) cond.add('${l10n.entryDialogWeatherLabel}: ${t.weather!}');
   if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
 
   final sails = <String>[];
   if (t.grossState?.isNotEmpty == true) sails.add('Gross: ${t.grossState}');
   if (t.fockState?.isNotEmpty  == true) sails.add('Fock: ${t.fockState}');
-  if (t.motorOn  != null) sails.add('Motor: ${t.motorOn!  ? 'An'    : 'Aus'}');
-  if (t.keelDown != null) sails.add('Kiel: ${t.keelDown! ? 'Unten' : 'Oben'}');
+  if (t.motorOn  != null) sails.add('${l10n.entryDialogMotorLabel}: ${t.motorOn! ? l10n.on : l10n.off}');
+  if (t.keelDown != null) sails.add('${l10n.entryDialogKeelLabel}: ${t.keelDown! ? l10n.vesselKeelDown : l10n.vesselKeelUp}');
   if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
 
   if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');
-  if (t.vesselStatusNote?.isNotEmpty == true) buf.write('\n${t.vesselStatusNote}');
+  if (t.vesselStatusNote?.isNotEmpty == true) {
+    buf.write('\n${_DayDetailScreenState._vesselStatusDisplay(t.vesselStatusNote!, l10n)}');
+  }
 
   return buf.toString();
 }

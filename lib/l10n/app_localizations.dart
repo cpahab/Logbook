@@ -203,14 +203,8 @@ abstract class AppLocalizations {
   /// No description provided for @statSailingDays.
   ///
   /// In de, this message translates to:
-  /// **'Segeltage'**
-  String get statSailingDays;
-
-  /// No description provided for @statDays.
-  ///
-  /// In de, this message translates to:
   /// **'Tage'**
-  String get statDays;
+  String get statSailingDays;
 
   /// No description provided for @statDistance.
   ///
@@ -1460,6 +1454,18 @@ abstract class AppLocalizations {
   /// **'Leer'**
   String get vesselEmptyLabel;
 
+  /// No description provided for @vesselKeelDown.
+  ///
+  /// In de, this message translates to:
+  /// **'Unten'**
+  String get vesselKeelDown;
+
+  /// No description provided for @vesselKeelUp.
+  ///
+  /// In de, this message translates to:
+  /// **'Oben'**
+  String get vesselKeelUp;
+
   /// No description provided for @gpsConsentTitle.
   ///
   /// In de, this message translates to:
@@ -1754,6 +1760,18 @@ abstract class AppLocalizations {
   /// **'Konto löschen? Diese Aktion kann nicht rückgängig gemacht werden.'**
   String get authDeleteAccountConfirm;
 
+  /// No description provided for @authDeleteCleanupFailedTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Datenlöschung unvollständig'**
+  String get authDeleteCleanupFailedTitle;
+
+  /// No description provided for @authDeleteCleanupFailedBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Einige deiner Daten konnten nicht vom Server gelöscht werden. Dein Konto wurde nicht gelöscht.\n\nBitte versuche es erneut mit einer stabilen Internetverbindung. Falls das Problem weiterhin besteht, kontaktiere den Support – wir löschen deine Daten dann manuell.'**
+  String get authDeleteCleanupFailedBody;
+
   /// No description provided for @settingsLogbooksSection.
   ///
   /// In de, this message translates to:
@@ -1885,6 +1903,444 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Offline — Änderungen lokal gespeichert'**
   String get offlineBanner;
+
+  /// No description provided for @done.
+  ///
+  /// In de, this message translates to:
+  /// **'Fertig'**
+  String get done;
+
+  /// No description provided for @save.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichern'**
+  String get save;
+
+  /// No description provided for @emergencyGuideTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Notsignal-Handbuch'**
+  String get emergencyGuideTitle;
+
+  /// No description provided for @emergencyGuideIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Kurzreferenz für internationale Seenotzeichen. Gewährleiste Sichtbarkeit und klare Kommunikation im Notfall.'**
+  String get emergencyGuideIntro;
+
+  /// No description provided for @emergencyVisualSignals.
+  ///
+  /// In de, this message translates to:
+  /// **'Sichtsignale'**
+  String get emergencyVisualSignals;
+
+  /// No description provided for @emergencySoundSignals.
+  ///
+  /// In de, this message translates to:
+  /// **'Schallsignale'**
+  String get emergencySoundSignals;
+
+  /// No description provided for @emergencyElectronicSignals.
+  ///
+  /// In de, this message translates to:
+  /// **'Elektronische Signale'**
+  String get emergencyElectronicSignals;
+
+  /// No description provided for @emergencyPyrotechnicTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Pyrotechnische Signale'**
+  String get emergencyPyrotechnicTitle;
+
+  /// No description provided for @emergencyPyrotechnicSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Rote Leuchtrakete (Handfeuer/Fallschirm) oder orangefarbener Rauch.'**
+  String get emergencyPyrotechnicSubtitle;
+
+  /// No description provided for @emergencyHighVisBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'SICHTBAR'**
+  String get emergencyHighVisBadge;
+
+  /// No description provided for @emergencyHandSignalTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Handsignale'**
+  String get emergencyHandSignalTitle;
+
+  /// No description provided for @emergencyHandSignalSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Langsam und wiederholt die seitwärts ausgestreckten Arme heben und senken.'**
+  String get emergencyHandSignalSubtitle;
+
+  /// No description provided for @emergencyFlagSignalTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Flaggensignale'**
+  String get emergencyFlagSignalTitle;
+
+  /// No description provided for @emergencyFlagSignalSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Quadratische Flagge mit einer Kugel darüber oder darunter oder Flaggen November über Charlie.'**
+  String get emergencyFlagSignalSubtitle;
+
+  /// No description provided for @emergencyGunTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Schuss/Sprengmittel'**
+  String get emergencyGunTitle;
+
+  /// No description provided for @emergencyGunSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'In Abständen von etwa einer Minute abgefeuert.'**
+  String get emergencyGunSubtitle;
+
+  /// No description provided for @emergencyFoghornTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Nebelhorn'**
+  String get emergencyFoghornTitle;
+
+  /// No description provided for @emergencyFoghornSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Anhaltender Ton mit einem beliebigen Nebelsignalgerät.'**
+  String get emergencyFoghornSubtitle;
+
+  /// No description provided for @emergencyEpirbTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'EPIRB / PLB'**
+  String get emergencyEpirbTitle;
+
+  /// No description provided for @emergencyEpirbSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Notpositionsanzeige-Funkbake. Sendet 406 MHz an COSPAS-SARSAT-Satelliten.'**
+  String get emergencyEpirbSubtitle;
+
+  /// No description provided for @emergencySartTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'SART'**
+  String get emergencySartTitle;
+
+  /// No description provided for @emergencySartSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Such- und Rettungstransponder. Erscheint als Linie aus 12 Punkten auf X-Band-Radargeräten.'**
+  String get emergencySartSubtitle;
+
+  /// No description provided for @emergencyRadioProtocolLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Funkprotokoll (MAYDAY)'**
+  String get emergencyRadioProtocolLabel;
+
+  /// No description provided for @emergencyRadioProtocolTip.
+  ///
+  /// In de, this message translates to:
+  /// **'UKW-Kanal 16. \"MAYDAY\" dreimal nennen, dann Schiffsname und Position.'**
+  String get emergencyRadioProtocolTip;
+
+  /// No description provided for @emergencyOpenChecklist.
+  ///
+  /// In de, this message translates to:
+  /// **'FUNK-CHECKLISTE ÖFFNEN'**
+  String get emergencyOpenChecklist;
+
+  /// No description provided for @emergencyManifestTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Notfallmanifest'**
+  String get emergencyManifestTitle;
+
+  /// No description provided for @maydayScreenTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Funkprotokoll'**
+  String get maydayScreenTitle;
+
+  /// No description provided for @maydayStateThreeTimes.
+  ///
+  /// In de, this message translates to:
+  /// **'(dreimal sagen)'**
+  String get maydayStateThreeTimes;
+
+  /// No description provided for @emergencyDistressGuideSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Visuelle, akustische & elektronische Signale'**
+  String get emergencyDistressGuideSubtitle;
+
+  /// No description provided for @emergencyUrgentProcedure.
+  ///
+  /// In de, this message translates to:
+  /// **'NOTFALLVERFAHREN'**
+  String get emergencyUrgentProcedure;
+
+  /// No description provided for @emergencyFollowScript.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Skript exakt befolgen. Auf UKW-Kanal 16 senden.'**
+  String get emergencyFollowScript;
+
+  /// No description provided for @emergencyDscAction1.
+  ///
+  /// In de, this message translates to:
+  /// **'Rote Abdeckung über dem Notrufknopf öffnen'**
+  String get emergencyDscAction1;
+
+  /// No description provided for @emergencyDscAction2.
+  ///
+  /// In de, this message translates to:
+  /// **'Drücken und halten (3–5 Sekunden, je nach Funkgerät) bis der Alarm gesendet ist'**
+  String get emergencyDscAction2;
+
+  /// No description provided for @emergencyDscWait.
+  ///
+  /// In de, this message translates to:
+  /// **'Warten bis das Funkgerät automatisch auf Kanal 16 wechselt'**
+  String get emergencyDscWait;
+
+  /// No description provided for @emergencyIdentifyVessel.
+  ///
+  /// In de, this message translates to:
+  /// **'Fahrzeug eindeutig identifizieren:'**
+  String get emergencyIdentifyVessel;
+
+  /// No description provided for @emergencyPositionUnavailable.
+  ///
+  /// In de, this message translates to:
+  /// **'Position nicht verfügbar'**
+  String get emergencyPositionUnavailable;
+
+  /// No description provided for @emergencyAcquiringGps.
+  ///
+  /// In de, this message translates to:
+  /// **'GPS wird ermittelt…'**
+  String get emergencyAcquiringGps;
+
+  /// No description provided for @emergencyCriticalTips.
+  ///
+  /// In de, this message translates to:
+  /// **'Wichtige Protokollhinweise'**
+  String get emergencyCriticalTips;
+
+  /// No description provided for @emergencyTipCalmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Ruhe bewahren:'**
+  String get emergencyTipCalmTitle;
+
+  /// No description provided for @emergencyTipCalmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Tief durchatmen vor dem Sprechen. Panik macht die Übertragung unverständlich.'**
+  String get emergencyTipCalmBody;
+
+  /// No description provided for @emergencyTipEnunciateTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Deutlich sprechen:'**
+  String get emergencyTipEnunciateTitle;
+
+  /// No description provided for @emergencyTipEnunciateBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Langsam und deutlich sprechen. Zahlen einzeln aussprechen (z.B. \"Fünf-Null\" für 50).'**
+  String get emergencyTipEnunciateBody;
+
+  /// No description provided for @emergencyTipListenTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Zuhören:'**
+  String get emergencyTipListenTitle;
+
+  /// No description provided for @emergencyTipListenBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Sendetaste loslassen und 15 Sekunden auf Bestätigung warten, bevor wiederholt wird.'**
+  String get emergencyTipListenBody;
+
+  /// No description provided for @emergencyManifestEditDoneTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Fertig'**
+  String get emergencyManifestEditDoneTooltip;
+
+  /// No description provided for @emergencyManifestEditPageTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Seite bearbeiten'**
+  String get emergencyManifestEditPageTooltip;
+
+  /// No description provided for @emergencyProtocolBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'PROTOKOLL'**
+  String get emergencyProtocolBadge;
+
+  /// No description provided for @emergencyRadioProtocolShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Funkprotokoll\n(MAYDAY)'**
+  String get emergencyRadioProtocolShort;
+
+  /// No description provided for @emergencyVisualAidBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'SICHTHILFE'**
+  String get emergencyVisualAidBadge;
+
+  /// No description provided for @emergencyGuideShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Notsignal-\nHandbuch'**
+  String get emergencyGuideShort;
+
+  /// No description provided for @emergencyContactsSection.
+  ///
+  /// In de, this message translates to:
+  /// **'NOTFALLKONTAKTE'**
+  String get emergencyContactsSection;
+
+  /// No description provided for @emergencyVesselSafetySection.
+  ///
+  /// In de, this message translates to:
+  /// **'SICHERHEITSINFO SCHIFF'**
+  String get emergencyVesselSafetySection;
+
+  /// No description provided for @emergencyFrequenciesSection.
+  ///
+  /// In de, this message translates to:
+  /// **'KÜSTENWACHE-FREQUENZEN'**
+  String get emergencyFrequenciesSection;
+
+  /// No description provided for @emergencyCrewMedicalSection.
+  ///
+  /// In de, this message translates to:
+  /// **'MEDIZINISCHE BESATZUNGSÜBERSICHT'**
+  String get emergencyCrewMedicalSection;
+
+  /// No description provided for @emergencyCrewAutoNote.
+  ///
+  /// In de, this message translates to:
+  /// **'Automatisch aus dem aktuellsten Logeintrag übernommen.\nBesatzungsdaten werden im Logbuch gepflegt.'**
+  String get emergencyCrewAutoNote;
+
+  /// No description provided for @emergencyNoContacts.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Notfallkontakte hinzugefügt.'**
+  String get emergencyNoContacts;
+
+  /// No description provided for @emergencyAddContactTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Notfallkontakt hinzufügen'**
+  String get emergencyAddContactTitle;
+
+  /// No description provided for @emergencyContactNameLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Name'**
+  String get emergencyContactNameLabel;
+
+  /// No description provided for @emergencyContactRoleHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Rolle (z.B. Partner, Arzt)'**
+  String get emergencyContactRoleHint;
+
+  /// No description provided for @emergencyContactPhoneLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Telefonnummer'**
+  String get emergencyContactPhoneLabel;
+
+  /// No description provided for @emergencyEditContactTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Kontakt bearbeiten'**
+  String get emergencyEditContactTitle;
+
+  /// No description provided for @emergencyNoSafetyData.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Sicherheitsdaten erfasst.'**
+  String get emergencyNoSafetyData;
+
+  /// No description provided for @emergencyBloodBadge.
+  ///
+  /// In de, this message translates to:
+  /// **'BLUT'**
+  String get emergencyBloodBadge;
+
+  /// No description provided for @emergencyNoFrequencies.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Frequenzen konfiguriert.'**
+  String get emergencyNoFrequencies;
+
+  /// No description provided for @emergencyAddFrequencyTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Frequenz hinzufügen'**
+  String get emergencyAddFrequencyTitle;
+
+  /// No description provided for @emergencyEditFrequencyTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Frequenz bearbeiten'**
+  String get emergencyEditFrequencyTitle;
+
+  /// No description provided for @emergencyFrequencyChannelLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Kanal'**
+  String get emergencyFrequencyChannelLabel;
+
+  /// No description provided for @emergencyFrequencyDescLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Beschreibung'**
+  String get emergencyFrequencyDescLabel;
+
+  /// No description provided for @emergencyNoCrewHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Besatzungsmitglieder für heute hinzugefügt.'**
+  String get emergencyNoCrewHint;
+
+  /// No description provided for @emergencyOpenDayEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Tageseintrag öffnen'**
+  String get emergencyOpenDayEntry;
+
+  /// No description provided for @emergencyLifeRaft.
+  ///
+  /// In de, this message translates to:
+  /// **'Rettungsinsel'**
+  String get emergencyLifeRaft;
+
+  /// No description provided for @emergencyEpirbLocation.
+  ///
+  /// In de, this message translates to:
+  /// **'EPIRB-Standort'**
+  String get emergencyEpirbLocation;
+
+  /// No description provided for @emergencyFireSuppression.
+  ///
+  /// In de, this message translates to:
+  /// **'Feuerlöschanlage'**
+  String get emergencyFireSuppression;
 }
 
 class _AppLocalizationsDelegate

@@ -60,10 +60,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get off => 'Off';
 
   @override
-  String get statSailingDays => 'Sailing Days';
-
-  @override
-  String get statDays => 'Days';
+  String get statSailingDays => 'Days';
 
   @override
   String get statDistance => 'Distance';
@@ -725,6 +722,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get vesselEmptyLabel => 'Empty';
 
   @override
+  String get vesselKeelDown => 'Down';
+
+  @override
+  String get vesselKeelUp => 'Up';
+
+  @override
   String get gpsConsentTitle => 'GPS for Emergencies';
 
   @override
@@ -881,6 +884,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Delete account? This cannot be undone.';
 
   @override
+  String get authDeleteCleanupFailedTitle => 'Data cleanup incomplete';
+
+  @override
+  String get authDeleteCleanupFailedBody =>
+      'Some of your data could not be removed from the server. Your account has not been deleted.\n\nPlease try again with a stable internet connection. If the problem persists, contact support and we will manually remove your data.';
+
+  @override
   String get settingsLogbooksSection => 'Logbooks';
 
   @override
@@ -955,4 +965,240 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offlineBanner => 'Offline — changes saved locally';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get emergencyGuideTitle => 'Distress Signal Guide';
+
+  @override
+  String get emergencyGuideIntro =>
+      'Quick reference guide for International Maritime Distress Signals. Ensure visibility and clear communication during an emergency.';
+
+  @override
+  String get emergencyVisualSignals => 'Visual Signals';
+
+  @override
+  String get emergencySoundSignals => 'Sound Signals';
+
+  @override
+  String get emergencyElectronicSignals => 'Electronic Signals';
+
+  @override
+  String get emergencyPyrotechnicTitle => 'Pyrotechnic Signals';
+
+  @override
+  String get emergencyPyrotechnicSubtitle =>
+      'Red flare (handheld/parachute) or Orange smoke.';
+
+  @override
+  String get emergencyHighVisBadge => 'HIGH VIS';
+
+  @override
+  String get emergencyHandSignalTitle => 'Hand Signals';
+
+  @override
+  String get emergencyHandSignalSubtitle =>
+      'Slowly and repeatedly raising and lowering arms outstretched to each side.';
+
+  @override
+  String get emergencyFlagSignalTitle => 'Flag Signals';
+
+  @override
+  String get emergencyFlagSignalSubtitle =>
+      'Square flag having above or below it a ball or anything resembling a ball, or flags November over Charlie.';
+
+  @override
+  String get emergencyGunTitle => 'Gun/Explosive';
+
+  @override
+  String get emergencyGunSubtitle => 'Fired at intervals of about a minute.';
+
+  @override
+  String get emergencyFoghornTitle => 'Foghorn';
+
+  @override
+  String get emergencyFoghornSubtitle =>
+      'Continuous sounding with any fog-signaling apparatus.';
+
+  @override
+  String get emergencyEpirbTitle => 'EPIRB / PLB';
+
+  @override
+  String get emergencyEpirbSubtitle =>
+      'Emergency Position Indicating Radio Beacon. Signals 406 MHz to COSPAS-SARSAT satellites.';
+
+  @override
+  String get emergencySartTitle => 'SART';
+
+  @override
+  String get emergencySartSubtitle =>
+      'Search and Rescue Transponder. Shows as a line of 12 dots on nearby X-band radars.';
+
+  @override
+  String get emergencyRadioProtocolLabel => 'Radio Protocol (MAYDAY)';
+
+  @override
+  String get emergencyRadioProtocolTip =>
+      'VHF Channel 16. State \"MAYDAY\" three times, followed by Vessel Name and Position.';
+
+  @override
+  String get emergencyOpenChecklist => 'OPEN RADIO CHECKLIST';
+
+  @override
+  String get emergencyManifestTitle => 'Emergency Manifest';
+
+  @override
+  String get maydayScreenTitle => 'Radio Protocol';
+
+  @override
+  String get maydayStateThreeTimes => '(say three times)';
+
+  @override
+  String get emergencyDistressGuideSubtitle =>
+      'Visual, sound & electronic signals';
+
+  @override
+  String get emergencyUrgentProcedure => 'URGENT PROCEDURE';
+
+  @override
+  String get emergencyFollowScript =>
+      'Follow this script exactly. Transmit on VHF Channel 16.';
+
+  @override
+  String get emergencyDscAction1 =>
+      'Lift the red flap over the distress button';
+
+  @override
+  String get emergencyDscAction2 =>
+      'Press and hold (3–5 seconds, varies by radio) until the alert is sent';
+
+  @override
+  String get emergencyDscWait =>
+      'Wait for the radio to switch automatically to Channel 16';
+
+  @override
+  String get emergencyIdentifyVessel => 'Identify your vessel clearly:';
+
+  @override
+  String get emergencyPositionUnavailable => 'Position unavailable';
+
+  @override
+  String get emergencyAcquiringGps => 'Acquiring GPS…';
+
+  @override
+  String get emergencyCriticalTips => 'Critical Protocol Tips';
+
+  @override
+  String get emergencyTipCalmTitle => 'Stay Calm:';
+
+  @override
+  String get emergencyTipCalmBody =>
+      'Take a deep breath before speaking. Panic makes your transmission unintelligible.';
+
+  @override
+  String get emergencyTipEnunciateTitle => 'Enunciate:';
+
+  @override
+  String get emergencyTipEnunciateBody =>
+      'Speak slowly and clearly. Pronounce numbers individually (e.g., \"Five-Zero\" for 50).';
+
+  @override
+  String get emergencyTipListenTitle => 'Listen:';
+
+  @override
+  String get emergencyTipListenBody =>
+      'Release the transmit button and wait 15 seconds for an acknowledgement before repeating.';
+
+  @override
+  String get emergencyManifestEditDoneTooltip => 'Done';
+
+  @override
+  String get emergencyManifestEditPageTooltip => 'Edit page';
+
+  @override
+  String get emergencyProtocolBadge => 'PROTOCOL';
+
+  @override
+  String get emergencyRadioProtocolShort => 'Radio Protocol\n(MAYDAY)';
+
+  @override
+  String get emergencyVisualAidBadge => 'VISUAL AID';
+
+  @override
+  String get emergencyGuideShort => 'Distress Signal\nGuide';
+
+  @override
+  String get emergencyContactsSection => 'EMERGENCY CONTACTS';
+
+  @override
+  String get emergencyVesselSafetySection => 'VESSEL SAFETY INFO';
+
+  @override
+  String get emergencyFrequenciesSection => 'COAST GUARD FREQUENCIES';
+
+  @override
+  String get emergencyCrewMedicalSection => 'CREW MEDICAL OVERVIEW';
+
+  @override
+  String get emergencyCrewAutoNote =>
+      'Automatically taken from the most recent log entry.\nCrew data is managed in the logbook.';
+
+  @override
+  String get emergencyNoContacts => 'No emergency contacts added.';
+
+  @override
+  String get emergencyAddContactTitle => 'Add emergency contact';
+
+  @override
+  String get emergencyContactNameLabel => 'Name';
+
+  @override
+  String get emergencyContactRoleHint => 'Role (e.g. Spouse, Doctor)';
+
+  @override
+  String get emergencyContactPhoneLabel => 'Phone number';
+
+  @override
+  String get emergencyEditContactTitle => 'Edit contact';
+
+  @override
+  String get emergencyNoSafetyData => 'No safety data recorded.';
+
+  @override
+  String get emergencyBloodBadge => 'BLOOD';
+
+  @override
+  String get emergencyNoFrequencies => 'No frequencies configured.';
+
+  @override
+  String get emergencyAddFrequencyTitle => 'Add Frequency';
+
+  @override
+  String get emergencyEditFrequencyTitle => 'Edit Frequency';
+
+  @override
+  String get emergencyFrequencyChannelLabel => 'Channel';
+
+  @override
+  String get emergencyFrequencyDescLabel => 'Description';
+
+  @override
+  String get emergencyNoCrewHint => 'No crew members added for today.';
+
+  @override
+  String get emergencyOpenDayEntry => 'Open day entry';
+
+  @override
+  String get emergencyLifeRaft => 'Life Raft';
+
+  @override
+  String get emergencyEpirbLocation => 'EPIRB Location';
+
+  @override
+  String get emergencyFireSuppression => 'Fire Suppression';
 }
