@@ -2391,6 +2391,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted || member == null) return;
     final fresh = repo.getEntry(day) ?? entry;
     fresh.crew.add(member);
+    if (fresh.timeline.isNotEmpty) {
+      final now = DateTime.now();
+      final ts = DateTime(widget.year, widget.month, widget.day, now.hour, now.minute);
+      fresh.timeline.add(TimelineEntry(
+          time: ts, vesselStatusNote: HomeRepository.buildCrewNote(fresh.crew)));
+      fresh.timeline.sort((a, b) => a.time.compareTo(b.time));
+    }
     repo.saveEntry(fresh);
   }
 
@@ -2427,12 +2434,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final day = DateTime(widget.year, widget.month, widget.day);
     final fresh = repo.getEntry(day) ?? entry;
 
-    final hadCrewLog = fresh.timeline
-        .any((t) => _isCrewNote(t.vesselStatusNote));
-
     fresh.crew = List<CrewMember>.from(_pendingCrew!);
 
-    if (hadCrewLog && fresh.crew.isNotEmpty) {
+    if (fresh.timeline.isNotEmpty && fresh.crew.isNotEmpty) {
       final now = DateTime.now();
       final ts = DateTime(
           widget.year, widget.month, widget.day, now.hour, now.minute);
