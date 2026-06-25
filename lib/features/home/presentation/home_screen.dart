@@ -508,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
             iconColor: cs.onPrimaryContainer,
             label: l10n.statSailingDays,
             value: '$daysAtSea',
-            unit: l10n.statDays,
+            unit: l10n.statSailingDays,
             cs: cs,
           ),
         ),
