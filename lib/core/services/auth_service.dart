@@ -112,6 +112,10 @@ class AuthService extends ChangeNotifier {
         return 'authErrorWeakPassword';
       case 'network-request-failed':
         return 'authErrorNetworkFailed';
+      case 'too-many-requests':
+        return 'authErrorTooManyRequests';
+      case 'user-disabled':
+        return 'authErrorUserDisabled';
       default:
         return 'authErrorGeneric';
     }
