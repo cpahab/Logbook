@@ -60,10 +60,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get off => 'Aus';
 
   @override
-  String get statSailingDays => 'Segeltage';
-
-  @override
-  String get statDays => 'Tage';
+  String get statSailingDays => 'Tage';
 
   @override
   String get statDistance => 'Distanz';
@@ -727,6 +724,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get vesselEmptyLabel => 'Leer';
 
   @override
+  String get vesselKeelDown => 'Unten';
+
+  @override
+  String get vesselKeelUp => 'Oben';
+
+  @override
   String get gpsConsentTitle => 'GPS für den Notfall';
 
   @override
@@ -886,6 +889,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Konto löschen? Diese Aktion kann nicht rückgängig gemacht werden.';
 
   @override
+  String get authDeleteCleanupFailedTitle => 'Datenlöschung unvollständig';
+
+  @override
+  String get authDeleteCleanupFailedBody =>
+      'Einige deiner Daten konnten nicht vom Server gelöscht werden. Dein Konto wurde nicht gelöscht.\n\nBitte versuche es erneut mit einer stabilen Internetverbindung. Falls das Problem weiterhin besteht, kontaktiere den Support – wir löschen deine Daten dann manuell.';
+
+  @override
   String get settingsLogbooksSection => 'Logbücher';
 
   @override
@@ -960,4 +970,242 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get offlineBanner => 'Offline — Änderungen lokal gespeichert';
+
+  @override
+  String get done => 'Fertig';
+
+  @override
+  String get save => 'Speichern';
+
+  @override
+  String get emergencyGuideTitle => 'Notsignal-Handbuch';
+
+  @override
+  String get emergencyGuideIntro =>
+      'Kurzreferenz für internationale Seenotzeichen. Gewährleiste Sichtbarkeit und klare Kommunikation im Notfall.';
+
+  @override
+  String get emergencyVisualSignals => 'Sichtsignale';
+
+  @override
+  String get emergencySoundSignals => 'Schallsignale';
+
+  @override
+  String get emergencyElectronicSignals => 'Elektronische Signale';
+
+  @override
+  String get emergencyPyrotechnicTitle => 'Pyrotechnische Signale';
+
+  @override
+  String get emergencyPyrotechnicSubtitle =>
+      'Rote Leuchtrakete (Handfeuer/Fallschirm) oder orangefarbener Rauch.';
+
+  @override
+  String get emergencyHighVisBadge => 'SICHTBAR';
+
+  @override
+  String get emergencyHandSignalTitle => 'Handsignale';
+
+  @override
+  String get emergencyHandSignalSubtitle =>
+      'Langsam und wiederholt die seitwärts ausgestreckten Arme heben und senken.';
+
+  @override
+  String get emergencyFlagSignalTitle => 'Flaggensignale';
+
+  @override
+  String get emergencyFlagSignalSubtitle =>
+      'Quadratische Flagge mit einer Kugel darüber oder darunter oder Flaggen November über Charlie.';
+
+  @override
+  String get emergencyGunTitle => 'Schuss/Sprengmittel';
+
+  @override
+  String get emergencyGunSubtitle =>
+      'In Abständen von etwa einer Minute abgefeuert.';
+
+  @override
+  String get emergencyFoghornTitle => 'Nebelhorn';
+
+  @override
+  String get emergencyFoghornSubtitle =>
+      'Anhaltender Ton mit einem beliebigen Nebelsignalgerät.';
+
+  @override
+  String get emergencyEpirbTitle => 'EPIRB / PLB';
+
+  @override
+  String get emergencyEpirbSubtitle =>
+      'Notpositionsanzeige-Funkbake. Sendet 406 MHz an COSPAS-SARSAT-Satelliten.';
+
+  @override
+  String get emergencySartTitle => 'SART';
+
+  @override
+  String get emergencySartSubtitle =>
+      'Such- und Rettungstransponder. Erscheint als Linie aus 12 Punkten auf X-Band-Radargeräten.';
+
+  @override
+  String get emergencyRadioProtocolLabel => 'Funkprotokoll (MAYDAY)';
+
+  @override
+  String get emergencyRadioProtocolTip =>
+      'UKW-Kanal 16. \"MAYDAY\" dreimal nennen, dann Schiffsname und Position.';
+
+  @override
+  String get emergencyOpenChecklist => 'FUNK-CHECKLISTE ÖFFNEN';
+
+  @override
+  String get emergencyManifestTitle => 'Notfallmanifest';
+
+  @override
+  String get maydayScreenTitle => 'Funkprotokoll';
+
+  @override
+  String get maydayStateThreeTimes => '(dreimal sagen)';
+
+  @override
+  String get emergencyDistressGuideSubtitle =>
+      'Visuelle, akustische & elektronische Signale';
+
+  @override
+  String get emergencyUrgentProcedure => 'NOTFALLVERFAHREN';
+
+  @override
+  String get emergencyFollowScript =>
+      'Dieses Skript exakt befolgen. Auf UKW-Kanal 16 senden.';
+
+  @override
+  String get emergencyDscAction1 =>
+      'Rote Abdeckung über dem Notrufknopf öffnen';
+
+  @override
+  String get emergencyDscAction2 =>
+      'Drücken und halten (3–5 Sekunden, je nach Funkgerät) bis der Alarm gesendet ist';
+
+  @override
+  String get emergencyDscWait =>
+      'Warten bis das Funkgerät automatisch auf Kanal 16 wechselt';
+
+  @override
+  String get emergencyIdentifyVessel => 'Fahrzeug eindeutig identifizieren:';
+
+  @override
+  String get emergencyPositionUnavailable => 'Position nicht verfügbar';
+
+  @override
+  String get emergencyAcquiringGps => 'GPS wird ermittelt…';
+
+  @override
+  String get emergencyCriticalTips => 'Wichtige Protokollhinweise';
+
+  @override
+  String get emergencyTipCalmTitle => 'Ruhe bewahren:';
+
+  @override
+  String get emergencyTipCalmBody =>
+      'Tief durchatmen vor dem Sprechen. Panik macht die Übertragung unverständlich.';
+
+  @override
+  String get emergencyTipEnunciateTitle => 'Deutlich sprechen:';
+
+  @override
+  String get emergencyTipEnunciateBody =>
+      'Langsam und deutlich sprechen. Zahlen einzeln aussprechen (z.B. \"Fünf-Null\" für 50).';
+
+  @override
+  String get emergencyTipListenTitle => 'Zuhören:';
+
+  @override
+  String get emergencyTipListenBody =>
+      'Sendetaste loslassen und 15 Sekunden auf Bestätigung warten, bevor wiederholt wird.';
+
+  @override
+  String get emergencyManifestEditDoneTooltip => 'Fertig';
+
+  @override
+  String get emergencyManifestEditPageTooltip => 'Seite bearbeiten';
+
+  @override
+  String get emergencyProtocolBadge => 'PROTOKOLL';
+
+  @override
+  String get emergencyRadioProtocolShort => 'Funkprotokoll\n(MAYDAY)';
+
+  @override
+  String get emergencyVisualAidBadge => 'SICHTHILFE';
+
+  @override
+  String get emergencyGuideShort => 'Notsignal-\nHandbuch';
+
+  @override
+  String get emergencyContactsSection => 'NOTFALLKONTAKTE';
+
+  @override
+  String get emergencyVesselSafetySection => 'SICHERHEITSINFO SCHIFF';
+
+  @override
+  String get emergencyFrequenciesSection => 'KÜSTENWACHE-FREQUENZEN';
+
+  @override
+  String get emergencyCrewMedicalSection => 'MEDIZINISCHE BESATZUNGSÜBERSICHT';
+
+  @override
+  String get emergencyCrewAutoNote =>
+      'Automatisch aus dem aktuellsten Logeintrag übernommen.\nBesatzungsdaten werden im Logbuch gepflegt.';
+
+  @override
+  String get emergencyNoContacts => 'Keine Notfallkontakte hinzugefügt.';
+
+  @override
+  String get emergencyAddContactTitle => 'Notfallkontakt hinzufügen';
+
+  @override
+  String get emergencyContactNameLabel => 'Name';
+
+  @override
+  String get emergencyContactRoleHint => 'Rolle (z.B. Partner, Arzt)';
+
+  @override
+  String get emergencyContactPhoneLabel => 'Telefonnummer';
+
+  @override
+  String get emergencyEditContactTitle => 'Kontakt bearbeiten';
+
+  @override
+  String get emergencyNoSafetyData => 'Noch keine Sicherheitsdaten erfasst.';
+
+  @override
+  String get emergencyBloodBadge => 'BLUT';
+
+  @override
+  String get emergencyNoFrequencies => 'Keine Frequenzen konfiguriert.';
+
+  @override
+  String get emergencyAddFrequencyTitle => 'Frequenz hinzufügen';
+
+  @override
+  String get emergencyEditFrequencyTitle => 'Frequenz bearbeiten';
+
+  @override
+  String get emergencyFrequencyChannelLabel => 'Kanal';
+
+  @override
+  String get emergencyFrequencyDescLabel => 'Beschreibung';
+
+  @override
+  String get emergencyNoCrewHint =>
+      'Keine Besatzungsmitglieder für heute hinzugefügt.';
+
+  @override
+  String get emergencyOpenDayEntry => 'Tageseintrag öffnen';
+
+  @override
+  String get emergencyLifeRaft => 'Rettungsinsel';
+
+  @override
+  String get emergencyEpirbLocation => 'EPIRB-Standort';
+
+  @override
+  String get emergencyFireSuppression => 'Feuerlöschanlage';
 }

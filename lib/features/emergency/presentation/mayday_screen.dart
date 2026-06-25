@@ -7,6 +7,9 @@ import 'package:provider/provider.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
+import '../../../app/theme/theme_extensions.dart';
+import '../../../core/services/gps_consent_service.dart';
+import '../../../l10n/l10n_extension.dart';
 
 class MaydayScreen extends StatefulWidget {
   const MaydayScreen({super.key});
@@ -34,15 +37,16 @@ class _MaydayScreenState extends State<MaydayScreen>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
     _pulseAnim = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut);
-    _acquirePosition();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await GpsConsentService.requestIfNeeded(context);
+      if (mounted) _acquirePosition();
+    });
   }
 
   Future<void> _acquirePosition() async {
     try {
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
+      final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.deniedForever ||
           permission == LocationPermission.denied) {
         if (mounted) setState(() => _positionError = true);
@@ -83,6 +87,7 @@ class _MaydayScreenState extends State<MaydayScreen>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     final vessel = context.watch<ThemeProvider>();
     final today = DateTime.now();
     final homeRepo = context.read<HomeRepository>();
@@ -96,17 +101,16 @@ class _MaydayScreenState extends State<MaydayScreen>
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.error,
+        backgroundColor: em.criticalColor,
         foregroundColor: cs.onError,
         elevation: 2,
         scrolledUnderElevation: 0,
-        centerTitle: true,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: cs.onError),
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Emergency Manifest',
+          context.l10n.maydayScreenTitle,
           style: GoogleFonts.newsreader(
             color: cs.onError,
             fontSize: 18,
@@ -119,8 +123,8 @@ class _MaydayScreenState extends State<MaydayScreen>
         showFab: false,
         onSelect: (tab) {
           if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.push('/tracks');
-          if (tab == NavTab.settings) context.push('/settings');
+          if (tab == NavTab.map) context.go('/tracks');
+          if (tab == NavTab.settings) context.go('/settings');
         },
       ),
       body: ListView(
@@ -185,6 +189,8 @@ class _DistressSignalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final l10n = context.l10n;
     return GestureDetector(
       onTap: () => context.push('/emergency/distress'),
       child: Container(
@@ -195,7 +201,7 @@ class _DistressSignalCard extends StatelessWidget {
           border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: em.cardShadowColor,
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -218,7 +224,7 @@ class _DistressSignalCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Distress Signal Guide',
+                    l10n.emergencyGuideTitle,
                     style: GoogleFonts.newsreader(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -226,7 +232,7 @@ class _DistressSignalCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Visual, sound & electronic signals',
+                    l10n.emergencyDistressGuideSubtitle,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: cs.onSurfaceVariant,
@@ -249,39 +255,42 @@ class _ProcedureHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(Icons.emergency, color: cs.error, size: 20),
+            Icon(Icons.emergency, color: em.criticalColor, size: 20),
             const SizedBox(width: 8),
             Text(
-              'URGENT PROCEDURE',
+              l10n.emergencyUrgentProcedure,
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 2.4,
-                color: cs.error,
+                color: em.criticalColor,
               ),
             ),
           ],
         ),
         const SizedBox(height: 4),
         Text(
-          'Radio Protocol (MAYDAY)',
+          // "MAYDAY" in the title is the international distress call — kept as protocol reference
+          l10n.emergencyRadioProtocolLabel,
           style: GoogleFonts.newsreader(
             fontSize: 36,
             fontWeight: FontWeight.w700,
-            color: cs.error,
+            color: em.criticalColor,
             height: 1.1,
           ),
         ),
         const SizedBox(height: 6),
-        Divider(color: cs.error.withValues(alpha: 0.2), thickness: 2),
+        Divider(color: em.criticalMutedColor, thickness: 2),
         const SizedBox(height: 4),
         Text(
-          'Follow this script exactly. Transmit on VHF Channel 16.',
+          l10n.emergencyFollowScript,
           style: GoogleFonts.inter(
             fontSize: 14,
             fontStyle: FontStyle.italic,
@@ -304,6 +313,8 @@ class _StepDsc extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final l10n = context.l10n;
     final borderOpacity = 0.3 + 0.7 * (1 - pulseValue);
     final shadowBlur = 10 * (1 - pulseValue);
     return Container(
@@ -311,12 +322,12 @@ class _StepDsc extends StatelessWidget {
         color: cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: cs.error.withValues(alpha: borderOpacity),
+          color: em.criticalColor.withValues(alpha: borderOpacity),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: cs.error.withValues(alpha: 0.2 * (1 - pulseValue)),
+            color: em.criticalColor.withValues(alpha: 0.2 * (1 - pulseValue)),
             blurRadius: shadowBlur,
           ),
         ],
@@ -327,7 +338,7 @@ class _StepDsc extends StatelessWidget {
           children: [
             Positioned(
               left: 0, top: 0, bottom: 0,
-              child: Container(width: 6, color: cs.error),
+              child: Container(width: 6, color: em.criticalColor),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 16, 16, 16),
@@ -337,7 +348,7 @@ class _StepDsc extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: cs.error,
+                      color: em.criticalColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(Icons.crisis_alert, color: cs.onError, size: 22),
@@ -348,23 +359,24 @@ class _StepDsc extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
+                          // Maritime protocol step label — kept in English per SOLAS/IMO standard
                           'STEP 1: DSC DISTRESS ALERT',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 2,
-                            color: cs.error,
+                            color: em.criticalColor,
                           ),
                         ),
                         const SizedBox(height: 8),
                         _DscAction(
                           number: '1',
-                          text: 'Lift the red flap over the distress button',
+                          text: l10n.emergencyDscAction1,
                         ),
                         const SizedBox(height: 6),
                         _DscAction(
                           number: '2',
-                          text: 'Press and hold (3–5 seconds, varies by radio) until the alert is sent',
+                          text: l10n.emergencyDscAction2,
                         ),
                         const SizedBox(height: 10),
                         Container(
@@ -381,7 +393,7 @@ class _StepDsc extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Wait for the radio to switch automatically to Channel 16',
+                                  l10n.emergencyDscWait,
                                   style: GoogleFonts.inter(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -413,6 +425,7 @@ class _DscAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -420,7 +433,7 @@ class _DscAction extends StatelessWidget {
           width: 20,
           height: 20,
           decoration: BoxDecoration(
-            color: cs.error.withValues(alpha: 0.15),
+            color: em.criticalColor.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -429,7 +442,7 @@ class _DscAction extends StatelessWidget {
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: cs.error,
+                color: em.criticalColor,
               ),
             ),
           ),
@@ -458,6 +471,7 @@ class _StepSignal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     final borderOpacity = 0.3 + 0.7 * (1 - pulseValue);
     final shadowBlur = 10 * (1 - pulseValue);
     return Container(
@@ -465,12 +479,12 @@ class _StepSignal extends StatelessWidget {
         color: cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: cs.error.withValues(alpha: borderOpacity),
+          color: em.criticalColor.withValues(alpha: borderOpacity),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: cs.error.withValues(alpha: 0.2 * (1 - pulseValue)),
+            color: em.criticalColor.withValues(alpha: 0.2 * (1 - pulseValue)),
             blurRadius: shadowBlur,
           ),
         ],
@@ -481,7 +495,7 @@ class _StepSignal extends StatelessWidget {
           children: [
             Positioned(
               left: 0, top: 0, bottom: 0,
-              child: Container(width: 6, color: cs.error),
+              child: Container(width: 6, color: em.criticalColor),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 16, 16, 16),
@@ -490,7 +504,7 @@ class _StepSignal extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: cs.error,
+                      color: em.criticalColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(Icons.radio, color: cs.onError, size: 22),
@@ -501,12 +515,13 @@ class _StepSignal extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
+                          // Protocol step labels and radio script kept in English — international maritime standard (SOLAS/IMO)
                           'STEP 2: SIGNAL',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 2,
-                            color: cs.error,
+                            color: em.criticalColor,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -546,8 +561,10 @@ class _StepIdentification extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return _StepCard(
       step: 3,
+      // "IDENTIFICATION" is a protocol step label — kept in English per SOLAS/IMO standard
       label: 'IDENTIFICATION',
       icon: Icons.sailing,
       iconBg: cs.secondaryContainer,
@@ -557,7 +574,7 @@ class _StepIdentification extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Identify your vessel clearly:',
+            l10n.emergencyIdentifyVessel,
             style: GoogleFonts.inter(
               fontSize: 13,
               color: cs.onSurfaceVariant,
@@ -579,6 +596,15 @@ class _StepIdentification extends StatelessWidget {
                 const TextSpan(text: ' '),
                 _underlinedSpan(vesselName, cs),
               ],
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l10n.maydayStateThreeTimes,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 6),
@@ -651,19 +677,21 @@ class _StepPosition extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final l10n = context.l10n;
 
     final Widget positionWidget;
     if (positionError) {
       positionWidget = Row(
         children: [
-          Icon(Icons.gps_off, size: 16, color: cs.error),
+          Icon(Icons.gps_off, size: 16, color: em.criticalColor),
           const SizedBox(width: 8),
           Text(
-            'Position unavailable',
+            l10n.emergencyPositionUnavailable,
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: cs.error,
+              color: em.criticalColor,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -682,7 +710,7 @@ class _StepPosition extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Text(
-            'Acquiring GPS…',
+            l10n.emergencyAcquiringGps,
             style: GoogleFonts.inter(
               fontSize: 14,
               color: cs.onSurfaceVariant,
@@ -768,6 +796,7 @@ class _StepDistress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     final borderOpacity = 0.3 + 0.7 * (1 - pulseValue);
     final shadowBlur = 10 * (1 - pulseValue);
 
@@ -776,12 +805,12 @@ class _StepDistress extends StatelessWidget {
         color: cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: cs.error.withValues(alpha: borderOpacity),
+          color: em.criticalColor.withValues(alpha: borderOpacity),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: cs.error.withValues(alpha: 0.2 * (1 - pulseValue)),
+            color: em.criticalColor.withValues(alpha: 0.2 * (1 - pulseValue)),
             blurRadius: shadowBlur,
           ),
         ],
@@ -792,7 +821,7 @@ class _StepDistress extends StatelessWidget {
           children: [
             Positioned(
               left: 0, top: 0, bottom: 0,
-              child: Container(width: 6, color: cs.error),
+              child: Container(width: 6, color: em.criticalColor),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 16, 16, 16),
@@ -802,7 +831,7 @@ class _StepDistress extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: cs.error,
+                      color: em.criticalColor,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(Icons.local_fire_department, color: cs.onError, size: 22),
@@ -818,7 +847,7 @@ class _StepDistress extends StatelessWidget {
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 2,
-                            color: cs.error,
+                            color: em.criticalColor,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -842,7 +871,7 @@ class _StepDistress extends StatelessWidget {
                                 duration: const Duration(milliseconds: 200),
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: selected ? cs.error : cs.surfaceContainerHighest,
+                                  color: selected ? em.criticalColor : cs.surfaceContainerHighest,
                                   borderRadius: BorderRadius.circular(99),
                                 ),
                                 child: Text(
@@ -879,6 +908,7 @@ class _StepCrew extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return _StepCard(
       step: 6,
+      // IMO GMDSS protocol term — kept in English per SOLAS/IMO standard.
       label: 'CREW STATUS',
       icon: Icons.groups,
       iconBg: cs.secondaryContainer,
@@ -1073,6 +1103,7 @@ class _TipsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1091,7 +1122,7 @@ class _TipsSection extends StatelessWidget {
               Icon(Icons.tips_and_updates, color: cs.secondary, size: 22),
               const SizedBox(width: 8),
               Text(
-                'Critical Protocol Tips',
+                l10n.emergencyCriticalTips,
                 style: GoogleFonts.newsreader(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
@@ -1102,18 +1133,18 @@ class _TipsSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _Tip(
-            title: 'Stay Calm:',
-            body: 'Take a deep breath before speaking. Panic makes your transmission unintelligible.',
+            title: l10n.emergencyTipCalmTitle,
+            body: l10n.emergencyTipCalmBody,
           ),
           const SizedBox(height: 10),
           _Tip(
-            title: 'Enunciate:',
-            body: 'Speak slowly and clearly. Pronounce numbers individually (e.g., "Five-Zero" for 50).',
+            title: l10n.emergencyTipEnunciateTitle,
+            body: l10n.emergencyTipEnunciateBody,
           ),
           const SizedBox(height: 10),
           _Tip(
-            title: 'Listen:',
-            body: 'Release the transmit button and wait 15 seconds for an acknowledgement before repeating.',
+            title: l10n.emergencyTipListenTitle,
+            body: l10n.emergencyTipListenBody,
           ),
         ],
       ),
