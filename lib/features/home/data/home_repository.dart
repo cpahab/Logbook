@@ -46,13 +46,6 @@ class HomeRepository extends ChangeNotifier {
   List<DayEntry> get entries =>
       _entries.values.toList()..sort((a, b) => a.date.compareTo(b.date));
 
-  List<String> get lastParticipants {
-    for (final e in entries.reversed) {
-      if (e.participantsList.isNotEmpty) return List<String>.from(e.participantsList);
-    }
-    return [];
-  }
-
   ({int? oilLevel, int? fuelLevel, bool? keelDown}) get lastVesselStatus {
     int? oil;
     int? fuel;
@@ -312,7 +305,6 @@ class HomeRepository extends ChangeNotifier {
     final entry = DayEntry(
       date: normalized,
       timeline: [],
-      participantsList: lastParticipants,
       crew: lastCrew,
       oilLevel:  oil,
       fuelLevel: fuel,
@@ -434,16 +426,16 @@ class HomeRepository extends ChangeNotifier {
         e.vesselStatusNote?.startsWith('crew:') != true);
     if (!hasStatusLog) {
       final parts = <String>[];
-      if (d.oilLevel != null) parts.add('Motoröl: ${d.oilLevel}%');
-      if (d.fuelLevel != null) parts.add('Kraftstoff: ${d.fuelLevel}%');
+      if (d.oilLevel != null) parts.add('oil=${d.oilLevel}');
+      if (d.fuelLevel != null) parts.add('fuel=${d.fuelLevel}');
       if (parts.isNotEmpty) {
         d.timeline.add(TimelineEntry(
-            time: t, vesselStatusNote: parts.join(' · ')));
+            time: t, vesselStatusNote: 'vs:${parts.join(',')}'));
       }
       if (d.keelDown != null) {
         d.timeline.add(TimelineEntry(
             time: t,
-            vesselStatusNote: d.keelDown! ? 'Kiel: Unten' : 'Kiel: Oben'));
+            vesselStatusNote: d.keelDown! ? 'vs:keel=down' : 'vs:keel=up'));
       }
     }
 
@@ -523,7 +515,7 @@ class HomeRepository extends ChangeNotifier {
   /// (remote wins for the same date).  Also syncs GPX tracks.
   Future<void> forceSync() async {
     final fs = _firestore;
-    if (fs == null) throw Exception('Cloud-Sync nicht verfügbar.');
+    if (fs == null) throw Exception('Cloud sync unavailable.');
 
     // Push all local entries.
     for (final e in _entries.values) {

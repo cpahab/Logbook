@@ -22,6 +22,50 @@ import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../core/constants/map_config.dart';
 
+// Bearing (radians, clockwise from north) between two LatLng points.
+double _trackBearing(LatLng from, LatLng to) {
+  final lat1 = from.latitude * pi / 180;
+  final lat2 = to.latitude * pi / 180;
+  final dLon = (to.longitude - from.longitude) * pi / 180;
+  final y = sin(dLon) * cos(lat2);
+  final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
+  return atan2(y, x);
+}
+
+// Haversine distance in metres between two LatLng points.
+double _distanceM(LatLng a, LatLng b) {
+  const r = 6371000.0;
+  final lat1 = a.latitude * pi / 180;
+  final lat2 = b.latitude * pi / 180;
+  final dLat = (b.latitude - a.latitude) * pi / 180;
+  final dLon = (b.longitude - a.longitude) * pi / 180;
+  final s = sin(dLat / 2) * sin(dLat / 2) +
+      cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
+  return r * 2 * atan2(sqrt(s), sqrt(1 - s));
+}
+
+// Bearing for the departure arrow: bearing from start toward the point that
+// is ≥ 500 m cumulative along track. Falls back to start→furthest for short tracks.
+double _departureBearing(List<LatLng> pts) {
+  if (pts.length < 2) return 0;
+  const targetM = 500.0;
+  double cum = 0;
+  for (int i = 1; i < pts.length; i++) {
+    cum += _distanceM(pts[i - 1], pts[i]);
+    if (cum >= targetM) return _trackBearing(pts[0], pts[i]);
+  }
+  double maxDist = 0;
+  int farIdx = 1;
+  for (int i = 1; i < pts.length; i++) {
+    final d = _distanceM(pts[0], pts[i]);
+    if (d > maxDist) {
+      maxDist = d;
+      farIdx = i;
+    }
+  }
+  return _trackBearing(pts[0], pts[farIdx]);
+}
+
 enum _FilterPreset { year1, month1, week1, custom }
 
 class TracksScreen extends StatefulWidget {
@@ -49,54 +93,6 @@ class _TracksScreenState extends State<TracksScreen> {
     const startHue = 200.0;     // begin at nautical blue
     final hue = (startHue + index * goldenAngle) % 360;
     return HSLColor.fromAHSL(1.0, hue, 0.75, 0.48).toColor();
-  }
-
-  // Bearing (radians, clockwise from north) between two LatLng points.
-  static double _trackBearing(LatLng from, LatLng to) {
-    final lat1 = from.latitude * pi / 180;
-    final lat2 = to.latitude * pi / 180;
-    final dLon = (to.longitude - from.longitude) * pi / 180;
-    final y = sin(dLon) * cos(lat2);
-    final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
-    return atan2(y, x);
-  }
-
-  // Haversine distance in metres between two LatLng points.
-  static double _distanceM(LatLng a, LatLng b) {
-    const r = 6371000.0;
-    final lat1 = a.latitude * pi / 180;
-    final lat2 = b.latitude * pi / 180;
-    final dLat = (b.latitude - a.latitude) * pi / 180;
-    final dLon = (b.longitude - a.longitude) * pi / 180;
-    final s = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
-    return r * 2 * atan2(sqrt(s), sqrt(1 - s));
-  }
-
-  // Bearing for the departure arrow: bearing from start toward the point that
-  // is ≥ 500 m cumulative along track. Cumulative path distance reflects where
-  // the boat actually went; the input track is already cleaned (stationary
-  // fixes removed) so GPS jitter at rest is not an issue.
-  // Falls back to the extent bearing (start → furthest point) for short tracks.
-  static double _departureBearing(List<LatLng> pts) {
-    if (pts.length < 2) return 0;
-    const targetM = 500.0;
-    double cum = 0;
-    for (int i = 1; i < pts.length; i++) {
-      cum += _distanceM(pts[i - 1], pts[i]);
-      if (cum >= targetM) return _trackBearing(pts[0], pts[i]);
-    }
-    // Track shorter than 500 m — aim at the furthest point from start.
-    double maxDist = 0;
-    int farIdx = 1;
-    for (int i = 1; i < pts.length; i++) {
-      final d = _distanceM(pts[0], pts[i]);
-      if (d > maxDist) {
-        maxDist = d;
-        farIdx = i;
-      }
-    }
-    return _trackBearing(pts[0], pts[farIdx]);
   }
 
   DateTimeRange? get _effectiveRange {
@@ -320,7 +316,6 @@ class _TracksScreenState extends State<TracksScreen> {
         elevation: 0,
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
-        centerTitle: true,
         automaticallyImplyLeading: false,
         title: Text(
           context.l10n.tracksTitle,
@@ -337,8 +332,8 @@ class _TracksScreenState extends State<TracksScreen> {
         showFab: false,
         onSelect: (tab) {
           if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.settings) context.push('/settings');
-          if (tab == NavTab.safety) context.push('/emergency');
+          if (tab == NavTab.settings) context.go('/settings');
+          if (tab == NavTab.safety) context.go('/emergency');
         },
       ),
       body: trackData.isEmpty
@@ -544,15 +539,13 @@ class _TracksScreenState extends State<TracksScreen> {
                 bgColor: cs.surfaceContainerLowest,
                 fgColor: cs.primary,
                 tooltip: context.l10n.tracksFullscreen,
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => _TracksMapFullScreen(
-                      displayed: displayed,
-                      initialBounds: initialBounds,
-                      initialSatellite: _satelliteView,
-                      selectedIndex: _selectedIndex,
-                    ),
+                onTap: () => context.push(
+                  '/tracks/fullscreen',
+                  extra: _TracksFullScreenArgs(
+                    displayed: displayed,
+                    initialBounds: initialBounds,
+                    initialSatellite: _satelliteView,
+                    selectedIndex: _selectedIndex,
                   ),
                 ),
               ),
@@ -617,7 +610,7 @@ class _TracksScreenState extends State<TracksScreen> {
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
           child: Row(
             children: [
-              Expanded(child: _statSummaryBox('${movingLegs.length}', context.l10n.statSailingDays, Icons.sailing, cs, unit: context.l10n.statDays)),
+              Expanded(child: _statSummaryBox('${movingLegs.length}', context.l10n.statSailingDays, Icons.sailing, cs, unit: context.l10n.statSailingDays)),
               const SizedBox(width: 10),
               Expanded(
                 child: _statSummaryBox(
@@ -984,6 +977,32 @@ class _DayTrackData {
 
 // ── Full-screen overview map ───────────────────────────────────────────────────
 
+class _TracksFullScreenArgs {
+  final List<_DayTrackData> displayed;
+  final LatLngBounds? initialBounds;
+  final bool initialSatellite;
+  final int? selectedIndex;
+
+  const _TracksFullScreenArgs({
+    required this.displayed,
+    required this.initialBounds,
+    required this.initialSatellite,
+    this.selectedIndex,
+  });
+}
+
+/// GoRoute builder registered at `/tracks/fullscreen`.
+/// Kept here so private types stay within this file.
+Widget tracksFullScreenRouteBuilder(BuildContext context, GoRouterState state) {
+  final args = state.extra! as _TracksFullScreenArgs;
+  return _TracksMapFullScreen(
+    displayed: args.displayed,
+    initialBounds: args.initialBounds,
+    initialSatellite: args.initialSatellite,
+    selectedIndex: args.selectedIndex,
+  );
+}
+
 class _TracksMapFullScreen extends StatefulWidget {
   final List<_DayTrackData> displayed;
   final LatLngBounds? initialBounds;
@@ -1015,40 +1034,6 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
   void dispose() {
     _mapController.dispose();
     super.dispose();
-  }
-
-  static double _trackBearing(LatLng from, LatLng to) {
-    final lat1 = from.latitude * pi / 180;
-    final lat2 = to.latitude   * pi / 180;
-    final dLon = (to.longitude - from.longitude) * pi / 180;
-    return atan2(sin(dLon) * cos(lat2),
-        cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon));
-  }
-
-  static double _distanceM(LatLng a, LatLng b) {
-    const r = 6371000.0;
-    final lat1 = a.latitude * pi / 180;
-    final lat2 = b.latitude * pi / 180;
-    final dLat = (b.latitude  - a.latitude)  * pi / 180;
-    final dLon = (b.longitude - a.longitude) * pi / 180;
-    final s = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
-    return r * 2 * atan2(sqrt(s), sqrt(1 - s));
-  }
-
-  static double _departureBearing(List<LatLng> pts) {
-    if (pts.length < 2) return 0;
-    double cum = 0;
-    for (int i = 1; i < pts.length; i++) {
-      cum += _distanceM(pts[i - 1], pts[i]);
-      if (cum >= 500) return _trackBearing(pts[0], pts[i]);
-    }
-    double maxD = 0; int farIdx = 1;
-    for (int i = 1; i < pts.length; i++) {
-      final d = _distanceM(pts[0], pts[i]);
-      if (d > maxD) { maxD = d; farIdx = i; }
-    }
-    return _trackBearing(pts[0], pts[farIdx]);
   }
 
   Widget _mapButton({
