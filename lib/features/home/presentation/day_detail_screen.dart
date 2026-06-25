@@ -31,6 +31,7 @@ import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
 import '../utils/gpx_exporter.dart';
 import '../utils/pdf_exporter.dart';
+import '../utils/sail_state_utils.dart';
 import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
 import '../../settings/domain/theme_provider.dart';
@@ -85,25 +86,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     _              => s, // legacy German text — display verbatim
   };
 
-  static String _vesselStatusDisplay(String note, AppLocalizations l10n) {
-    if (!note.startsWith('vs:')) return note;
-    final parts = <String>[];
-    for (final kv in note.substring(3).split(',')) {
-      final idx = kv.indexOf('=');
-      if (idx < 0) continue;
-      final key = kv.substring(0, idx);
-      final val = kv.substring(idx + 1);
-      switch (key) {
-        case 'oil':
-          parts.add('${l10n.vesselOilLabel}: $val%');
-        case 'fuel':
-          parts.add('${l10n.vesselFuelLabel}: $val%');
-        case 'keel':
-          parts.add('${l10n.entryDialogKeelLabel}: ${val == 'down' ? l10n.vesselKeelDown : l10n.vesselKeelUp}');
-      }
-    }
-    return parts.join(' · ');
-  }
+  static String _vesselStatusDisplay(String note, AppLocalizations l10n) =>
+      parseVesselStatus(
+        note,
+        oilLabel:       (pct) => '${l10n.vesselOilLabel}: $pct%',
+        fuelLabel:      (pct) => '${l10n.vesselFuelLabel}: $pct%',
+        keelDownLabel:  l10n.vesselKeelDown,
+        keelUpLabel:    l10n.vesselKeelUp,
+        keelFieldLabel: l10n.entryDialogKeelLabel,
+      );
 
   final MapController _mapController = MapController();
   bool _satelliteView = false;
