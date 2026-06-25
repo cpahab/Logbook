@@ -263,10 +263,11 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Aggregate from repo.dailyTracks (same source as the tracks screen) so
-    // days that have a GPX track but no logbook entry are still counted.
+    // Aggregate distance: prefer GPS track stats, fall back to DayEntry.distanceNm
+    // for days logged without a GPX track.
     double totalNm = 0;
     int daysAtSea = 0;
+    final countedDays = <DateTime>{};
     for (final day in repo.dailyTracks.keys) {
       if (effectiveYear != null && day.year != effectiveYear) continue;
       final track = repo.dailyTracks[day]!;
@@ -274,6 +275,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final stats = computeDailyStats(track.points, settings: filterSettings);
       if (stats.distanceNm > 0) {
         totalNm += stats.distanceNm;
+        daysAtSea++;
+        countedDays.add(day);
+      }
+    }
+    for (final e in filtered) {
+      final day = DateTime(e.date.year, e.date.month, e.date.day);
+      if (countedDays.contains(day)) continue;
+      if (e.distanceNm > 0) {
+        totalNm += e.distanceNm;
         daysAtSea++;
       }
     }
