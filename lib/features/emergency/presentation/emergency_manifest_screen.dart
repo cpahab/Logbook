@@ -8,6 +8,8 @@ import '../../home/data/home_repository.dart';
 import '../../home/domain/crew_member.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
+import '../../../l10n/l10n_extension.dart';
+import '../../../app/theme/theme_extensions.dart';
 import '../data/emergency_repository.dart';
 import '../domain/emergency_contact.dart';
 
@@ -47,6 +49,8 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final l10n = context.l10n;
     final vessel = context.watch<ThemeProvider>();
     final emergency = context.watch<EmergencyRepository>();
     final today = DateTime.now();
@@ -60,15 +64,9 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.primary,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        shadowColor: Colors.black12,
-        centerTitle: false,
         automaticallyImplyLeading: false,
         title: Text(
-          'EMERGENCY MANIFEST',
+          l10n.emergencyManifestTitle.toUpperCase(),
           style: GoogleFonts.newsreader(
             color: cs.primary,
             fontSize: 18,
@@ -82,7 +80,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
               _editMode ? Icons.check_rounded : Icons.edit_outlined,
               color: _editMode ? cs.primary : cs.onSurfaceVariant,
             ),
-            tooltip: _editMode ? 'Done' : 'Edit page',
+            tooltip: _editMode ? l10n.emergencyManifestEditDoneTooltip : l10n.emergencyManifestEditPageTooltip,
             onPressed: () => setState(() => _editMode = !_editMode),
           ),
         ],
@@ -92,8 +90,8 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
         showFab: false,
         onSelect: (tab) {
           if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.push('/tracks');
-          if (tab == NavTab.settings) context.push('/settings');
+          if (tab == NavTab.map) context.go('/tracks');
+          if (tab == NavTab.settings) context.go('/settings');
         },
       ),
       body: ListView(
@@ -103,8 +101,8 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           Row(
             children: [
               Expanded(child: _QuickActionCard(
-                label: 'PROTOCOL',
-                title: 'Radio Protocol\n(MAYDAY)',
+                label: l10n.emergencyProtocolBadge,
+                title: l10n.emergencyRadioProtocolShort,
                 icon: Icons.record_voice_over,
                 iconBg: cs.primary,
                 iconFg: cs.onPrimary,
@@ -116,15 +114,15 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
               )),
               const SizedBox(width: 12),
               Expanded(child: _QuickActionCard(
-                label: 'VISUAL AID',
-                title: 'Distress Signal\nGuide',
+                label: l10n.emergencyVisualAidBadge,
+                title: l10n.emergencyGuideShort,
                 icon: Icons.sos,
-                iconBg: cs.error,
+                iconBg: em.criticalColor,
                 iconFg: cs.onError,
-                borderColor: cs.error,
-                cardBg: cs.errorContainer,
+                borderColor: em.criticalColor,
+                cardBg: em.criticalBgColor,
                 trailingIcon: Icons.flare,
-                trailingColor: cs.error,
+                trailingColor: em.criticalColor,
                 onTap: () => context.push('/emergency/distress'),
               )),
             ],
@@ -135,7 +133,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _SectionHeader(icon: Icons.contact_emergency, label: 'EMERGENCY CONTACTS'),
+              _SectionHeader(icon: Icons.contact_emergency, label: l10n.emergencyContactsSection),
               if (_editMode)
                 _AddIconButton(onTap: _showAddContactDialog),
             ],
@@ -145,7 +143,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           const SizedBox(height: 20),
 
           // ── Vessel Safety Info ──────────────────────────────────────────────
-          _SectionHeader(icon: Icons.directions_boat, label: 'VESSEL SAFETY INFO'),
+          _SectionHeader(icon: Icons.directions_boat, label: l10n.emergencyVesselSafetySection),
           const SizedBox(height: 8),
           _VesselSafetyCard(vessel: vessel, editMode: _editMode),
           const SizedBox(height: 20),
@@ -154,7 +152,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _SectionHeader(icon: Icons.settings_input_antenna, label: 'COAST GUARD FREQUENCIES'),
+              _SectionHeader(icon: Icons.settings_input_antenna, label: l10n.emergencyFrequenciesSection),
               if (_editMode && canAddFrequency)
                 _AddIconButton(onTap: _showAddFrequencyDialog),
             ],
@@ -166,10 +164,10 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           // ── Crew Medical Overview ───────────────────────────────────────────
           Row(
             children: [
-              _SectionHeader(icon: Icons.medical_services, label: 'CREW MEDICAL OVERVIEW'),
+              _SectionHeader(icon: Icons.medical_services, label: l10n.emergencyCrewMedicalSection),
               const SizedBox(width: 6),
               Tooltip(
-                message: 'Automatisch aus dem aktuellsten Logeintrag übernommen.\nBesatzungsdaten werden im Logbuch gepflegt.',
+                message: l10n.emergencyCrewAutoNote,
                 triggerMode: TooltipTriggerMode.tap,
                 showDuration: const Duration(seconds: 4),
                 child: Icon(Icons.info_outline, size: 14, color: cs.onSurfaceVariant),
@@ -323,7 +321,7 @@ class _AddIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Tooltip(
-      message: 'Hinzufügen',
+      message: context.l10n.add,
       child: GestureDetector(
         onTap: onTap,
         child: Container(
@@ -347,8 +345,9 @@ class _EditButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Tooltip(
-      message: 'Bearbeiten',
+      message: l10n.edit,
       child: GestureDetector(
         onTap: onTap,
         child: Row(
@@ -356,7 +355,7 @@ class _EditButton extends StatelessWidget {
             Icon(Icons.edit, size: 14, color: cs.primary),
             const SizedBox(width: 4),
             Text(
-              'EDIT',
+              l10n.edit.toUpperCase(),
               style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
@@ -397,7 +396,7 @@ class _ContactsCard extends StatelessWidget {
           ? Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'No emergency contacts added.',
+                context.l10n.emergencyNoContacts,
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   color: cs.onSurfaceVariant,
@@ -447,6 +446,7 @@ class _ContactRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     return Container(
       margin: const EdgeInsets.all(10),
       padding: const EdgeInsets.all(12),
@@ -456,7 +456,7 @@ class _ContactRow extends StatelessWidget {
         border: Border(left: BorderSide(color: cs.primary, width: 4)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: em.cardShadowColor,
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),
@@ -537,7 +537,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
     return AlertDialog(
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
-      title: Text('Notfallkontakt hinzufügen',
+      title: Text(context.l10n.emergencyAddContactTitle,
           style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -545,21 +545,21 @@ class _AddContactDialogState extends State<_AddContactDialog> {
           TextField(
             controller: _nameCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyContactNameLabel, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _roleCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Rolle (z.B. Partner, Arzt)', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyContactRoleHint, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Telefonnummer', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyContactPhoneLabel, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             keyboardType: TextInputType.phone,
           ),
         ],
@@ -567,7 +567,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Abbrechen', style: TextStyle(color: cs.onSurfaceVariant)),
+          child: Text(context.l10n.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
         ),
         FilledButton.icon(
           onPressed: () {
@@ -582,7 +582,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
             );
           },
           icon: const Icon(Icons.anchor, size: 18),
-          label: const Text('Hinzufügen'),
+          label: Text(context.l10n.add),
         ),
       ],
     );
@@ -627,7 +627,7 @@ class _EditContactDialogState extends State<_EditContactDialog> {
     return AlertDialog(
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
-      title: Text('Kontakt bearbeiten',
+      title: Text(context.l10n.emergencyEditContactTitle,
           style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -635,21 +635,21 @@ class _EditContactDialogState extends State<_EditContactDialog> {
           TextField(
             controller: _nameCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyContactNameLabel, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _roleCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Role (e.g. Spouse, Doctor)', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyContactRoleHint, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _phoneCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Phone number', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyContactPhoneLabel, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             keyboardType: TextInputType.phone,
           ),
         ],
@@ -667,7 +667,7 @@ class _EditContactDialogState extends State<_EditContactDialog> {
             children: [
               Icon(Icons.delete_outline, size: 16, color: cs.error),
               const SizedBox(width: 4),
-              const Text('Löschen'),
+              Text(context.l10n.delete),
             ],
           ),
         ),
@@ -676,7 +676,7 @@ class _EditContactDialogState extends State<_EditContactDialog> {
           children: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Abbrechen', style: TextStyle(color: cs.onSurfaceVariant)),
+              child: Text(context.l10n.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
             ),
             const SizedBox(width: 4),
             FilledButton(
@@ -691,7 +691,7 @@ class _EditContactDialogState extends State<_EditContactDialog> {
                   ),
                 );
               },
-              child: const Text('Speichern'),
+              child: Text(context.l10n.save),
             ),
           ],
         ),
@@ -764,12 +764,14 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
   }
 
   Widget _buildEditView(ColorScheme cs) {
+    final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             Expanded(child: _VesselEditField(
+              // MMSI NUMBER and CALL SIGN are international maritime identifiers — kept in English per SOLAS/IMO standard
               label: 'MMSI NUMBER',
               controller: _mmsiCtrl,
               keyboardType: TextInputType.number,
@@ -786,19 +788,20 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
         ),
         const SizedBox(height: 12),
         _VesselEditField(
-          label: 'LIFE RAFT',
+          label: l10n.emergencyLifeRaft.toUpperCase(),
           controller: _lifeRaftCtrl,
           onChanged: widget.vessel.setLifeRaftInfo,
         ),
         const SizedBox(height: 12),
         _VesselEditField(
+          // EPIRB is an international maritime acronym — kept in English
           label: 'EPIRB LOCATION',
           controller: _epirbCtrl,
           onChanged: widget.vessel.setEpirbInfo,
         ),
         const SizedBox(height: 12),
         _VesselEditField(
-          label: 'FIRE SUPPRESSION',
+          label: l10n.emergencyFireSuppression.toUpperCase(),
           controller: _fireSuppCtrl,
           onChanged: widget.vessel.setFireSuppInfo,
         ),
@@ -807,6 +810,8 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
   }
 
   Widget _buildReadView(ColorScheme cs) {
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final l10n = context.l10n;
     final v = widget.vessel;
     return Stack(
       children: [
@@ -837,22 +842,23 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
             if (v.lifeRaftInfo.isNotEmpty)
               _SafetyItem(
                 icon: Icons.water,
-                iconColor: cs.error,
-                title: 'Life Raft',
+                iconColor: em.criticalColor,
+                title: l10n.emergencyLifeRaft,
                 detail: v.lifeRaftInfo,
               ),
             if (v.epirbInfo.isNotEmpty)
               _SafetyItem(
                 icon: Icons.sensors,
                 iconColor: cs.secondary,
+                // EPIRB is an international maritime acronym — kept in English
                 title: 'EPIRB Location',
                 detail: v.epirbInfo,
               ),
             if (v.fireSuppInfo.isNotEmpty)
               _SafetyItem(
                 icon: Icons.fire_extinguisher,
-                iconColor: cs.error,
-                title: 'Fire Suppression',
+                iconColor: em.criticalColor,
+                title: l10n.emergencyFireSuppression,
                 detail: v.fireSuppInfo,
               ),
             if (v.vesselMmsi.isEmpty &&
@@ -863,7 +869,7 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Noch keine Sicherheitsdaten erfasst.',
+                  l10n.emergencyNoSafetyData,
                   style: GoogleFonts.inter(
                       fontSize: 13,
                       color: cs.onSurfaceVariant,
@@ -1029,7 +1035,7 @@ class _FrequenciesCard extends StatelessWidget {
           ? Padding(
               padding: const EdgeInsets.all(6),
               child: Text(
-                'No frequencies configured.',
+                context.l10n.emergencyNoFrequencies,
                 style: GoogleFonts.inter(
                     fontSize: 13,
                     color: cs.onSurfaceVariant,
@@ -1101,13 +1107,14 @@ class _FrequencyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: urgent ? cs.errorContainer : cs.surfaceContainerLowest,
+        color: urgent ? em.criticalBgColor : cs.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(8),
         border: Border(
-          left: BorderSide(color: urgent ? cs.error : cs.primary, width: 4),
+          left: BorderSide(color: urgent ? em.criticalColor : cs.primary, width: 4),
         ),
       ),
       child: Row(
@@ -1120,7 +1127,7 @@ class _FrequencyRow extends StatelessWidget {
                     style: GoogleFonts.newsreader(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: urgent ? cs.error : cs.primary)),
+                        color: urgent ? em.criticalColor : cs.primary)),
                 Text(desc,
                     style: GoogleFonts.inter(
                         fontSize: 13,
@@ -1129,7 +1136,7 @@ class _FrequencyRow extends StatelessWidget {
             ),
           ),
           if (urgent && !editMode)
-            Icon(Icons.warning_rounded, color: cs.error, size: 20),
+            Icon(Icons.warning_rounded, color: em.criticalColor, size: 20),
           if (editMode)
             _EditButton(onTap: onEdit),
         ],
@@ -1164,7 +1171,7 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
     return AlertDialog(
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
-      title: Text('Add Frequency',
+      title: Text(context.l10n.emergencyAddFrequencyTitle,
           style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1172,7 +1179,7 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
           TextField(
             controller: _labelCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Channel', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyFrequencyChannelLabel, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
           ),
@@ -1180,7 +1187,7 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
           TextField(
             controller: _descCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyFrequencyDescLabel, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textInputAction: TextInputAction.done,
           ),
         ],
@@ -1188,7 +1195,7 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
+          child: Text(context.l10n.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
         ),
         FilledButton(
           onPressed: () {
@@ -1196,7 +1203,7 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
             Navigator.pop(context,
                 (label: _labelCtrl.text.trim(), desc: _descCtrl.text.trim()));
           },
-          child: const Text('Add'),
+          child: Text(context.l10n.add),
         ),
       ],
     );
@@ -1244,7 +1251,7 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
     return AlertDialog(
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
-      title: Text('Frequenz bearbeiten',
+      title: Text(context.l10n.emergencyEditFrequencyTitle,
           style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1252,7 +1259,7 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
           TextField(
             controller: _labelCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Channel', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyFrequencyChannelLabel, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textCapitalization: TextCapitalization.words,
             textInputAction: TextInputAction.next,
           ),
@@ -1260,7 +1267,7 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
           TextField(
             controller: _descCtrl,
             style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: cs.onSurfaceVariant)),
+            decoration: InputDecoration(labelText: context.l10n.emergencyFrequencyDescLabel, labelStyle: TextStyle(color: cs.onSurfaceVariant)),
             textInputAction: TextInputAction.done,
           ),
         ],
@@ -1278,7 +1285,7 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
             children: [
               Icon(Icons.delete_outline, size: 16, color: cs.error),
               const SizedBox(width: 4),
-              const Text('Löschen'),
+              Text(context.l10n.delete),
             ],
           ),
         ),
@@ -1287,7 +1294,7 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
           children: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Abbrechen', style: TextStyle(color: cs.onSurfaceVariant)),
+              child: Text(context.l10n.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
             ),
             const SizedBox(width: 4),
             FilledButton(
@@ -1295,7 +1302,7 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
                 Navigator.pop(context,
                     (label: _labelCtrl.text.trim(), desc: _descCtrl.text.trim()));
               },
-              child: const Text('Speichern'),
+              child: Text(context.l10n.save),
             ),
           ],
         ),
@@ -1313,6 +1320,7 @@ class _CrewMedicalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     final bloodType = member.bloodType ?? '';
     final allergies = member.allergies ?? '';
     final conditions = member.conditions ?? '';
@@ -1324,7 +1332,7 @@ class _CrewMedicalCard extends StatelessWidget {
         border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: em.cardShadowColor,
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -1395,12 +1403,12 @@ class _CrewMedicalCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: cs.errorContainer,
+                              color: em.criticalBgColor,
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Column(
                               children: [
-                                Text('BLOOD',
+                                Text(context.l10n.emergencyBloodBadge,
                                     style: GoogleFonts.inter(
                                         fontSize: 8, fontWeight: FontWeight.w700,
                                         color: cs.onErrorContainer)),
@@ -1423,7 +1431,7 @@ class _CrewMedicalCard extends StatelessWidget {
                     if (conditions.isNotEmpty)
                       _MedicalRow(
                           icon: Icons.medication,
-                          color: cs.error,
+                          color: em.criticalColor,
                           text: conditions),
                   ],
                 ),
@@ -1471,6 +1479,11 @@ class _EmptyCrewHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    final homeRepo = context.read<HomeRepository>();
+    final entries = homeRepo.entries;
+    final latestEntry = entries.isNotEmpty ? entries.last : null;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1478,12 +1491,37 @@ class _EmptyCrewHint extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: cs.outlineVariant),
       ),
-      child: Text(
-        'No crew members added for today. Open a day entry to add crew.',
-        style: GoogleFonts.inter(
-            fontSize: 13,
-            color: cs.onSurfaceVariant,
-            fontStyle: FontStyle.italic),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.emergencyNoCrewHint,
+            style: GoogleFonts.inter(
+                fontSize: 13,
+                color: cs.onSurfaceVariant,
+                fontStyle: FontStyle.italic),
+          ),
+          if (latestEntry != null) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push(
+                  '/day/${latestEntry.date.year}/${latestEntry.date.month}/${latestEntry.date.day}',
+                ),
+                icon: const Icon(Icons.auto_stories, size: 16),
+                label: Text(l10n.emergencyOpenDayEntry),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: cs.primary,
+                  side: BorderSide(color: cs.primary.withValues(alpha: 0.3)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  textStyle: GoogleFonts.inter(
+                      fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../home/widgets/nav_bar.dart';
+import '../../../l10n/l10n_extension.dart';
 
 class EmergencyScreen extends StatelessWidget {
   const EmergencyScreen({super.key});
@@ -10,6 +11,7 @@ class EmergencyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
@@ -18,13 +20,12 @@ class EmergencyScreen extends StatelessWidget {
         elevation: 0,
         scrolledUnderElevation: 1,
         shadowColor: Colors.black12,
-        centerTitle: false,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: cs.primary),
           onPressed: () => context.pop(),
         ),
         title: Text(
-          'Distress Signal Guide',
+          l10n.emergencyGuideTitle,
           style: GoogleFonts.newsreader(
             color: cs.primary,
             fontSize: 22,
@@ -44,15 +45,15 @@ class EmergencyScreen extends StatelessWidget {
         showFab: false,
         onSelect: (tab) {
           if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.push('/tracks');
-          if (tab == NavTab.settings) context.push('/settings');
+          if (tab == NavTab.map) context.go('/tracks');
+          if (tab == NavTab.settings) context.go('/settings');
         },
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
           Text(
-            'Quick reference guide for International Maritime Distress Signals. Ensure visibility and clear communication during an emergency.',
+            l10n.emergencyGuideIntro,
             style: GoogleFonts.inter(
               fontSize: 15,
               height: 1.6,
@@ -60,12 +61,12 @@ class EmergencyScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          const _SectionHeader(title: 'Visual Signals'),
+          _SectionHeader(title: l10n.emergencyVisualSignals),
           const SizedBox(height: 12),
-          IntrinsicHeight(
+          const IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: const [
+              children: [
                 Expanded(child: _PyrotechnicCard()),
                 SizedBox(width: 12),
                 Expanded(child: _HandSignalCard()),
@@ -75,57 +76,52 @@ class EmergencyScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const _FlagSignalCard(),
           const SizedBox(height: 20),
-          const _SectionHeader(title: 'Sound Signals'),
+          _SectionHeader(title: l10n.emergencySoundSignals),
           const SizedBox(height: 12),
-          const Row(
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: _SoundCard(
                   icon: Icons.crisis_alert,
-                  title: 'Gun/Explosive',
-                  subtitle: 'Fired at intervals of about a minute.',
+                  title: l10n.emergencyGunTitle,
+                  subtitle: l10n.emergencyGunSubtitle,
                   watermarkIcon: Icons.volume_up,
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: _SoundCard(
                   icon: Icons.air,
-                  title: 'Foghorn',
-                  subtitle: 'Continuous sounding with any fog-signaling apparatus.',
+                  title: l10n.emergencyFoghornTitle,
+                  subtitle: l10n.emergencyFoghornSubtitle,
                   watermarkIcon: Icons.campaign,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          const _SectionHeader(title: 'Electronic Signals'),
+          _SectionHeader(title: l10n.emergencyElectronicSignals),
           const SizedBox(height: 12),
-          Builder(builder: (context) {
-            final cs = Theme.of(context).colorScheme;
-            return Column(
-              children: [
-                _ElectronicItem(
-                  icon: Icons.satellite_alt,
-                  iconBg: cs.secondaryContainer,
-                  iconColor: cs.onSecondaryContainer,
-                  title: 'EPIRB / PLB',
-                  subtitle:
-                      'Emergency Position Indicating Radio Beacon. Signals 406MHz to COSPAS-SARSAT satellites.',
-                ),
-                const SizedBox(height: 12),
-                _ElectronicItem(
-                  icon: Icons.radar,
-                  iconBg: cs.primaryContainer,
-                  iconColor: cs.onPrimaryContainer,
-                  title: 'SART',
-                  subtitle:
-                      'Search and Rescue Transponder. Shows as a line of 12 dots on nearby X-band radars.',
-                ),
-              ],
-            );
-          }),
+          Column(
+            children: [
+              _ElectronicItem(
+                icon: Icons.satellite_alt,
+                iconBg: cs.secondaryContainer,
+                iconColor: cs.onSecondaryContainer,
+                title: l10n.emergencyEpirbTitle,
+                subtitle: l10n.emergencyEpirbSubtitle,
+              ),
+              const SizedBox(height: 12),
+              _ElectronicItem(
+                icon: Icons.radar,
+                iconBg: cs.primaryContainer,
+                iconColor: cs.onPrimaryContainer,
+                title: l10n.emergencySartTitle,
+                subtitle: l10n.emergencySartSubtitle,
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
           const _MaydayCard(),
         ],
@@ -159,15 +155,16 @@ class _PyrotechnicCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return _SignalCard(
       stripeColor: cs.error,
       icon: Icons.local_fire_department,
       iconColor: cs.error,
-      badge: 'HIGH VIS',
+      badge: l10n.emergencyHighVisBadge,
       badgeBg: cs.errorContainer,
       badgeFg: cs.onErrorContainer,
-      title: 'Pyrotechnic Signals',
-      subtitle: 'Red flare (handheld/parachute) or Orange smoke.',
+      title: l10n.emergencyPyrotechnicTitle,
+      subtitle: l10n.emergencyPyrotechnicSubtitle,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Stack(
@@ -203,12 +200,13 @@ class _HandSignalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return _SignalCard(
       stripeColor: cs.primary,
       icon: Icons.accessibility_new,
       iconColor: cs.primary,
-      title: 'Hand Signals',
-      subtitle: 'Slowly and repeatedly raising and lowering arms outstretched to each side.',
+      title: l10n.emergencyHandSignalTitle,
+      subtitle: l10n.emergencyHandSignalSubtitle,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: Image.asset(
@@ -384,7 +382,7 @@ class _FlagSignalCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Flag Signals',
+                              context.l10n.emergencyFlagSignalTitle,
                               style: GoogleFonts.newsreader(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -393,7 +391,7 @@ class _FlagSignalCard extends StatelessWidget {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Square flag having above or below it a ball or anything resembling a ball, or flags November over Charlie.',
+                              context.l10n.emergencyFlagSignalSubtitle,
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: cs.onSurfaceVariant,
@@ -567,6 +565,7 @@ class _MaydayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -596,7 +595,7 @@ class _MaydayCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Radio Protocol (MAYDAY)',
+                      l10n.emergencyRadioProtocolLabel,
                       style: GoogleFonts.newsreader(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
@@ -608,7 +607,8 @@ class _MaydayCard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'VHF Channel 16. State "MAYDAY" three times, followed by Vessel Name and Position.',
+                // MAYDAY within tip text is part of the instruction — kept as protocol reference
+                l10n.emergencyRadioProtocolTip,
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: Colors.white.withValues(alpha: 0.8),
@@ -629,7 +629,7 @@ class _MaydayCard extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.launch, size: 18),
                   label: Text(
-                    'OPEN RADIO CHECKLIST',
+                    l10n.emergencyOpenChecklist,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
