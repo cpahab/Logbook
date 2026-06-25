@@ -439,5 +439,16 @@
 
   "emergencyLifeRaft": "Life Raft",
   "emergencyEpirbLocation": "EPIRB Location",
-  "emergencyFireSuppression": "Fire Suppression"
+  "emergencyFireSuppression": "Fire Suppression",
+
+  "navJournal": "Journal",
+  "navSafety": "Safety",
+  "offlineLabel": "Offline",
+  "crewBloodGroupPrefix": "BG",
+
+  "sailFull": "Full sail",
+  "sailReef1": "1st reef",
+  "sailReef2": "2nd reef",
+  "sailLowered": "Lowered",
+  "sailFurled": "Furled"
 }

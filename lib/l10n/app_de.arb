@@ -439,5 +439,16 @@
 
   "emergencyLifeRaft": "Rettungsinsel",
   "emergencyEpirbLocation": "EPIRB-Standort",
-  "emergencyFireSuppression": "Feuerlöschanlage"
+  "emergencyFireSuppression": "Feuerlöschanlage",
+
+  "navJournal": "Journal",
+  "navSafety": "Sicherheit",
+  "offlineLabel": "Offline",
+  "crewBloodGroupPrefix": "BG",
+
+  "sailFull": "Voll gesetzt",
+  "sailReef1": "1. Reff",
+  "sailReef2": "2. Reff",
+  "sailLowered": "Niedergeholt",
+  "sailFurled": "Eingerollt"
 }

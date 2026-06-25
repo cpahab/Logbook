@@ -140,13 +140,6 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       child: Scaffold(
         backgroundColor: cs.surface,
         appBar: AppBar(
-          backgroundColor: cs.surface,
-          foregroundColor: cs.primary,
-          iconTheme: IconThemeData(color: cs.primary),
-          elevation: 0,
-          scrolledUnderElevation: 1,
-          shadowColor: Colors.black12,
-          centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.pop(context, null),
@@ -230,7 +223,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       Expanded(
                         child: _navCard(
                           label: l10n.entryDialogSpeedLabel,
-                          unit: 'kts',
+                          unit: 'kn',
                           controller: speedCtrl,
                           placeholder: '0.0',
                           keyboardType: const TextInputType.numberWithOptions(
@@ -338,7 +331,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                     ),
                                     Padding(
                                       padding: const EdgeInsets.only(right: 12),
-                                      child: Text('KN',
+                                      child: Text('kn',
                                           style: GoogleFonts.inter(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w700,
@@ -442,10 +435,10 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                   _labelSm(l10n.entryDialogKeelLabel, cs),
                                   const SizedBox(height: 6),
                                   Row(children: [
-                                    _stateChip('Unten', _keelDown == true,
+                                    _stateChip(l10n.vesselKeelDown, _keelDown == true,
                                         () => setState(() => _keelDown = _keelDown == true  ? null : true),  cs),
                                     const SizedBox(width: 8),
-                                    _stateChip('Oben', _keelDown == false,
+                                    _stateChip(l10n.vesselKeelUp, _keelDown == false,
                                         () => setState(() => _keelDown = _keelDown == false ? null : false), cs),
                                   ]),
                                 ],

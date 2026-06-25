@@ -94,11 +94,11 @@ class _AppBottomNavState extends State<AppBottomNav> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.journal, Icons.auto_stories, 'Journal'))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.journal, Icons.auto_stories, context.l10n.navJournal))),
                         Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, context.l10n.tracksTitle))),
                         const SizedBox(width: 64),
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, 'Einstellungen'))),
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.safety, Icons.health_and_safety, 'Sicherheit'))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, context.l10n.settingsTitle))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.safety, Icons.health_and_safety, context.l10n.navSafety))),
                       ],
                     ),
                   ),
@@ -120,7 +120,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                'Offline',
+                                context.l10n.offlineLabel,
                                 style: GoogleFonts.inter(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
@@ -143,23 +143,30 @@ class _AppBottomNavState extends State<AppBottomNav> {
             Positioned(
               top: 0, left: 0, right: 0,
               child: Center(
-                child: GestureDetector(
-                  onTap: widget.onFabTap,
-                  child: Container(
-                    width: 64, height: 64,
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: cs.tertiaryContainer, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
+                child: Tooltip(
+                  message: context.l10n.add,
+                  child: Semantics(
+                    label: context.l10n.add,
+                    button: true,
+                    child: GestureDetector(
+                      onTap: widget.onFabTap,
+                      child: Container(
+                        width: 64, height: 64,
+                        decoration: BoxDecoration(
+                          color: cs.primaryContainer,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: cs.tertiaryContainer, width: 4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.25),
+                              blurRadius: 16,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                      ],
+                        child: Icon(Icons.add, color: cs.onPrimaryContainer, size: 30),
+                      ),
                     ),
-                    child: Icon(Icons.add, color: cs.onPrimaryContainer, size: 30),
                   ),
                 ),
               ),
