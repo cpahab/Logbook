@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
 
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -75,6 +76,68 @@ const _fog   = PdfColor(0.937, 0.929, 0.933);    // #efedee — surface-containe
 const _rule  = PdfColor(0.761, 0.776, 0.812);    // #c3c6cf — outline-variant
 const _steel = PdfColor(0.263, 0.278, 0.306);    // #43474e — on-surface-variant
 
+/// All locale-dependent strings needed by the PDF exporter.
+/// Populated from AppLocalizations at the call site (where BuildContext is available).
+class PdfStrings {
+  final String voyageLog;
+  final String notes;
+  final String date;
+  final String distance;
+  final String avgSpeed;
+  final String max;
+  final String duration;
+  final String stops;
+  final String statistics;
+  final String crew;
+  final String skipper;
+  final String crewMember;
+  final String logEntries;
+  final String timeCol;
+  final String courseCol;
+  final String windCol;
+  final String seaCol;
+  final String motorCol;
+  final String sailsCol;
+  final String remarksCol;
+  final String motorOn;
+  final String motorOff;
+  final String trackMap;
+  final String locale;
+  final String Function(String destination) passageTo;
+  final String Function(String origin) departureFrom;
+  final String Function(int page, int total) pageOf;
+
+  const PdfStrings({
+    required this.voyageLog,
+    required this.notes,
+    required this.date,
+    required this.distance,
+    required this.avgSpeed,
+    required this.max,
+    required this.duration,
+    required this.stops,
+    required this.statistics,
+    required this.crew,
+    required this.skipper,
+    required this.crewMember,
+    required this.logEntries,
+    required this.timeCol,
+    required this.courseCol,
+    required this.windCol,
+    required this.seaCol,
+    required this.motorCol,
+    required this.sailsCol,
+    required this.remarksCol,
+    required this.motorOn,
+    required this.motorOff,
+    required this.trackMap,
+    required this.locale,
+    required this.passageTo,
+    required this.departureFrom,
+    required this.pageOf,
+  });
+}
+
 /// Builds and returns the PDF bytes for a single-day voyage report.
 ///
 /// Fonts are downloaded from Google Fonts on first call and cached by the
@@ -83,6 +146,7 @@ Future<Uint8List> buildVoyagePdf({
   required DayEntry entry,
   required DailyStats? stats,
   required String vesselName,
+  required PdfStrings strings,
   List<TrackPoint> trackPoints = const [],
   List<Uint8List> photoBytes = const [],
 }) async {
@@ -100,7 +164,7 @@ Future<Uint8List> buildVoyagePdf({
       pageFormat: PdfPageFormat.a4,
       margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 44),
       theme: pw.ThemeData.withFont(base: regular, bold: bold, italic: italic),
-      footer: (ctx) => _footer(ctx, regular),
+      footer: (ctx) => _footer(ctx, regular, strings),
       build: (ctx) {
         final sections = <pw.Widget>[];
 
@@ -112,7 +176,7 @@ Future<Uint8List> buildVoyagePdf({
         final from = entry.fromHarbor?.trim() ?? '';
         final to   = entry.toHarbor?.trim()   ?? '';
         if (from.isNotEmpty || to.isNotEmpty) {
-          sections.add(_buildRoute(from, to, entry.date, bold, regular, italic, emojiFont));
+          sections.add(_buildRoute(from, to, entry.date, bold, regular, italic, emojiFont, strings));
           sections.add(pw.SizedBox(height: 16));
         }
 
@@ -121,7 +185,7 @@ Future<Uint8List> buildVoyagePdf({
 
         // ── Full-width: Narrative (always, avoids overflowing the two-column row)
         if (narrative.isNotEmpty) {
-          sections.add(_buildNotes('TAGEBUCH', narrative, bold, italic, emojiFont));
+          sections.add(_buildNotes(strings.voyageLog, narrative, bold, italic, emojiFont));
           sections.add(pw.SizedBox(height: 14));
         }
 
@@ -133,7 +197,7 @@ Future<Uint8List> buildVoyagePdf({
 
         // ── Full-width: Free notes ─────────────────────────────────
         if (freeNote.isNotEmpty) {
-          sections.add(_buildNotes('NOTIZEN', freeNote, bold, italic, emojiFont));
+          sections.add(_buildNotes(strings.notes, freeNote, bold, italic, emojiFont));
           sections.add(pw.SizedBox(height: 14));
         }
 
@@ -145,14 +209,14 @@ Future<Uint8List> buildVoyagePdf({
               pw.Expanded(
                 flex: 8,
                 child: trackImageBytes != null
-                    ? _buildTrackMap(trackImageBytes, bold, regular)
+                    ? _buildTrackMap(trackImageBytes, bold, regular, strings)
                     : pw.SizedBox(),
               ),
               pw.SizedBox(width: 20),
               pw.Expanded(
                 flex: 5,
                 child: stats != null
-                    ? _buildStats(stats, bold, regular)
+                    ? _buildStats(stats, bold, regular, strings)
                     : pw.SizedBox(),
               ),
             ],
@@ -168,14 +232,14 @@ Future<Uint8List> buildVoyagePdf({
               pw.Expanded(
                 flex: 8,
                 child: entry.timeline.isNotEmpty
-                    ? _buildTimeline(entry.timeline, bold, regular, emojiFont)
+                    ? _buildTimeline(entry.timeline, bold, regular, emojiFont, strings)
                     : pw.SizedBox(),
               ),
               pw.SizedBox(width: 20),
               pw.Expanded(
                 flex: 5,
                 child: entry.crew.isNotEmpty
-                    ? _buildCrew(entry.crew, bold, regular, emojiFont)
+                    ? _buildCrew(entry.crew, bold, regular, emojiFont, strings)
                     : pw.SizedBox(),
               ),
             ],
@@ -208,12 +272,12 @@ pw.Widget _buildHeader(String vesselName, pw.Font bold, pw.Font emoji) {
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 pw.Widget _buildRoute(String from, String to, DateTime date,
-    pw.Font bold, pw.Font regular, pw.Font italic, pw.Font emoji) {
+    pw.Font bold, pw.Font regular, pw.Font italic, pw.Font emoji, PdfStrings strings) {
   final hasFrom = from.isNotEmpty;
   final hasTo   = to.isNotEmpty;
 
-  final title   = hasTo ? 'Passage nach $to' : 'Abfahrt von $from';
-  final dateStr = DateFormat('d. MMM yyyy', 'de_CH').format(date);
+  final title   = hasTo ? strings.passageTo(to) : strings.departureFrom(from);
+  final dateStr = DateFormat('d. MMM yyyy', strings.locale).format(date);
 
   return pw.Row(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -225,7 +289,7 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
             _richText(title, base: bold, emoji: emoji, size: 18, color: _navy),
             if (hasFrom && hasTo) ...[
               pw.SizedBox(height: 2),
-              _richText('Abfahrt von $from',
+              _richText(strings.departureFrom(from),
                   base: italic, emoji: emoji, size: 10, color: _steel),
             ],
           ],
@@ -235,7 +299,7 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
       pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
-          pw.Text('DATUM',
+          pw.Text(strings.date,
               style: pw.TextStyle(
                   font: bold, fontSize: 7, color: _steel, letterSpacing: 1.2)),
           pw.SizedBox(height: 2),
@@ -249,7 +313,7 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 
-pw.Widget _buildStats(DailyStats stats, pw.Font bold, pw.Font regular) {
+pw.Widget _buildStats(DailyStats stats, pw.Font bold, pw.Font regular, PdfStrings strings) {
   String dur(Duration d) {
     final h = d.inHours;
     final m = d.inMinutes.remainder(60);
@@ -257,11 +321,11 @@ pw.Widget _buildStats(DailyStats stats, pw.Font bold, pw.Font regular) {
   }
 
   final items = [
-    (label: 'DISTANZ',  value: '${stats.distanceNm.toStringAsFixed(1)} nm'),
-    (label: 'Ø FAHRT',  value: '${stats.avgOverGroundKn.toStringAsFixed(1)} kn'),
-    (label: 'MAX',      value: '${stats.maxSpeedKn.toStringAsFixed(1)} kn'),
-    (label: 'FAHRZEIT', value: dur(stats.movingDuration)),
-    if (stats.nStops > 0) (label: 'STOPPS', value: '${stats.nStops}'),
+    (label: strings.distance, value: '${stats.distanceNm.toStringAsFixed(1)} nm'),
+    (label: strings.avgSpeed, value: '${stats.avgOverGroundKn.toStringAsFixed(1)} kn'),
+    (label: strings.max,      value: '${stats.maxSpeedKn.toStringAsFixed(1)} kn'),
+    (label: strings.duration, value: dur(stats.movingDuration)),
+    if (stats.nStops > 0) (label: strings.stops, value: '${stats.nStops}'),
   ];
 
   final rows = <pw.Widget>[];
@@ -283,7 +347,7 @@ pw.Widget _buildStats(DailyStats stats, pw.Font bold, pw.Font regular) {
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
-      _sectionLabel('STATISTIK', bold),
+      _sectionLabel(strings.statistics, bold),
       pw.SizedBox(height: 6),
       ...rows,
     ],
@@ -312,11 +376,11 @@ pw.Widget _statCard(String label, String value, pw.Font bold, pw.Font regular) =
 
 // ── Crew ──────────────────────────────────────────────────────────────────────
 
-pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular, pw.Font emoji) {
+pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular, pw.Font emoji, PdfStrings strings) {
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
-      _sectionLabel('CREW', bold),
+      _sectionLabel(strings.crew, bold),
       pw.SizedBox(height: 6),
       for (int i = 0; i < crew.length; i++)
         pw.Container(
@@ -346,7 +410,7 @@ pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular, pw.Fo
                             const pw.BorderRadius.all(pw.Radius.circular(2)),
                       ),
                 child: pw.Text(
-                  i == 0 ? 'SKIPPER' : 'BESATZUNG',
+                  i == 0 ? strings.skipper : strings.crewMember,
                   style: pw.TextStyle(
                     font: bold,
                     fontSize: 7,
@@ -365,7 +429,7 @@ pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular, pw.Fo
 // ── Timeline table ────────────────────────────────────────────────────────────
 
 pw.Widget _buildTimeline(
-    List<TimelineEntry> entries, pw.Font bold, pw.Font regular, pw.Font emoji) {
+    List<TimelineEntry> entries, pw.Font bold, pw.Font regular, pw.Font emoji, PdfStrings strings) {
   // Detect which optional columns are actually populated so we only render them.
   final hasCourse  = entries.any((e) => e.course  != null);
   final hasSpeed   = entries.any((e) => e.speed   != null);
@@ -378,14 +442,14 @@ pw.Widget _buildTimeline(
 
   // Build ordered column list so flex widths stay aligned.
   final cols = <({String header, double flex})>[
-    (header: 'Zeit',      flex: 1.0),
-    if (hasCourse)  (header: 'Kurs',   flex: 0.8),
-    if (hasSpeed)   (header: 'kn',     flex: 0.7),
-    if (hasWind)    (header: 'Wind',   flex: 1.1),
-    if (hasSea)     (header: 'See',    flex: 0.8),
-    if (hasMotor)   (header: 'Motor',  flex: 0.7),
-    if (hasSail)    (header: 'Segel',  flex: 1.0),
-    if (hasRemarks) (header: 'Bemerkungen', flex: 2.6),
+    (header: strings.timeCol,    flex: 1.0),
+    if (hasCourse)  (header: strings.courseCol, flex: 0.8),
+    if (hasSpeed)   (header: 'kn',              flex: 0.7),
+    if (hasWind)    (header: strings.windCol,   flex: 1.1),
+    if (hasSea)     (header: strings.seaCol,    flex: 0.8),
+    if (hasMotor)   (header: strings.motorCol,  flex: 0.7),
+    if (hasSail)    (header: strings.sailsCol,  flex: 1.0),
+    if (hasRemarks) (header: strings.remarksCol, flex: 2.6),
   ];
 
   final columnWidths = {
@@ -395,9 +459,18 @@ pw.Widget _buildTimeline(
 
   String sailAbbr(String? s) {
     if (s == null || s.isEmpty) return '—';
-    if (s.contains('Voll') || s.contains('Gesetzt')) return 'VG';
-    if (s.contains('1.') || s.contains('R1'))        return 'R1';
-    if (s.contains('2.') || s.contains('R2'))        return 'R2';
+    // Sentinel-based (current format)
+    if (s == 'sail:full')    return 'VG';
+    if (s == 'sail:reef1')   return 'R1';
+    if (s == 'sail:reef2')   return 'R2';
+    if (s == 'sail:lowered') return 'NR';
+    if (s == 'sail:furled')  return 'ER';
+    // Legacy German strings
+    if (s.contains('Voll'))         return 'VG';
+    if (s.contains('1.'))           return 'R1';
+    if (s.contains('2.'))           return 'R2';
+    if (s.contains('Niedergeholt')) return 'NR';
+    if (s.contains('Eingerollt'))   return 'ER';
     return '—';
   }
 
@@ -426,7 +499,7 @@ pw.Widget _buildTimeline(
       if (hasSpeed)   cell(e.speed   != null ? e.speed!.toStringAsFixed(1) : '—'),
       if (hasWind)    cell(e.wind    ?? '—'),
       if (hasSea)     cell(e.sea     ?? '—'),
-      if (hasMotor)   cell(e.motorOn == null ? '—' : (e.motorOn! ? 'AN' : 'AUS')),
+      if (hasMotor)   cell(e.motorOn == null ? '—' : (e.motorOn! ? strings.motorOn : strings.motorOff)),
       if (hasSail)    cell(sailText),
       if (hasRemarks) cell(remarksText.isEmpty ? '—' : remarksText),
     ];
@@ -440,7 +513,7 @@ pw.Widget _buildTimeline(
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
-      _sectionLabel('LOGBUCH-EINTRÄGE', bold),
+      _sectionLabel(strings.logEntries, bold),
       pw.SizedBox(height: 6),
       pw.Table(
         columnWidths: columnWidths,
@@ -521,7 +594,7 @@ pw.Widget _buildPhotos(List<Uint8List> photos, pw.Font bold) {
 
 // ── Footer ────────────────────────────────────────────────────────────────────
 
-pw.Widget _footer(pw.Context ctx, pw.Font regular) {
+pw.Widget _footer(pw.Context ctx, pw.Font regular, PdfStrings strings) {
   return pw.Column(
     children: [
       pw.Divider(color: _rule, thickness: 0.3),
@@ -529,7 +602,7 @@ pw.Widget _footer(pw.Context ctx, pw.Font regular) {
       pw.Align(
         alignment: pw.Alignment.centerRight,
         child: pw.Text(
-          'Seite ${ctx.pageNumber} von ${ctx.pagesCount}',
+          strings.pageOf(ctx.pageNumber, ctx.pagesCount),
           style: pw.TextStyle(font: regular, fontSize: 7, color: _rule),
         ),
       ),
@@ -554,11 +627,11 @@ pw.Widget _sectionLabel(String label, pw.Font bold) => pw.Column(
 
 // ── Track map ─────────────────────────────────────────────────────────────────
 
-pw.Widget _buildTrackMap(Uint8List imageBytes, pw.Font bold, pw.Font regular) {
+pw.Widget _buildTrackMap(Uint8List imageBytes, pw.Font bold, pw.Font regular, PdfStrings strings) {
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
-      _sectionLabel('KURS & TRACK', bold),
+      _sectionLabel(strings.trackMap, bold),
       pw.SizedBox(height: 6),
       pw.Container(
         height: 160,
@@ -636,7 +709,8 @@ Future<ui.Image?> _fetchTile(int z, int tx, int ty, String base) async {
     final bytes = Uint8List.fromList(chunks.expand((c) => c).toList());
     final codec = await ui.instantiateImageCodec(bytes);
     return (await codec.getNextFrame()).image;
-  } catch (_) {
+  } catch (e) {
+    if (kDebugMode) debugPrint('_fetchTile: $e');
     return null;
   }
 }
