@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../domain/timeline_entry.dart';
+import '../utils/sail_state_utils.dart';
 import '../../../l10n/l10n_extension.dart';
 
 class _CourseFormatter extends TextInputFormatter {
@@ -50,17 +51,6 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   static const _grossSentinels = ['sail:full', 'sail:reef1', 'sail:reef2', 'sail:lowered'];
   static const _fockSentinels  = ['sail:full', 'sail:reef1', 'sail:reef2', 'sail:furled'];
 
-  // Converts legacy German sail state strings to sentinels.
-  static String? _normalizeSailState(String? s) {
-    if (s == null) return null;
-    if (s.startsWith('sail:')) return s;
-    if (s.contains('Voll') || s.contains('voll')) return 'sail:full';
-    if (s.contains('1.'))                          return 'sail:reef1';
-    if (s.contains('2.'))                          return 'sail:reef2';
-    if (s.contains('Niedergeholt'))                return 'sail:lowered';
-    if (s.contains('Eingerollt'))                  return 'sail:furled';
-    return null;
-  }
 
   @override
   void initState() {
@@ -74,8 +64,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       seaCtrl.text     = e.sea ?? '';
       weatherCtrl.text = e.weather ?? '';
       remarksCtrl.text = e.remarks ?? '';
-      _grossState = _normalizeSailState(e.grossState);
-      _fockState  = _normalizeSailState(e.fockState);
+      _grossState = normalizeSailState(e.grossState);
+      _fockState  = normalizeSailState(e.fockState);
       _motorOn    = e.motorOn;
       _keelDown   = e.keelDown;
     } else {

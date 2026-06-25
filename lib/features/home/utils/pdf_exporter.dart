@@ -15,6 +15,7 @@ import '../domain/day_entry.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import 'compute_daily_stats.dart';
+import 'sail_state_utils.dart';
 
 // Returns true for codepoints that NotoSans can't render but NotoEmoji can.
 bool _isEmojiRune(int r) =>
@@ -457,22 +458,7 @@ pw.Widget _buildTimeline(
       i: pw.FlexColumnWidth(cols[i].flex),
   };
 
-  String sailAbbr(String? s) {
-    if (s == null || s.isEmpty) return '—';
-    // Sentinel-based (current format)
-    if (s == 'sail:full')    return 'VG';
-    if (s == 'sail:reef1')   return 'R1';
-    if (s == 'sail:reef2')   return 'R2';
-    if (s == 'sail:lowered') return 'NR';
-    if (s == 'sail:furled')  return 'ER';
-    // Legacy German strings
-    if (s.contains('Voll'))         return 'VG';
-    if (s.contains('1.'))           return 'R1';
-    if (s.contains('2.'))           return 'R2';
-    if (s.contains('Niedergeholt')) return 'NR';
-    if (s.contains('Eingerollt'))   return 'ER';
-    return '—';
-  }
+  final sailAbbr = sailStateAbbr;
 
   pw.Widget cell(String text, {bool isHeader = false}) => pw.Padding(
     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
