@@ -47,6 +47,21 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
 
   static const _windDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
+  static const _grossSentinels = ['sail:full', 'sail:reef1', 'sail:reef2', 'sail:lowered'];
+  static const _fockSentinels  = ['sail:full', 'sail:reef1', 'sail:reef2', 'sail:furled'];
+
+  // Converts legacy German sail state strings to sentinels.
+  static String? _normalizeSailState(String? s) {
+    if (s == null) return null;
+    if (s.startsWith('sail:')) return s;
+    if (s.contains('Voll') || s.contains('voll')) return 'sail:full';
+    if (s.contains('1.'))                          return 'sail:reef1';
+    if (s.contains('2.'))                          return 'sail:reef2';
+    if (s.contains('Niedergeholt'))                return 'sail:lowered';
+    if (s.contains('Eingerollt'))                  return 'sail:furled';
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -59,8 +74,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       seaCtrl.text     = e.sea ?? '';
       weatherCtrl.text = e.weather ?? '';
       remarksCtrl.text = e.remarks ?? '';
-      _grossState = e.grossState;
-      _fockState  = e.fockState;
+      _grossState = _normalizeSailState(e.grossState);
+      _fockState  = _normalizeSailState(e.fockState);
       _motorOn    = e.motorOn;
       _keelDown   = e.keelDown;
     } else {
@@ -393,7 +408,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         _labelSm(l10n.entryDialogMainSailLabel, cs),
                         const SizedBox(height: 6),
                         _sailChips(
-                          options: const ['Voll gesetzt', '1. Reff', '2. Reff', 'Niedergeholt'],
+                          sentinels: _grossSentinels,
+                          labelFor: _sailLabel,
                           selected: _grossState,
                           onSelect: (v) => setState(() => _grossState = v),
                           cs: cs,
@@ -402,7 +418,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         _labelSm(l10n.entryDialogJibSailLabel, cs),
                         const SizedBox(height: 6),
                         _sailChips(
-                          options: const ['Voll gesetzt', '1. Reff', '2. Reff', 'Eingerollt'],
+                          sentinels: _fockSentinels,
+                          labelFor: _sailLabel,
                           selected: _fockState,
                           onSelect: (v) => setState(() => _fockState = v),
                           cs: cs,
@@ -660,8 +677,21 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   }
 
   // ── Sail state chip row ───────────────────────────────────────────
+  String _sailLabel(String sentinel) {
+    final l10n = context.l10n;
+    return switch (sentinel) {
+      'sail:full'    => l10n.sailFull,
+      'sail:reef1'   => l10n.sailReef1,
+      'sail:reef2'   => l10n.sailReef2,
+      'sail:lowered' => l10n.sailLowered,
+      'sail:furled'  => l10n.sailFurled,
+      _              => sentinel,
+    };
+  }
+
   Widget _sailChips({
-    required List<String> options,
+    required List<String> sentinels,
+    required String Function(String) labelFor,
     required String? selected,
     required ValueChanged<String?> onSelect,
     required ColorScheme cs,
@@ -669,11 +699,11 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: options
-          .map((opt) => _stateChip(
-                opt,
-                selected == opt,
-                () => onSelect(selected == opt ? null : opt),
+      children: sentinels
+          .map((s) => _stateChip(
+                labelFor(s),
+                selected == s,
+                () => onSelect(selected == s ? null : s),
                 cs,
               ))
           .toList(),

@@ -324,6 +324,8 @@
   "authErrorWeakPassword": "Das Passwort ist zu schwach.",
   "authErrorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
   "authErrorNetworkFailed": "Keine Internetverbindung.",
+  "authErrorTooManyRequests": "Zu viele Versuche. Bitte versuche es später erneut.",
+  "authErrorUserDisabled": "Dieses Konto wurde deaktiviert. Bitte kontaktiere den Support.",
   "authErrorRequiresRecentLogin": "Bitte melde dich ab und wieder an, bevor du dein Konto löschst.",
   "settingsAccountSection": "Konto",
   "settingsAccountSignedInAs": "Angemeldet als",
@@ -450,5 +452,49 @@
   "sailReef1": "1. Reff",
   "sailReef2": "2. Reff",
   "sailLowered": "Niedergeholt",
-  "sailFurled": "Eingerollt"
+  "sailFurled": "Eingerollt",
+
+  "pdfVoyageLog": "TAGEBUCH",
+  "pdfNotes": "NOTIZEN",
+  "pdfDate": "DATUM",
+  "pdfDistance": "DISTANZ",
+  "pdfAvgSpeed": "Ø FAHRT",
+  "pdfMax": "MAX",
+  "pdfDuration": "FAHRZEIT",
+  "pdfStops": "STOPPS",
+  "pdfStatistics": "STATISTIK",
+  "pdfCrew": "CREW",
+  "pdfSkipper": "SKIPPER",
+  "pdfCrewMember": "BESATZUNG",
+  "pdfLogEntries": "LOGBUCH-EINTRÄGE",
+  "pdfTimeCol": "Zeit",
+  "pdfCourseCol": "Kurs",
+  "pdfWindCol": "Wind",
+  "pdfSeaCol": "See",
+  "pdfMotorCol": "Motor",
+  "pdfSailsCol": "Segel",
+  "pdfRemarksCol": "Bemerkungen",
+  "pdfMotorOn": "AN",
+  "pdfMotorOff": "AUS",
+  "pdfTrackMap": "KURS & TRACK",
+  "pdfPassageTo": "Passage nach {destination}",
+  "@pdfPassageTo": {
+    "placeholders": {
+      "destination": { "type": "String" }
+    }
+  },
+  "pdfDepartureFrom": "Abfahrt von {origin}",
+  "@pdfDepartureFrom": {
+    "placeholders": {
+      "origin": { "type": "String" }
+    }
+  },
+  "pdfPageOf": "Seite {page} von {total}",
+  "@pdfPageOf": {
+    "placeholders": {
+      "page": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "pdfLocale": "de_CH"
 }

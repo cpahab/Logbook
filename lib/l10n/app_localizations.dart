@@ -1718,6 +1718,18 @@ abstract class AppLocalizations {
   /// **'Keine Internetverbindung.'**
   String get authErrorNetworkFailed;
 
+  /// No description provided for @authErrorTooManyRequests.
+  ///
+  /// In de, this message translates to:
+  /// **'Zu viele Versuche. Bitte versuche es später erneut.'**
+  String get authErrorTooManyRequests;
+
+  /// No description provided for @authErrorUserDisabled.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Konto wurde deaktiviert. Bitte kontaktiere den Support.'**
+  String get authErrorUserDisabled;
+
   /// No description provided for @authErrorRequiresRecentLogin.
   ///
   /// In de, this message translates to:
@@ -2341,6 +2353,222 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Feuerlöschanlage'**
   String get emergencyFireSuppression;
+
+  /// No description provided for @navJournal.
+  ///
+  /// In de, this message translates to:
+  /// **'Journal'**
+  String get navJournal;
+
+  /// No description provided for @navSafety.
+  ///
+  /// In de, this message translates to:
+  /// **'Sicherheit'**
+  String get navSafety;
+
+  /// No description provided for @offlineLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Offline'**
+  String get offlineLabel;
+
+  /// No description provided for @crewBloodGroupPrefix.
+  ///
+  /// In de, this message translates to:
+  /// **'BG'**
+  String get crewBloodGroupPrefix;
+
+  /// No description provided for @sailFull.
+  ///
+  /// In de, this message translates to:
+  /// **'Voll gesetzt'**
+  String get sailFull;
+
+  /// No description provided for @sailReef1.
+  ///
+  /// In de, this message translates to:
+  /// **'1. Reff'**
+  String get sailReef1;
+
+  /// No description provided for @sailReef2.
+  ///
+  /// In de, this message translates to:
+  /// **'2. Reff'**
+  String get sailReef2;
+
+  /// No description provided for @sailLowered.
+  ///
+  /// In de, this message translates to:
+  /// **'Niedergeholt'**
+  String get sailLowered;
+
+  /// No description provided for @sailFurled.
+  ///
+  /// In de, this message translates to:
+  /// **'Eingerollt'**
+  String get sailFurled;
+
+  /// No description provided for @pdfVoyageLog.
+  ///
+  /// In de, this message translates to:
+  /// **'TAGEBUCH'**
+  String get pdfVoyageLog;
+
+  /// No description provided for @pdfNotes.
+  ///
+  /// In de, this message translates to:
+  /// **'NOTIZEN'**
+  String get pdfNotes;
+
+  /// No description provided for @pdfDate.
+  ///
+  /// In de, this message translates to:
+  /// **'DATUM'**
+  String get pdfDate;
+
+  /// No description provided for @pdfDistance.
+  ///
+  /// In de, this message translates to:
+  /// **'DISTANZ'**
+  String get pdfDistance;
+
+  /// No description provided for @pdfAvgSpeed.
+  ///
+  /// In de, this message translates to:
+  /// **'Ø FAHRT'**
+  String get pdfAvgSpeed;
+
+  /// No description provided for @pdfMax.
+  ///
+  /// In de, this message translates to:
+  /// **'MAX'**
+  String get pdfMax;
+
+  /// No description provided for @pdfDuration.
+  ///
+  /// In de, this message translates to:
+  /// **'FAHRZEIT'**
+  String get pdfDuration;
+
+  /// No description provided for @pdfStops.
+  ///
+  /// In de, this message translates to:
+  /// **'STOPPS'**
+  String get pdfStops;
+
+  /// No description provided for @pdfStatistics.
+  ///
+  /// In de, this message translates to:
+  /// **'STATISTIK'**
+  String get pdfStatistics;
+
+  /// No description provided for @pdfCrew.
+  ///
+  /// In de, this message translates to:
+  /// **'CREW'**
+  String get pdfCrew;
+
+  /// No description provided for @pdfSkipper.
+  ///
+  /// In de, this message translates to:
+  /// **'SKIPPER'**
+  String get pdfSkipper;
+
+  /// No description provided for @pdfCrewMember.
+  ///
+  /// In de, this message translates to:
+  /// **'BESATZUNG'**
+  String get pdfCrewMember;
+
+  /// No description provided for @pdfLogEntries.
+  ///
+  /// In de, this message translates to:
+  /// **'LOGBUCH-EINTRÄGE'**
+  String get pdfLogEntries;
+
+  /// No description provided for @pdfTimeCol.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeit'**
+  String get pdfTimeCol;
+
+  /// No description provided for @pdfCourseCol.
+  ///
+  /// In de, this message translates to:
+  /// **'Kurs'**
+  String get pdfCourseCol;
+
+  /// No description provided for @pdfWindCol.
+  ///
+  /// In de, this message translates to:
+  /// **'Wind'**
+  String get pdfWindCol;
+
+  /// No description provided for @pdfSeaCol.
+  ///
+  /// In de, this message translates to:
+  /// **'See'**
+  String get pdfSeaCol;
+
+  /// No description provided for @pdfMotorCol.
+  ///
+  /// In de, this message translates to:
+  /// **'Motor'**
+  String get pdfMotorCol;
+
+  /// No description provided for @pdfSailsCol.
+  ///
+  /// In de, this message translates to:
+  /// **'Segel'**
+  String get pdfSailsCol;
+
+  /// No description provided for @pdfRemarksCol.
+  ///
+  /// In de, this message translates to:
+  /// **'Bemerkungen'**
+  String get pdfRemarksCol;
+
+  /// No description provided for @pdfMotorOn.
+  ///
+  /// In de, this message translates to:
+  /// **'AN'**
+  String get pdfMotorOn;
+
+  /// No description provided for @pdfMotorOff.
+  ///
+  /// In de, this message translates to:
+  /// **'AUS'**
+  String get pdfMotorOff;
+
+  /// No description provided for @pdfTrackMap.
+  ///
+  /// In de, this message translates to:
+  /// **'KURS & TRACK'**
+  String get pdfTrackMap;
+
+  /// No description provided for @pdfPassageTo.
+  ///
+  /// In de, this message translates to:
+  /// **'Passage nach {destination}'**
+  String pdfPassageTo(String destination);
+
+  /// No description provided for @pdfDepartureFrom.
+  ///
+  /// In de, this message translates to:
+  /// **'Abfahrt von {origin}'**
+  String pdfDepartureFrom(String origin);
+
+  /// No description provided for @pdfPageOf.
+  ///
+  /// In de, this message translates to:
+  /// **'Seite {page} von {total}'**
+  String pdfPageOf(int page, int total);
+
+  /// No description provided for @pdfLocale.
+  ///
+  /// In de, this message translates to:
+  /// **'de_CH'**
+  String get pdfLocale;
 }
 
 class _AppLocalizationsDelegate

@@ -866,6 +866,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get authErrorNetworkFailed => 'Keine Internetverbindung.';
 
   @override
+  String get authErrorTooManyRequests =>
+      'Zu viele Versuche. Bitte versuche es später erneut.';
+
+  @override
+  String get authErrorUserDisabled =>
+      'Dieses Konto wurde deaktiviert. Bitte kontaktiere den Support.';
+
+  @override
   String get authErrorRequiresRecentLogin =>
       'Bitte melde dich ab und wieder an, bevor du dein Konto löschst.';
 
@@ -1208,4 +1216,118 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get emergencyFireSuppression => 'Feuerlöschanlage';
+
+  @override
+  String get navJournal => 'Journal';
+
+  @override
+  String get navSafety => 'Sicherheit';
+
+  @override
+  String get offlineLabel => 'Offline';
+
+  @override
+  String get crewBloodGroupPrefix => 'BG';
+
+  @override
+  String get sailFull => 'Voll gesetzt';
+
+  @override
+  String get sailReef1 => '1. Reff';
+
+  @override
+  String get sailReef2 => '2. Reff';
+
+  @override
+  String get sailLowered => 'Niedergeholt';
+
+  @override
+  String get sailFurled => 'Eingerollt';
+
+  @override
+  String get pdfVoyageLog => 'TAGEBUCH';
+
+  @override
+  String get pdfNotes => 'NOTIZEN';
+
+  @override
+  String get pdfDate => 'DATUM';
+
+  @override
+  String get pdfDistance => 'DISTANZ';
+
+  @override
+  String get pdfAvgSpeed => 'Ø FAHRT';
+
+  @override
+  String get pdfMax => 'MAX';
+
+  @override
+  String get pdfDuration => 'FAHRZEIT';
+
+  @override
+  String get pdfStops => 'STOPPS';
+
+  @override
+  String get pdfStatistics => 'STATISTIK';
+
+  @override
+  String get pdfCrew => 'CREW';
+
+  @override
+  String get pdfSkipper => 'SKIPPER';
+
+  @override
+  String get pdfCrewMember => 'BESATZUNG';
+
+  @override
+  String get pdfLogEntries => 'LOGBUCH-EINTRÄGE';
+
+  @override
+  String get pdfTimeCol => 'Zeit';
+
+  @override
+  String get pdfCourseCol => 'Kurs';
+
+  @override
+  String get pdfWindCol => 'Wind';
+
+  @override
+  String get pdfSeaCol => 'See';
+
+  @override
+  String get pdfMotorCol => 'Motor';
+
+  @override
+  String get pdfSailsCol => 'Segel';
+
+  @override
+  String get pdfRemarksCol => 'Bemerkungen';
+
+  @override
+  String get pdfMotorOn => 'AN';
+
+  @override
+  String get pdfMotorOff => 'AUS';
+
+  @override
+  String get pdfTrackMap => 'KURS & TRACK';
+
+  @override
+  String pdfPassageTo(String destination) {
+    return 'Passage nach $destination';
+  }
+
+  @override
+  String pdfDepartureFrom(String origin) {
+    return 'Abfahrt von $origin';
+  }
+
+  @override
+  String pdfPageOf(int page, int total) {
+    return 'Seite $page von $total';
+  }
+
+  @override
+  String get pdfLocale => 'de_CH';
 }
