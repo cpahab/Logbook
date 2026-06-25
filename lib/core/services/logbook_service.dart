@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'storage_service.dart';
 
 /// Manages logbook identity and membership.
 ///
@@ -228,6 +229,11 @@ class LogbookService {
     batch.delete(logbookRef);
     await batch.commit();
 
+    // Delete all files in Storage (best-effort — orphaned files are not critical).
+    try {
+      await StorageService.deleteLogbookFolder(logbookId);
+    } catch (_) {}
+
     // Remove from owner's logbook list.
     final userDoc = await _db.collection('users').doc(ownerUid).get();
     final data = userDoc.data();
@@ -250,11 +256,15 @@ class LogbookService {
   /// Deletes every Firestore document and user data associated with [uid].
   /// Owned logbooks are fully wiped; guest-only logbooks remove the member entry.
   /// Does NOT delete the Firebase Auth account — call that separately.
+  ///
+  /// Throws an [Exception] if any Firestore operation fails, so the caller can
+  /// abort the Auth account deletion and inform the user.
   Future<void> deleteUserAndAllLogbooks(String uid) async {
     final userDoc = await _db.collection('users').doc(uid).get();
     final logbookIds =
         List<String>.from(userDoc.data()?['logbooks'] as List? ?? []);
 
+    var failures = 0;
     for (final logbookId in logbookIds) {
       try {
         final memberDoc = await _db
@@ -274,12 +284,21 @@ class LogbookService {
               .doc(uid)
               .delete();
         }
-      } catch (_) {}
+      } catch (_) {
+        failures++;
+      }
     }
 
     try {
       await _db.collection('users').doc(uid).delete();
-    } catch (_) {}
+    } catch (_) {
+      failures++;
+    }
+
+    if (failures > 0) {
+      throw Exception(
+          '$failures Firestore document(s) could not be deleted.');
+    }
   }
 
   Future<void> _deleteCollectionInChunks(

@@ -48,6 +48,25 @@ class StorageService {
 
   // ------------------------------------------------------------------
 
+  // ------------------------------------------------------------------
+  // Bulk delete
+  // ------------------------------------------------------------------
+
+  /// Deletes every file under `logbooks/{logbookId}/` (tracks + photos).
+  /// Safe to call even if the folder is empty or doesn't exist.
+  static Future<void> deleteLogbookFolder(String logbookId) =>
+      _deleteRef(FirebaseStorage.instance.ref('logbooks/$logbookId'));
+
+  static Future<void> _deleteRef(Reference ref) async {
+    final result = await ref.listAll();
+    await Future.wait([
+      for (final item in result.items) item.delete(),
+      for (final prefix in result.prefixes) _deleteRef(prefix),
+    ]);
+  }
+
+  // ------------------------------------------------------------------
+
   static String _dateKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
