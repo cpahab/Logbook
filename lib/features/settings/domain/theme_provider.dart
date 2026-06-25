@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
@@ -12,7 +11,6 @@ class ThemeProvider extends ChangeNotifier {
   static const _themeKey            = 'theme_mode';
   static const _titleKey            = 'logbuch_title';
   static const _weatherKey          = 'weather_url';
-  static const _logbookCodeKey      = 'logbook_code';
   static const _initialSyncDoneKey  = 'initial_cloud_sync_done';
   static const _lastRouteKey        = 'last_route';
   static const _lastRouteDateKey    = 'last_route_date';
@@ -63,7 +61,6 @@ class ThemeProvider extends ChangeNotifier {
   bool   _showRawTrack              = true;
   String _title = 'Logbuch';
   String _weatherUrl = '';
-  late String _logbookCode;
   String _vesselName = '';
   String _vesselMmsi = '';
   String _vesselCallSign = '';
@@ -101,7 +98,6 @@ class ThemeProvider extends ChangeNotifier {
   );
   String get logbuchTitle          => _title;
   String get weatherUrl         => _weatherUrl;
-  String get logbookCode        => _logbookCode;
   String get vesselName         => _vesselName;
   String get vesselMmsi         => _vesselMmsi;
   String get vesselCallSign     => _vesselCallSign;
@@ -116,7 +112,6 @@ class ThemeProvider extends ChangeNotifier {
   String get vhf3Desc           => _vhf3Desc;
   String get vhf4Label          => _vhf4Label;
   String get vhf4Desc           => _vhf4Desc;
-  String get installationId     => _logbookCode;
   String? get lastKnownUid      => _box.get(_lastUidKey);
   void setLastKnownUid(String uid) => _box.put(_lastUidKey, uid);
 
@@ -248,42 +243,6 @@ class ThemeProvider extends ChangeNotifier {
     _vhf4Label = _box.get(_vhf4LabelKey, defaultValue: 'Channel 13')!;
     _vhf4Desc  = _box.get(_vhf4DescKey,  defaultValue: 'Bridge to Bridge · 156.650 MHz')!;
 
-    final existing = _box.get(_logbookCodeKey);
-    if (existing != null && existing.isNotEmpty) {
-      _logbookCode = existing;
-    } else {
-      _logbookCode = _generateCode();
-      _box.put(_logbookCodeKey, _logbookCode);
-    }
-  }
-
-  // ── Logbook code ───────────────────────────────────────────────────────────
-
-  void setLogbookCode(String code) {
-    final normalized = code.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
-    if (normalized.isEmpty || normalized == _logbookCode) return;
-    _logbookCode = normalized;
-    _box.put(_logbookCodeKey, normalized);
-    _box.delete(_initialSyncDoneKey);
-    notifyListeners();
-  }
-
-  /// Called when the Firestore profile's logbookId differs from the local
-  /// logbook code (e.g. user signed in from a different device).
-  /// Unlike [setLogbookCode] this does NOT reset the initial-sync flag, because
-  /// this is an identity reconciliation, not a deliberate logbook switch.
-  void reconcileLogbookId(String logbookId) {
-    final normalized = logbookId.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
-    if (normalized.isEmpty || normalized == _logbookCode) return;
-    _logbookCode = normalized;
-    _box.put(_logbookCodeKey, normalized);
-    notifyListeners();
-  }
-
-  static String _generateCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final rand = Random.secure();
-    return List.generate(8, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
   // ── Non-synced setters ─────────────────────────────────────────────────────
