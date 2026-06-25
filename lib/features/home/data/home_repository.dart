@@ -417,12 +417,34 @@ class HomeRepository extends ChangeNotifier {
     final d = _entries[normalized];
     if (d == null) return;
 
-    // On the very first timeline entry, auto-snapshot the crew list.
-    if (d.timeline.isEmpty && d.crew.isNotEmpty) {
+    final t = entry.time;
+
+    // On the first real timeline entry, auto-snapshot crew and vessel status.
+    // addEntry() already carries both forward from the previous day, so we
+    // just read the current day's values — no need to look back ourselves.
+    final hasCrewLog = d.timeline
+        .any((e) => e.vesselStatusNote?.startsWith('crew:') == true);
+    if (!hasCrewLog && d.crew.isNotEmpty) {
       d.timeline.add(TimelineEntry(
-        time: entry.time,
-        vesselStatusNote: buildCrewNote(d.crew),
-      ));
+          time: t, vesselStatusNote: buildCrewNote(d.crew)));
+    }
+
+    final hasStatusLog = d.timeline.any((e) =>
+        e.vesselStatusNote != null &&
+        e.vesselStatusNote?.startsWith('crew:') != true);
+    if (!hasStatusLog) {
+      final parts = <String>[];
+      if (d.oilLevel != null) parts.add('Motoröl: ${d.oilLevel}%');
+      if (d.fuelLevel != null) parts.add('Kraftstoff: ${d.fuelLevel}%');
+      if (parts.isNotEmpty) {
+        d.timeline.add(TimelineEntry(
+            time: t, vesselStatusNote: parts.join(' · ')));
+      }
+      if (d.keelDown != null) {
+        d.timeline.add(TimelineEntry(
+            time: t,
+            vesselStatusNote: d.keelDown! ? 'Kiel: Unten' : 'Kiel: Oben'));
+      }
     }
 
     d.timeline.add(entry);
