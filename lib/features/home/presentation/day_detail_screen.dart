@@ -76,6 +76,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   // Parses a vessel-status sentinel note (`vs:oil=75,fuel=60`, `vs:keel=down`)
   // and returns a localised display string. Legacy notes (no `vs:` prefix) are
   // returned verbatim so old Firestore documents continue to display correctly.
+  static String _sailStateDisplay(String s, AppLocalizations l10n) => switch (s) {
+    'sail:full'    => l10n.sailFull,
+    'sail:reef1'   => l10n.sailReef1,
+    'sail:reef2'   => l10n.sailReef2,
+    'sail:lowered' => l10n.sailLowered,
+    'sail:furled'  => l10n.sailFurled,
+    _              => s, // legacy German text — display verbatim
+  };
+
   static String _vesselStatusDisplay(String note, AppLocalizations l10n) {
     if (!note.startsWith('vs:')) return note;
     final parts = <String>[];
@@ -1259,8 +1268,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   if (t.wind != null) '${context.l10n.dataWind}: ${t.wind!}',
                   if (t.sea != null) '${context.l10n.dataSea}: ${t.sea!}',
                   if (t.weather != null) '${context.l10n.dataWeather}: ${t.weather!}',
-                  if (t.grossState != null) '${context.l10n.dataMainSail}: ${t.grossState!}',
-                  if (t.fockState != null) '${context.l10n.dataJibSail}: ${t.fockState!}',
+                  if (t.grossState != null) '${context.l10n.dataMainSail}: ${_sailStateDisplay(t.grossState!, context.l10n)}',
+                  if (t.fockState != null) '${context.l10n.dataJibSail}: ${_sailStateDisplay(t.fockState!, context.l10n)}',
                   if (t.motorOn != null)
                     '${context.l10n.dataMotor}: ${t.motorOn! ? context.l10n.on : context.l10n.off}',
                 ].join(' · '),
@@ -2713,6 +2722,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   void _exportPdf(DayEntry entry, DailyStats? stats, DailyTrack? track) async {
     final p = context.read<ThemeProvider>();
+    final l10n = context.l10n;
     final filteredPoints = track != null
         ? buildDisplayModel(track.points, settings: p.filterSettings).allPoints()
         : const <TrackPoint>[];
@@ -2721,10 +2731,40 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       final file = await PhotoService.localFile(path);
       if (file != null) photoBytes.add(await file.readAsBytes());
     }
+    final pdfStrings = PdfStrings(
+      voyageLog:     l10n.pdfVoyageLog,
+      notes:         l10n.pdfNotes,
+      date:          l10n.pdfDate,
+      distance:      l10n.pdfDistance,
+      avgSpeed:      l10n.pdfAvgSpeed,
+      max:           l10n.pdfMax,
+      duration:      l10n.pdfDuration,
+      stops:         l10n.pdfStops,
+      statistics:    l10n.pdfStatistics,
+      crew:          l10n.pdfCrew,
+      skipper:       l10n.pdfSkipper,
+      crewMember:    l10n.pdfCrewMember,
+      logEntries:    l10n.pdfLogEntries,
+      timeCol:       l10n.pdfTimeCol,
+      courseCol:     l10n.pdfCourseCol,
+      windCol:       l10n.pdfWindCol,
+      seaCol:        l10n.pdfSeaCol,
+      motorCol:      l10n.pdfMotorCol,
+      sailsCol:      l10n.pdfSailsCol,
+      remarksCol:    l10n.pdfRemarksCol,
+      motorOn:       l10n.pdfMotorOn,
+      motorOff:      l10n.pdfMotorOff,
+      trackMap:      l10n.pdfTrackMap,
+      locale:        l10n.pdfLocale,
+      passageTo:     l10n.pdfPassageTo,
+      departureFrom: l10n.pdfDepartureFrom,
+      pageOf:        l10n.pdfPageOf,
+    );
     final bytes = await buildVoyagePdf(
       entry:       entry,
       stats:       stats,
       vesselName:  p.vesselName,
+      strings:     pdfStrings,
       trackPoints: filteredPoints,
       photoBytes:  photoBytes,
     );
@@ -3371,8 +3411,8 @@ String _buildEntryTooltip(TimelineEntry t, AppLocalizations l10n) {
   if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
 
   final sails = <String>[];
-  if (t.grossState?.isNotEmpty == true) sails.add('Gross: ${t.grossState}');
-  if (t.fockState?.isNotEmpty  == true) sails.add('Fock: ${t.fockState}');
+  if (t.grossState?.isNotEmpty == true) sails.add('${l10n.dataMainSail}: ${_DayDetailScreenState._sailStateDisplay(t.grossState!, l10n)}');
+  if (t.fockState?.isNotEmpty  == true) sails.add('${l10n.dataJibSail}: ${_DayDetailScreenState._sailStateDisplay(t.fockState!, l10n)}');
   if (t.motorOn  != null) sails.add('${l10n.entryDialogMotorLabel}: ${t.motorOn! ? l10n.on : l10n.off}');
   if (t.keelDown != null) sails.add('${l10n.entryDialogKeelLabel}: ${t.keelDown! ? l10n.vesselKeelDown : l10n.vesselKeelUp}');
   if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
