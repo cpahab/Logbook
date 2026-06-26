@@ -1,9 +1,11 @@
 import 'package:go_router/go_router.dart';
 
+import '../core/config/feature_flags.dart';
 import '../core/services/auth_service.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
+import '../features/auth/presentation/verify_email_screen.dart';
 import '../features/emergency/presentation/emergency_manifest_screen.dart';
 import '../features/emergency/presentation/emergency_screen.dart';
 import '../features/emergency/presentation/mayday_screen.dart';
@@ -20,9 +22,20 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
     redirect: (context, state) {
       final signedIn = authService.currentUser != null;
       final onAuth = state.matchedLocation.startsWith('/auth');
+      final onVerify = state.matchedLocation == '/auth/verify-email';
 
       if (!signedIn && !onAuth) return '/auth/login';
-      if (signedIn && onAuth) return '/';
+
+      if (signedIn) {
+        // Email verification gate — flip kEnforceEmailVerification in
+        // feature_flags.dart to activate. No other code changes needed.
+        final needsVerification =
+            kEnforceEmailVerification && !authService.emailVerified;
+        if (needsVerification && !onVerify) return '/auth/verify-email';
+        if (!needsVerification && onVerify) return '/';
+        if (onAuth && !onVerify) return '/';
+      }
+
       return null;
     },
     routes: [
@@ -38,6 +51,10 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
       GoRoute(
         path: '/auth/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/auth/verify-email',
+        builder: (context, state) => const VerifyEmailScreen(),
       ),
 
       // ── App ─────────────────────────────────────────────────────────

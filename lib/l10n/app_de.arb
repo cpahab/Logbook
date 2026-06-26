@@ -327,6 +327,16 @@
   "authErrorTooManyRequests": "Zu viele Versuche. Bitte versuche es später erneut.",
   "authErrorUserDisabled": "Dieses Konto wurde deaktiviert. Bitte kontaktiere den Support.",
   "authErrorRequiresRecentLogin": "Bitte melde dich ab und wieder an, bevor du dein Konto löschst.",
+  "authVerifyEmailTitle": "E-Mail bestätigen",
+  "authVerifyEmailBody": "Wir haben einen Bestätigungslink an {email} gesendet.\nTippe auf den Link und dann auf die Schaltfläche unten.",
+  "@authVerifyEmailBody": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "authVerifyEmailCheck": "E-Mail bestätigt",
+  "authVerifyEmailResend": "Bestätigungs-E-Mail erneut senden",
+  "authVerifyEmailSent": "Bestätigungs-E-Mail gesendet",
   "settingsAccountSection": "Konto",
   "settingsAccountSignedInAs": "Angemeldet als",
   "settingsAccountNotSignedIn": "Nicht angemeldet",

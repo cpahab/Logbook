@@ -1,6 +1,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -20,6 +21,7 @@ import 'core/services/logbook_service.dart';
 import 'core/services/firestore_service.dart';
 import 'core/services/storage_service.dart';
 import 'firebase_options.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'app/router.dart';
 import 'app.dart';
@@ -92,6 +94,21 @@ void main() async {
   try {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
+
+    // App Check — blocks requests from non-genuine app binaries.
+    // Debug builds print a token to the console; register it once in:
+    //   Firebase Console → App Check → Apps → [your app] → Debug tokens
+    // Release builds use DeviceCheck (macOS/iOS) / Play Integrity (Android),
+    // which require no extra entitlements beyond what's already in place.
+    await FirebaseAppCheck.instance.activate(
+      providerApple: kDebugMode
+          ? const AppleDebugProvider()
+          : const AppleDeviceCheckProvider(),
+      providerAndroid: kDebugMode
+          ? const AndroidDebugProvider()
+          : const AndroidPlayIntegrityProvider(),
+    );
+
     // Configure offline persistence immediately after init, before any reads.
     FirestoreService.configure();
 

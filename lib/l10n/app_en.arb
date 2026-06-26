@@ -327,6 +327,16 @@
   "authErrorTooManyRequests": "Too many attempts. Please try again later.",
   "authErrorUserDisabled": "This account has been disabled. Please contact support.",
   "authErrorRequiresRecentLogin": "Please sign out and sign back in before deleting your account.",
+  "authVerifyEmailTitle": "Check your email",
+  "authVerifyEmailBody": "We sent a verification link to {email}.\nTap the link, then tap the button below.",
+  "@authVerifyEmailBody": {
+    "placeholders": {
+      "email": {"type": "String"}
+    }
+  },
+  "authVerifyEmailCheck": "I've verified my email",
+  "authVerifyEmailResend": "Resend verification email",
+  "authVerifyEmailSent": "Verification email sent",
   "settingsAccountSection": "Account",
   "settingsAccountSignedInAs": "Signed in as",
   "settingsAccountNotSignedIn": "Not signed in",

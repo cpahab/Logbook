@@ -1736,6 +1736,36 @@ abstract class AppLocalizations {
   /// **'Bitte melde dich ab und wieder an, bevor du dein Konto löschst.'**
   String get authErrorRequiresRecentLogin;
 
+  /// No description provided for @authVerifyEmailTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'E-Mail bestätigen'**
+  String get authVerifyEmailTitle;
+
+  /// No description provided for @authVerifyEmailBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Wir haben einen Bestätigungslink an {email} gesendet.\nTippe auf den Link und dann auf die Schaltfläche unten.'**
+  String authVerifyEmailBody(String email);
+
+  /// No description provided for @authVerifyEmailCheck.
+  ///
+  /// In de, this message translates to:
+  /// **'E-Mail bestätigt'**
+  String get authVerifyEmailCheck;
+
+  /// No description provided for @authVerifyEmailResend.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestätigungs-E-Mail erneut senden'**
+  String get authVerifyEmailResend;
+
+  /// No description provided for @authVerifyEmailSent.
+  ///
+  /// In de, this message translates to:
+  /// **'Bestätigungs-E-Mail gesendet'**
+  String get authVerifyEmailSent;
+
   /// No description provided for @settingsAccountSection.
   ///
   /// In de, this message translates to:

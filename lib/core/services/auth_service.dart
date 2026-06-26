@@ -7,6 +7,7 @@ class AuthService extends ChangeNotifier {
   static final _auth = FirebaseAuth.instance;
 
   User? get currentUser => _auth.currentUser;
+  bool get emailVerified => _auth.currentUser?.emailVerified ?? false;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // ── Email / Password ───────────────────────────────────────────────
@@ -25,6 +26,9 @@ class AuthService extends ChangeNotifier {
     try {
       await _auth.createUserWithEmailAndPassword(
           email: email.trim(), password: password);
+      // Always send — whether it blocks access is controlled by
+      // kEnforceEmailVerification in feature_flags.dart.
+      _auth.currentUser?.sendEmailVerification().ignore();
       notifyListeners();
     } on FirebaseAuthException {
       rethrow;
@@ -76,6 +80,18 @@ class AuthService extends ChangeNotifier {
     } on FirebaseAuthException {
       rethrow;
     }
+  }
+
+  // ── Email verification ─────────────────────────────────────────────
+
+  Future<void> sendVerificationEmail() =>
+      _auth.currentUser?.sendEmailVerification() ?? Future.value();
+
+  /// Re-fetches the user profile from Firebase so emailVerified reflects
+  /// the latest server state, then notifies listeners (triggers router refresh).
+  Future<void> reloadUser() async {
+    await _auth.currentUser?.reload();
+    notifyListeners();
   }
 
   // ── Sign out / Delete ──────────────────────────────────────────────

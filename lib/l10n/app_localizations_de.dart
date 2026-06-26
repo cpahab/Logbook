@@ -878,6 +878,23 @@ class AppLocalizationsDe extends AppLocalizations {
       'Bitte melde dich ab und wieder an, bevor du dein Konto löschst.';
 
   @override
+  String get authVerifyEmailTitle => 'E-Mail bestätigen';
+
+  @override
+  String authVerifyEmailBody(String email) {
+    return 'Wir haben einen Bestätigungslink an $email gesendet.\nTippe auf den Link und dann auf die Schaltfläche unten.';
+  }
+
+  @override
+  String get authVerifyEmailCheck => 'E-Mail bestätigt';
+
+  @override
+  String get authVerifyEmailResend => 'Bestätigungs-E-Mail erneut senden';
+
+  @override
+  String get authVerifyEmailSent => 'Bestätigungs-E-Mail gesendet';
+
+  @override
   String get settingsAccountSection => 'Konto';
 
   @override

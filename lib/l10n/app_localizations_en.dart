@@ -873,6 +873,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please sign out and sign back in before deleting your account.';
 
   @override
+  String get authVerifyEmailTitle => 'Check your email';
+
+  @override
+  String authVerifyEmailBody(String email) {
+    return 'We sent a verification link to $email.\nTap the link, then tap the button below.';
+  }
+
+  @override
+  String get authVerifyEmailCheck => 'I\'ve verified my email';
+
+  @override
+  String get authVerifyEmailResend => 'Resend verification email';
+
+  @override
+  String get authVerifyEmailSent => 'Verification email sent';
+
+  @override
   String get settingsAccountSection => 'Account';
 
   @override
