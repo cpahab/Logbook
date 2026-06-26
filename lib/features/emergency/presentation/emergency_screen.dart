@@ -33,12 +33,6 @@ class EmergencyScreen extends StatelessWidget {
             fontStyle: FontStyle.italic,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.account_circle_outlined, color: cs.primary),
-            onPressed: () {},
-          ),
-        ],
       ),
       bottomNavigationBar: AppBottomNav(
         active: NavTab.safety,

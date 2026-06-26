@@ -65,23 +65,31 @@ class LogbookService {
     final logbookIds = List<String>.from(
         userDoc.data()?['logbooks'] as List? ?? []);
 
+    if (logbookIds.isEmpty) return [];
+
+    // Fetch all logbook docs and all member docs in two parallel batches
+    // instead of 2N sequential round-trips.
+    final logbookFutures = logbookIds
+        .map((id) => _db.collection('logbooks').doc(id).get());
+    final memberFutures = logbookIds
+        .map((id) => _db.collection('logbooks').doc(id).collection('members').doc(uid).get());
+
+    final results = await Future.wait([
+      Future.wait(logbookFutures),
+      Future.wait(memberFutures),
+    ]);
+
+    final logbookDocs = results[0];
+    final memberDocs  = results[1];
+
     final result = <Map<String, dynamic>>[];
-    for (final logbookId in logbookIds) {
-      final logbookDoc =
-          await _db.collection('logbooks').doc(logbookId).get();
+    for (var i = 0; i < logbookIds.length; i++) {
+      final logbookDoc = logbookDocs[i];
       if (!logbookDoc.exists) continue;
       final data = logbookDoc.data()!;
-
-      final memberDoc = await _db
-          .collection('logbooks')
-          .doc(logbookId)
-          .collection('members')
-          .doc(uid)
-          .get();
-      final role = memberDoc.data()?['role'] as String? ?? 'guest';
-
+      final role = memberDocs[i].data()?['role'] as String? ?? 'guest';
       result.add({
-        'logbookId': logbookId,
+        'logbookId': logbookIds[i],
         'name': data['name'] as String? ?? '',
         'role': role,
         'shareCode': data['shareCode'] as String? ?? '',
@@ -213,12 +221,13 @@ class LogbookService {
     // Delete all entries (may be large — chunked).
     await _deleteCollectionInChunks(logbookRef.collection('entries'));
 
-    // Delete known meta documents.
+    // Delete known meta documents in a single batch so any failure surfaces
+    // to the caller rather than being silently swallowed.
+    final metaBatch = _db.batch();
     for (final id in ['settings', 'contacts', 'ui', 'crew_roster']) {
-      try {
-        await logbookRef.collection('meta').doc(id).delete();
-      } catch (_) {}
+      metaBatch.delete(logbookRef.collection('meta').doc(id));
     }
+    await metaBatch.commit();
 
     // Delete all members + the logbook doc itself.
     final membersSnap = await logbookRef.collection('members').get();

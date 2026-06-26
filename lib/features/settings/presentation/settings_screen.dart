@@ -14,7 +14,6 @@ import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
-import '../../home/screens/crew_roster_screen.dart';
 import '../../home/utils/filter_settings.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../domain/theme_provider.dart';
@@ -1527,10 +1526,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildCrewRosterSection(ColorScheme cs) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CrewRosterScreen()),
-      ),
+      onTap: () => context.push('/settings/crew-roster'),
       child: Container(
         decoration: BoxDecoration(
           color: cs.surfaceContainerLowest,

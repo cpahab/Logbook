@@ -9,6 +9,7 @@ import '../features/emergency/presentation/emergency_screen.dart';
 import '../features/emergency/presentation/mayday_screen.dart';
 import '../features/home/presentation/day_detail_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/home/screens/crew_roster_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/tracks/presentation/tracks_screen.dart';
 
@@ -58,6 +59,10 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/crew-roster',
+        builder: (context, state) => const CrewRosterScreen(),
       ),
       GoRoute(
         path: '/tracks',

@@ -1221,6 +1221,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get navJournal => 'Journal';
 
   @override
+  String get navTracks => 'Tracks';
+
+  @override
+  String get navSettings => 'Einst.';
+
+  @override
   String get navSafety => 'Sicherheit';
 
   @override

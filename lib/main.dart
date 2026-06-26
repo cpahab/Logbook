@@ -18,6 +18,7 @@ import 'features/emergency/data/emergency_repository.dart';
 import 'features/settings/domain/theme_provider.dart';
 import 'core/services/logbook_service.dart';
 import 'core/services/firestore_service.dart';
+import 'core/services/migration_service.dart';
 import 'core/services/storage_service.dart';
 import 'firebase_options.dart';
 
@@ -57,6 +58,7 @@ Future<void> _initFirestore(
     if (initialSync) themeProvider.markInitialSyncDone();
     themeProvider.setLastKnownUid(user.uid);
     logbookIdNotifier.value = logbookId;
+    unawaited(MigrationService().runAll(user.uid));
   } catch (_) {
     // Offline or Firestore error — continue with local data, retry next launch.
   }

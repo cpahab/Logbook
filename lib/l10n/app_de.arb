@@ -444,6 +444,8 @@
   "emergencyFireSuppression": "Feuerlöschanlage",
 
   "navJournal": "Journal",
+  "navTracks": "Tracks",
+  "navSettings": "Einst.",
   "navSafety": "Sicherheit",
   "offlineLabel": "Offline",
   "crewBloodGroupPrefix": "BG",
