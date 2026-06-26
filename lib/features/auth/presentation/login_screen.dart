@@ -99,7 +99,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final l10n = context.l10n;
     final platform = defaultTargetPlatform;
     final showGoogle = platform == TargetPlatform.iOS ||
-        platform == TargetPlatform.android;
+        platform == TargetPlatform.android ||
+        platform == TargetPlatform.macOS;
     final showApple = platform == TargetPlatform.iOS ||
         platform == TargetPlatform.macOS;
 
