@@ -372,26 +372,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const Spacer(),
-                            GestureDetector(
-                              onTap: () => setState(() => _showAllYears = true),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    context.l10n.homeAllButton.toUpperCase(),
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 1.5,
-                                      color: cs.secondary,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Icon(Icons.arrow_forward,
-                                      size: 14, color: cs.secondary),
-                                ],
-                              ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -443,7 +423,48 @@ class _HomeScreenState extends State<HomeScreen> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: years.map((year) {
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: GestureDetector(
+              onTap: () => setState(() => _showAllYears = true),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _showAllYears ? cs.primary : cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: _showAllYears ? cs.primary : cs.outlineVariant,
+                  ),
+                  boxShadow: _showAllYears
+                      ? [
+                          BoxShadow(
+                            color: cs.primary.withValues(alpha: 0.25),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                          BoxShadow(
+                            color: cs.secondaryFixed.withValues(alpha: 0.30),
+                            blurRadius: 0,
+                            spreadRadius: 1.5,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  context.l10n.homeAllButton.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                    color: _showAllYears ? cs.onPrimary : cs.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          ...years.map((year) {
           final active = !_showAllYears && year == effectiveYear;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -490,7 +511,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           );
-        }).toList(),
+        }),
+        ],
       ),
     );
   }

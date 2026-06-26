@@ -95,9 +95,9 @@ class _AppBottomNavState extends State<AppBottomNav> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(child: Center(child: _tab(context, cs, NavTab.journal, Icons.auto_stories, context.l10n.navJournal))),
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, context.l10n.tracksTitle))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, context.l10n.navTracks))),
                         const SizedBox(width: 64),
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, context.l10n.settingsTitle))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, context.l10n.navSettings))),
                         Expanded(child: Center(child: _tab(context, cs, NavTab.safety, Icons.health_and_safety, context.l10n.navSafety))),
                       ],
                     ),

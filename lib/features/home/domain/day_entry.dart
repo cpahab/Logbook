@@ -27,7 +27,9 @@ class DayEntry extends HiveObject {
   @HiveField(5)
   String? toHarbor;
 
-  // Statistics
+  // Statistics — written during GPX import but never read back for UI display.
+  // All on-screen stats are recomputed live from raw track points via computeDailyStats().
+  // These fields exist for Firestore sync compatibility; do not rely on them for display.
   @HiveField(6)
   double distanceNm;
 

@@ -103,7 +103,7 @@ final ThemeData darkTheme = ThemeData(
     actionsIconTheme: IconThemeData(color: Color(0xFF7DB3F0)),
   ),
   cardTheme: const CardThemeData(
-    elevation: 2,
+    elevation: 1,
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.all(Radius.circular(12)),

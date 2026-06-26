@@ -18,6 +18,12 @@ service cloud.firestore {
     }
 
     // Share-code lookup: any signed-in user can read (needed for QR join flow).
+    //
+    // DELIBERATE TRADE-OFF: a signed-in user who knows or guesses a share code
+    // can read that document. The code space is 32^8 ≈ 1 trillion combinations
+    // (alphabet: ABCDEFGHJKLMNPQRSTUVWXYZ23456789), so brute-force is not
+    // practical. Listing is not possible (no 'list' rule), so guessing requires
+    // knowing the exact 8-character string. Accepted risk; no change planned.
     match /shareCodes/{code} {
       allow read:   if isSignedIn();
       allow create: if isSignedIn();

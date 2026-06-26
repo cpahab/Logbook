@@ -2360,6 +2360,18 @@ abstract class AppLocalizations {
   /// **'Journal'**
   String get navJournal;
 
+  /// No description provided for @navTracks.
+  ///
+  /// In de, this message translates to:
+  /// **'Tracks'**
+  String get navTracks;
+
+  /// No description provided for @navSettings.
+  ///
+  /// In de, this message translates to:
+  /// **'Einst.'**
+  String get navSettings;
+
   /// No description provided for @navSafety.
   ///
   /// In de, this message translates to:

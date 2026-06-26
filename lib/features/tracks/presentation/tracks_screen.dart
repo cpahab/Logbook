@@ -375,6 +375,7 @@ class _TracksScreenState extends State<TracksScreen> {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             _chip(context.l10n.tracksOneYear.toUpperCase(), _FilterPreset.year1, cs),
             const SizedBox(width: 8),
@@ -383,6 +384,7 @@ class _TracksScreenState extends State<TracksScreen> {
             _chip(context.l10n.tracksOneWeek.toUpperCase(), _FilterPreset.week1, cs),
             const SizedBox(width: 8),
             _chip(customLabel, _FilterPreset.custom, cs, isCustom: true),
+            const SizedBox(width: 8),
           ],
         ),
       ),

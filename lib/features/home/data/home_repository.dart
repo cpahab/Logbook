@@ -666,7 +666,7 @@ class HomeRepository extends ChangeNotifier {
 
   static String buildCrewNote(List<CrewMember> crew) {
     final parts = crew.asMap().entries.map((e) =>
-        e.key == 0 ? '${e.value.name} (Skipper)' : e.value.name).toList();
+        e.key == 0 ? 'role=0:${e.value.name}' : e.value.name).toList();
     // Stored prefix is a non-localised sentinel; display label is separate (see _crewNoteDisplay).
     return 'crew:${parts.join(' · ')}';
   }

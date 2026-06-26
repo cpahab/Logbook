@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../features/home/domain/crew_member.dart';
 import '../../features/home/domain/day_entry.dart';
@@ -261,7 +262,9 @@ class FirestoreService {
       if (data == null) continue;
       try {
         result.add(_fromMap(data, normalized));
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) debugPrint('FirestoreService: failed to parse doc change: $e');
+      }
     }
     return result;
   }
@@ -275,7 +278,9 @@ class FirestoreService {
       final normalized = DateTime(date.year, date.month, date.day);
       try {
         result.add(_fromMap(doc.data(), normalized));
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) debugPrint('FirestoreService: failed to parse doc ${doc.id}: $e');
+      }
     }
     return result;
   }

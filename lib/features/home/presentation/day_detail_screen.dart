@@ -69,8 +69,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // Returns the display string for a crew note, stripping the sentinel prefix
   // and prepending a localisation-ready display label.
-  static String _crewNoteDisplay(String note, String crewLabel) {
-    if (note.startsWith('crew:')) return '$crewLabel: ${note.substring(5)}';
+  // New format: 'crew:role=0:Alice · Bob' → 'Crew: Alice (Skipper) · Bob'
+  // Legacy format: 'crew:Alice (Skipper) · Bob' — passes through verbatim after stripping prefix.
+  static String _crewNoteDisplay(String note, String crewLabel, String skipperLabel) {
+    if (note.startsWith('crew:')) {
+      final body = note.substring(5).split(' · ').map((part) {
+        if (part.startsWith('role=0:')) return '${part.substring(7)} ($skipperLabel)';
+        return part;
+      }).join(' · ');
+      return '$crewLabel: $body';
+    }
     return note; // legacy format already begins with 'Besatzung: '
   }
 
@@ -1231,7 +1239,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 isCrewEntry
-                    ? _crewNoteDisplay(t.vesselStatusNote!, context.l10n.dataCrewNote)
+                    ? _crewNoteDisplay(t.vesselStatusNote!, context.l10n.dataCrewNote, context.l10n.labelSkipper)
                     : _vesselStatusDisplay(t.vesselStatusNote!, context.l10n),
                 style: GoogleFonts.inter(
                   fontSize: 13,
