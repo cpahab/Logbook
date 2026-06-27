@@ -820,17 +820,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
-                        // Line 4: Stats (dist + avg speed, same italic style)
-                        if (stats != null &&
-                            (stats.distanceNm > 0 || stats.avgSpeed > 0)) ...[
+                        // Line 4: Stats (distance only)
+                        if (stats != null && stats.distanceNm > 0) ...[
                           const SizedBox(height: 2),
                           Text(
-                            [
-                              if (stats.distanceNm > 0)
-                                '${stats.distanceNm.toStringAsFixed(1)} nm',
-                              if (stats.avgSpeed > 0)
-                                'Ø ${stats.avgSpeed.toStringAsFixed(1)} kn',
-                            ].join(' · '),
+                            '${stats.distanceNm.toStringAsFixed(1)} nm',
                             style: GoogleFonts.newsreader(
                               fontSize: 13,
                               fontStyle: FontStyle.italic,
