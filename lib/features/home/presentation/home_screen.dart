@@ -263,10 +263,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // Aggregate distance: prefer GPS track stats, fall back to DayEntry.distanceNm
-    // for days logged without a GPX track.
+    // Aggregate distance: prefer GPS track stats, fall back to DayEntry.distanceNm.
+    // Day count includes every logged day regardless of whether it has a track.
     double totalNm = 0;
-    int daysAtSea = 0;
     final countedDays = <DateTime>{};
     for (final day in repo.dailyTracks.keys) {
       if (effectiveYear != null && day.year != effectiveYear) continue;
@@ -275,18 +274,15 @@ class _HomeScreenState extends State<HomeScreen> {
       final stats = computeDailyStats(track.points, settings: filterSettings);
       if (stats.distanceNm > 0) {
         totalNm += stats.distanceNm;
-        daysAtSea++;
         countedDays.add(day);
       }
     }
     for (final e in filtered) {
       final day = DateTime(e.date.year, e.date.month, e.date.day);
       if (countedDays.contains(day)) continue;
-      if (e.distanceNm > 0) {
-        totalNm += e.distanceNm;
-        daysAtSea++;
-      }
+      if (e.distanceNm > 0) totalNm += e.distanceNm;
     }
+    final daysAtSea = filtered.length;
 
     WidgetsBinding.instance
         .addPostFrameCallback((_) => _scrollToSelectedDay());
