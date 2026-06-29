@@ -43,6 +43,7 @@ class ThemeProvider extends ChangeNotifier {
   static const _showRawTrackKey            = 'debug_show_raw_track';
   static const _localeKey                  = 'locale';
   static const _lastUidKey                 = 'last_known_uid';
+  static const _lastProjectIdKey           = 'last_known_project_id';
 
   late Box<String> _box;
   FirestoreService? _firestore;
@@ -112,8 +113,11 @@ class ThemeProvider extends ChangeNotifier {
   String get vhf3Desc           => _vhf3Desc;
   String get vhf4Label          => _vhf4Label;
   String get vhf4Desc           => _vhf4Desc;
-  String? get lastKnownUid      => _box.get(_lastUidKey);
+  String? get lastKnownUid        => _box.get(_lastUidKey);
   void setLastKnownUid(String uid) => _box.put(_lastUidKey, uid);
+
+  String? get lastKnownProjectId          => _box.get(_lastProjectIdKey);
+  void setLastKnownProjectId(String id)   => _box.put(_lastProjectIdKey, id);
 
   /// Returns whether [monthKey] (format `"yyyy-M"`) is expanded.
   /// Defaults to [defaultOpen] when the user has never explicitly set it.

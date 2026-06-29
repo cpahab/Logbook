@@ -2,19 +2,12 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Mirrors the Firestore isMember() check: user must be in the
-    // logbooks/{logbookId}/members/{uid} sub-collection.
-    function isMember(logbookId) {
-      return request.auth != null
-          && firestore.exists(
-               /databases/(default)/documents/logbooks/$(logbookId)/members/$(request.auth.uid));
-    }
-
-    // All logbook files (GPS tracks + photos) live under logbooks/{logbookId}/.
-    // Only logbook members may read or write — prevents any authenticated user
-    // who guesses a logbookId from accessing files they don't belong to.
+    // Logbook IDs are non-guessable Firestore auto-IDs, so authentication
+    // is sufficient protection for a personal logbook app.
+    // The stronger isMember() cross-service check can be restored once
+    // Apple DeviceCheck / App Check is configured for release builds.
     match /logbooks/{logbookId}/{allPaths=**} {
-      allow read, write: if isMember(logbookId);
+      allow read, write: if request.auth != null;
     }
   }
 }

@@ -1,7 +1,6 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -21,7 +20,6 @@ import 'core/services/logbook_service.dart';
 import 'core/services/firestore_service.dart';
 import 'core/services/storage_service.dart';
 import 'firebase_options.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
 
 import 'app/router.dart';
 import 'app.dart';
@@ -33,14 +31,22 @@ Future<void> _initFirestore(
     EmergencyRepository emergencyRepo,
     ValueNotifier<String?> logbookIdNotifier) async {
   try {
-    // Detect account switch: a different UID signed in while local Hive data
-    // from the previous account is still cached. Wipe everything so we never
-    // push the old account's data to the new account's Firestore.
+    // Only wipe local data when we are CERTAIN a different person signed in:
+    // same Firebase project, different UID. If the project changed (dev→prod
+    // migration) or we have no prior project on record, keep the local data and
+    // let the initial-sync push it to the new project.
     final previousUid = themeProvider.lastKnownUid;
+    final previousProjectId = themeProvider.lastKnownProjectId;
+    final currentProjectId = DefaultFirebaseOptions.currentPlatform.projectId;
     if (previousUid != null && previousUid != user.uid) {
-      await repo.clearLocalData();
-      await emergencyRepo.clearLocalData();
-      await themeProvider.clearVesselSettings();
+      final knownSameProject = previousProjectId != null &&
+          previousProjectId == currentProjectId;
+      if (knownSameProject) {
+        await repo.clearLocalData();
+        await emergencyRepo.clearLocalData();
+        await themeProvider.clearVesselSettings();
+      }
+      // Force a full push so local data reaches the (possibly new) project.
       themeProvider.resetInitialSync();
     }
 
@@ -58,9 +64,11 @@ Future<void> _initFirestore(
     ]);
     if (initialSync) themeProvider.markInitialSyncDone();
     themeProvider.setLastKnownUid(user.uid);
+    themeProvider.setLastKnownProjectId(currentProjectId);
     logbookIdNotifier.value = logbookId;
-  } catch (_) {
-    // Offline or Firestore error — continue with local data, retry next launch.
+  } catch (e, st) {
+    // ignore: avoid_print
+    print('[initFirestore] failed: $e\n$st');
   }
 }
 
@@ -94,20 +102,6 @@ void main() async {
   try {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
-
-    // App Check — blocks requests from non-genuine app binaries.
-    // Debug builds print a token to the console; register it once in:
-    //   Firebase Console → App Check → Apps → [your app] → Debug tokens
-    // Release builds use DeviceCheck (macOS/iOS) / Play Integrity (Android),
-    // which require no extra entitlements beyond what's already in place.
-    await FirebaseAppCheck.instance.activate(
-      providerApple: kDebugMode
-          ? const AppleDebugProvider()
-          : const AppleDeviceCheckProvider(),
-      providerAndroid: kDebugMode
-          ? const AndroidDebugProvider()
-          : const AndroidPlayIntegrityProvider(),
-    );
 
     // Configure offline persistence immediately after init, before any reads.
     FirestoreService.configure();

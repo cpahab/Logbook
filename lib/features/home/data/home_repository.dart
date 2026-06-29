@@ -268,7 +268,10 @@ class HomeRepository extends ChangeNotifier {
         if (points.isEmpty) continue;
         await _saveTrack(date, '$date.gpx', points);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      // ignore: avoid_print
+      debugPrint('[attachStorage] failed: $e\n$st');
+    }
   }
 
   static Uint8List _trackToGpxBytes(DailyTrack track) {

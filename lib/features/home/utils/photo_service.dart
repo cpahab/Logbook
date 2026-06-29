@@ -63,7 +63,10 @@ class PhotoService {
         await local.writeAsBytes(compressed.isNotEmpty ? compressed : srcBytes);
         await FirebaseStorage.instance.ref(storagePath).putFile(local);
         uploaded.add(storagePath);
-      } catch (_) {}
+      } catch (e, st) {
+        // ignore: avoid_print
+        print('[PhotoService] upload failed: $e\n$st');
+      }
     }
     return uploaded;
   }

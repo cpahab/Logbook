@@ -3,21 +3,23 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>238354943592-c4i2ndgeife35unb4bvp0ah5mj16sra9.apps.googleusercontent.com</string>
+	<string>34296706111-0ann0c13688t1t2pbrodoc4tojs7f2co.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.238354943592-c4i2ndgeife35unb4bvp0ah5mj16sra9</string>
+	<string>com.googleusercontent.apps.34296706111-0ann0c13688t1t2pbrodoc4tojs7f2co</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>34296706111-cmo7686vs6gt4bj4qrkmrp25lgcdn9r5.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyBR52cSkytVtjhLeuCNvzHphhCQVDIMkic</string>
+	<string>AIzaSyB1sAEN7GS33LcsiOVUC5b3npgq6lxC--k</string>
 	<key>GCM_SENDER_ID</key>
-	<string>238354943592</string>
+	<string>34296706111</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>com.ziegler.logbook</string>
 	<key>PROJECT_ID</key>
-	<string>logbook-auth-dev</string>
+	<string>logbook-b19ed</string>
 	<key>STORAGE_BUCKET</key>
-	<string>logbook-auth-dev.firebasestorage.app</string>
+	<string>logbook-b19ed.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -29,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:238354943592:ios:bb7b2307cddb2a8353f5dd</string>
+	<string>1:34296706111:ios:0c855c2dc50b42d9ebf48a</string>
 </dict>
 </plist>

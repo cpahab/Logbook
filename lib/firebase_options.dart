@@ -51,31 +51,32 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBI7MFrpYIkdpG_x6-pealt3IHFNBcm-bQ',
-    appId: '1:238354943592:android:17d48f0ed9549c2553f5dd',
-    messagingSenderId: '238354943592',
-    projectId: 'logbook-auth-dev',
-    storageBucket: 'logbook-auth-dev.firebasestorage.app',
+    apiKey: 'AIzaSyABHc8SlhoG9KcIq356CwJ3D2nLP-78kQk',
+    appId: '1:34296706111:android:885f3976d853be9eebf48a',
+    messagingSenderId: '34296706111',
+    projectId: 'logbook-b19ed',
+    storageBucket: 'logbook-b19ed.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyBR52cSkytVtjhLeuCNvzHphhCQVDIMkic',
-    appId: '1:238354943592:ios:bb7b2307cddb2a8353f5dd',
-    messagingSenderId: '238354943592',
-    projectId: 'logbook-auth-dev',
-    storageBucket: 'logbook-auth-dev.firebasestorage.app',
+    apiKey: 'AIzaSyB1sAEN7GS33LcsiOVUC5b3npgq6lxC--k',
+    appId: '1:34296706111:ios:0c855c2dc50b42d9ebf48a',
+    messagingSenderId: '34296706111',
+    projectId: 'logbook-b19ed',
+    storageBucket: 'logbook-b19ed.firebasestorage.app',
+    androidClientId: '34296706111-cmo7686vs6gt4bj4qrkmrp25lgcdn9r5.apps.googleusercontent.com',
+    iosClientId: '34296706111-0ann0c13688t1t2pbrodoc4tojs7f2co.apps.googleusercontent.com',
     iosBundleId: 'com.ziegler.logbook',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyBR52cSkytVtjhLeuCNvzHphhCQVDIMkic',
-    appId: '1:238354943592:ios:bb7b2307cddb2a8353f5dd',
-    messagingSenderId: '238354943592',
-    projectId: 'logbook-auth-dev',
-    storageBucket: 'logbook-auth-dev.firebasestorage.app',
+    apiKey: 'AIzaSyB1sAEN7GS33LcsiOVUC5b3npgq6lxC--k',
+    appId: '1:34296706111:ios:0c855c2dc50b42d9ebf48a',
+    messagingSenderId: '34296706111',
+    projectId: 'logbook-b19ed',
+    storageBucket: 'logbook-b19ed.firebasestorage.app',
+    androidClientId: '34296706111-cmo7686vs6gt4bj4qrkmrp25lgcdn9r5.apps.googleusercontent.com',
+    iosClientId: '34296706111-0ann0c13688t1t2pbrodoc4tojs7f2co.apps.googleusercontent.com',
     iosBundleId: 'com.ziegler.logbook',
   );
-
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyA11016bm3ey5EgTSTVVBz8PbVVVJ3J3N0',
     appId: '1:238354943592:web:d250d2d216a1b81453f5dd',

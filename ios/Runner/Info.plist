@@ -22,8 +22,6 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -31,10 +29,12 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.238354943592-c4i2ndgeife35unb4bvp0ah5mj16sra9</string>
+				<string>com.googleusercontent.apps.34296706111-0ann0c13688t1t2pbrodoc4tojs7f2co</string>
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>https</string>
@@ -42,12 +42,14 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Logbook needs access to your photo library to import GPX or image files.</string>
-	<key>NSPhotoLibraryAddOnlyUsageDescription</key>
-	<string>Logbook needs access to save files to your photo library.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Logbook uses the camera to scan QR codes for joining a shared logbook.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your position is shown in the MAYDAY radio protocol so you can relay it to the Coast Guard.</string>
+	<key>NSPhotoLibraryAddOnlyUsageDescription</key>
+	<string>Logbook needs access to save files to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Logbook needs access to your photo library to import image files.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -71,8 +73,6 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Your position is shown in the MAYDAY radio protocol so you can relay it to the Coast Guard.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
