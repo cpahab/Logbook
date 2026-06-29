@@ -1,20 +1,25 @@
-/// GPS track cleaning pipeline — Dart port of gpx_filter_reference_v5.py.
+/// GPS track cleaning pipeline — Dart port of gpx_filter_reference_v6.py.
 ///
-/// v5 upgrade: robustness to GPS dropouts / teleports (a logging gap where the
-/// receiver re-acquires at a new position).  Two changes:
-///   (a) the moving-window speed/spread is GAP-AWARE — the window never spans a
-///       flagged spike, so berth fixes adjacent to a departure glitch still read
-///       as stationary;
-///   (b) the stop-merge never bridges across a flagged spike, so a teleport
-///       cannot fuse the pre- and post-jump pauses into one bogus wide "stop".
+/// v6 adds detection of a BAD FIRST FIX: a single wrong GPS position at fix[0]
+/// that sits far from where the receiver settled in the following fixes. Unlike
+/// cold-start (gradual convergence over several minutes), this is one outlier
+/// that jumps immediately to the correct position at fix[1]. Observed in 3 of 9
+/// real Idefix logs: 28 Jun (256 m off), 18 Apr (89 m off), 02 May (75 m off).
+/// Two targeted changes:
+///   (a) _detectBadFirstFix() flags fix[0] when it is a single outlier relative
+///       to the tight cluster formed by the next ~10 fixes.
+///   (b) _findStationarySegments() now EXCLUDES flagged fixes from the spread
+///       calculation so a flagged fix[0] cannot inflate the berth spread and
+///       cause it to be rejected by the maxStopSpreadM gate.
 ///
-/// Pipeline order (v5):
-///   1. Annotate  — initial windowed speed + spread (simple window, no spikes yet).
-///   2. Spikes    — flag physically implausible moving fixes BEFORE stop detection.
-///   3. Re-annotate — gap-aware window now that spike positions are known.
-///   4. Detect    — find ALL stationary segments (start, mid, end).
-///   5. Cold-start — flag GPS warm-up fixes at track start.
-///   6. Smooth    — sliding-median on the kept moving track.
+/// Pipeline order (v6):
+///   1. Annotate   — initial windowed speed + spread (simple window, no spikes yet).
+///   2. Spikes     — flag physically implausible moving fixes BEFORE stop detection.
+///   3. BadFirst   — flag fix[0] if it is a single position outlier.
+///   4. Re-annotate — gap-aware window now that all flagged positions are known.
+///   5. Detect     — find ALL stationary segments (spread excludes flagged fixes).
+///   6. Cold-start — flag GPS warm-up fixes at track start.
+///   7. Smooth     — sliding-median on the kept moving track.
 library;
 
 import 'dart:math';
@@ -106,6 +111,50 @@ void _annotate(List<_Fix> fixes, int window) {
   }
 }
 
+// ── Pass 2b — bad first fix detection ────────────────────────────────────────
+
+/// Flags fix[0] when it is a single wrong initial GPS position — one outlier
+/// that sits far from where the receiver settled from fix[1] onward.
+///
+/// Method: compute the centroid and mean spread of the next [lookahead] fixes.
+/// If fix[0] is more than [factor] × spread away from that centroid AND the
+/// distance exceeds [minDistanceM], it is flagged.  The tight-cluster condition
+/// (`factor × spread`) ensures this never fires on a trip that genuinely starts
+/// under way (where the lookahead cluster is spread out along the track).
+///
+/// Returns true if fix[0] was flagged.  The caller must recompute speeds after
+/// this so the window no longer spans the flagged fix.
+bool _detectBadFirstFix(
+  List<_Fix> fixes, {
+  int lookahead       = 10,
+  double factor       = 5.0,
+  double minDistanceM = 30.0,
+}) {
+  if (fixes.length < 4) return false;
+
+  final clusterEnd = min(lookahead + 1, fixes.length);
+  final cluster    = fixes.sublist(1, clusterEnd);
+
+  var sumLat = 0.0, sumLon = 0.0;
+  for (final f in cluster) { sumLat += f.pt.lat; sumLon += f.pt.lon; }
+  final cLat = sumLat / cluster.length;
+  final cLon = sumLon / cluster.length;
+
+  final d0 = _haversineM(fixes[0].pt.lat, fixes[0].pt.lon, cLat, cLon);
+
+  var sumSpread = 0.0;
+  for (final f in cluster) {
+    sumSpread += _haversineM(cLat, cLon, f.pt.lat, f.pt.lon);
+  }
+  final spread = sumSpread / cluster.length;
+
+  if (d0 > max(factor * spread, minDistanceM)) {
+    fixes[0].flagged = true;
+    return true;
+  }
+  return false;
+}
+
 // ── Pass 2 — find ALL stationary segments ────────────────────────────────────
 
 class _StopSegment {
@@ -169,6 +218,12 @@ List<_StopSegment> _findStationarySegments(
   }
 
   // 3. Filter and classify each merged run.
+  // v6: first non-flagged index for correct start-stop classification when
+  // fix[0] was flagged as a bad first fix (the berth starts at index 1 but
+  // is still a 'start' stop, not a 'mid').
+  final firstNonFlagged = fixes.indexWhere((f) => !f.flagged);
+  final effectiveFirst  = firstNonFlagged < 0 ? 0 : firstNonFlagged;
+
   final stops = <_StopSegment>[];
   for (final span in merged) {
     final a   = span[0];
@@ -178,15 +233,19 @@ List<_StopSegment> _findStationarySegments(
     final durationMinutes =
         fixes[b].pt.time.difference(fixes[a].pt.time).inSeconds / 60.0;
 
-    // Centroid of this cluster.
+    // v6: exclude flagged fixes from spread so a flagged bad-first-fix cannot
+    // inflate the apparent cluster radius and cause the berth to be rejected.
+    final nonFlagged = seg.where((f) => !f.flagged).toList();
+    if (nonFlagged.isEmpty) continue;
+
     var sumLat = 0.0, sumLon = 0.0;
-    for (final f in seg) { sumLat += f.pt.lat; sumLon += f.pt.lon; }
-    final cLat = sumLat / seg.length;
-    final cLon = sumLon / seg.length;
+    for (final f in nonFlagged) { sumLat += f.pt.lat; sumLon += f.pt.lon; }
+    final cLat = sumLat / nonFlagged.length;
+    final cLon = sumLon / nonFlagged.length;
 
     // Maximum distance from centroid (overall_spread in Python reference).
     var maxSpread = 0.0;
-    for (final f in seg) {
+    for (final f in nonFlagged) {
       final d = _haversineM(cLat, cLon, f.pt.lat, f.pt.lon);
       if (d > maxSpread) maxSpread = d;
     }
@@ -197,7 +256,9 @@ List<_StopSegment> _findStationarySegments(
       continue;
     }
 
-    final kind = a == 0
+    // v6: a stop beginning at or before effectiveFirst is a 'start' stop even
+    // when the true first fix (index 0) was flagged.
+    final kind = a <= effectiveFirst
         ? AnchorKind.start
         : (b == n - 1 ? AnchorKind.end : AnchorKind.mid);
 
@@ -403,12 +464,16 @@ class TrimResult {
   /// Number of GPS cold-start convergence fixes stripped from the track start.
   final int nColdStart;
 
+  /// 1 if fix[0] was identified as a single bad initial GPS position; 0 otherwise.
+  final int nBadFirstFix;
+
   const TrimResult({
     required this.points,
     this.anchors             = const [],
     this.movingInstSpeedsKn  = const [],
     this.nSpikes             = 0,
     this.nColdStart          = 0,
+    this.nBadFirstFix        = 0,
   });
 
   // Backward-compat getters for callers that only care about the endpoints.
@@ -433,16 +498,19 @@ TrimResult trimTrackWithAnchors(
   // Pass 1 — initial annotate (simple window; no spikes flagged yet)
   _annotate(fixes, settings.window);
 
-  // Pass 2 — flag spikes BEFORE stop detection
+  // Pass 2 — flag mid-track spikes BEFORE stop detection
   final nSpikes = _flagSpikes(fixes);
 
-  // Pass 3 — re-annotate now that spike positions are known (gap-aware window)
+  // Pass 3 — detect bad first fix (single outlier at fix[0], distinct from cold-start)
+  final nBadFirstFix = settings.detectBadFirstFix && _detectBadFirstFix(fixes) ? 1 : 0;
+
+  // Pass 4 — re-annotate gap-aware now that all flagged positions are known
   _annotate(fixes, settings.window);
 
-  // Pass 4 — find all stationary segments (uses spike-aware annotations)
+  // Pass 5 — find all stationary segments (spread excludes flagged fixes)
   final stops = _findStationarySegments(fixes, settings);
 
-  // Pass 5 — GPS cold-start (only at start stop; sets .coldStart on leading fixes)
+  // Pass 6 — GPS cold-start (only at start stop; sets .coldStart on leading fixes)
   final nColdStart = settings.detectColdStart
       ? _flagColdStart(fixes, stops, settings.coldStartSettleFactor)
       : 0;
@@ -462,7 +530,8 @@ TrimResult trimTrackWithAnchors(
   final keptFixes = fixes.where((f) => !f.stationary && !f.flagged).toList();
 
   if (keptFixes.isEmpty) {
-    return TrimResult(points: points, anchors: anchors, nSpikes: nSpikes, nColdStart: nColdStart);
+    return TrimResult(points: points, anchors: anchors, nSpikes: nSpikes,
+        nColdStart: nColdStart, nBadFirstFix: nBadFirstFix);
   }
 
   // Collect instantaneous speeds of kept fixes for robust max-speed computation.
@@ -483,6 +552,7 @@ TrimResult trimTrackWithAnchors(
     movingInstSpeedsKn:  movingInstSpeedsKn,
     nSpikes:             nSpikes,
     nColdStart:          nColdStart,
+    nBadFirstFix:        nBadFirstFix,
   );
 }
 
@@ -602,12 +672,19 @@ class DisplayModel {
   /// Use this for the "raw track" overlay instead of the original track.points.
   final List<TrackPoint> rawMovingPoints;
 
+  /// All fixes with flagged (bad first fix + spikes) and cold-start fixes
+  /// removed, but including stationary/berth fixes at their correct positions.
+  /// Use this for timeline-entry correlation so departure/arrival entries snap
+  /// to the berth rather than to a wrong GPS position.
+  final List<TrackPoint> correlationPoints;
+
   const DisplayModel({
-    this.segments         = const [],
-    this.stops            = const [],
-    this.hasTeleport      = false,
-    this.baseAccuracyM    = _defaultBaseAccuracyM,
-    this.rawMovingPoints  = const [],
+    this.segments           = const [],
+    this.stops              = const [],
+    this.hasTeleport        = false,
+    this.baseAccuracyM      = _defaultBaseAccuracyM,
+    this.rawMovingPoints    = const [],
+    this.correlationPoints  = const [],
   });
 
   /// First moving fix — departure time.
@@ -809,6 +886,7 @@ DisplayModel buildDisplayModel(
 
   _annotate(fixes, settings.window);
   _flagSpikes(fixes);
+  if (settings.detectBadFirstFix) _detectBadFirstFix(fixes);
   _annotate(fixes, settings.window);
   final stops = _findStationarySegments(fixes, settings);
   if (settings.detectColdStart) {
@@ -822,6 +900,13 @@ DisplayModel buildDisplayModel(
   // filter's effect is visible when the raw overlay is shown.
   final rawMovingPoints = fixes
       .where((f) => !f.stationary && !f.coldStart)
+      .map((f) => f.pt)
+      .toList();
+  // correlationPoints: flagged (bad first fix + spikes) and cold-start removed,
+  // but stationary/berth fixes KEPT so timeline entries at departure/arrival
+  // time snap to the correct berth position, not to a bad GPS fix.
+  final correlationPoints = fixes
+      .where((f) => !f.flagged && !f.coldStart)
       .map((f) => f.pt)
       .toList();
   final movingFixes    = fixes.where((f) => !f.stationary && !f.coldStart && !f.flagged).toList();
@@ -984,10 +1069,11 @@ DisplayModel buildDisplayModel(
   flushMoving();
 
   return DisplayModel(
-    segments:        segments,
-    stops:           stopMarkers,
-    hasTeleport:     hasTeleport,
-    baseAccuracyM:   baseAccuracyM,
-    rawMovingPoints: rawMovingPoints,
+    segments:          segments,
+    stops:             stopMarkers,
+    hasTeleport:       hasTeleport,
+    baseAccuracyM:     baseAccuracyM,
+    rawMovingPoints:   rawMovingPoints,
+    correlationPoints: correlationPoints,
   );
 }

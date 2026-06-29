@@ -266,16 +266,19 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ),
       body: entry == null
           ? Center(child: Text(l10n.dayNoEntry))
-          : _buildBody(entry, track, stats, cs),
+          : _buildBody(entry, track, stats, filterSettings, cs),
     );
   }
 
   // ── Body ──────────────────────────────────────────────────────────
-  Widget _buildBody(
-      DayEntry entry, DailyTrack? track, DailyStats? stats, ColorScheme cs) {
+  Widget _buildBody(DayEntry entry, DailyTrack? track, DailyStats? stats,
+      FilterSettings filterSettings, ColorScheme cs) {
+    final corrPoints = track != null
+        ? buildDisplayModel(track.points, settings: filterSettings).correlationPoints
+        : <TrackPoint>[];
     final correlatedMap = track != null
         ? Map<TimelineEntry, TrackPoint>.fromEntries(
-            correlateTimelineWithTrack(entry.timeline, track.points)
+            correlateTimelineWithTrack(entry.timeline, corrPoints)
                 .map((pair) => MapEntry(pair.$1, pair.$2)),
           )
         : <TimelineEntry, TrackPoint>{};
@@ -2064,7 +2067,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final filterSettings = provider.filterSettings;
     final showRawTrack = provider.showRawTrack;
     final display    = buildDisplayModel(track.points, settings: filterSettings);
-    final correlated = correlateTimelineWithTrack(entry.timeline, track.points);
+    final correlated = correlateTimelineWithTrack(entry.timeline, display.correlationPoints);
 
     final startPoint = display.firstMovingPoint ?? track.points.first;
     final endPoint   = display.lastMovingPoint  ?? track.points.last;
@@ -3394,7 +3397,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final entry = widget.entry;
 
     final display    = buildDisplayModel(track.points, settings: widget.filterSettings);
-    final correlated = correlateTimelineWithTrack(entry.timeline, track.points);
+    final correlated = correlateTimelineWithTrack(entry.timeline, display.correlationPoints);
 
     final startPoint = display.firstMovingPoint ?? track.points.first;
     final endPoint   = display.lastMovingPoint  ?? track.points.last;

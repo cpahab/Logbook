@@ -52,6 +52,13 @@ class FilterSettings {
   /// berth position to count as a cold-start fix.  Lower = more aggressive.
   final double coldStartSettleFactor;
 
+  /// Whether to detect and flag a single wrong GPS position at fix[0] that sits
+  /// far from where the receiver settled immediately after.  Observed in 3 of 9
+  /// real logs (28 Jun 256 m off, 18 Apr 89 m, 02 May 75 m).  Distinct from
+  /// cold-start: this is one outlier that snaps to the correct position at fix[1],
+  /// not a gradual convergence over several fixes.
+  final bool detectBadFirstFix;
+
   /// Minimum speed (knots) for a fix to count toward the "making-way" average.
   /// Drifting / motoring slowly below this threshold is excluded.
   final double makingWayThresholdKn;
@@ -70,6 +77,7 @@ class FilterSettings {
     this.maxStopSpreadM        = 30.0,
     this.detectColdStart       = true,
     this.coldStartSettleFactor = 3.0,
+    this.detectBadFirstFix     = true,
     this.makingWayThresholdKn  = 1.0,
     this.topSpeedPercentile    = 0.99,
   });
