@@ -79,7 +79,7 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeMode get themeMode               => _mode;
   Locale    get locale                  => _locale;
-  String    get localeString            => _locale.languageCode == 'de' ? 'de_CH' : 'en';
+  String    get localeString            => _locale.languageCode == 'de' ? 'de_CH' : 'en_GB';
   StationaryMode get filterMode         => _filterMode;
   double get minStopMinutes             => _minStopMinutes;
   double get maxStopSpreadM             => _maxStopSpreadM;

@@ -29,13 +29,15 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       fockState: fields[15] as String?,
       vesselStatusNote: fields[16] as String?,
       keelDown: fields[17] as bool?,
+      createdAt: fields[18] as DateTime?,
+      updatedAt: fields[19] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TimelineEntry obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.time)
       ..writeByte(1)
@@ -59,7 +61,11 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       ..writeByte(16)
       ..write(obj.vesselStatusNote)
       ..writeByte(17)
-      ..write(obj.keelDown);
+      ..write(obj.keelDown)
+      ..writeByte(18)
+      ..write(obj.createdAt)
+      ..writeByte(19)
+      ..write(obj.updatedAt);
   }
 
   @override

@@ -51,6 +51,14 @@ class TimelineEntry extends HiveObject {
   @HiveField(17)
   bool? keelDown;
 
+  /// Set once when the entry is first created. Never overwritten.
+  @HiveField(18)
+  DateTime? createdAt;
+
+  /// Updated on every subsequent edit. Null until the first edit after creation.
+  @HiveField(19)
+  DateTime? updatedAt;
+
   TimelineEntry({
     required this.time,
     this.course,
@@ -64,5 +72,7 @@ class TimelineEntry extends HiveObject {
     this.fockState,
     this.vesselStatusNote,
     this.keelDown,
+    this.createdAt,
+    this.updatedAt,
   });
 }

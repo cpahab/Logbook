@@ -305,6 +305,7 @@ class HomeRepository extends ChangeNotifier {
       if (oil != null && fuel != null && keel != null) break;
     }
 
+    final now = DateTime.now();
     final entry = DayEntry(
       date: normalized,
       timeline: [],
@@ -312,6 +313,8 @@ class HomeRepository extends ChangeNotifier {
       oilLevel:  oil,
       fuelLevel: fuel,
       keelDown:  keel,
+      createdAt: now,
+      updatedAt: now,
     );
     _entries[normalized] = entry;
     _dayBox.put(normalized.toIso8601String(), entry);
@@ -388,6 +391,9 @@ class HomeRepository extends ChangeNotifier {
   // ── Save ───────────────────────────────────────────────────────────────────
 
   void saveEntry(DayEntry entry) {
+    final now = DateTime.now();
+    entry.createdAt ??= now; // backfill for entries created before timestamping
+    entry.updatedAt = now;
     entry.save();
     _recordLocalEdit(entry.date);
     notifyListeners();

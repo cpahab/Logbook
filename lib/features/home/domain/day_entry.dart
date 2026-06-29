@@ -76,6 +76,14 @@ class DayEntry extends HiveObject {
   @HiveField(21)
   List<String> photos;
 
+  /// Set once when the day entry is first created. Never overwritten.
+  @HiveField(22)
+  DateTime? createdAt;
+
+  /// Updated on every save. Reflects the last time any field on this entry changed.
+  @HiveField(23)
+  DateTime? updatedAt;
+
   DayEntry({
     required this.date,
     this.timeline = const [],
@@ -94,6 +102,8 @@ class DayEntry extends HiveObject {
     this.freeText,
     this.keelDown,
     List<String>? photos,
+    this.createdAt,
+    this.updatedAt,
   })  : crew = crew ?? <CrewMember>[],
         photos = photos ?? <String>[];
 

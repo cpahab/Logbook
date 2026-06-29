@@ -1173,6 +1173,25 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           // Time + label + action icons
           Row(
             children: [
+              // Entry-type icon — tappable to snap map when GPS data exists.
+              GestureDetector(
+                onTap: trackedPoint != null
+                    ? () => _mapController.move(
+                          LatLng(trackedPoint.lat, trackedPoint.lon),
+                          14,
+                        )
+                    : null,
+                child: Icon(
+                  isCrewEntry
+                      ? Icons.groups_outlined
+                      : isStatusEntry
+                          ? Icons.sailing
+                          : Icons.schedule,
+                  size: 16,
+                  color: trackedPoint != null ? cs.primary : cs.outlineVariant,
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
                 timeStr,
                 style: GoogleFonts.newsreader(
@@ -1181,25 +1200,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   color: cs.primary,
                 ),
               ),
-              if (trackedPoint != null) ...[
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: () => _mapController.move(
-                    LatLng(trackedPoint.lat, trackedPoint.lon),
-                    14,
-                  ),
-                  child: Icon(Icons.location_on_outlined,
-                      size: 16, color: cs.primary),
-                ),
-              ],
               const Spacer(),
-              Text(
-                entryLabel,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
-                  color: cs.secondary,
+              Flexible(
+                child: Text(
+                  entryLabel,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.5,
+                    color: cs.secondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1208,15 +1220,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 child: GestureDetector(
                   onTap: () => _editTimelineEntry(entry, t),
                   child: Icon(Icons.edit_outlined,
-                      size: 16, color: cs.outline),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Tooltip(
-                message: context.l10n.dayDeleteLogEntry,
-                child: GestureDetector(
-                  onTap: () => _deleteTimelineEntry(entry, t),
-                  child: Icon(Icons.close,
                       size: 16, color: cs.outline),
                 ),
               ),
@@ -1637,7 +1640,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     children: [
                       Expanded(
                         child: _vesselStatCell(
-                            context.l10n.vesselOilLabel.toUpperCase(), entry.oilLevel, Icons.check_circle, cs, cardFg),
+                            context.l10n.vesselOilLabel.toUpperCase(), entry.oilLevel, Icons.opacity, cs, cardFg),
                       ),
                       const SizedBox(width: 20),
                       Expanded(
@@ -2585,7 +2588,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final day = DateTime(widget.year, widget.month, widget.day);
     final updated = await showDialog<TimelineEntry>(
       context: context,
-      builder: (_) => AddTimelineEntryDialog(day: day, initialEntry: t),
+      builder: (_) => AddTimelineEntryDialog(
+        day: day,
+        initialEntry: t,
+        onDelete: () => _deleteTimelineEntry(entry, t),
+      ),
     );
     if (!mounted || updated == null) return;
     setState(() {

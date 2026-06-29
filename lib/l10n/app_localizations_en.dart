@@ -1345,5 +1345,5 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get pdfLocale => 'en_US';
+  String get pdfLocale => 'en_GB';
 }

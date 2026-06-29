@@ -517,34 +517,37 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildStatsBento(
       double totalNm, int daysAtSea, ColorScheme cs) {
     final l10n = context.l10n;
-    return Row(
-      children: [
-        Expanded(
-          child: _statCard(
-            icon: Icons.sailing,
-            iconBg: cs.primaryContainer,
-            iconColor: cs.onPrimaryContainer,
-            label: l10n.statSailingDays,
-            value: '$daysAtSea',
-            unit: l10n.statSailingDays,
-            cs: cs,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _statCard(
+              icon: Icons.sailing,
+              iconBg: cs.primaryContainer,
+              iconColor: cs.onPrimaryContainer,
+              label: l10n.statSailingDays,
+              value: '$daysAtSea',
+              unit: l10n.statSailingDays,
+              cs: cs,
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statCard(
-            icon: Icons.straighten,
-            iconBg: cs.primaryContainer,
-            iconColor: cs.onPrimaryContainer,
-            label: l10n.statDistance,
-            value: totalNm >= 1000
-                ? '${(totalNm / 1000).toStringAsFixed(1)}k'
-                : totalNm.toStringAsFixed(0),
-            unit: 'nm',
-            cs: cs,
+          const SizedBox(width: 12),
+          Expanded(
+            child: _statCard(
+              icon: Icons.straighten,
+              iconBg: cs.primaryContainer,
+              iconColor: cs.onPrimaryContainer,
+              label: l10n.statDistance,
+              value: totalNm >= 1000
+                  ? '${(totalNm / 1000).toStringAsFixed(1)}k'
+                  : totalNm.toStringAsFixed(0),
+              unit: 'nm',
+              cs: cs,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -756,7 +759,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                '${DateFormat('EEEE', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()} · ${DateFormat('d. MMM yyyy', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()}',
+                                '${DateFormat('EEEE', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()} · ${DateFormat('d. MMM', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()}',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,

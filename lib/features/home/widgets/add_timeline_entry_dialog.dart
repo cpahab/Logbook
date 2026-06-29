@@ -19,11 +19,13 @@ class _CourseFormatter extends TextInputFormatter {
 class AddTimelineEntryDialog extends StatefulWidget {
   final DateTime day;
   final TimelineEntry? initialEntry;
+  final VoidCallback? onDelete;
 
   const AddTimelineEntryDialog({
     super.key,
     required this.day,
     this.initialEntry,
+    this.onDelete,
   });
 
   @override
@@ -112,6 +114,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       wind = '$_windDir $strength kn';
     }
 
+    final now = DateTime.now();
     Navigator.pop(
       context,
       TimelineEntry(
@@ -126,6 +129,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         fockState:  _fockState,
         motorOn:    _motorOn,
         keelDown:   _keelDown,
+        // Preserve original createdAt on edits; set it now for new entries.
+        createdAt:  widget.initialEntry?.createdAt ?? now,
+        updatedAt:  widget.initialEntry != null ? now : null,
       ),
     );
   }
@@ -525,6 +531,29 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       child: Text(l10n.cancel),
                     ),
                   ),
+                  if (isEdit && widget.onDelete != null) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context, null);
+                          widget.onDelete!.call();
+                        },
+                        icon: Icon(Icons.delete_outline,
+                            size: 18, color: cs.error),
+                        label: Text(l10n.dayDeleteLogEntry),
+                        style: TextButton.styleFrom(
+                          foregroundColor: cs.error,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          textStyle: GoogleFonts.inter(
+                              fontSize: 15, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

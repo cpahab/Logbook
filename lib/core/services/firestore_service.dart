@@ -297,7 +297,8 @@ class FirestoreService {
         'timeline': e.timeline.map(_timelineToMap).toList(),
         'photos': e.photos,
         'keelDown': e.keelDown,
-        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': e.createdAt?.toUtc().toIso8601String(),
+        'updatedAt': e.updatedAt?.toUtc().toIso8601String(),
       };
 
   static Map<String, dynamic> _timelineToMap(TimelineEntry t) => {
@@ -313,6 +314,8 @@ class FirestoreService {
         'motorOn': t.motorOn,
         'vesselStatusNote': t.vesselStatusNote,
         'keelDown': t.keelDown,
+        'createdAt': t.createdAt?.toUtc().toIso8601String(),
+        'updatedAt': t.updatedAt?.toUtc().toIso8601String(),
       };
 
   static Map<String, dynamic> _crewToMap(CrewMember c) => {
@@ -339,6 +342,12 @@ class FirestoreService {
             .toList(),
         photos: List<String>.from(d['photos'] as List? ?? []),
         keelDown: d['keelDown'] as bool?,
+        createdAt: d['createdAt'] != null
+            ? DateTime.parse(d['createdAt'] as String).toLocal()
+            : null,
+        updatedAt: d['updatedAt'] != null
+            ? DateTime.parse(d['updatedAt'] as String).toLocal()
+            : null,
       );
 
   static TimelineEntry _timelineFromMap(Map<String, dynamic> d) => TimelineEntry(
@@ -354,6 +363,12 @@ class FirestoreService {
         motorOn: d['motorOn'] as bool?,
         vesselStatusNote: d['vesselStatusNote'] as String?,
         keelDown: d['keelDown'] as bool?,
+        createdAt: d['createdAt'] != null
+            ? DateTime.parse(d['createdAt'] as String).toLocal()
+            : null,
+        updatedAt: d['updatedAt'] != null
+            ? DateTime.parse(d['updatedAt'] as String).toLocal()
+            : null,
       );
 
   static CrewMember _crewFromMap(Map<String, dynamic> d) => CrewMember(

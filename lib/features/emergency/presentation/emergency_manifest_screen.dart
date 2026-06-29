@@ -98,34 +98,37 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
           // ── Quick Actions ───────────────────────────────────────────────────
-          Row(
-            children: [
-              Expanded(child: _QuickActionCard(
-                label: l10n.emergencyProtocolBadge,
-                title: l10n.emergencyRadioProtocolShort,
-                icon: Icons.record_voice_over,
-                iconBg: cs.primary,
-                iconFg: cs.onPrimary,
-                borderColor: cs.primary,
-                cardBg: cs.surfaceContainerLowest,
-                trailingIcon: Icons.arrow_forward_ios,
-                trailingColor: cs.primary,
-                onTap: () => context.push('/emergency/mayday'),
-              )),
-              const SizedBox(width: 12),
-              Expanded(child: _QuickActionCard(
-                label: l10n.emergencyVisualAidBadge,
-                title: l10n.emergencyGuideShort,
-                icon: Icons.sos,
-                iconBg: em.criticalColor,
-                iconFg: cs.onError,
-                borderColor: em.criticalColor,
-                cardBg: em.criticalBgColor,
-                trailingIcon: Icons.flare,
-                trailingColor: em.criticalColor,
-                onTap: () => context.push('/emergency/distress'),
-              )),
-            ],
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _QuickActionCard(
+                  label: l10n.emergencyProtocolBadge,
+                  title: l10n.emergencyRadioProtocolShort,
+                  icon: Icons.record_voice_over,
+                  iconBg: cs.primary,
+                  iconFg: cs.onPrimary,
+                  borderColor: cs.primary,
+                  cardBg: cs.surfaceContainerLowest,
+                  trailingIcon: Icons.arrow_forward_ios,
+                  trailingColor: cs.primary,
+                  onTap: () => context.push('/emergency/mayday'),
+                )),
+                const SizedBox(width: 12),
+                Expanded(child: _QuickActionCard(
+                  label: l10n.emergencyVisualAidBadge,
+                  title: l10n.emergencyGuideShort,
+                  icon: Icons.sos,
+                  iconBg: em.criticalColor,
+                  iconFg: cs.onError,
+                  borderColor: em.criticalColor,
+                  cardBg: em.criticalBgColor,
+                  trailingIcon: Icons.flare,
+                  trailingColor: em.criticalColor,
+                  onTap: () => context.push('/emergency/distress'),
+                )),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -240,6 +243,7 @@ class _QuickActionCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.max,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -256,7 +260,7 @@ class _QuickActionCard extends StatelessWidget {
                 Icon(trailingIcon, color: trailingColor, size: 18),
               ],
             ),
-            const SizedBox(height: 10),
+            const Spacer(),
             Text(
               label,
               style: GoogleFonts.inter(
@@ -824,19 +828,33 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(child: _InfoField(
-                  label: 'MMSI NUMBER',
-                  value: v.vesselMmsi.isNotEmpty ? v.vesselMmsi : '—',
-                  mono: true,
-                )),
-                const SizedBox(width: 20),
-                Expanded(child: _InfoField(
-                  label: 'CALL SIGN',
-                  value: v.vesselCallSign.isNotEmpty ? v.vesselCallSign : '—',
-                )),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final fields = [
+                  _InfoField(
+                    label: 'MMSI NUMBER',
+                    value: v.vesselMmsi.isNotEmpty ? v.vesselMmsi : '—',
+                    mono: true,
+                  ),
+                  _InfoField(
+                    label: 'CALL SIGN',
+                    value: v.vesselCallSign.isNotEmpty ? v.vesselCallSign : '—',
+                  ),
+                ];
+                if (constraints.maxWidth < 300) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [fields[0], const SizedBox(height: 12), fields[1]],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: fields[0]),
+                    const SizedBox(width: 20),
+                    Expanded(child: fields[1]),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
             if (v.lifeRaftInfo.isNotEmpty)

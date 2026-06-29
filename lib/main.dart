@@ -75,7 +75,7 @@ Future<void> _initFirestore(
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('de_CH');
-  await initializeDateFormatting('en');
+  await initializeDateFormatting('en_GB');
 
   await Hive.initFlutter();
 
