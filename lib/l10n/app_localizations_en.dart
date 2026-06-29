@@ -1346,4 +1346,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pdfLocale => 'en_GB';
+
+  @override
+  String get amendmentDialogTitle => 'Amend entry';
+
+  @override
+  String get amendmentReasonLabel => 'Reason for amendment';
+
+  @override
+  String get amendmentReasonHint => 'e.g. Wind direction corrected after check';
+
+  @override
+  String amendmentBadgeSingle(String date) {
+    return 'Amended · $date';
+  }
+
+  @override
+  String amendmentBadgeMultiple(int count, String date) {
+    return 'Amended $count× · last $date';
+  }
+
+  @override
+  String get amendmentHistoryTitle => 'Amendment history';
+
+  @override
+  String get amendmentOriginal => 'Original entry';
+
+  @override
+  String get amendmentNoReason => 'No reason given';
 }

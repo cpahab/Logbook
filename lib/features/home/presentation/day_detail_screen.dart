@@ -20,6 +20,7 @@ import '../domain/daily_track.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import '../domain/crew_member.dart';
+import '../domain/timeline_amendment.dart';
 import '../widgets/add_timeline_entry_dialog.dart';
 import '../widgets/add_crew_member_dialog.dart';
 import '../widgets/crew_picker_sheet.dart';
@@ -103,6 +104,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         keelUpLabel:    l10n.vesselKeelUp,
         keelFieldLabel: l10n.entryDialogKeelLabel,
       );
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return widget.year == now.year &&
+        widget.month == now.month &&
+        widget.day == now.day;
+  }
 
   final MapController _mapController = MapController();
   bool _satelliteView = false;
@@ -1282,8 +1290,247 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 ),
               ),
             ],
+            // Amendment history badge
+            if (t.amendments.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.5)),
+              const SizedBox(height: 6),
+              _buildAmendmentBadge(t, cs),
+            ],
           ],
         ),
+    );
+  }
+
+
+
+  Widget _buildAmendmentBadge(TimelineEntry t, ColorScheme cs) {
+    final l10n = context.l10n;
+    final count = t.amendments.length;
+    final last = t.amendments.last;
+    final dateStr = DateFormat('d MMM', context.read<ThemeProvider>().localeString)
+        .format(last.amendedAt);
+    final label = count == 1
+        ? l10n.amendmentBadgeSingle(dateStr)
+        : l10n.amendmentBadgeMultiple(count, dateStr);
+
+    return GestureDetector(
+      onTap: () => _showAmendmentHistory(t, cs),
+      child: Row(
+        children: [
+          Icon(Icons.history, size: 13, color: cs.outline),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+                color: cs.outline,
+              ),
+            ),
+          ),
+          Icon(Icons.chevron_right, size: 14, color: cs.outlineVariant),
+        ],
+      ),
+    );
+  }
+
+  void _showAmendmentHistory(TimelineEntry t, ColorScheme cs) {
+    final l10n = context.l10n;
+    final locale = context.read<ThemeProvider>().localeString;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        // Entries displayed newest-first: current state at top, then
+        // amendments from latest to oldest, original at the bottom.
+        final entries = [
+          (amendedAt: null as DateTime?, reason: null as String?, isOriginal: false, isCurrent: true,
+            snapshot: t),
+          ...t.amendments.reversed.map((a) => (
+            amendedAt: a.amendedAt, reason: a.reason, isOriginal: false, isCurrent: false,
+            snapshot: a)),
+        ];
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.5,
+          maxChildSize: 0.9,
+          builder: (_, controller) => Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  l10n.amendmentHistoryTitle,
+                  style: GoogleFonts.newsreader(
+                    fontSize: 20, fontWeight: FontWeight.w600,
+                    fontStyle: FontStyle.italic, color: cs.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.separated(
+                  controller: controller,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                  itemCount: entries.length + 1, // +1 for original label
+                  separatorBuilder: (_, _) => Divider(
+                    color: cs.outlineVariant.withValues(alpha: 0.5), height: 24),
+                  itemBuilder: (_, i) {
+                    if (i == entries.length) {
+                      // Original entry (oldest amendment's snapshot)
+                      final orig = t.amendments.first;
+                      return _amendmentSnapshotTile(
+                        label: l10n.amendmentOriginal,
+                        dateStr: DateFormat('d MMM yyyy · HH:mm', locale).format(orig.amendedAt),
+                        reason: null,
+                        time: orig.time,
+                        course: orig.course,
+                        speed: orig.speed,
+                        wind: orig.wind,
+                        sea: orig.sea,
+                        weather: orig.weather,
+                        remarks: orig.remarks,
+                        cs: cs,
+                        isOriginal: true,
+                      );
+                    }
+                    final e = entries[i];
+                    if (e.isCurrent) {
+                      return _amendmentSnapshotTile(
+                        label: 'Current',
+                        dateStr: t.updatedAt != null
+                            ? DateFormat('d MMM yyyy · HH:mm', locale).format(t.updatedAt!)
+                            : '',
+                        reason: null,
+                        time: t.time,
+                        course: t.course,
+                        speed: t.speed,
+                        wind: t.wind,
+                        sea: t.sea,
+                        weather: t.weather,
+                        remarks: t.remarks,
+                        cs: cs,
+                        isOriginal: false,
+                      );
+                    }
+                    final a = t.amendments.reversed.toList()[i - 1];
+                    return _amendmentSnapshotTile(
+                      label: DateFormat('d MMM yyyy · HH:mm', locale).format(a.amendedAt),
+                      dateStr: '',
+                      reason: a.reason ?? l10n.amendmentNoReason,
+                      time: a.time,
+                      course: a.course,
+                      speed: a.speed,
+                      wind: a.wind,
+                      sea: a.sea,
+                      weather: a.weather,
+                      remarks: a.remarks,
+                      cs: cs,
+                      isOriginal: false,
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _amendmentSnapshotTile({
+    required String label,
+    required String dateStr,
+    required String? reason,
+    required DateTime time,
+    required double? course,
+    required double? speed,
+    required String? wind,
+    required String? sea,
+    required String? weather,
+    required String? remarks,
+    required ColorScheme cs,
+    required bool isOriginal,
+  }) {
+    final timeStr =
+        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    final details = [
+      if (course != null) 'COG ${course.toStringAsFixed(0)}°',
+      if (speed != null) '${speed.toStringAsFixed(1)} kn',
+      ?wind,
+      ?sea,
+      ?weather,
+    ].join(' · ');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11, fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+                color: isOriginal ? cs.outline : cs.secondary,
+              ),
+            ),
+            if (dateStr.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Text(dateStr,
+                style: GoogleFonts.inter(fontSize: 11, color: cs.outline)),
+            ],
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          timeStr,
+          style: GoogleFonts.newsreader(
+            fontSize: 20, fontWeight: FontWeight.w500,
+            color: isOriginal ? cs.outline : cs.primary,
+          ),
+        ),
+        if (details.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Text(details,
+            style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant)),
+        ],
+        if (remarks?.isNotEmpty == true) ...[
+          const SizedBox(height: 2),
+          Text(remarks!,
+            style: GoogleFonts.inter(
+              fontSize: 13, fontStyle: FontStyle.italic, color: cs.onSurface)),
+        ],
+        if (reason != null) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              reason,
+              style: GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -2550,12 +2797,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _addTimelineEntry(BuildContext context) async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
-    final newEntry = await showDialog<TimelineEntry>(
+    final result = await showDialog<AddTimelineEntryResult>(
       context: context,
       builder: (_) => AddTimelineEntryDialog(day: day),
     );
-    if (!mounted || newEntry == null) return;
-    repo.addTimelineEntry(day, newEntry);
+    if (!mounted || result == null) return;
+    repo.addTimelineEntry(day, result.entry);
   }
 
   void _deleteTimelineEntry(DayEntry entry, TimelineEntry t) {
@@ -2586,15 +2833,39 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   void _editTimelineEntry(DayEntry entry, TimelineEntry t) async {
     final day = DateTime(widget.year, widget.month, widget.day);
-    final updated = await showDialog<TimelineEntry>(
+    final isAmendment = !_isToday;
+    final result = await showDialog<AddTimelineEntryResult>(
       context: context,
       builder: (_) => AddTimelineEntryDialog(
         day: day,
         initialEntry: t,
+        isAmendment: isAmendment,
         onDelete: () => _deleteTimelineEntry(entry, t),
       ),
     );
-    if (!mounted || updated == null) return;
+    if (!mounted || result == null) return;
+    final updated = result.entry;
+    // For past-day edits, snapshot the previous state as an amendment.
+    if (isAmendment) {
+      final snapshot = TimelineAmendment.fromSnapshot(
+        amendedAt: DateTime.now(),
+        reason: result.amendmentReason,
+        time: t.time,
+        course: t.course,
+        speed: t.speed,
+        wind: t.wind,
+        sea: t.sea,
+        weather: t.weather,
+        remarks: t.remarks,
+        grossState: t.grossState,
+        fockState: t.fockState,
+        motorOn: t.motorOn,
+        keelDown: t.keelDown,
+      );
+      updated.amendments
+        ..addAll(t.amendments) // carry forward prior amendments
+        ..add(snapshot);
+    }
     setState(() {
       final index = entry.timeline.indexOf(t);
       if (index != -1) {

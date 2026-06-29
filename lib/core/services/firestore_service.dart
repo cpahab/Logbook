@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../features/home/domain/crew_member.dart';
 import '../../features/home/domain/day_entry.dart';
+import '../../features/home/domain/timeline_amendment.dart';
 import '../../features/home/domain/timeline_entry.dart';
 
 /// Syncs DayEntry, settings and emergency contacts to/from Firestore.
@@ -316,6 +317,7 @@ class FirestoreService {
         'keelDown': t.keelDown,
         'createdAt': t.createdAt?.toUtc().toIso8601String(),
         'updatedAt': t.updatedAt?.toUtc().toIso8601String(),
+        'amendments': t.amendments.map(_amendmentToMap).toList(),
       };
 
   static Map<String, dynamic> _crewToMap(CrewMember c) => {
@@ -369,6 +371,42 @@ class FirestoreService {
         updatedAt: d['updatedAt'] != null
             ? DateTime.parse(d['updatedAt'] as String).toLocal()
             : null,
+        amendments: (d['amendments'] as List? ?? [])
+            .map((a) => _amendmentFromMap(a as Map<String, dynamic>))
+            .toList(),
+      );
+
+  static Map<String, dynamic> _amendmentToMap(TimelineAmendment a) => {
+        'amendedAt': a.amendedAt.toUtc().toIso8601String(),
+        'reason': a.reason,
+        'time': a.time.toUtc().toIso8601String(),
+        'course': a.course,
+        'speed': a.speed,
+        'wind': a.wind,
+        'sea': a.sea,
+        'weather': a.weather,
+        'remarks': a.remarks,
+        'grossState': a.grossState,
+        'fockState': a.fockState,
+        'motorOn': a.motorOn,
+        'keelDown': a.keelDown,
+      };
+
+  static TimelineAmendment _amendmentFromMap(Map<String, dynamic> d) =>
+      TimelineAmendment(
+        amendedAt: DateTime.parse(d['amendedAt'] as String).toLocal(),
+        reason: d['reason'] as String?,
+        time: DateTime.parse(d['time'] as String).toLocal(),
+        course: (d['course'] as num?)?.toDouble(),
+        speed: (d['speed'] as num?)?.toDouble(),
+        wind: d['wind'] as String?,
+        sea: d['sea'] as String?,
+        weather: d['weather'] as String?,
+        remarks: d['remarks'] as String?,
+        grossState: d['grossState'] as String?,
+        fockState: d['fockState'] as String?,
+        motorOn: d['motorOn'] as bool?,
+        keelDown: d['keelDown'] as bool?,
       );
 
   static CrewMember _crewFromMap(Map<String, dynamic> d) => CrewMember(

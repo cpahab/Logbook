@@ -13,6 +13,7 @@ import 'features/home/domain/timeline_entry.dart';
 import 'features/home/domain/daily_track.dart';
 import 'features/home/domain/track_point.dart';
 import 'features/home/domain/crew_member.dart';
+import 'features/home/domain/timeline_amendment.dart';
 import 'features/emergency/domain/emergency_contact.dart';
 import 'features/emergency/data/emergency_repository.dart';
 import 'features/settings/domain/theme_provider.dart';
@@ -81,6 +82,7 @@ void main() async {
 
   Hive.registerAdapter(DayEntryAdapter());
   Hive.registerAdapter(TimelineEntryAdapter());
+  Hive.registerAdapter(TimelineAmendmentAdapter());
   Hive.registerAdapter(DailyTrackAdapter());
   Hive.registerAdapter(TrackPointAdapter());
   Hive.registerAdapter(CrewMemberAdapter());

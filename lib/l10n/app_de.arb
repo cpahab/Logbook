@@ -508,5 +508,23 @@
       "total": { "type": "int" }
     }
   },
-  "pdfLocale": "de_CH"
+  "pdfLocale": "de_CH",
+
+  "amendmentDialogTitle": "Eintrag korrigieren",
+  "amendmentReasonLabel": "Grund der Korrektur",
+  "amendmentReasonHint": "z.B. Windrichtung nach Kontrolle korrigiert",
+  "amendmentBadgeSingle": "Korrigiert · {date}",
+  "@amendmentBadgeSingle": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "amendmentBadgeMultiple": "{count}× korrigiert · zuletzt {date}",
+  "@amendmentBadgeMultiple": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "amendmentHistoryTitle": "Korrekturhistorie",
+  "amendmentOriginal": "Originaleintrag",
+  "amendmentNoReason": "Kein Grund angegeben"
 }

@@ -2611,6 +2611,54 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'de_CH'**
   String get pdfLocale;
+
+  /// No description provided for @amendmentDialogTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Eintrag korrigieren'**
+  String get amendmentDialogTitle;
+
+  /// No description provided for @amendmentReasonLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Grund der Korrektur'**
+  String get amendmentReasonLabel;
+
+  /// No description provided for @amendmentReasonHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Windrichtung nach Kontrolle korrigiert'**
+  String get amendmentReasonHint;
+
+  /// No description provided for @amendmentBadgeSingle.
+  ///
+  /// In de, this message translates to:
+  /// **'Korrigiert · {date}'**
+  String amendmentBadgeSingle(String date);
+
+  /// No description provided for @amendmentBadgeMultiple.
+  ///
+  /// In de, this message translates to:
+  /// **'{count}× korrigiert · zuletzt {date}'**
+  String amendmentBadgeMultiple(int count, String date);
+
+  /// No description provided for @amendmentHistoryTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Korrekturhistorie'**
+  String get amendmentHistoryTitle;
+
+  /// No description provided for @amendmentOriginal.
+  ///
+  /// In de, this message translates to:
+  /// **'Originaleintrag'**
+  String get amendmentOriginal;
+
+  /// No description provided for @amendmentNoReason.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Grund angegeben'**
+  String get amendmentNoReason;
 }
 
 class _AppLocalizationsDelegate

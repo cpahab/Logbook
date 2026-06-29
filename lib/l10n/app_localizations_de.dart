@@ -1353,4 +1353,33 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get pdfLocale => 'de_CH';
+
+  @override
+  String get amendmentDialogTitle => 'Eintrag korrigieren';
+
+  @override
+  String get amendmentReasonLabel => 'Grund der Korrektur';
+
+  @override
+  String get amendmentReasonHint =>
+      'z.B. Windrichtung nach Kontrolle korrigiert';
+
+  @override
+  String amendmentBadgeSingle(String date) {
+    return 'Korrigiert · $date';
+  }
+
+  @override
+  String amendmentBadgeMultiple(int count, String date) {
+    return '$count× korrigiert · zuletzt $date';
+  }
+
+  @override
+  String get amendmentHistoryTitle => 'Korrekturhistorie';
+
+  @override
+  String get amendmentOriginal => 'Originaleintrag';
+
+  @override
+  String get amendmentNoReason => 'Kein Grund angegeben';
 }

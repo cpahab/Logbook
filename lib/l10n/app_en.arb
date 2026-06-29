@@ -508,5 +508,23 @@
       "total": { "type": "int" }
     }
   },
-  "pdfLocale": "en_US"
+  "pdfLocale": "en_GB",
+
+  "amendmentDialogTitle": "Amend entry",
+  "amendmentReasonLabel": "Reason for amendment",
+  "amendmentReasonHint": "e.g. Wind direction corrected after check",
+  "amendmentBadgeSingle": "Amended · {date}",
+  "@amendmentBadgeSingle": {
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "amendmentBadgeMultiple": "Amended {count}× · last {date}",
+  "@amendmentBadgeMultiple": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "date": { "type": "String" }
+    }
+  },
+  "amendmentHistoryTitle": "Amendment history",
+  "amendmentOriginal": "Original entry",
+  "amendmentNoReason": "No reason given"
 }
