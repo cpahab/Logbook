@@ -31,13 +31,14 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       keelDown: fields[17] as bool?,
       createdAt: fields[18] as DateTime?,
       updatedAt: fields[19] as DateTime?,
+      amendments: (fields[20] as List?)?.cast<TimelineAmendment>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, TimelineEntry obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.time)
       ..writeByte(1)
@@ -65,7 +66,9 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       ..writeByte(18)
       ..write(obj.createdAt)
       ..writeByte(19)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(20)
+      ..write(obj.amendments);
   }
 
   @override

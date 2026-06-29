@@ -5,6 +5,15 @@ import '../domain/timeline_entry.dart';
 import '../utils/sail_state_utils.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// Return value from [AddTimelineEntryDialog].
+/// [amendmentReason] is non-null only when [isAmendment] was true and the
+/// user typed a reason; it is always null for new entries.
+class AddTimelineEntryResult {
+  final TimelineEntry entry;
+  final String? amendmentReason;
+  const AddTimelineEntryResult(this.entry, {this.amendmentReason});
+}
+
 class _CourseFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -20,12 +29,17 @@ class AddTimelineEntryDialog extends StatefulWidget {
   final DateTime day;
   final TimelineEntry? initialEntry;
   final VoidCallback? onDelete;
+  /// When true the dialog shows a "Reason for amendment" field and titles
+  /// itself accordingly. Should be set whenever editing an entry from a
+  /// past day (not today).
+  final bool isAmendment;
 
   const AddTimelineEntryDialog({
     super.key,
     required this.day,
     this.initialEntry,
     this.onDelete,
+    this.isAmendment = false,
   });
 
   @override
@@ -35,12 +49,13 @@ class AddTimelineEntryDialog extends StatefulWidget {
 class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   late TimeOfDay selectedTime;
 
-  final courseCtrl      = TextEditingController();
-  final speedCtrl       = TextEditingController();
+  final courseCtrl       = TextEditingController();
+  final speedCtrl        = TextEditingController();
   final windStrengthCtrl = TextEditingController();
-  final seaCtrl         = TextEditingController();
-  final weatherCtrl     = TextEditingController();
-  final remarksCtrl     = TextEditingController();
+  final seaCtrl          = TextEditingController();
+  final weatherCtrl      = TextEditingController();
+  final remarksCtrl      = TextEditingController();
+  final amendmentReasonCtrl = TextEditingController();
 
   String  _windDir  = 'N';
   String? _grossState;
@@ -97,6 +112,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     courseCtrl.dispose();
     speedCtrl.dispose();
     windStrengthCtrl.dispose();
+    amendmentReasonCtrl.dispose();
     seaCtrl.dispose();
     weatherCtrl.dispose();
     remarksCtrl.dispose();
@@ -115,23 +131,28 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     }
 
     final now = DateTime.now();
+    final entry = TimelineEntry(
+      time:       dt,
+      course:     _parseDouble(courseCtrl.text),
+      speed:      _parseDouble(speedCtrl.text),
+      wind:       wind,
+      sea:        seaCtrl.text.isEmpty     ? null : seaCtrl.text,
+      weather:    weatherCtrl.text.isEmpty ? null : weatherCtrl.text,
+      remarks:    remarksCtrl.text.isEmpty ? null : remarksCtrl.text,
+      grossState: _grossState,
+      fockState:  _fockState,
+      motorOn:    _motorOn,
+      keelDown:   _keelDown,
+      // Preserve original createdAt on edits; set it now for new entries.
+      createdAt:  widget.initialEntry?.createdAt ?? now,
+      updatedAt:  widget.initialEntry != null ? now : null,
+    );
+    final reason = amendmentReasonCtrl.text.trim();
     Navigator.pop(
       context,
-      TimelineEntry(
-        time:       dt,
-        course:     _parseDouble(courseCtrl.text),
-        speed:      _parseDouble(speedCtrl.text),
-        wind:       wind,
-        sea:        seaCtrl.text.isEmpty     ? null : seaCtrl.text,
-        weather:    weatherCtrl.text.isEmpty ? null : weatherCtrl.text,
-        remarks:    remarksCtrl.text.isEmpty ? null : remarksCtrl.text,
-        grossState: _grossState,
-        fockState:  _fockState,
-        motorOn:    _motorOn,
-        keelDown:   _keelDown,
-        // Preserve original createdAt on edits; set it now for new entries.
-        createdAt:  widget.initialEntry?.createdAt ?? now,
-        updatedAt:  widget.initialEntry != null ? now : null,
+      AddTimelineEntryResult(
+        entry,
+        amendmentReason: widget.isAmendment && reason.isNotEmpty ? reason : null,
       ),
     );
   }
@@ -156,7 +177,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
             onPressed: () => Navigator.pop(context, null),
           ),
           title: Text(
-            isEdit ? l10n.entryDialogTitleEdit : l10n.entryDialogTitleNew,
+            widget.isAmendment ? l10n.amendmentDialogTitle
+                : isEdit ? l10n.entryDialogTitleEdit
+                : l10n.entryDialogTitleNew,
             style: GoogleFonts.newsreader(
               fontSize: 22,
               fontStyle: FontStyle.italic,
@@ -493,6 +516,37 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     ),
                     cs: cs,
                   ),
+
+                  // ── Amendment reason (past entries only) ─────────────
+                  if (widget.isAmendment) ...[
+                    const SizedBox(height: 16),
+                    _sectionHeader(Icons.history, l10n.amendmentReasonLabel, cs),
+                    const SizedBox(height: 8),
+                    _plainCard(
+                      cs: cs,
+                      child: TextField(
+                        controller: amendmentReasonCtrl,
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                        decoration: InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          hintText: l10n.amendmentReasonHint,
+                          hintStyle: GoogleFonts.inter(
+                            fontSize: 15,
+                            color: cs.onSurface.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        maxLines: 2,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 20),
                   // ── Actions ──────────────────────────────────────────

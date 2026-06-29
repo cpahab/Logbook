@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'timeline_amendment.dart';
 
 part 'timeline_entry.g.dart';
 
@@ -59,6 +60,11 @@ class TimelineEntry extends HiveObject {
   @HiveField(19)
   DateTime? updatedAt;
 
+  /// Ordered list of snapshots, oldest first. Each snapshot captures the full
+  /// state of this entry immediately before an amendment was applied.
+  @HiveField(20)
+  List<TimelineAmendment> amendments;
+
   TimelineEntry({
     required this.time,
     this.course,
@@ -74,5 +80,6 @@ class TimelineEntry extends HiveObject {
     this.keelDown,
     this.createdAt,
     this.updatedAt,
-  });
+    List<TimelineAmendment>? amendments,
+  }) : amendments = amendments ?? [];
 }
