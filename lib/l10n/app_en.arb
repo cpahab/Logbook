@@ -525,6 +525,7 @@
     }
   },
   "amendmentHistoryTitle": "Amendment history",
+  "amendmentCurrent": "Current",
   "amendmentOriginal": "Original entry",
   "amendmentNoReason": "No reason given"
 }

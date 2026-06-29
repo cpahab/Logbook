@@ -1370,6 +1370,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get amendmentHistoryTitle => 'Amendment history';
 
   @override
+  String get amendmentCurrent => 'Current';
+
+  @override
   String get amendmentOriginal => 'Original entry';
 
   @override

@@ -1349,11 +1349,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ),
       builder: (_) {
         // Entries displayed newest-first: current state at top, then
-        // amendments from latest to oldest, original at the bottom.
+        // intermediate amendments (newest to second-oldest). The oldest
+        // snapshot is shown separately at the bottom as "Original entry"
+        // to avoid duplicating it in both the list and the special row.
         final entries = [
           (amendedAt: null as DateTime?, reason: null as String?, isOriginal: false, isCurrent: true,
             snapshot: t),
-          ...t.amendments.reversed.map((a) => (
+          ...t.amendments.reversed.skip(1).map((a) => (
             amendedAt: a.amendedAt, reason: a.reason, isOriginal: false, isCurrent: false,
             snapshot: a)),
         ];
@@ -1412,7 +1414,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     final e = entries[i];
                     if (e.isCurrent) {
                       return _amendmentSnapshotTile(
-                        label: 'Current',
+                        label: l10n.amendmentCurrent,
                         dateStr: t.updatedAt != null
                             ? DateFormat('d MMM yyyy · HH:mm', locale).format(t.updatedAt!)
                             : '',

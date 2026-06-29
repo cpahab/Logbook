@@ -1378,6 +1378,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get amendmentHistoryTitle => 'Korrekturhistorie';
 
   @override
+  String get amendmentCurrent => 'Aktuell';
+
+  @override
   String get amendmentOriginal => 'Originaleintrag';
 
   @override

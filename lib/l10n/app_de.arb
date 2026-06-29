@@ -525,6 +525,7 @@
     }
   },
   "amendmentHistoryTitle": "Korrekturhistorie",
+  "amendmentCurrent": "Aktuell",
   "amendmentOriginal": "Originaleintrag",
   "amendmentNoReason": "Kein Grund angegeben"
 }

@@ -2648,6 +2648,12 @@ abstract class AppLocalizations {
   /// **'Korrekturhistorie'**
   String get amendmentHistoryTitle;
 
+  /// No description provided for @amendmentCurrent.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuell'**
+  String get amendmentCurrent;
+
   /// No description provided for @amendmentOriginal.
   ///
   /// In de, this message translates to:
