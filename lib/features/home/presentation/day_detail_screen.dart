@@ -2163,12 +2163,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         width: 20,
         height: 20,
         alignment: Alignment.center,
-        child: Tooltip(
-          richMessage: TextSpan(text: _buildEntryTooltip(t, context.l10n)),
-          preferBelow: false,
-          triggerMode: TooltipTriggerMode.tap,
-          showDuration: const Duration(seconds: 5),
-          waitDuration: Duration.zero,
+        // GestureDetector absorbs the tap so the map's onTap does not also
+        // fire (which would show only the time). _dropMarker shows the full
+        // entry data instead.
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _dropMarker(
+            LatLng(p.lat, p.lon),
+            _buildEntryTooltip(t, context.l10n),
+          ),
           child: Center(
             child: Container(
               width: 11,
@@ -3460,12 +3463,12 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       final t = pair.$1; final p = pair.$2;
       return Marker(
         point: LatLng(p.lat, p.lon), width: 20, height: 20, alignment: Alignment.center,
-        child: Tooltip(
-          richMessage: TextSpan(text: _buildEntryTooltip(t, context.l10n)),
-          preferBelow: false,
-          triggerMode: TooltipTriggerMode.tap,
-          showDuration: const Duration(seconds: 5),
-          waitDuration: Duration.zero,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _dropMarker(
+            LatLng(p.lat, p.lon),
+            _buildEntryTooltip(t, context.l10n),
+          ),
           child: Center(child: Container(
             width: 11, height: 11,
             decoration: BoxDecoration(shape: BoxShape.circle, color: cs.surface, border: Border.all(color: cs.primary, width: 2.5)),
