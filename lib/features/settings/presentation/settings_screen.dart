@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -37,6 +38,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _guestsExpanded = false;
   Future<List<Map<String, dynamic>>>? _guestsFuture;
   late ValueNotifier<String?> _logbookIdNotifier;
+  late final Future<PackageInfo> _packageInfoFuture;
 
   @override
   void initState() {
@@ -49,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Refresh list whenever the active boat changes (e.g. async init completes)
     _logbookIdNotifier.addListener(_refreshLogbooks);
     _refreshLogbooks();
+    _packageInfoFuture = PackageInfo.fromPlatform();
   }
 
   @override
@@ -768,6 +771,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Logbooks ──────────────────────────────────────────────
             _buildLogbooksSection(cs),
             const SizedBox(height: 32),
+
+            // ── App version ───────────────────────────────────────────
+            FutureBuilder<PackageInfo>(
+              future: _packageInfoFuture,
+              builder: (_, snap) {
+                final version = snap.hasData
+                    ? 'Version ${snap.data!.version} (${snap.data!.buildNumber})'
+                    : '';
+                return Center(
+                  child: Text(
+                    version,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
 
           ],
         ),

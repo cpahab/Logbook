@@ -2193,12 +2193,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         width: 20,
         height: 20,
         alignment: Alignment.center,
-        child: Tooltip(
-          message: DateFormat('HH:mm').format(p.time.toLocal()),
-          preferBelow: false,
-          triggerMode: _isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
-          showDuration: _isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
-          waitDuration: _isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _dropMarker(
+            LatLng(p.lat, p.lon),
+            DateFormat('HH:mm').format(p.time.toLocal()),
+          ),
           child: Center(
             child: Container(
               width: 11,
@@ -3480,12 +3480,12 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final fsTimeWaypoints = _sampleHourlyPoints(display.movingPoints()).map((p) =>
       Marker(
         point: LatLng(p.lat, p.lon), width: 20, height: 20, alignment: Alignment.center,
-        child: Tooltip(
-          message: DateFormat('HH:mm').format(p.time.toLocal()),
-          preferBelow: false,
-          triggerMode: _isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
-          showDuration: _isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
-          waitDuration: _isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _dropMarker(
+            LatLng(p.lat, p.lon),
+            DateFormat('HH:mm').format(p.time.toLocal()),
+          ),
           child: Center(
             child: Container(
               width: 11, height: 11,
