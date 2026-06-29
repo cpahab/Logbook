@@ -192,15 +192,8 @@ List<_StopSegment> _findStationarySegments(
     }
 
     // Gate: must last long enough AND stay tight enough.
-    // The spread gate is intentionally skipped for the very first cluster
-    // (a == 0): GPS cold-start fixes can sit 100–300 m from the berth and
-    // inflate the apparent spread well beyond maxStopSpreadM.  Accepting the
-    // start cluster here lets _flagColdStart (pass 5) identify and strip those
-    // leading fixes; the anchor centroid is then recomputed from settled fixes
-    // only, so the displayed halo is still accurate.
-    final isStartCandidate = a == 0;
     if (durationMinutes < settings.minStopMinutes ||
-        (!isStartCandidate && maxSpread > settings.maxStopSpreadM)) {
+        maxSpread > settings.maxStopSpreadM) {
       continue;
     }
 
