@@ -528,5 +528,55 @@
   "amendmentHistoryTitle": "Amendment history",
   "amendmentCurrent": "Current",
   "amendmentOriginal": "Original entry",
-  "amendmentNoReason": "No reason given"
+  "amendmentNoReason": "No reason given",
+
+  "importLabel": "Import",
+
+  "gpxShareErrorEncoding": "Could not read this file. Try exporting it again from the source app.",
+  "gpxShareErrorInvalidXml": "This file is not a valid GPX file.",
+  "gpxShareErrorRoutesOnly": "This file contains a planned route, not a recorded track. Only recorded tracks can be imported.",
+  "gpxShareErrorWaypointsOnly": "This file contains only waypoints, not a track.",
+  "gpxShareErrorEmpty": "No track data found in this file.",
+  "gpxShareMultiDay": "This track spans {count} days ({first} – {last}). Which day should it be attached to?",
+  "@gpxShareMultiDay": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "first": { "type": "String" },
+      "last":  { "type": "String" }
+    }
+  },
+  "gpxShareNoTimestamps": "This track has no timestamps. Which day does it belong to?",
+  "gpxShareConflictIncoming": "Incoming: {date} · {points} points · {start}–{end}",
+  "@gpxShareConflictIncoming": {
+    "placeholders": {
+      "date":   { "type": "String" },
+      "points": { "type": "int" },
+      "start":  { "type": "String" },
+      "end":    { "type": "String" }
+    }
+  },
+  "gpxShareConflictExisting": "Existing: {date} · {points} points · {start}–{end}",
+  "@gpxShareConflictExisting": {
+    "placeholders": {
+      "date":   { "type": "String" },
+      "points": { "type": "int" },
+      "start":  { "type": "String" },
+      "end":    { "type": "String" }
+    }
+  },
+  "gpxShareMergedNote": "{count} tracks merged from this file.",
+  "@gpxShareMergedNote": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gpxShareActionReplace": "Replace",
+  "gpxShareActionMerge": "Merge",
+  "gpxShareActionDifferent": "Different date",
+  "gpxShareImported": "Track imported → {date}",
+  "@gpxShareImported": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  }
 }

@@ -528,5 +528,55 @@
   "amendmentHistoryTitle": "Korrekturhistorie",
   "amendmentCurrent": "Aktuell",
   "amendmentOriginal": "Originaleintrag",
-  "amendmentNoReason": "Kein Grund angegeben"
+  "amendmentNoReason": "Kein Grund angegeben",
+
+  "importLabel": "Importieren",
+
+  "gpxShareErrorEncoding": "Diese Datei konnte nicht gelesen werden. Exportiere sie erneut aus der Quell-App.",
+  "gpxShareErrorInvalidXml": "Diese Datei ist kein gültiges GPX-Format.",
+  "gpxShareErrorRoutesOnly": "Diese Datei enthält eine geplante Route, keine aufgezeichnete Strecke. Nur aufgezeichnete Strecken können importiert werden.",
+  "gpxShareErrorWaypointsOnly": "Diese Datei enthält nur Wegpunkte, keine Strecke.",
+  "gpxShareErrorEmpty": "In dieser Datei wurden keine Streckendaten gefunden.",
+  "gpxShareMultiDay": "Diese Strecke erstreckt sich über {count} Tage ({first} – {last}). Welchem Tag soll sie zugeordnet werden?",
+  "@gpxShareMultiDay": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "first": { "type": "String" },
+      "last":  { "type": "String" }
+    }
+  },
+  "gpxShareNoTimestamps": "Diese Strecke enthält keine Zeitstempel. Welchem Tag gehört sie an?",
+  "gpxShareConflictIncoming": "Neu: {date} · {points} Punkte · {start}–{end}",
+  "@gpxShareConflictIncoming": {
+    "placeholders": {
+      "date":   { "type": "String" },
+      "points": { "type": "int" },
+      "start":  { "type": "String" },
+      "end":    { "type": "String" }
+    }
+  },
+  "gpxShareConflictExisting": "Vorhanden: {date} · {points} Punkte · {start}–{end}",
+  "@gpxShareConflictExisting": {
+    "placeholders": {
+      "date":   { "type": "String" },
+      "points": { "type": "int" },
+      "start":  { "type": "String" },
+      "end":    { "type": "String" }
+    }
+  },
+  "gpxShareMergedNote": "{count} Strecken aus dieser Datei wurden zusammengeführt.",
+  "@gpxShareMergedNote": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gpxShareActionReplace": "Ersetzen",
+  "gpxShareActionMerge": "Zusammenführen",
+  "gpxShareActionDifferent": "Anderes Datum",
+  "gpxShareImported": "Strecke importiert → {date}",
+  "@gpxShareImported": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  }
 }

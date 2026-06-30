@@ -2671,6 +2671,106 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Kein Grund angegeben'**
   String get amendmentNoReason;
+
+  /// No description provided for @importLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Importieren'**
+  String get importLabel;
+
+  /// No description provided for @gpxShareErrorEncoding.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Datei konnte nicht gelesen werden. Exportiere sie erneut aus der Quell-App.'**
+  String get gpxShareErrorEncoding;
+
+  /// No description provided for @gpxShareErrorInvalidXml.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Datei ist kein gültiges GPX-Format.'**
+  String get gpxShareErrorInvalidXml;
+
+  /// No description provided for @gpxShareErrorRoutesOnly.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Datei enthält eine geplante Route, keine aufgezeichnete Strecke. Nur aufgezeichnete Strecken können importiert werden.'**
+  String get gpxShareErrorRoutesOnly;
+
+  /// No description provided for @gpxShareErrorWaypointsOnly.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Datei enthält nur Wegpunkte, keine Strecke.'**
+  String get gpxShareErrorWaypointsOnly;
+
+  /// No description provided for @gpxShareErrorEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'In dieser Datei wurden keine Streckendaten gefunden.'**
+  String get gpxShareErrorEmpty;
+
+  /// No description provided for @gpxShareMultiDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Strecke erstreckt sich über {count} Tage ({first} – {last}). Welchem Tag soll sie zugeordnet werden?'**
+  String gpxShareMultiDay(int count, String first, String last);
+
+  /// No description provided for @gpxShareNoTimestamps.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Strecke enthält keine Zeitstempel. Welchem Tag gehört sie an?'**
+  String get gpxShareNoTimestamps;
+
+  /// No description provided for @gpxShareConflictIncoming.
+  ///
+  /// In de, this message translates to:
+  /// **'Neu: {date} · {points} Punkte · {start}–{end}'**
+  String gpxShareConflictIncoming(
+    String date,
+    int points,
+    String start,
+    String end,
+  );
+
+  /// No description provided for @gpxShareConflictExisting.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorhanden: {date} · {points} Punkte · {start}–{end}'**
+  String gpxShareConflictExisting(
+    String date,
+    int points,
+    String start,
+    String end,
+  );
+
+  /// No description provided for @gpxShareMergedNote.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Strecken aus dieser Datei wurden zusammengeführt.'**
+  String gpxShareMergedNote(int count);
+
+  /// No description provided for @gpxShareActionReplace.
+  ///
+  /// In de, this message translates to:
+  /// **'Ersetzen'**
+  String get gpxShareActionReplace;
+
+  /// No description provided for @gpxShareActionMerge.
+  ///
+  /// In de, this message translates to:
+  /// **'Zusammenführen'**
+  String get gpxShareActionMerge;
+
+  /// No description provided for @gpxShareActionDifferent.
+  ///
+  /// In de, this message translates to:
+  /// **'Anderes Datum'**
+  String get gpxShareActionDifferent;
+
+  /// No description provided for @gpxShareImported.
+  ///
+  /// In de, this message translates to:
+  /// **'Strecke importiert → {date}'**
+  String gpxShareImported(String date);
 }
 
 class _AppLocalizationsDelegate
