@@ -86,10 +86,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _reinitFirestore(String logbookId) async {
-    final repo = context.read<HomeRepository>();
+    // Cache context-dependent objects before any await.
+    final repo          = context.read<HomeRepository>();
     final themeProvider = context.read<ThemeProvider>();
     final emergencyRepo = context.read<EmergencyRepository>();
-    final notifier = context.read<ValueNotifier<String?>>();
+    final notifier      = context.read<ValueNotifier<String?>>();
+    final l10n          = context.l10n;
+
+    // Switching logbooks requires a live connection — we must download the new
+    // logbook's data before replacing local state.
+    final connectivity = await Connectivity().checkConnectivity();
+    final isOffline = connectivity.every((r) => r == ConnectivityResult.none);
+    if (isOffline) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)),
+        );
+      }
+      return;
+    }
 
     // Clear all per-boat local caches so the new boat's remote data always wins.
     await emergencyRepo.clearLocalData();

@@ -215,6 +215,7 @@
   "settingsConnected": "Connected.",
   "settingsSwitchLogbookTitle": "Switch logbook?",
   "settingsSwitchLogbookContent": "Your local data will be replaced with the data from the connected logbook.",
+  "settingsSwitchLogbookOffline": "Switching logbooks requires an internet connection.",
   "settingsScanQr": "Scan QR Code",
   "settingsScanTitle": "Scan logbook QR code",
 

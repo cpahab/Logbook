@@ -579,17 +579,29 @@ class HomeRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Switches to a different logbook code: wipes local data and pulls from cloud.
+  /// Switches to a different logbook: downloads the new logbook's data first,
+  /// then replaces local state only on success.  If the download fails, local
+  /// state is left intact — callers must be online before calling this (enforced
+  /// by the connectivity check in _reinitFirestore).
   Future<void> reattachAndSync(
       FirestoreService firestoreService, StorageService storageService) async {
     await _entrySub?.cancel();
     _entrySub = null;
     await _rosterSub?.cancel();
     _rosterSub = null;
-
     for (final t in _syncTimers.values) { t.cancel(); }
     _syncTimers.clear();
 
+    // ── Step 1: download new logbook data before touching local state ──────────
+    List<DayEntry> newEntries;
+    try {
+      newEntries = await firestoreService.fetchAllEntries();
+    } catch (_) {
+      // Download failed — leave existing local data intact and abort.
+      return;
+    }
+
+    // ── Step 2: download complete, now safe to replace local state ─────────────
     await _dayBox.clear();
     await _trackBox.clear();
     await _syncStateBox.clear();
@@ -600,14 +612,11 @@ class HomeRepository extends ChangeNotifier {
     _firestore = firestoreService;
     _storage = storageService;
 
-    try {
-      final all = await firestoreService.fetchAllEntries();
-      for (final e in all) {
-        _entries[e.date] = e;
-        await _dayBox.put(e.date.toIso8601String(), e);
-      }
-      _setLastSyncAt();
-    } catch (_) {}
+    for (final e in newEntries) {
+      _entries[e.date] = e;
+      await _dayBox.put(e.date.toIso8601String(), e);
+    }
+    _setLastSyncAt();
 
     try {
       final cloudDates = await storageService.listTrackDates();
@@ -622,7 +631,6 @@ class HomeRepository extends ChangeNotifier {
 
     notifyListeners();
 
-    // Re-subscribe to the new logbook's streams.
     _entrySub = firestoreService
         .entryChanges()
         .asyncMap(_applyRemoteEntries)

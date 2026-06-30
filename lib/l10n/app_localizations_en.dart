@@ -597,6 +597,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your local data will be replaced with the data from the connected logbook.';
 
   @override
+  String get settingsSwitchLogbookOffline =>
+      'Switching logbooks requires an internet connection.';
+
+  @override
   String get settingsScanQr => 'Scan QR Code';
 
   @override
