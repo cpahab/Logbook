@@ -477,6 +477,17 @@ class HomeRepository extends ChangeNotifier {
     _storage?.uploadTrack(normalized, bytes).catchError((_) {});
   }
 
+  /// Replaces a day's track with [points] (e.g. after a merge), re-uploads.
+  Future<void> replaceTrackPoints(DateTime day, List<TrackPoint> points) async {
+    final normalized = DateTime(day.year, day.month, day.day);
+    final fileName = '${normalized.toIso8601String().substring(0, 10)}.gpx';
+    await _saveTrack(normalized, fileName, points);
+    final track = dailyTracks[normalized];
+    if (track != null) {
+      _storage?.uploadTrack(normalized, _trackToGpxBytes(track)).catchError((_) {});
+    }
+  }
+
   Future<void> _saveTrack(
       DateTime normalized, String fileName, List<TrackPoint> points) async {
     final track = DailyTrack(day: normalized, fileName: fileName, points: points);
