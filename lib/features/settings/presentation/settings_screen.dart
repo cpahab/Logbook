@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -39,6 +41,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<List<Map<String, dynamic>>>? _guestsFuture;
   late ValueNotifier<String?> _logbookIdNotifier;
   late final Future<PackageInfo> _packageInfoFuture;
+  bool _isOffline = false;
+  StreamSubscription<dynamic>? _connectivitySub;
 
   @override
   void initState() {
@@ -52,10 +56,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _logbookIdNotifier.addListener(_refreshLogbooks);
     _refreshLogbooks();
     _packageInfoFuture = PackageInfo.fromPlatform();
+    Connectivity().checkConnectivity().then((results) {
+      if (mounted) setState(() => _isOffline = results.every((r) => r == ConnectivityResult.none));
+    });
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
+      if (mounted) setState(() => _isOffline = results.every((r) => r == ConnectivityResult.none));
+    });
   }
 
   @override
   void dispose() {
+    _connectivitySub?.cancel();
     _logbookIdNotifier.removeListener(_refreshLogbooks);
     _vesselNameCtrl.dispose();
     _vesselMmsiCtrl.dispose();
@@ -1719,12 +1730,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final role = logbook['role'] as String;
     final isActive = logbookId == activeLogbookId;
     final isOwner = role == 'owner';
+    final canSwitch = !isActive && !_syncing && !_isOffline;
     final l10n = context.l10n;
 
     return InkWell(
-      onTap: isActive || _syncing ? null : () => _switchLogbook(logbook, uid),
+      onTap: canSwitch ? () => _switchLogbook(logbook, uid) : null,
       borderRadius: BorderRadius.circular(8),
-      child: Padding(
+      child: Opacity(
+        opacity: !isActive && _isOffline ? 0.45 : 1.0,
+        child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
         child: Row(
           children: [
@@ -1753,7 +1767,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   Text(
-                    isOwner ? l10n.settingsRoleOwner : l10n.settingsRoleGuest,
+                    !isActive && _isOffline
+                        ? l10n.offlineLabel
+                        : isOwner ? l10n.settingsRoleOwner : l10n.settingsRoleGuest,
                     style: GoogleFonts.inter(
                         fontSize: 12, color: cs.onSurfaceVariant),
                   ),
@@ -1772,6 +1788,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
