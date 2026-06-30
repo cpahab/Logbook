@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'core/services/auth_service.dart';
+import 'core/services/gpx_share_service.dart';
 import 'features/home/data/home_repository.dart';
 import 'features/home/domain/day_entry.dart';
 import 'features/home/domain/timeline_entry.dart';
@@ -99,6 +100,9 @@ void main() async {
 
   final authService = AuthService();
 
+  final gpxShareService = GpxShareService();
+  await gpxShareService.init();
+
   final logbookIdNotifier = ValueNotifier<String?>(null);
 
   try {
@@ -153,6 +157,7 @@ void main() async {
         ChangeNotifierProvider.value(value: emergencyRepo),
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider.value(value: logbookIdNotifier),
+        Provider.value(value: gpxShareService),
       ],
       child: Logbook(router: router),
     ),
