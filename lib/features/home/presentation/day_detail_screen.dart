@@ -2906,11 +2906,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (kIsWeb) {
       final bytes = picked.bytes;
       if (bytes == null) return;
-      preview = GpxParser().parseBytes(bytes);
+      preview = GpxParser().parseBytes(bytes).points;
     } else {
       final path = picked.path;
       if (path == null) return;
-      preview = await GpxParser().parse(File(path));
+      preview = (await GpxParser().parse(File(path))).points;
     }
 
     if (!mounted) return;

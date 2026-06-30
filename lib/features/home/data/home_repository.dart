@@ -264,7 +264,7 @@ class HomeRepository extends ChangeNotifier {
       for (final date in missing) {
         final bytes = await service.downloadTrack(date);
         if (bytes == null || bytes.isEmpty) continue;
-        final points = GpxParser().parseBytes(bytes);
+        final points = GpxParser().parseBytes(bytes).points;
         if (points.isEmpty) continue;
         await _saveTrack(date, '$date.gpx', points);
       }
@@ -462,7 +462,7 @@ class HomeRepository extends ChangeNotifier {
   Future<void> importGpx(DateTime day, File file) async {
     final normalized = DateTime(day.year, day.month, day.day);
     final bytes = await file.readAsBytes();
-    final points = GpxParser().parseBytes(bytes);
+    final points = GpxParser().parseBytes(bytes).points;
     if (points.isEmpty) return;
     await _saveTrack(normalized, file.uri.pathSegments.last, points);
     _storage?.uploadTrack(normalized, bytes).catchError((_) {});
@@ -471,7 +471,7 @@ class HomeRepository extends ChangeNotifier {
   Future<void> importGpxFromBytes(
       DateTime day, Uint8List bytes, String fileName) async {
     final normalized = DateTime(day.year, day.month, day.day);
-    final points = GpxParser().parseBytes(bytes);
+    final points = GpxParser().parseBytes(bytes).points;
     if (points.isEmpty) return;
     await _saveTrack(normalized, fileName, points);
     _storage?.uploadTrack(normalized, bytes).catchError((_) {});
@@ -552,7 +552,7 @@ class HomeRepository extends ChangeNotifier {
       for (final date in missing) {
         final bytes = await st.downloadTrack(date);
         if (bytes == null || bytes.isEmpty) continue;
-        final points = GpxParser().parseBytes(bytes);
+        final points = GpxParser().parseBytes(bytes).points;
         if (points.isEmpty) continue;
         await _saveTrack(date, '$date.gpx', points);
       }
@@ -623,7 +623,7 @@ class HomeRepository extends ChangeNotifier {
       for (final date in cloudDates) {
         final bytes = await storageService.downloadTrack(date);
         if (bytes == null || bytes.isEmpty) continue;
-        final points = GpxParser().parseBytes(bytes);
+        final points = GpxParser().parseBytes(bytes).points;
         if (points.isEmpty) continue;
         await _saveTrack(date, '$date.gpx', points);
       }
