@@ -17,6 +17,7 @@ This wiki documents the architecture, completed changes, and planned upgrades.
 | 6 | [Maps Provider Migration](Maps-Provider-Migration) | Required before App Store submission |
 | 7 | [Cost Risk Analysis](Cost-Risk-Analysis) | Firebase cost estimates and risk mitigation |
 | 8 | [Roadmap](Roadmap) | Sequenced plan to first public release |
+| 9 | [Code Map](Code-Map) | What each source file does, and how the app's data flow/sync model works |
 | A | [Implementation Prompts](Implementation-Prompts) | Copy-paste prompts for future Claude Code sessions |
 | B | [Firebase Cost Reference](Firebase-Cost-Reference) | Spark limits and Blaze pricing tables |
 | C | [Architectural Decisions](Architectural-Decisions) | Key decisions recorded so they aren't re-litigated |

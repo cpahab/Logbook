@@ -30,8 +30,7 @@ import 'filter_settings.dart';
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const _mpsToKn    = 1.94384;
-const _maxSpeedKn = 12.0;
-const _accelSigma = 4.0;
+const _accelSigma = 4.0;  // spike threshold in MAD-sigmas above the median moving speed
 const _mergeGap   = 4; // merge stationary runs separated by ≤ this many moving fixes
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
@@ -327,7 +326,7 @@ int _flagColdStart(
 
 // ── Pass 3 — spike detection ─────────────────────────────────────────────────
 
-int _flagSpikes(List<_Fix> fixes) {
+int _flagSpikes(List<_Fix> fixes, double maxSpeedKn) {
   final movingSpds = fixes
       .where((f) => !f.stationary && f.instSpeedKn > 0)
       .map((f) => f.instSpeedKn)
@@ -339,7 +338,7 @@ int _flagSpikes(List<_Fix> fixes) {
   final mads = movingSpds.map((s) => (s - med).abs()).toList()..sort();
   final mad  = mads[mads.length ~/ 2];
   final effectiveMad = mad < 1e-9 ? 1e-6 : mad;
-  final limit = max(_maxSpeedKn, med + _accelSigma * 1.4826 * effectiveMad);
+  final limit = max(maxSpeedKn, med + _accelSigma * 1.4826 * effectiveMad);
 
   var count = 0;
   for (final f in fixes) {
@@ -499,7 +498,7 @@ TrimResult trimTrackWithAnchors(
   _annotate(fixes, settings.window);
 
   // Pass 2 — flag mid-track spikes BEFORE stop detection
-  final nSpikes = _flagSpikes(fixes);
+  final nSpikes = _flagSpikes(fixes, settings.maxSpeedKn);
 
   // Pass 3 — detect bad first fix (single outlier at fix[0], distinct from cold-start)
   final nBadFirstFix = settings.detectBadFirstFix && _detectBadFirstFix(fixes) ? 1 : 0;
@@ -594,10 +593,10 @@ List<TrackPoint> trimStationaryEnds(
 
 // ── Display model ─────────────────────────────────────────────────────────────
 
-const _samePlaceM           = 100.0;
-const _teleportM            = 200.0;
+const _samePlaceM           = 100.0; // stop-connector endpoints within this are "on_track", not a shift
+const _teleportM            = 200.0; // beyond this + a spike nearby, treat the jump as a GPS teleport
 const _defaultBaseAccuracyM = 8.0;
-const _jitterGain           = 1.5;
+const _jitterGain           = 1.5; // amplifies neighbour-deviation jitter relative to base accuracy
 const _uncertaintyCapFactor = 3.0;
 const _gapSeconds           = 120.0;
 
@@ -889,7 +888,7 @@ DisplayModel buildDisplayModel(
   final n = fixes.length;
 
   _annotate(fixes, settings.window);
-  _flagSpikes(fixes);
+  _flagSpikes(fixes, settings.maxSpeedKn);
   if (settings.detectBadFirstFix) _detectBadFirstFix(fixes);
   _annotate(fixes, settings.window);
   final stops = _findStationarySegments(fixes, settings);

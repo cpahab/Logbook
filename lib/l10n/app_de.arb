@@ -177,6 +177,8 @@
   "settingsUnderwayDesc": "Mindestgeschwindigkeit für den Fahrt-Durchschnitt. Driften unterhalb wird nicht mitgezählt.",
   "settingsPercentileLabel": "Spitzenwert-Perzentil",
   "settingsPercentileDesc": "p99 ignoriert das oberste 1 % der Messwerte und unterdrückt GPS-Ausreißer. p100 = echter Maximalwert.",
+  "settingsMaxSpeedLabel": "Geschwindigkeits-Obergrenze",
+  "settingsMaxSpeedDesc": "Fixe Punkte über dieser Geschwindigkeit gelten immer als GPS-Ausreißer. Bei schnellen Booten (Regatta, Foiler, Motorboot) erhöhen, sonst werden echte schnelle Fahrten herausgefiltert.",
   "settingsShowRawTrackLabel": "Ungefilterte Spur anzeigen",
   "settingsShowRawTrackDesc": "Zeigt den Roh-GPX-Track zusätzlich zur gefilterten Spur an. Dient zur Fehleranalyse und zum Optimieren der Filtereinstellungen.",
   "settingsCrewSection": "Besatzungsliste",

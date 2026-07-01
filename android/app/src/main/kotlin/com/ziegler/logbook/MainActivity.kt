@@ -33,16 +33,24 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        handleIntent(intent)
+        // onCreate only runs for a fresh Activity/engine instance (launchMode
+        // "singleTop" routes re-launches of a running instance to onNewIntent
+        // below), so the Dart side is guaranteed not to have registered its
+        // method call handler yet. Pushing via invokeMethod here would race
+        // main()'s async startup and could be dropped with no listener
+        // attached — buffer the path instead and let Dart pull it once ready.
+        handleIntent(intent, coldStart = true)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleIntent(intent)
+        // The engine (and Dart's handler) were already running before this
+        // intent arrived, so pushing directly is safe.
+        handleIntent(intent, coldStart = false)
     }
 
-    private fun handleIntent(intent: Intent?) {
+    private fun handleIntent(intent: Intent?, coldStart: Boolean) {
         if (intent == null) return
         val action = intent.action ?: return
         if (action != Intent.ACTION_VIEW && action != Intent.ACTION_SEND) return
@@ -66,7 +74,9 @@ class MainActivity : FlutterActivity() {
             }
             if (!fileName.endsWith(".gpx", ignoreCase = true)) fileName += ".gpx"
 
-            // Copy bytes to a stable internal location.
+            // The shared URI points into the sending app's content provider and
+            // is only guaranteed valid for this call — copy the bytes now to a
+            // location we own so the Dart side can read it later at its own pace.
             val inboxDir = File(filesDir, "gpx_inbox").apply { mkdirs() }
             val dest = File(inboxDir, fileName)
             contentResolver.openInputStream(uri)?.use { input ->
@@ -74,13 +84,12 @@ class MainActivity : FlutterActivity() {
             }
 
             val stablePath = dest.absolutePath
-            val channel = methodChannel
-            if (channel != null) {
-                // Engine is running — emit directly.
-                channel.invokeMethod("onGpxFile", mapOf("path" to stablePath))
-            } else {
-                // Cold start — engine not ready yet; Dart will pull via getPendingGpxPath.
+            if (coldStart) {
+                // Dart will pull this via getPendingGpxPath once it has
+                // subscribed to the stream (see GpxShareService).
                 pendingGpxPath = stablePath
+            } else {
+                methodChannel?.invokeMethod("onGpxFile", mapOf("path" to stablePath))
             }
         } catch (_: Exception) {
             // Ignore — bad URI or IO error; user will see nothing rather than a crash.

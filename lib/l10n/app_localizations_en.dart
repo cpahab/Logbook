@@ -498,6 +498,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'p99 ignores the top 1 % of readings and suppresses GPS outliers. p100 = true maximum.';
 
   @override
+  String get settingsMaxSpeedLabel => 'Max speed ceiling';
+
+  @override
+  String get settingsMaxSpeedDesc =>
+      'Fixes faster than this are always treated as GPS glitches. Raise it for fast boats (racing, foiling, powerboats) or genuinely fast runs will get filtered out.';
+
+  @override
   String get settingsShowRawTrackLabel => 'Show unfiltered track';
 
   @override

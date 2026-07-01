@@ -40,6 +40,7 @@ class ThemeProvider extends ChangeNotifier {
   static const _coldStartSettleFactorKey   = 'filter_cold_start_settle_factor';
   static const _makingWayThresholdKnKey    = 'filter_making_way_threshold_kn';
   static const _topSpeedPercentileKey      = 'filter_top_speed_percentile';
+  static const _maxSpeedKnKey              = 'filter_max_speed_kn';
   static const _showRawTrackKey            = 'debug_show_raw_track';
   static const _localeKey                  = 'locale';
   static const _lastUidKey                 = 'last_known_uid';
@@ -59,6 +60,7 @@ class ThemeProvider extends ChangeNotifier {
   double _coldStartSettleFactor     = 3.0;
   double _makingWayThresholdKn      = 1.0;
   double _topSpeedPercentile        = 0.99;
+  double _maxSpeedKn                = 12.0;
   bool   _showRawTrack              = true;
   String _title = 'Logbuch';
   String _weatherUrl = '';
@@ -87,6 +89,7 @@ class ThemeProvider extends ChangeNotifier {
   double get coldStartSettleFactor      => _coldStartSettleFactor;
   double get makingWayThresholdKn       => _makingWayThresholdKn;
   double get topSpeedPercentile         => _topSpeedPercentile;
+  double get maxSpeedKn                 => _maxSpeedKn;
   bool   get showRawTrack               => _showRawTrack;
   FilterSettings get filterSettings => FilterSettings(
     stationaryMode:        _filterMode,
@@ -96,6 +99,7 @@ class ThemeProvider extends ChangeNotifier {
     coldStartSettleFactor: _coldStartSettleFactor,
     makingWayThresholdKn:  _makingWayThresholdKn,
     topSpeedPercentile:    _topSpeedPercentile,
+    maxSpeedKn:            _maxSpeedKn,
   );
   String get logbuchTitle          => _title;
   String get weatherUrl         => _weatherUrl;
@@ -188,6 +192,9 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Restoring the exact screen the user left is convenient within the same
+  // day, but a route saved on an earlier day would reopen a stale context
+  // (e.g. an old day view) that's more confusing than starting at home.
   String get lastRouteToday {
     if (_box.get(_lastRouteDateKey) != _todayStr()) return '/';
     return _box.get(_lastRouteKey) ?? '/';
@@ -229,6 +236,7 @@ class ThemeProvider extends ChangeNotifier {
     _coldStartSettleFactor = double.tryParse(_box.get(_coldStartSettleFactorKey,  defaultValue: '3.0')!)  ?? 3.0;
     _makingWayThresholdKn  = double.tryParse(_box.get(_makingWayThresholdKnKey,   defaultValue: '1.0')!)  ?? 1.0;
     _topSpeedPercentile    = double.tryParse(_box.get(_topSpeedPercentileKey,      defaultValue: '0.99')!) ?? 0.99;
+    _maxSpeedKn            = double.tryParse(_box.get(_maxSpeedKnKey,              defaultValue: '12.0')!) ?? 12.0;
     _showRawTrack          = (_box.get(_showRawTrackKey, defaultValue: 'true')!) != 'false';
     _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
     _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
@@ -314,6 +322,13 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setMaxSpeedKn(double v) {
+    if (_maxSpeedKn == v) return;
+    _maxSpeedKn = v;
+    _box.put(_maxSpeedKnKey, v.toString());
+    notifyListeners();
+  }
+
   void setShowRawTrack(bool v) {
     if (_showRawTrack == v) return;
     _showRawTrack = v;
@@ -329,6 +344,7 @@ class ThemeProvider extends ChangeNotifier {
     _coldStartSettleFactor = 3.0;
     _makingWayThresholdKn = 1.0;
     _topSpeedPercentile   = 0.99;
+    _maxSpeedKn           = 12.0;
     _box
       ..put(_filterModeKey,            StationaryMode.speed.name)
       ..put(_minStopMinutesKey,        '5.0')
@@ -336,7 +352,8 @@ class ThemeProvider extends ChangeNotifier {
       ..put(_detectColdStartKey,       'true')
       ..put(_coldStartSettleFactorKey, '3.0')
       ..put(_makingWayThresholdKnKey,  '1.0')
-      ..put(_topSpeedPercentileKey,    '0.99');
+      ..put(_topSpeedPercentileKey,    '0.99')
+      ..put(_maxSpeedKnKey,            '12.0');
     notifyListeners();
   }
 

@@ -21,6 +21,13 @@ class GpxDateResolution {
   });
 }
 
+/// Decides which single calendar day a GPX track should be imported into.
+///
+/// A logbook entry is always keyed by one day, but a real GPX file can span
+/// several (an overnight passage, a multi-day delivery). Rather than reject
+/// or silently split those, we anchor the import to the first day the track
+/// touches and report [GpxDateResolution.isMultiDay]/[spannedDays] so the
+/// import UI can warn the user and let them confirm or pick a different day.
 class GpxDateResolver {
   static GpxDateResolution resolve(GpxParseResult result) {
     if (result.hasRoutesOnly) {

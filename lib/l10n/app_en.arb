@@ -177,6 +177,8 @@
   "settingsUnderwayDesc": "Minimum speed for the underway average. Drifting below this is not counted.",
   "settingsPercentileLabel": "Peak speed percentile",
   "settingsPercentileDesc": "p99 ignores the top 1 % of readings and suppresses GPS outliers. p100 = true maximum.",
+  "settingsMaxSpeedLabel": "Max speed ceiling",
+  "settingsMaxSpeedDesc": "Fixes faster than this are always treated as GPS glitches. Raise it for fast boats (racing, foiling, powerboats) or genuinely fast runs will get filtered out.",
   "settingsShowRawTrackLabel": "Show unfiltered track",
   "settingsShowRawTrackDesc": "Shows the raw GPX track in addition to the filtered track. Useful for diagnosing and tuning filter settings.",
   "settingsCrewSection": "Crew roster",

@@ -299,7 +299,12 @@ class FirestoreService {
         'photos': e.photos,
         'keelDown': e.keelDown,
         'createdAt': e.createdAt?.toUtc().toIso8601String(),
-        'updatedAt': e.updatedAt?.toUtc().toIso8601String(),
+        // Server timestamp, not the client string used elsewhere in this map:
+        // fetchEntriesUpdatedSince() below runs a `isGreaterThan Timestamp`
+        // query, and Firestore range filters only match fields of the same
+        // type as the query value — a client-set ISO string would silently
+        // never match and the incremental pull would always come back empty.
+        'updatedAt': FieldValue.serverTimestamp(),
       };
 
   static Map<String, dynamic> _timelineToMap(TimelineEntry t) => {

@@ -117,6 +117,8 @@ class GpxParser {
       for (final seg in trk.trksegs) {
         for (final pt in seg.trkpts) {
           if (pt.lat == null || pt.lon == null) continue;
+          // (0, 0) is "Null Island" — some receivers emit it as a sentinel
+          // for "no fix yet" rather than omitting the point.
           if (pt.lat == 0.0 && pt.lon == 0.0) continue;
           if (pt.time == null) {
             coordsWithoutTime++;
@@ -133,6 +135,8 @@ class GpxParser {
 
     points.sort((a, b) => a.time.compareTo(b.time));
 
+    // Some exporters repeat the last fix across multiple <trkseg> blocks;
+    // drop consecutive exact duplicates left over after sorting.
     final unique = <TrackPoint>[];
     TrackPoint? last;
     for (final p in points) {

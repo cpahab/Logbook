@@ -1122,7 +1122,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       p.detectColdStart != true ||
       p.coldStartSettleFactor != 3.0 ||
       p.makingWayThresholdKn != 1.0 ||
-      p.topSpeedPercentile != 0.99;
+      p.topSpeedPercentile != 0.99 ||
+      p.maxSpeedKn != 12.0;
 
   // ── Track Filter ────────────────────────────────────────────────────
   Widget _buildTrackFilterSection(ThemeProvider p, ColorScheme cs) {
@@ -1470,6 +1471,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsPercentileDesc,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  _rowDivider(cs),
+                  // ── Max speed ceiling ────────────────────────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        context.l10n.settingsMaxSpeedLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Text(
+                        '${p.maxSpeedKn.round()} kn',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: p.maxSpeedKn,
+                    min: 8,
+                    max: 60,
+                    divisions: 52,
+                    onChanged: p.setMaxSpeedKn,
+                  ),
+                  Text(
+                    context.l10n.settingsMaxSpeedDesc,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,

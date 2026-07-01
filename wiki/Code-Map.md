@@ -1,0 +1,222 @@
+# Code Map — What Each File Does
+
+A from-the-code reference to how Logbook is put together: the runtime
+architecture and data flow first, then a directory-by-directory index of
+every source file. Written from the current `main` branch — if a file listed
+here has been renamed or removed, the code is authoritative, not this page.
+
+---
+
+## 1. What the app is
+
+Logbook is a Flutter app (iOS, macOS, Android) for sailors to keep a daily
+ship's log: one entry per calendar day, a timeline of events within that day
+(course, speed, wind, sail state, crew, remarks), an optional GPS track
+imported from a GPX file, a shared crew roster, and an emergency-contacts /
+distress-call section. Multiple people can share one "logbook" (e.g. owner +
+crew) via Firebase Auth accounts and a join-by-share-code flow.
+
+## 2. Architecture at a glance
+
+| Layer | Technology | Notes |
+|---|---|---|
+| Local storage | Hive (typed boxes/adapters) | Source of truth for the UI; app must work fully offline |
+| Cloud sync | Firebase Firestore + Storage | Best-effort mirror of the Hive data, keyed by `logbookId` |
+| Auth | firebase_auth + Google/Apple sign-in | Gates cloud sync; app still works signed-out, local-only |
+| State management | `provider` (`ChangeNotifier`) | `HomeRepository`, `ThemeProvider`, `EmergencyRepository`, `AuthService` |
+| Navigation | `go_router` | Flat route list, no nested/shell routes; one root `Navigator` |
+| Maps | `flutter_map` (OSM / MapTiler / Esri tiles) | Used for day-detail and full-track map views |
+
+**Everything is offline-first.** Every repository (`HomeRepository`,
+`EmergencyRepository`, `ThemeProvider`) writes to Hive first and
+synchronously, then fires off a best-effort push to Firestore that's allowed
+to fail silently (`.catchError((_) {})`). Reads on startup pull from Hive
+immediately; Firestore sync happens in the background and merges in via
+`notifyListeners()` when it completes.
+
+**Conflict resolution is timestamp-based, not CRDT.** Each repository tracks
+a local "last modified" timestamp per record (or globally) in a small Hive
+box, and a "last successful sync" timestamp. On (re)connect: local edits
+newer than the last sync get pushed; remote data newer than the local edit
+wins on pull. A live Firestore listener then keeps things in sync while the
+app runs. See `HomeRepository.attachFirestore` for the fullest version of
+this pattern; `ThemeProvider` and `EmergencyRepository` mirror it for
+settings/contacts.
+
+## 3. Key flows
+
+**Day entry & timeline.** A `DayEntry` (one per calendar day) holds a list of
+`TimelineEntry` (course/speed/wind/sail/crew/remarks at a point in time).
+Timeline entries can later be "amended" (edited with a reason) rather than
+silently overwritten — see `TimelineAmendment`. Vessel status (oil, fuel,
+keel) and crew carry forward automatically from the previous day
+(`HomeRepository.addEntry`).
+
+**GPX import & cleaning.** A raw GPX track is noisy: GPS cold-start drift, a
+bad first fix, speed spikes from teleports, and "stationary" wobble while
+moored. `trim_track.dart` runs a multi-pass pipeline (annotate → flag
+spikes → flag bad first fix → re-annotate → detect stops → flag cold-start →
+smooth) documented in detail at the top of that file. The result feeds both
+the on-screen filtered/raw map layers (`DisplayModel`) and the trip
+statistics (`compute_daily_stats.dart`). Filter thresholds are user-tunable
+(`FilterSettings`, exposed in Settings) since real boats vary a lot (an
+anchored yacht vs. a foiling dinghy behave very differently in this data).
+
+**GPX import UX.** A GPX file can arrive by manual "Import" or by the OS
+share sheet (see §4, share-intent native bridges). Either way it flows
+through `GpxParser` → `GpxDateResolver` (which calendar day does this track
+belong to?) → `GpxShareHandler`/`GpxImportSheet` (ask the user to confirm,
+merge, or replace if there's ambiguity or an existing track) → 
+`HomeRepository.importGpx*`.
+
+**Cloud sync & multi-user logbooks.** `LogbookService` manages logbook
+identity in Firestore (`users/{uid}`, `logbooks/{id}`, membership,
+share-code join). `FirestoreService` is the actual data sync layer for one
+logbook's entries/settings/contacts/roster. A user can own or join multiple
+logbooks and switch the active one (`HomeRepository.reattachAndSync`).
+
+**Auth gating.** `router.dart`'s global `redirect` callback is the only auth
+gate — it sends signed-out users to `/auth/login` and (optionally, behind
+`kEnforceEmailVerification`) unverified users to a verification screen.
+Everything else is a normal flat route list.
+
+## 4. Directory index
+
+### `lib/` (root)
+| File | What it does |
+|---|---|
+| `main.dart` | App entry point: Hive/Firebase/services init, builds the `GoRouter`, wires the GPX-share stream to `router.go('/gpx-import')`, restores the last-viewed route. |
+| `app.dart` | `Logbook` — the root `MaterialApp.router` widget (theme, locale, routerConfig). |
+| `firebase_options.dart` | Generated by FlutterFire CLI — per-platform Firebase project config. |
+
+### `lib/app/`
+| File | What it does |
+|---|---|
+| `router.dart` | All `GoRoute`s + the single auth-gating `redirect`. Flat structure, no nested routes. |
+| `theme/light_theme.dart`, `dark_theme.dart` | Material theme definitions. |
+| `theme/theme_extensions.dart` | Custom `ThemeExtension` for timeline/day-detail/crew colour tokens. |
+
+### `lib/core/config/`
+| File | What it does |
+|---|---|
+| `feature_flags.dart` | Single flag (`kEnforceEmailVerification`) to toggle the email-verification gate without code changes. |
+
+### `lib/core/constants/`
+| File | What it does |
+|---|---|
+| `map_config.dart` | Tile-server URL templates (OSM / MapTiler / Esri satellite). |
+
+### `lib/core/errors/`
+| File | What it does |
+|---|---|
+| `exceptions.dart`, `failures.dart` | Small shared exception/failure types. |
+
+### `lib/core/services/` — cross-feature services
+| File | What it does |
+|---|---|
+| `auth_service.dart` | Wraps Firebase Auth: email/password, Google, Apple sign-in, verification, error-code → l10n-key mapping. |
+| `firestore_service.dart` | Firestore read/write/stream layer for one logbook's entries, settings, UI state, contacts, roster. Owns the Firestore document schema. |
+| `storage_service.dart` | Firebase Storage layer for raw GPX files (`logbooks/{id}/tracks/{date}.gpx`) and bulk folder delete. |
+| `logbook_service.dart` | Logbook identity/membership: create, list, join by share-code, rename, delete, remove member, regenerate code. |
+| `gpx_share_service.dart` | Dart side of the native GPX share-intent bridge — a broadcast stream of incoming file paths (warm push) plus a one-shot pending-file check (cold-start pull). |
+| `gps_consent_service.dart` | One-time "why we need your location" dialog before requesting the OS location permission. |
+
+### `lib/features/auth/presentation/`
+| File | What it does |
+|---|---|
+| `login_screen.dart`, `register_screen.dart`, `forgot_password_screen.dart`, `verify_email_screen.dart` | The four auth screens. |
+| `auth_widgets.dart` | Shared form field widget used across the auth screens. |
+
+### `lib/features/home/domain/` — Hive-persisted models
+| File | What it does |
+|---|---|
+| `day_entry.dart` | One calendar day's log: harbors, notes, crew, vessel status, timeline, photos. `@HiveField` indices are append-only by convention (see the migration-invariant comment at the top). |
+| `timeline_entry.dart` | One timestamped event within a day (course/speed/wind/sea/weather/sail/motor/crew note), plus its amendment history. |
+| `timeline_amendment.dart` | A recorded edit to a `TimelineEntry` — keeps the original value + reason instead of silently overwriting. |
+| `crew_member.dart` | Roster entry: name + medical info (blood type, allergies, conditions). |
+| `daily_track.dart` | One day's raw GPS track: file name + list of `TrackPoint`. |
+| `track_point.dart` | A single GPS fix (lat/lon/time). |
+| `*.g.dart` | Generated Hive `TypeAdapter`s — do not hand-edit, regenerate with `build_runner`. |
+
+### `lib/features/home/data/`
+| File | What it does |
+|---|---|
+| `home_repository.dart` | The app's central `ChangeNotifier`: owns all Hive boxes for entries/tracks/roster, offline-first Firestore sync (see §2), GPX import, crew-note/vessel-status auto-snapshotting, debounced writes. |
+
+### `lib/features/home/utils/` — GPS/GPX processing pipeline
+| File | What it does |
+|---|---|
+| `trim_track.dart` | The GPS cleaning pipeline (see §3) — spike/cold-start/bad-first-fix detection, stop/anchor detection, smoothing, and the `DisplayModel` used for map rendering (moving/stop/teleport segments, uncertainty bands). |
+| `compute_daily_stats.dart` | Distance, moving/stationary time, average and robust max speed for one day, built on top of `trim_track`'s output. |
+| `filter_settings.dart` | User-tunable thresholds for the cleaning pipeline (persisted per-device via `ThemeProvider`, not cloud-synced). |
+| `track_correlation.dart` | Nearest-in-time matching of a `TimelineEntry` to a `TrackPoint`, so a logged event can be anchored to where the boat actually was. |
+| `gpx_parser.dart` | Parses raw GPX bytes into `TrackPoint`s: encoding detection (UTF-8/16/Latin-1), a timestamp-format fixup for some exporters, sentinel/duplicate-point filtering. |
+| `gpx_date_resolver.dart` | Decides which single calendar day an imported GPX track belongs to, and flags when it spans multiple days. |
+| `gpx_exporter.dart` | Builds an export GPX (filtered + raw track) from a `DisplayModel`. |
+| `pdf_exporter.dart` | Renders a full voyage report PDF (map snapshot, stats, timeline) for one or more days. |
+| `photo_service.dart` | Picks, compresses, uploads, caches, and deletes day-entry photos via Firebase Storage. |
+| `sail_state_utils.dart` | Converts legacy German sail-state strings to locale-neutral sentinels, and formats vessel-status sentinel notes (`vs:oil=..,fuel=..,keel=..`) for display. |
+
+### `lib/features/home/presentation/` — screens
+| File | What it does |
+|---|---|
+| `home_screen.dart` | The main timeline/dashboard: year filter, stats, list of day entries, add-entry FAB menu. |
+| `day_detail_screen.dart` | The big one — one day's full editable log, map, timeline list, GPX import/merge entry points, full-screen map view. |
+| `gpx_import_screen.dart` | Full-screen import flow shown for GPX files opened via the OS (as opposed to the in-app bottom sheet). |
+| `gpx_import_sheet.dart` | Bottom sheet asking the user to confirm a date / merge-or-replace choice when a GPX import is ambiguous. |
+| `gpx_share_handler.dart` | Orchestrates one GPX share-intent end to end: read → parse → resolve date → (maybe) ask via the sheet → import → navigate + snackbar. |
+
+### `lib/features/home/screens/`
+| File | What it does |
+|---|---|
+| `crew_roster_screen.dart` | List/add/edit/delete crew roster members. |
+
+### `lib/features/home/widgets/`
+| File | What it does |
+|---|---|
+| `add_timeline_entry_dialog.dart` | Form for adding/amending a timeline entry. |
+| `add_crew_member_dialog.dart` | Form for adding a crew member. |
+| `crew_picker_sheet.dart` | Bottom sheet to pick an existing roster member or create a new one inline. |
+| `keel_icon.dart` | Small custom-painted boat-hull icon showing keel up/down state. |
+| `nav_bar.dart` | Bottom navigation bar with the raised centre FAB (journal/map/settings/safety tabs). |
+
+### `lib/features/emergency/`
+| File | What it does |
+|---|---|
+| `domain/emergency_contact.dart` | Hive model: name, role, phone. |
+| `data/emergency_repository.dart` | Same offline-first Firestore sync pattern as `HomeRepository`, scoped to the contacts list. |
+| `presentation/emergency_manifest_screen.dart` | Overview: quick actions, safety info (life raft, EPIRB, fire suppression, VHF channels), contacts list. |
+| `presentation/emergency_screen.dart` | Distress info / VHF channel reference screen. |
+| `presentation/mayday_screen.dart` | Step-by-step Mayday call script. |
+
+### `lib/features/settings/`
+| File | What it does |
+|---|---|
+| `domain/theme_provider.dart` | Misnamed by history — actually the general local-settings `ChangeNotifier`: theme, locale, vessel/VHF info (cloud-synced), GPX filter thresholds (device-local), last-route memory, migration/sync bookkeeping flags. |
+| `presentation/settings_screen.dart` | The settings UI: appearance, vessel info, track filter tuning, logbook management (create/join/rename/share-code/delete), account. |
+
+### `lib/features/tracks/presentation/`
+| File | What it does |
+|---|---|
+| `tracks_screen.dart` | Cross-day track overview/browsing with date-range filter presets and a full-screen multi-day map view. |
+
+### `lib/l10n/`
+| File | What it does |
+|---|---|
+| `app_de.arb`, `app_en.arb` | Source strings (German is the template locale). |
+| `app_localizations*.dart` | Generated by `flutter gen-l10n` from the `.arb` files — do not hand-edit. |
+| `l10n_extension.dart` | `context.l10n` convenience getter. |
+
+### Native platform bridges (GPX share-intent)
+| File | What it does |
+|---|---|
+| `ios/Runner/AppDelegate.swift` | Strips GPX file URLs from legacy (non-scene) launch options; holds the static `pendingGpxPath` read by the method channel. |
+| `ios/Runner/SceneDelegate.swift` | Splits cold-start (`willConnectTo`, buffers to `pendingGpxPath`) from warm-start (`openURLContexts`, pushes via method channel) GPX handling, and copies the shared file to a stable app-owned location. |
+| `android/.../MainActivity.kt` | Same split for Android: `onCreate` (fresh engine, cold start) buffers to `pendingGpxPath`; `onNewIntent` (already-running engine, warm start) pushes directly via the method channel. |
+
+## 5. Things that look odd on purpose
+
+- **`ThemeProvider` holds vessel/VHF/filter settings, not just theme.** It grew from a small theme toggle into the general local-settings store; the name stuck.
+- **GPX filter thresholds are per-device, not cloud-synced** (`filter_settings.dart` docstring) — deliberate, since they're a display/analysis preference, not logbook data.
+- **Two different "resolved so far" checks look similar but differ:** `HomeRepository`'s per-entry `_localEditTime`/`_lastSyncAt` timestamp-race logic exists three times (entries, settings, contacts) with slightly different owners (`HomeRepository`, `ThemeProvider`, `EmergencyRepository`) because each syncs a different Firestore document shape.
+- **`TimelineAmendment` exists instead of just overwriting a `TimelineEntry`** so a ship's log stays an auditable record — this mirrors real paper-logbook conventions (corrections, not erasures).

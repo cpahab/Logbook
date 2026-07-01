@@ -701,6 +701,8 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Private Firestore helpers ──────────────────────────────────────────────
 
+  // Coalesces rapid successive edits to the same day (e.g. typing in a text
+  // field) into a single Firestore write instead of one per keystroke.
   void _debouncedSync(DayEntry entry) {
     _syncTimers[entry.date]?.cancel();
     _syncTimers[entry.date] = Timer(const Duration(seconds: 2), () {

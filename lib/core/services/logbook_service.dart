@@ -171,6 +171,8 @@ class LogbookService {
   // ── Code generation ────────────────────────────────────────────────────────
 
   static String _generateShareCode() {
+    // Excludes I, O, 0, 1 — visually ambiguous when someone reads the code
+    // aloud or types it in by hand.
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final rand = Random.secure();
     return List.generate(8, (_) => chars[rand.nextInt(chars.length)]).join();
@@ -312,7 +314,7 @@ class LogbookService {
 
   Future<void> _deleteCollectionInChunks(
       CollectionReference<Map<String, dynamic>> col) async {
-    const chunkSize = 400;
+    const chunkSize = 400; // stays under Firestore's 500-write batch limit
     while (true) {
       final snap = await col.limit(chunkSize).get();
       if (snap.docs.isEmpty) break;

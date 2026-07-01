@@ -67,6 +67,13 @@ class FilterSettings {
   /// "max speed".  1.0 = true maximum; 0.99 = p99 (suppresses lone GPS spikes).
   final double topSpeedPercentile;
 
+  /// Hard speed ceiling (knots) for spike detection: any moving fix faster
+  /// than this is always flagged as an implausible GPS glitch, regardless of
+  /// the boat's own recent speed distribution. Default (12 kn) suits typical
+  /// cruising sailboats; racing yachts / foilers / powerboats need a higher
+  /// value or spikes will be false-flagged during genuinely fast runs.
+  final double maxSpeedKn;
+
   const FilterSettings({
     this.stationaryMode        = StationaryMode.speed,
     this.speedThresholdKn      = 0.5,
@@ -80,5 +87,6 @@ class FilterSettings {
     this.detectBadFirstFix     = true,
     this.makingWayThresholdKn  = 1.0,
     this.topSpeedPercentile    = 0.99,
+    this.maxSpeedKn            = 12.0,
   });
 }

@@ -498,6 +498,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'p99 ignoriert das oberste 1 % der Messwerte und unterdrückt GPS-Ausreißer. p100 = echter Maximalwert.';
 
   @override
+  String get settingsMaxSpeedLabel => 'Geschwindigkeits-Obergrenze';
+
+  @override
+  String get settingsMaxSpeedDesc =>
+      'Fixe Punkte über dieser Geschwindigkeit gelten immer als GPS-Ausreißer. Bei schnellen Booten (Regatta, Foiler, Motorboot) erhöhen, sonst werden echte schnelle Fahrten herausgefiltert.';
+
+  @override
   String get settingsShowRawTrackLabel => 'Ungefilterte Spur anzeigen';
 
   @override
