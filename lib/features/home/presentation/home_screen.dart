@@ -11,7 +11,6 @@ import '../utils/filter_settings.dart';
 import '../widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../core/services/gps_consent_service.dart';
-import '../../../core/services/gpx_share_service.dart';
 import '../../../l10n/l10n_extension.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -33,9 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) GpsConsentService.requestIfNeeded(context);
     });
-    // Cold-start: check for a GPX file that arrived before this screen mounted.
-    // Warm-start is handled by _GpxResumeObserver in main.dart.
-    context.read<GpxShareService>().checkPendingFile();
   }
 
   @override

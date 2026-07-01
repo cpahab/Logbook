@@ -161,6 +161,12 @@ void main() async {
     router.go('/gpx-import', extra: path);
   });
 
+  // Check for a GPX file that arrived before the engine was ready. Done here
+  // (rather than in HomeScreen.initState()) so it still fires when the app
+  // boots directly into a restored deep link like a day view, where
+  // HomeScreen never mounts.
+  unawaited(gpxShareService.checkPendingFile());
+
   router.routerDelegate.addListener(() {
     final location =
         router.routerDelegate.currentConfiguration.uri.toString();
