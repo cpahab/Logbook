@@ -3,6 +3,12 @@
 Generates the Logbook app upgrade planning document.
 Run with: python3 generate_doc.py
 Output:  Logbook_Upgrade_Plan.docx
+
+NOTE (2026-07): most of the plan below (auth, multilingual support, Android
+Firebase registration, MapTiler migration) has since shipped. The wiki
+(../wiki/) is hand-maintained and reflects current reality; this script's
+output is a historical planning snapshot. Do not re-run this to "refresh"
+project docs — it would not pick up what actually shipped.
 """
 
 from docx import Document
@@ -191,6 +197,19 @@ date_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 r3 = date_p.add_run(f"Prepared: {datetime.date.today().strftime('%B %Y')}   ·   Branch: main   ·   Version target: v1.0.17+")
 r3.font.size = Pt(10)
 r3.font.color.rgb = RGBColor(0x88, 0x99, 0xAA)
+
+note_p = doc.add_paragraph()
+note_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+note_p.paragraph_format.space_before = Pt(30)
+r4 = note_p.add_run(
+    'HISTORICAL SNAPSHOT — most items in this plan (auth, multilingual support, '
+    'Android Firebase registration, MapTiler migration) have since shipped. '
+    'See the project wiki for current state; this document is kept for the '
+    'reasoning behind decisions already made, not as a live status report.'
+)
+r4.font.size = Pt(9.5)
+r4.font.italic = True
+r4.font.color.rgb = RGBColor(0xC0, 0x39, 0x2B)
 
 doc.add_page_break()
 
@@ -891,6 +910,6 @@ add_para(doc,
 )
 
 # ── Save ──────────────────────────────────────────────────────────────────────
-out = '/home/user/Logbook/docs/Logbook_Upgrade_Plan.docx'
+out = 'Logbook_Upgrade_Plan.docx'
 doc.save(out)
 print(f'Saved → {out}')

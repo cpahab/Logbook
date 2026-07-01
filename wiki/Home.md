@@ -1,34 +1,25 @@
-# Logbook App — Upgrade Planning & Architecture
+# Logbook App — Wiki
 
-A Flutter-based sailing logbook for iOS, macOS, and Android.
-This wiki documents the architecture, completed changes, and planned upgrades.
+A Flutter-based, offline-first sailing logbook for iOS, macOS, and Android.
+This wiki documents the current architecture and behavior, and what's still planned.
 
 ---
 
 ## Contents
 
-| # | Page | Summary |
-|---|------|---------|
-| 1 | [Current State](Current-State) | Technology stack and where the app stands today |
-| 2 | [v1.0.17 Changes](v1.0.17-Changes) | All 17 items implemented in the v1.0.17 session |
-| 3 | [Multilingual Support](Multilingual-Support) | German / English implementation plan |
-| 4 | [Authentication](Authentication) | Email, Apple, Google auth design |
-| 5 | [Billing & Cost Strategy](Billing-and-Cost-Strategy) | Free model, web subscription option |
-| 6 | [Maps Provider Migration](Maps-Provider-Migration) | Required before App Store submission |
-| 7 | [Cost Risk Analysis](Cost-Risk-Analysis) | Firebase cost estimates and risk mitigation |
-| 8 | [Roadmap](Roadmap) | Sequenced plan to first public release |
-| 9 | [Code Map](Code-Map) | What each source file does, and how the app's data flow/sync model works |
-| A | [Implementation Prompts](Implementation-Prompts) | Copy-paste prompts for future Claude Code sessions |
-| B | [Firebase Cost Reference](Firebase-Cost-Reference) | Spark limits and Blaze pricing tables |
-| C | [Architectural Decisions](Architectural-Decisions) | Key decisions recorded so they aren't re-litigated |
+| Page | Summary |
+|------|---------|
+| [Current State](Current-State) | Tech stack, maturity notes, known platform issue |
+| [Code Map](Code-Map) | What each source file does; the app's data flow/sync model |
+| [Data Model](Data-Model) | Firestore schema, security rules, Hive boxes, sentinel encoding |
+| [Features](Features) | Behavior-level walkthrough of every screen |
+| [Architectural Decisions](Architectural-Decisions) | Key decisions recorded so they aren't re-litigated |
+| [Billing & Cost](Billing-and-Cost) | Current no-billing decision, Firebase cost reference, fallback plan |
+| [Roadmap](Roadmap) | What's left before App Store submission, and known gaps |
 
----
-
-## Quick reference — what to do next
-
-1. **Before any App Store submission:** [Switch map tiles to MapTiler + Esri](Maps-Provider-Migration) (2 days, no dependencies)
-2. **For Android:** Register Android app in Firebase Console (see [prompt A2](Implementation-Prompts#a2--android-firebase-registration))
-3. **Parallel tracks:** [i18n](Multilingual-Support) and [Auth Phase 2.1](Authentication) can start simultaneously
+For a deep dive on the GPS track-cleaning algorithm specifically, see
+`docs/GPS-Track-Filtering-Pipeline.docx` in the repository (not in this wiki — it's a
+formal technical reference better suited to a standalone document).
 
 ---
 

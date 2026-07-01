@@ -1,34 +1,55 @@
 # 1. Current State of the App
 
-The Logbook app is a Flutter-based sailing logbook for iOS, macOS, and Android
-(Android partially configured). It is currently used only by the developer.
+The Logbook app is an offline-first Flutter sailing logbook for iOS, macOS, and Android.
+Multiple people can share one logbook (auth-gated, membership-based) via an 8-character
+share code or QR code. Data is stored locally in Hive and synced to Cloud Firestore.
 
-The app stores data locally using Hive and optionally syncs to Firebase Firestore
-using an installation-code model — two devices share a logbook by exchanging an
-eight-character code. There is no user authentication.
+For what each source file does, see [Code Map](Code-Map). For the Firestore/Hive schema,
+see [Data Model](Data-Model). For a walkthrough of each screen's behavior, see
+[Features](Features).
 
 ---
 
-## Technology Stack
+## Technology stack
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| Local storage | Hive (typed adapters) | DayEntry, TimelineEntry, CrewMember, DailyTrack, EmergencyContact |
-| Cloud sync | Firebase Firestore + Storage | Keyed by installationId — no auth required today |
-| State management | provider 6.1.2 (ChangeNotifier) | 3 providers: HomeRepository, ThemeProvider, EmergencyRepository |
-| Navigation | go_router 17.2.3 | Declarative routes, GoRouter redirect hooks available |
-| Maps | flutter_map 8.0.0 | OSM tiles + Esri satellite — both require tile provider change before App Store |
-| Auth package | firebase_auth (in pubspec) | Present but never wired up — zero auth code exists |
-| Platform targets | iOS ✓  macOS ✓  Android ⚠ | Android Firebase not yet configured (placeholder appId) |
-| Localization | flutter_localizations + intl | Hardcoded to de_CH — no ARB files, no l10n.yaml |
-| Billing / IAP | None | Zero billing code exists |
+| Local storage | Hive (typed adapters) | DayEntry, TimelineEntry, TimelineAmendment, CrewMember, DailyTrack, TrackPoint, EmergencyContact |
+| Cloud sync | Firebase Firestore + Storage | Auth-gated, keyed by `logbookId`; membership enforced by Firestore/Storage security rules |
+| Auth | firebase_auth + google_sign_in + sign_in_with_apple | Email/password, Google, Apple — all three wired up and working |
+| State management | provider (`ChangeNotifier`) | `HomeRepository`, `ThemeProvider`, `EmergencyRepository`, `AuthService` |
+| Navigation | go_router | Flat route list, single auth-gating `redirect` |
+| Maps | flutter_map + MapTiler | Nautical/satellite tiles via MapTiler API key — no policy-violating demo tile servers |
+| Platform targets | iOS ✓ macOS ✓ Android ✓ | Android Firebase registered (`google-services.json` present, real appId) |
+| Localization | flutter_localizations + intl, ARB-based | German (default) + English; `flutter gen-l10n` from `lib/l10n/app_{de,en}.arb` |
+| Billing / IAP | None (deliberate) | See [Billing & Cost](Billing-and-Cost) — absorbing Firebase costs at current scale |
 
 ---
 
-## Key structural facts
+## Maturity notes
 
-- **Firestore path today:** `logbooks/{installationId}/entries/…`
-- **Auth:** None — anyone who knows the installationId can read the logbook
-- **Android:** `firebase_options.dart` contains a placeholder `appId`; `google-services.json` is missing
-- **Maps:** OSM demo tile server is policy-prohibited for published apps; Esri satellite used without an API key
-- **Sentinel issue:** The string `"Besatzung: "` is used both as display text and as a detection marker in code logic — must be split before any i18n work
+- **Localization** is complete for the main app. The Emergency Manifest's MAYDAY radio
+  script is *deliberately* kept in English (SOLAS/IMO convention for maritime distress
+  calls) — this is a permanent decision, not a gap. Locale-sensitive data (sail state,
+  vessel status, keel position) is stored as language-neutral sentinel strings
+  (`sail:full`, `vs:oil=75,fuel=60`, `vs:keel=down`) and rendered through `l10n` at
+  display time — see `sail_state_utils.dart` — so switching languages doesn't leave
+  stale text baked into old entries.
+- **Testing** is thin: unit tests cover sentinel parsing and PDF string construction
+  (`test/sail_state_utils_test.dart`), but there are no widget tests for core flows
+  (add timeline entry, PDF export, account deletion) and no Crashlytics or equivalent
+  crash reporting. See [Roadmap](Roadmap).
+- **GPS track storage has no size cap** — every raw GPS fix is uploaded to Firebase
+  Storage as-is. A long offshore passage can accumulate thousands of points; no
+  decimation (e.g. Ramer–Douglas–Peucker) is applied before upload. See [Roadmap](Roadmap).
+
+---
+
+## Known platform issue
+
+**iOS 26 + Xcode debug launch crashes (SIGKILL / signal 9).** Launching the app from
+Xcode on iOS 26 kills the process before it reaches `main()`. Likely a Flutter/Xcode 26
+JIT-debugging incompatibility, no upstream fix confirmed yet.
+
+**Workaround:** use `flutter run -d {device_id}` from the terminal instead of the Xcode
+"Run" button. This does not affect release builds or `flutter build`.

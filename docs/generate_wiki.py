@@ -3,7 +3,24 @@
 Generates GitHub wiki pages from the upgrade plan content.
 Run with: python3 generate_wiki.py
 Output:  wiki/ directory containing all .md files
+
+DO NOT RUN THIS SCRIPT. As of 2026-07, wiki/ is hand-maintained and reflects
+current project reality (most of what this script writes describes work that
+has since shipped, or pages that were deliberately merged/removed). Running
+it would silently overwrite or resurrect superseded pages. Kept only for
+historical reference to what the wiki originally looked like. If you need to
+regenerate a page, edit it by hand in wiki/ instead.
 """
+
+import sys
+
+print(
+    'generate_wiki.py is disabled: wiki/ is now hand-maintained and this '
+    'script would overwrite it with a superseded snapshot. See the docstring '
+    'at the top of this file. Aborting without writing anything.',
+    file=sys.stderr,
+)
+sys.exit(1)
 
 import os
 

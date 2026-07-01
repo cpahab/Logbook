@@ -18,14 +18,10 @@ crew) via Firebase Auth accounts and a join-by-share-code flow.
 
 ## 2. Architecture at a glance
 
-| Layer | Technology | Notes |
-|---|---|---|
-| Local storage | Hive (typed boxes/adapters) | Source of truth for the UI; app must work fully offline |
-| Cloud sync | Firebase Firestore + Storage | Best-effort mirror of the Hive data, keyed by `logbookId` |
-| Auth | firebase_auth + Google/Apple sign-in | Gates cloud sync; app still works signed-out, local-only |
-| State management | `provider` (`ChangeNotifier`) | `HomeRepository`, `ThemeProvider`, `EmergencyRepository`, `AuthService` |
-| Navigation | `go_router` | Flat route list, no nested/shell routes; one root `Navigator` |
-| Maps | `flutter_map` (OSM / MapTiler / Esri tiles) | Used for day-detail and full-track map views |
+For the tech-stack table see [Current State](Current-State). The short version: Hive is
+the offline source of truth, Firestore/Storage are a best-effort auth-gated mirror keyed
+by `logbookId`, state is plain `provider`/`ChangeNotifier`, navigation is a flat
+`go_router` list with one auth-gating `redirect`, and maps are `flutter_map` + MapTiler.
 
 **Everything is offline-first.** Every repository (`HomeRepository`,
 `EmergencyRepository`, `ThemeProvider`) writes to Hive first and
@@ -148,7 +144,7 @@ Everything else is a normal flat route list.
 |---|---|
 | `trim_track.dart` | The GPS cleaning pipeline (see §3) — spike/cold-start/bad-first-fix detection, stop/anchor detection, smoothing, and the `DisplayModel` used for map rendering (moving/stop/teleport segments, uncertainty bands). |
 | `compute_daily_stats.dart` | Distance, moving/stationary time, average and robust max speed for one day, built on top of `trim_track`'s output. |
-| `filter_settings.dart` | User-tunable thresholds for the cleaning pipeline (persisted per-device via `ThemeProvider`, not cloud-synced). |
+| `filter_settings.dart` | User-tunable thresholds for the cleaning pipeline (persisted via `ThemeProvider`, cloud-synced per logbook). |
 | `track_correlation.dart` | Nearest-in-time matching of a `TimelineEntry` to a `TrackPoint`, so a logged event can be anchored to where the boat actually was. |
 | `gpx_parser.dart` | Parses raw GPX bytes into `TrackPoint`s: encoding detection (UTF-8/16/Latin-1), a timestamp-format fixup for some exporters, sentinel/duplicate-point filtering. |
 | `gpx_date_resolver.dart` | Decides which single calendar day an imported GPX track belongs to, and flags when it spans multiple days. |
@@ -192,7 +188,7 @@ Everything else is a normal flat route list.
 ### `lib/features/settings/`
 | File | What it does |
 |---|---|
-| `domain/theme_provider.dart` | Misnamed by history — actually the general local-settings `ChangeNotifier`: theme, locale, vessel/VHF info (cloud-synced), GPX filter thresholds (device-local), last-route memory, migration/sync bookkeeping flags. |
+| `domain/theme_provider.dart` | Misnamed by history — actually the general settings `ChangeNotifier`: theme/locale (device-local), vessel/VHF info and GPX filter thresholds (both cloud-synced per logbook), last-route memory, migration/sync bookkeeping flags. |
 | `presentation/settings_screen.dart` | The settings UI: appearance, vessel info, track filter tuning, logbook management (create/join/rename/share-code/delete), account. |
 
 ### `lib/features/tracks/presentation/`
@@ -216,7 +212,8 @@ Everything else is a normal flat route list.
 
 ## 5. Things that look odd on purpose
 
-- **`ThemeProvider` holds vessel/VHF/filter settings, not just theme.** It grew from a small theme toggle into the general local-settings store; the name stuck.
-- **GPX filter thresholds are per-device, not cloud-synced** (`filter_settings.dart` docstring) — deliberate, since they're a display/analysis preference, not logbook data.
+- **`ThemeProvider` holds vessel/VHF/filter settings, not just theme.** It grew from a small theme toggle into the general settings store; the name stuck.
+- **GPX filter thresholds are cloud-synced per logbook, but `showRawTrack` (the raw-track debug overlay) deliberately isn't** — it's a device display toggle, not logbook data, so it stays local-only in `ThemeProvider`.
+- **The tracks-screen date filter (`_preset`/`_customRange`/`_satelliteView` in `tracks_screen.dart`) is intentionally a `static` field, not persisted to Hive.** It needs to survive navigating away from and back to the Tracks tab (the bottom nav pushes a fresh route each time) but reset on a real app restart — a `static` gives process-lifetime, not permanent, persistence.
 - **Two different "resolved so far" checks look similar but differ:** `HomeRepository`'s per-entry `_localEditTime`/`_lastSyncAt` timestamp-race logic exists three times (entries, settings, contacts) with slightly different owners (`HomeRepository`, `ThemeProvider`, `EmergencyRepository`) because each syncs a different Firestore document shape.
 - **`TimelineAmendment` exists instead of just overwriting a `TimelineEntry`** so a ship's log stays an auditable record — this mirrors real paper-logbook conventions (corrections, not erasures).
