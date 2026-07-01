@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'core/services/auth_service.dart';
+import 'core/services/gpx_share_service.dart';
 import 'features/home/data/home_repository.dart';
 import 'features/home/domain/day_entry.dart';
 import 'features/home/domain/timeline_entry.dart';
@@ -24,6 +25,16 @@ import 'firebase_options.dart';
 
 import 'app/router.dart';
 import 'app.dart';
+
+class _GpxResumeObserver extends WidgetsBindingObserver {
+  final GpxShareService _service;
+  _GpxResumeObserver(this._service);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _service.checkPendingFile();
+  }
+}
 
 Future<void> _initFirestore(
     User user,
@@ -99,6 +110,10 @@ void main() async {
 
   final authService = AuthService();
 
+  final gpxShareService = GpxShareService();
+  await gpxShareService.init();
+  WidgetsBinding.instance.addObserver(_GpxResumeObserver(gpxShareService));
+
   final logbookIdNotifier = ValueNotifier<String?>(null);
 
   try {
@@ -139,6 +154,13 @@ void main() async {
   }
 
   final router = buildRouter(themeProvider.lastRouteToday, authService);
+
+  // Navigate to the import screen from anywhere in the app — using the router
+  // directly avoids the issue of calling context.go from a non-top-level screen.
+  gpxShareService.gpxFilePaths.listen((path) {
+    router.go('/gpx-import', extra: path);
+  });
+
   router.routerDelegate.addListener(() {
     final location =
         router.routerDelegate.currentConfiguration.uri.toString();
@@ -153,6 +175,7 @@ void main() async {
         ChangeNotifierProvider.value(value: emergencyRepo),
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider.value(value: logbookIdNotifier),
+        Provider.value(value: gpxShareService),
       ],
       child: Logbook(router: router),
     ),

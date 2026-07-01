@@ -344,16 +344,12 @@ class FirestoreService {
             .toList(),
         photos: List<String>.from(d['photos'] as List? ?? []),
         keelDown: d['keelDown'] as bool?,
-        createdAt: d['createdAt'] != null
-            ? DateTime.parse(d['createdAt'] as String).toLocal()
-            : null,
-        updatedAt: d['updatedAt'] != null
-            ? DateTime.parse(d['updatedAt'] as String).toLocal()
-            : null,
+        createdAt: _tsToDate(d['createdAt']),
+        updatedAt: _tsToDate(d['updatedAt']),
       );
 
   static TimelineEntry _timelineFromMap(Map<String, dynamic> d) => TimelineEntry(
-        time: DateTime.parse(d['time'] as String).toLocal(),
+        time: _parseDate(d['time']),
         course: (d['course'] as num?)?.toDouble(),
         speed: (d['speed'] as num?)?.toDouble(),
         wind: d['wind'] as String?,
@@ -365,12 +361,8 @@ class FirestoreService {
         motorOn: d['motorOn'] as bool?,
         vesselStatusNote: d['vesselStatusNote'] as String?,
         keelDown: d['keelDown'] as bool?,
-        createdAt: d['createdAt'] != null
-            ? DateTime.parse(d['createdAt'] as String).toLocal()
-            : null,
-        updatedAt: d['updatedAt'] != null
-            ? DateTime.parse(d['updatedAt'] as String).toLocal()
-            : null,
+        createdAt: _tsToDate(d['createdAt']),
+        updatedAt: _tsToDate(d['updatedAt']),
         amendments: (d['amendments'] as List? ?? [])
             .map((a) => _amendmentFromMap(a as Map<String, dynamic>))
             .toList(),
@@ -394,9 +386,9 @@ class FirestoreService {
 
   static TimelineAmendment _amendmentFromMap(Map<String, dynamic> d) =>
       TimelineAmendment(
-        amendedAt: DateTime.parse(d['amendedAt'] as String).toLocal(),
+        amendedAt: _parseDate(d['amendedAt']),
         reason: d['reason'] as String?,
-        time: DateTime.parse(d['time'] as String).toLocal(),
+        time: _parseDate(d['time']),
         course: (d['course'] as num?)?.toDouble(),
         speed: (d['speed'] as num?)?.toDouble(),
         wind: d['wind'] as String?,
@@ -446,8 +438,14 @@ class FirestoreService {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
-  static DateTime? _tsToDate(dynamic v) =>
-      v is Timestamp ? v.toDate() : null;
+  static DateTime? _tsToDate(dynamic v) {
+    if (v is Timestamp) return v.toDate().toLocal();
+    if (v is String) return DateTime.tryParse(v)?.toLocal();
+    return null;
+  }
+
+  static DateTime _parseDate(dynamic v) =>
+      _tsToDate(v) ?? (throw FormatException('Cannot parse date: $v'));
 
   static Map<String, String> _settingsFromDoc(Map<String, dynamic> data) {
     final result = <String, String>{};

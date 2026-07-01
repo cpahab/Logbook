@@ -1381,4 +1381,95 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get amendmentNoReason => 'No reason given';
+
+  @override
+  String get importLabel => 'Import';
+
+  @override
+  String get gpxShareErrorEncoding =>
+      'Could not read this file. Try exporting it again from the source app.';
+
+  @override
+  String get gpxShareErrorInvalidXml => 'This file is not a valid GPX file.';
+
+  @override
+  String get gpxShareErrorRoutesOnly =>
+      'This file contains a planned route, not a recorded track. Only recorded tracks can be imported.';
+
+  @override
+  String get gpxShareErrorWaypointsOnly =>
+      'This file contains only waypoints, not a track.';
+
+  @override
+  String get gpxShareErrorEmpty => 'No track data found in this file.';
+
+  @override
+  String gpxShareMultiDay(int count, String first, String last) {
+    return 'This track spans $count days ($first – $last). Which day should it be attached to?';
+  }
+
+  @override
+  String get gpxShareNoTimestamps =>
+      'This track has no timestamps. Which day does it belong to?';
+
+  @override
+  String gpxShareConflictIncoming(
+    String date,
+    int points,
+    String start,
+    String end,
+  ) {
+    return 'Incoming: $date · $points points · $start–$end';
+  }
+
+  @override
+  String gpxShareConflictExisting(
+    String date,
+    int points,
+    String start,
+    String end,
+  ) {
+    return 'Existing: $date · $points points · $start–$end';
+  }
+
+  @override
+  String gpxShareMergedNote(int count) {
+    return '$count tracks merged from this file.';
+  }
+
+  @override
+  String get gpxShareActionReplace => 'Replace';
+
+  @override
+  String get gpxShareActionMerge => 'Merge';
+
+  @override
+  String get gpxShareActionDifferent => 'Different date';
+
+  @override
+  String gpxShareImported(String date) {
+    return 'Track imported → $date';
+  }
+
+  @override
+  String get gpxImportTitle => 'Import GPX';
+
+  @override
+  String get gpxImportAssignDay => 'Assign to day';
+
+  @override
+  String get gpxImportNewEntry => 'A new log entry will be created';
+
+  @override
+  String get gpxImportConflict => 'Track already exists for this day';
+
+  @override
+  String gpxImportPoints(int count) {
+    return '$count track points';
+  }
+
+  @override
+  String gpxImportDateMismatch(String date) {
+    return 'Track date in file is $date — are you sure?';
+  }
 }

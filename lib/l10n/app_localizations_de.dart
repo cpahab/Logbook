@@ -1389,4 +1389,97 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get amendmentNoReason => 'Kein Grund angegeben';
+
+  @override
+  String get importLabel => 'Importieren';
+
+  @override
+  String get gpxShareErrorEncoding =>
+      'Diese Datei konnte nicht gelesen werden. Exportiere sie erneut aus der Quell-App.';
+
+  @override
+  String get gpxShareErrorInvalidXml =>
+      'Diese Datei ist kein gültiges GPX-Format.';
+
+  @override
+  String get gpxShareErrorRoutesOnly =>
+      'Diese Datei enthält eine geplante Route, keine aufgezeichnete Strecke. Nur aufgezeichnete Strecken können importiert werden.';
+
+  @override
+  String get gpxShareErrorWaypointsOnly =>
+      'Diese Datei enthält nur Wegpunkte, keine Strecke.';
+
+  @override
+  String get gpxShareErrorEmpty =>
+      'In dieser Datei wurden keine Streckendaten gefunden.';
+
+  @override
+  String gpxShareMultiDay(int count, String first, String last) {
+    return 'Diese Strecke erstreckt sich über $count Tage ($first – $last). Welchem Tag soll sie zugeordnet werden?';
+  }
+
+  @override
+  String get gpxShareNoTimestamps =>
+      'Diese Strecke enthält keine Zeitstempel. Welchem Tag gehört sie an?';
+
+  @override
+  String gpxShareConflictIncoming(
+    String date,
+    int points,
+    String start,
+    String end,
+  ) {
+    return 'Neu: $date · $points Punkte · $start–$end';
+  }
+
+  @override
+  String gpxShareConflictExisting(
+    String date,
+    int points,
+    String start,
+    String end,
+  ) {
+    return 'Vorhanden: $date · $points Punkte · $start–$end';
+  }
+
+  @override
+  String gpxShareMergedNote(int count) {
+    return '$count Strecken aus dieser Datei wurden zusammengeführt.';
+  }
+
+  @override
+  String get gpxShareActionReplace => 'Ersetzen';
+
+  @override
+  String get gpxShareActionMerge => 'Zusammenführen';
+
+  @override
+  String get gpxShareActionDifferent => 'Anderes Datum';
+
+  @override
+  String gpxShareImported(String date) {
+    return 'Strecke importiert → $date';
+  }
+
+  @override
+  String get gpxImportTitle => 'GPX importieren';
+
+  @override
+  String get gpxImportAssignDay => 'Tag zuordnen';
+
+  @override
+  String get gpxImportNewEntry => 'Ein neuer Logeintrag wird erstellt';
+
+  @override
+  String get gpxImportConflict => 'Für diesen Tag existiert bereits ein Track';
+
+  @override
+  String gpxImportPoints(int count) {
+    return '$count Streckenpunkte';
+  }
+
+  @override
+  String gpxImportDateMismatch(String date) {
+    return 'Track-Datum in der Datei ist $date — bist du sicher?';
+  }
 }
