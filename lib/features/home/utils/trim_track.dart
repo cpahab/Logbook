@@ -707,13 +707,17 @@ class DisplayModel {
   /// All non-break coords in track order.
   List<TrackPoint> allPoints() => [
     for (final s in segments)
-      if (s.kind != SegmentKind.teleportBreak) ...s.points,
+      if (s.kind != SegmentKind.teleportBreak)
+        for (final p in s.points)
+          if (p.lat.isFinite && p.lon.isFinite) p,
   ];
 
   /// Moving coords only — for bearing calculations and stats.
   List<TrackPoint> movingPoints() => [
     for (final s in segments)
-      if (s.kind == SegmentKind.moving) ...s.points,
+      if (s.kind == SegmentKind.moving)
+        for (final p in s.points)
+          if (p.lat.isFinite && p.lon.isFinite) p,
   ];
 
   /// Start stop (kind = start) if present.
@@ -899,7 +903,8 @@ DisplayModel buildDisplayModel(
   // rawMovingPoints: cold-start and stationary removed, spikes kept so the
   // filter's effect is visible when the raw overlay is shown.
   final rawMovingPoints = fixes
-      .where((f) => !f.stationary && !f.coldStart)
+      .where((f) => !f.stationary && !f.coldStart &&
+                    f.pt.lat.isFinite && f.pt.lon.isFinite)
       .map((f) => f.pt)
       .toList();
   // correlationPoints: flagged (bad first fix + spikes) and cold-start removed,

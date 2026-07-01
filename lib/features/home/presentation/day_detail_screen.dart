@@ -2079,12 +2079,17 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final boundsLatLngs = [
       for (final s in display.segments)
         if (s.kind != SegmentKind.teleportBreak)
-          ...s.points.map((p) => LatLng(p.lat, p.lon)),
-      for (final s in display.stops) LatLng(s.lat, s.lon),
+          for (final p in s.points)
+            if (p.lat.isFinite && p.lon.isFinite) LatLng(p.lat, p.lon),
+      for (final s in display.stops)
+        if (s.lat.isFinite && s.lon.isFinite) LatLng(s.lat, s.lon),
     ];
     final fitLatLngs = boundsLatLngs.isNotEmpty
         ? boundsLatLngs
-        : track.points.map((p) => LatLng(p.lat, p.lon)).toList();
+        : track.points
+            .where((p) => p.lat.isFinite && p.lon.isFinite)
+            .map((p) => LatLng(p.lat, p.lon))
+            .toList();
     final trackBounds = fitLatLngs.isNotEmpty ? LatLngBounds.fromPoints(fitLatLngs) : null;
 
     final startStop = display.startStop;
@@ -2356,9 +2361,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             _ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
-            if (showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             _ZoomAwareCircleLayer(circles: anchorCircles),
             PolylineLayer(polylines: trackPolylines, cullingMargin: null, simplificationTolerance: 0),
+            if (showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             MarkerLayer(markers: markers),
             RichAttributionWidget(
               attributions: [
@@ -3405,12 +3410,17 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final boundsLatLngs = [
       for (final s in display.segments)
         if (s.kind != SegmentKind.teleportBreak)
-          ...s.points.map((p) => LatLng(p.lat, p.lon)),
-      for (final s in display.stops) LatLng(s.lat, s.lon),
+          for (final p in s.points)
+            if (p.lat.isFinite && p.lon.isFinite) LatLng(p.lat, p.lon),
+      for (final s in display.stops)
+        if (s.lat.isFinite && s.lon.isFinite) LatLng(s.lat, s.lon),
     ];
     final fitLatLngs = boundsLatLngs.isNotEmpty
         ? boundsLatLngs
-        : track.points.map((p) => LatLng(p.lat, p.lon)).toList();
+        : track.points
+            .where((p) => p.lat.isFinite && p.lon.isFinite)
+            .map((p) => LatLng(p.lat, p.lon))
+            .toList();
     final trackBounds = fitLatLngs.isNotEmpty ? LatLngBounds.fromPoints(fitLatLngs) : null;
 
     final startStop = display.startStop;
@@ -3628,9 +3638,9 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
               userAgentPackageName: 'com.logbook.app',
             ),
             _ZoomAwareUncertaintyLayer(polygons: fsUncertaintyPolygons),
-            if (widget.showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             _ZoomAwareCircleLayer(circles: anchorCircles),
             PolylineLayer(polylines: fsTrackPolylines, cullingMargin: null, simplificationTolerance: 0),
+            if (widget.showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             MarkerLayer(markers: markers),
             RichAttributionWidget(attributions: [
               TextSourceAttribution('MapTiler', onTap: () async {

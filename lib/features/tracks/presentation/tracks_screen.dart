@@ -120,10 +120,11 @@ class _TracksScreenState extends State<TracksScreen> {
   }
 
   LatLngBounds? _boundsFor(List<LatLng> pts) {
-    if (pts.isEmpty) return null;
-    double minLat = pts.first.latitude, maxLat = pts.first.latitude;
-    double minLng = pts.first.longitude, maxLng = pts.first.longitude;
-    for (final p in pts) {
+    final finite = pts.where((p) => p.latitude.isFinite && p.longitude.isFinite).toList();
+    if (finite.isEmpty) return null;
+    double minLat = finite.first.latitude, maxLat = finite.first.latitude;
+    double minLng = finite.first.longitude, maxLng = finite.first.longitude;
+    for (final p in finite) {
       minLat = min(minLat, p.latitude);
       maxLat = max(maxLat, p.latitude);
       minLng = min(minLng, p.longitude);
@@ -457,6 +458,11 @@ class _TracksScreenState extends State<TracksScreen> {
               return PolygonLayer(polygons: uncertaintyPolygons);
             }),
             Builder(builder: (ctx) {
+              if (anchorCircles.isEmpty || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
+              return CircleLayer(circles: anchorCircles);
+            }),
+            PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
+            Builder(builder: (ctx) {
               if (!showRawTrack || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
               return PolylineLayer(
                 polylines: [
@@ -473,11 +479,6 @@ class _TracksScreenState extends State<TracksScreen> {
                 simplificationTolerance: 0,
               );
             }),
-            Builder(builder: (ctx) {
-              if (anchorCircles.isEmpty || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
-              return CircleLayer(circles: anchorCircles);
-            }),
-            PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(
               attributions: [
@@ -1195,6 +1196,11 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
               return PolygonLayer(polygons: fsUncertaintyPolygons);
             }),
             Builder(builder: (ctx) {
+              if (anchorCircles.isEmpty || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
+              return CircleLayer(circles: anchorCircles);
+            }),
+            PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
+            Builder(builder: (ctx) {
               if (!showRawTrack || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
               return PolylineLayer(
                 polylines: [
@@ -1211,11 +1217,6 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
                 simplificationTolerance: 0,
               );
             }),
-            Builder(builder: (ctx) {
-              if (anchorCircles.isEmpty || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
-              return CircleLayer(circles: anchorCircles);
-            }),
-            PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(attributions: [
               TextSourceAttribution('MapTiler', onTap: () async {
