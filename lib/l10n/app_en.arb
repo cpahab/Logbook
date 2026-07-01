@@ -578,5 +578,22 @@
     "placeholders": {
       "date": { "type": "String" }
     }
+  },
+
+  "gpxImportTitle": "Import GPX",
+  "gpxImportAssignDay": "Assign to day",
+  "gpxImportNewEntry": "A new log entry will be created",
+  "gpxImportConflict": "Track already exists for this day",
+  "gpxImportPoints": "{count} track points",
+  "@gpxImportPoints": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gpxImportDateMismatch": "Track date in file is {date} — are you sure?",
+  "@gpxImportDateMismatch": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
   }
 }

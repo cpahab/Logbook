@@ -1450,4 +1450,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String gpxShareImported(String date) {
     return 'Track imported → $date';
   }
+
+  @override
+  String get gpxImportTitle => 'Import GPX';
+
+  @override
+  String get gpxImportAssignDay => 'Assign to day';
+
+  @override
+  String get gpxImportNewEntry => 'A new log entry will be created';
+
+  @override
+  String get gpxImportConflict => 'Track already exists for this day';
+
+  @override
+  String gpxImportPoints(int count) {
+    return '$count track points';
+  }
+
+  @override
+  String gpxImportDateMismatch(String date) {
+    return 'Track date in file is $date — are you sure?';
+  }
 }

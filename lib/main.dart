@@ -26,6 +26,16 @@ import 'firebase_options.dart';
 import 'app/router.dart';
 import 'app.dart';
 
+class _GpxResumeObserver extends WidgetsBindingObserver {
+  final GpxShareService _service;
+  _GpxResumeObserver(this._service);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _service.checkPendingFile();
+  }
+}
+
 Future<void> _initFirestore(
     User user,
     ThemeProvider themeProvider,
@@ -102,6 +112,7 @@ void main() async {
 
   final gpxShareService = GpxShareService();
   await gpxShareService.init();
+  WidgetsBinding.instance.addObserver(_GpxResumeObserver(gpxShareService));
 
   final logbookIdNotifier = ValueNotifier<String?>(null);
 
@@ -143,6 +154,13 @@ void main() async {
   }
 
   final router = buildRouter(themeProvider.lastRouteToday, authService);
+
+  // Navigate to the import screen from anywhere in the app — using the router
+  // directly avoids the issue of calling context.go from a non-top-level screen.
+  gpxShareService.gpxFilePaths.listen((path) {
+    router.go('/gpx-import', extra: path);
+  });
+
   router.routerDelegate.addListener(() {
     final location =
         router.routerDelegate.currentConfiguration.uri.toString();

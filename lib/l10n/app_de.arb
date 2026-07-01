@@ -578,5 +578,22 @@
     "placeholders": {
       "date": { "type": "String" }
     }
+  },
+
+  "gpxImportTitle": "GPX importieren",
+  "gpxImportAssignDay": "Tag zuordnen",
+  "gpxImportNewEntry": "Ein neuer Logeintrag wird erstellt",
+  "gpxImportConflict": "Für diesen Tag existiert bereits ein Track",
+  "gpxImportPoints": "{count} Streckenpunkte",
+  "@gpxImportPoints": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "gpxImportDateMismatch": "Track-Datum in der Datei ist {date} — bist du sicher?",
+  "@gpxImportDateMismatch": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
   }
 }

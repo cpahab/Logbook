@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,7 +13,6 @@ import '../../settings/domain/theme_provider.dart';
 import '../../../core/services/gps_consent_service.dart';
 import '../../../core/services/gpx_share_service.dart';
 import '../../../l10n/l10n_extension.dart';
-import 'gpx_share_handler.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,25 +27,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _dayKeys = {};
   DateTime? _pendingScrollDate;
-  StreamSubscription<String>? _gpxShareSub;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) GpsConsentService.requestIfNeeded(context);
     });
-    final shareService = context.read<GpxShareService>();
-    _gpxShareSub = shareService.gpxFilePaths.listen((path) {
-      if (!mounted) return;
-      final repo = context.read<HomeRepository>();
-      GpxShareHandler.handle(context: context, filePath: path, repo: repo);
-    });
+    // Cold-start: check for a GPX file that arrived before this screen mounted.
+    // Warm-start is handled by _GpxResumeObserver in main.dart.
+    context.read<GpxShareService>().checkPendingFile();
   }
 
   @override
   void dispose() {
-    _gpxShareSub?.cancel();
     _scrollController.dispose();
     super.dispose();
   }

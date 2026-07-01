@@ -2771,6 +2771,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Strecke importiert → {date}'**
   String gpxShareImported(String date);
+
+  /// No description provided for @gpxImportTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'GPX importieren'**
+  String get gpxImportTitle;
+
+  /// No description provided for @gpxImportAssignDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Tag zuordnen'**
+  String get gpxImportAssignDay;
+
+  /// No description provided for @gpxImportNewEntry.
+  ///
+  /// In de, this message translates to:
+  /// **'Ein neuer Logeintrag wird erstellt'**
+  String get gpxImportNewEntry;
+
+  /// No description provided for @gpxImportConflict.
+  ///
+  /// In de, this message translates to:
+  /// **'Für diesen Tag existiert bereits ein Track'**
+  String get gpxImportConflict;
+
+  /// No description provided for @gpxImportPoints.
+  ///
+  /// In de, this message translates to:
+  /// **'{count} Streckenpunkte'**
+  String gpxImportPoints(int count);
+
+  /// No description provided for @gpxImportDateMismatch.
+  ///
+  /// In de, this message translates to:
+  /// **'Track-Datum in der Datei ist {date} — bist du sicher?'**
+  String gpxImportDateMismatch(String date);
 }
 
 class _AppLocalizationsDelegate

@@ -17,19 +17,18 @@ class GpxShareService {
         if (path != null) _controller.add(path);
       }
     });
+    // getPendingGpxPath is NOT called here — HomeScreen calls checkPendingFile()
+    // after subscribing to the stream so the cold-start event is not missed.
+  }
 
-    // Pull any file that arrived during cold start before the engine was ready.
-    if (Platform.isIOS || Platform.isAndroid) {
-      try {
-        final result =
-            await _channel.invokeMethod<String>('getPendingGpxPath');
-        if (result != null && result.isNotEmpty) {
-          _controller.add(result);
-        }
-      } catch (_) {
-        // Native side may not have a pending file — ignore.
-      }
-    }
+  /// Call this from HomeScreen.initState() AFTER subscribing to [gpxFilePaths],
+  /// so the cold-start pending path is emitted to an active listener.
+  Future<void> checkPendingFile() async {
+    if (!Platform.isIOS && !Platform.isAndroid) return;
+    try {
+      final result = await _channel.invokeMethod<String>('getPendingGpxPath');
+      if (result != null && result.isNotEmpty) _controller.add(result);
+    } catch (_) {}
   }
 
   void dispose() {
