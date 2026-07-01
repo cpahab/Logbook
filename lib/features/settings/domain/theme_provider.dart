@@ -32,7 +32,8 @@ class ThemeProvider extends ChangeNotifier {
   static const _settingsModifiedKey = 'settings_modified_at_epoch';
   // Epoch-ms string: when UI state (month expansion) was last changed locally.
   static const _uiModifiedKey       = 'ui_modified_at_epoch';
-  // Local-only (not cloud-synced) filter preferences.
+  // GPX track-filter tuning — cloud-synced, tied to the logbook (see the
+  // "Synced filter setters" section below).
   static const _filterModeKey              = 'filter_stationary_mode';
   static const _minStopMinutesKey          = 'filter_min_stop_minutes';
   static const _maxStopSpreadMKey          = 'filter_max_stop_spread_m';
@@ -41,6 +42,8 @@ class ThemeProvider extends ChangeNotifier {
   static const _makingWayThresholdKnKey    = 'filter_making_way_threshold_kn';
   static const _topSpeedPercentileKey      = 'filter_top_speed_percentile';
   static const _maxSpeedKnKey              = 'filter_max_speed_kn';
+  // Debug display toggle — deliberately device-local, not part of the
+  // synced filter tuning above.
   static const _showRawTrackKey            = 'debug_show_raw_track';
   static const _localeKey                  = 'locale';
   static const _lastUidKey                 = 'last_known_uid';
@@ -273,10 +276,24 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setShowRawTrack(bool v) {
+    if (_showRawTrack == v) return;
+    _showRawTrack = v;
+    _box.put(_showRawTrackKey, v.toString());
+    notifyListeners();
+  }
+
+  // ── Synced filter setters ──────────────────────────────────────────────────
+  // Track-filter tuning is shared logbook data, not a per-device display
+  // preference: crew sharing a logbook should see the same filter, and a
+  // user's own tuning should roam between their devices. Pushed through the
+  // same [_pushSettings] path (and Firestore doc) as vessel/VHF info.
+
   void setFilterMode(StationaryMode mode) {
     if (_filterMode == mode) return;
     _filterMode = mode;
     _box.put(_filterModeKey, mode.name);
+    _pushSettings();
     notifyListeners();
   }
 
@@ -284,6 +301,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_minStopMinutes == v) return;
     _minStopMinutes = v;
     _box.put(_minStopMinutesKey, v.toString());
+    _pushSettingsDebounced();
     notifyListeners();
   }
 
@@ -291,6 +309,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_maxStopSpreadM == v) return;
     _maxStopSpreadM = v;
     _box.put(_maxStopSpreadMKey, v.toString());
+    _pushSettingsDebounced();
     notifyListeners();
   }
 
@@ -298,6 +317,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_detectColdStart == v) return;
     _detectColdStart = v;
     _box.put(_detectColdStartKey, v.toString());
+    _pushSettings();
     notifyListeners();
   }
 
@@ -305,6 +325,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_coldStartSettleFactor == v) return;
     _coldStartSettleFactor = v;
     _box.put(_coldStartSettleFactorKey, v.toString());
+    _pushSettingsDebounced();
     notifyListeners();
   }
 
@@ -312,6 +333,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_makingWayThresholdKn == v) return;
     _makingWayThresholdKn = v;
     _box.put(_makingWayThresholdKnKey, v.toString());
+    _pushSettingsDebounced();
     notifyListeners();
   }
 
@@ -319,6 +341,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_topSpeedPercentile == v) return;
     _topSpeedPercentile = v;
     _box.put(_topSpeedPercentileKey, v.toString());
+    _pushSettingsDebounced();
     notifyListeners();
   }
 
@@ -326,13 +349,7 @@ class ThemeProvider extends ChangeNotifier {
     if (_maxSpeedKn == v) return;
     _maxSpeedKn = v;
     _box.put(_maxSpeedKnKey, v.toString());
-    notifyListeners();
-  }
-
-  void setShowRawTrack(bool v) {
-    if (_showRawTrack == v) return;
-    _showRawTrack = v;
-    _box.put(_showRawTrackKey, v.toString());
+    _pushSettingsDebounced();
     notifyListeners();
   }
 
@@ -354,6 +371,7 @@ class ThemeProvider extends ChangeNotifier {
       ..put(_makingWayThresholdKnKey,  '1.0')
       ..put(_topSpeedPercentileKey,    '0.99')
       ..put(_maxSpeedKnKey,            '12.0');
+    _pushSettings();
     notifyListeners();
   }
 
@@ -546,11 +564,32 @@ class ThemeProvider extends ChangeNotifier {
         _vhf3DescKey:        _vhf3Desc,
         _vhf4LabelKey:       _vhf4Label,
         _vhf4DescKey:        _vhf4Desc,
+        _filterModeKey:            _filterMode.name,
+        _minStopMinutesKey:        _minStopMinutes.toString(),
+        _maxStopSpreadMKey:        _maxStopSpreadM.toString(),
+        _detectColdStartKey:       _detectColdStart.toString(),
+        _coldStartSettleFactorKey: _coldStartSettleFactor.toString(),
+        _makingWayThresholdKnKey:  _makingWayThresholdKn.toString(),
+        _topSpeedPercentileKey:    _topSpeedPercentile.toString(),
+        _maxSpeedKnKey:            _maxSpeedKn.toString(),
       };
 
   void _pushSettings() {
     _markSettingsModified();
     _firestore?.saveSettings(_toSettingsMap()).catchError((_) {});
+  }
+
+  Timer? _settingsPushTimer;
+
+  // For Slider-bound setters, which fire onChanged continuously while
+  // dragging — pushing to Firestore on every pixel would be excessive.
+  // Marks the local edit immediately (so conflict resolution still sees it
+  // right away) but coalesces the network write.
+  void _pushSettingsDebounced() {
+    _markSettingsModified();
+    _settingsPushTimer?.cancel();
+    _settingsPushTimer = Timer(const Duration(milliseconds: 800),
+        () => _firestore?.saveSettings(_toSettingsMap()).catchError((_) {}));
   }
 
   void _applyRemoteSettings(Map<String, String> r) {
@@ -573,6 +612,40 @@ class ThemeProvider extends ChangeNotifier {
     apply(_vhf3DescKey,       _vhf3Desc,       (v) { _vhf3Desc = v;        _box.put(_vhf3DescKey, v); });
     apply(_vhf4LabelKey,      _vhf4Label,      (v) { _vhf4Label = v;       _box.put(_vhf4LabelKey, v); });
     apply(_vhf4DescKey,       _vhf4Desc,       (v) { _vhf4Desc = v;        _box.put(_vhf4DescKey, v); });
+
+    apply(_filterModeKey, _filterMode.name, (v) {
+      _filterMode = _parseFilterMode(v);
+      _box.put(_filterModeKey, v);
+    });
+    apply(_minStopMinutesKey, _minStopMinutes.toString(), (v) {
+      _minStopMinutes = double.tryParse(v) ?? _minStopMinutes;
+      _box.put(_minStopMinutesKey, v);
+    });
+    apply(_maxStopSpreadMKey, _maxStopSpreadM.toString(), (v) {
+      _maxStopSpreadM = double.tryParse(v) ?? _maxStopSpreadM;
+      _box.put(_maxStopSpreadMKey, v);
+    });
+    apply(_detectColdStartKey, _detectColdStart.toString(), (v) {
+      _detectColdStart = v != 'false';
+      _box.put(_detectColdStartKey, v);
+    });
+    apply(_coldStartSettleFactorKey, _coldStartSettleFactor.toString(), (v) {
+      _coldStartSettleFactor = double.tryParse(v) ?? _coldStartSettleFactor;
+      _box.put(_coldStartSettleFactorKey, v);
+    });
+    apply(_makingWayThresholdKnKey, _makingWayThresholdKn.toString(), (v) {
+      _makingWayThresholdKn = double.tryParse(v) ?? _makingWayThresholdKn;
+      _box.put(_makingWayThresholdKnKey, v);
+    });
+    apply(_topSpeedPercentileKey, _topSpeedPercentile.toString(), (v) {
+      _topSpeedPercentile = double.tryParse(v) ?? _topSpeedPercentile;
+      _box.put(_topSpeedPercentileKey, v);
+    });
+    apply(_maxSpeedKnKey, _maxSpeedKn.toString(), (v) {
+      _maxSpeedKn = double.tryParse(v) ?? _maxSpeedKn;
+      _box.put(_maxSpeedKnKey, v);
+    });
+
     if (changed) notifyListeners();
   }
 

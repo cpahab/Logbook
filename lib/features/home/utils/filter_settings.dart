@@ -1,6 +1,7 @@
 /// User preferences for the GPX track filter.
-/// Stored locally (Hive settings box); not cloud-synced since it is a
-/// per-device display preference.
+/// Stored locally (Hive settings box) and synced via [ThemeProvider] to the
+/// active logbook's Firestore settings doc, so the tuning is shared across
+/// everyone on the logbook and roams between one user's own devices.
 library;
 
 enum StationaryMode {

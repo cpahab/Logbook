@@ -78,9 +78,16 @@ class TracksScreen extends StatefulWidget {
 class _TracksScreenState extends State<TracksScreen> {
   final MapController _mapController = MapController();
   int? _selectedIndex;
-  _FilterPreset _preset = _FilterPreset.month1;
-  DateTimeRange? _customRange;
-  bool _satelliteView = false;
+
+  // Date-range filter and map style are `static` (process lifetime) rather
+  // than instance fields: the bottom nav pushes a fresh TracksScreen route
+  // on every tab switch, which would otherwise silently reset the user's
+  // filter choice back to the default every time they left and returned to
+  // this tab. Static fields survive that, but still reset to their declared
+  // defaults on a genuine cold start (fresh process).
+  static _FilterPreset _preset = _FilterPreset.month1;
+  static DateTimeRange? _customRange;
+  static bool _satelliteView = false;
   @override
   void initState() {
     super.initState();
@@ -860,17 +867,20 @@ class _TracksScreenState extends State<TracksScreen> {
                             ],
                             // Chips
                             if (wind != null ||
-                                (d.stats?.avgSpeed ?? 0) > 0) ...[
+                                (d.stats?.avgMakingWayKn ?? 0) > 0) ...[
                               const SizedBox(height: 4),
                               Wrap(
                                 spacing: 6,
                                 children: [
                                   if (wind != null)
                                     _miniChip(Icons.air, wind, cs),
-                                  if ((d.stats?.avgSpeed ?? 0) > 0)
+                                  if ((d.stats?.avgMakingWayKn ?? 0) > 0)
                                     _miniChip(
                                       Icons.speed,
-                                      '${d.stats!.avgSpeed.toStringAsFixed(1)} kn',
+                                      // Moving average, not distance/total-elapsed-time —
+                                      // avgSpeed (avgOverGroundKn) would be diluted by any
+                                      // stop in the middle of the track.
+                                      '${d.stats!.avgMakingWayKn.toStringAsFixed(1)} kn',
                                       cs,
                                     ),
                                   if (d.stats != null &&
