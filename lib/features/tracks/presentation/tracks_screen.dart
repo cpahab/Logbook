@@ -459,6 +459,20 @@ class _TracksScreenState extends State<TracksScreen> {
             TileLayer(
               urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
               userAgentPackageName: 'com.logbook.app',
+              // Keep more of the surrounding tile grid loaded across a
+              // pan/zoom transition so fewer tiles need a fresh fetch right
+              // when the gesture ends (default is 2).
+              keepBuffer: 4,
+              // Default is `.none`, which never retries a tile that failed
+              // once (transient network blip, tile-server rate limit) — it
+              // stays blank until this whole map widget is rebuilt. Evicting
+              // once it scrolls out of view lets it be re-fetched next time
+              // it's needed.
+              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
+              errorTileCallback: kDebugMode
+                  ? (tile, error, stackTrace) =>
+                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
+                  : null,
             ),
             Builder(builder: (ctx) {
               if (MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
@@ -1200,6 +1214,20 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
             TileLayer(
               urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
               userAgentPackageName: 'com.logbook.app',
+              // Keep more of the surrounding tile grid loaded across a
+              // pan/zoom transition so fewer tiles need a fresh fetch right
+              // when the gesture ends (default is 2).
+              keepBuffer: 4,
+              // Default is `.none`, which never retries a tile that failed
+              // once (transient network blip, tile-server rate limit) — it
+              // stays blank until this whole map widget is rebuilt. Evicting
+              // once it scrolls out of view lets it be re-fetched next time
+              // it's needed.
+              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
+              errorTileCallback: kDebugMode
+                  ? (tile, error, stackTrace) =>
+                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
+                  : null,
             ),
             Builder(builder: (ctx) {
               if (MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
