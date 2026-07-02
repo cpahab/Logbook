@@ -1334,6 +1334,18 @@ abstract class AppLocalizations {
   /// **'Ankunftszeit anhand der letzten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.'**
   String get arrivalTimeUncertainTooltip;
 
+  /// No description provided for @departureTimeEstimatedTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Abfahrtszeit anhand der ersten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.'**
+  String get departureTimeEstimatedTooltip;
+
+  /// No description provided for @departureTimeUnknownTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Aufzeichnung beginnt, während das Boot bereits unterwegs war — die tatsächliche Abfahrtszeit wurde nicht erfasst.'**
+  String get departureTimeUnknownTooltip;
+
   /// No description provided for @dayChangeDateTitle.
   ///
   /// In de, this message translates to:

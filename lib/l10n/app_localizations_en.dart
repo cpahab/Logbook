@@ -657,6 +657,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Arrival time estimated from last motion. GPS position quality was insufficient to determine the exact berth location.';
 
   @override
+  String get departureTimeEstimatedTooltip =>
+      'Departure time estimated from initial motion. GPS position quality was insufficient to determine the exact berth location.';
+
+  @override
+  String get departureTimeUnknownTooltip =>
+      'This track begins while the boat was already under way — the actual departure time is not recorded.';
+
+  @override
   String get dayChangeDateTitle => 'Wrong date?';
 
   @override

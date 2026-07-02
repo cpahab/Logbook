@@ -657,6 +657,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ankunftszeit anhand der letzten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.';
 
   @override
+  String get departureTimeEstimatedTooltip =>
+      'Abfahrtszeit anhand der ersten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.';
+
+  @override
+  String get departureTimeUnknownTooltip =>
+      'Diese Aufzeichnung beginnt, während das Boot bereits unterwegs war — die tatsächliche Abfahrtszeit wurde nicht erfasst.';
+
+  @override
   String get dayChangeDateTitle => 'Falsches Datum?';
 
   @override

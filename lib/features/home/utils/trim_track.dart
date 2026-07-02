@@ -373,6 +373,22 @@ List<TrackPoint> _smoothMedian(List<TrackPoint> pts, int window) {
 /// Where in the track a stationary cluster sits.
 enum AnchorKind { start, mid, end }
 
+/// How confidently a departure/arrival time is known.
+enum TimePrecision {
+  /// Bounded by a detected, validated stop — show the time plainly.
+  precise,
+
+  /// No stop was detected at that end of the track; derived purely from the
+  /// windowed-speed signal. Reliable to about ±2 minutes (one fix window) —
+  /// show with a "~" prefix.
+  estimated,
+
+  /// The track already shows the boat under way at its very first fix, so
+  /// the real departure isn't in the data at all. Departure only — a track
+  /// can't end before it starts.
+  unknown,
+}
+
 // ── Anchor description ────────────────────────────────────────────────────────
 
 /// Positional summary of one stationary cluster (dock / anchor / harbor stop).
@@ -677,11 +693,31 @@ class DisplayModel {
   /// to the berth rather than to a wrong GPS position.
   final List<TrackPoint> correlationPoints;
 
+  /// The moment the boat actually got under way, found by scanning windowed
+  /// speed for a sustained crossing rather than relying on segment/stop
+  /// classification. Prefer this over [firstMovingPoint].time — see
+  /// [departurePrecision] for how confident this value is.
+  final DateTime? departureTime;
+
+  /// How [departureTime] was derived:
+  ///   - [TimePrecision.precise] — a start stop was detected; bounded by it.
+  ///   - [TimePrecision.estimated] — no start stop, but the boat was clearly
+  ///     stationary before moving off; derived purely from the speed signal.
+  ///   - [TimePrecision.unknown] — the track already shows the boat under way
+  ///     at its very start, so the real departure isn't in the data at all.
+  final TimePrecision departurePrecision;
+
   /// The moment the boat actually stopped moving, found by scanning windowed
   /// speed rather than relying on segment/stop classification. Prefer this
   /// over [lastMovingPoint].time for an "arrived at" display — see the class
   /// doc on [endPositionReliable] for why the two can disagree by hours.
-  final DateTime? effectiveArrivalTime;
+  final DateTime? arrivalTime;
+
+  /// How [arrivalTime] was derived: [TimePrecision.precise] when an end stop
+  /// was detected (bounded by it), [TimePrecision.estimated] otherwise
+  /// (derived purely from the speed signal). Never [TimePrecision.unknown] —
+  /// unlike departure, a track can't end before it starts.
+  final TimePrecision arrivalPrecision;
 
   const DisplayModel({
     this.segments           = const [],
@@ -690,7 +726,10 @@ class DisplayModel {
     this.baseAccuracyM      = _defaultBaseAccuracyM,
     this.rawMovingPoints    = const [],
     this.correlationPoints  = const [],
-    this.effectiveArrivalTime,
+    this.departureTime,
+    this.departurePrecision = TimePrecision.estimated,
+    this.arrivalTime,
+    this.arrivalPrecision   = TimePrecision.estimated,
   });
 
   /// First moving fix — departure time.
@@ -734,17 +773,18 @@ class DisplayModel {
   StopMarker? get endStop =>
       stops.where((s) => s.kind == AnchorKind.end).firstOrNull;
 
-  /// False when no end stop was validated, meaning [endStop] is null and any
-  /// "arrival position" (e.g. [lastMovingPoint]) is just wherever GPS logging
-  /// happened to trail off — not a real berth location. This commonly happens
-  /// when the boat genuinely stopped but the GPS scatter there was too wide to
-  /// pass stop validation (a wide anchor swing, multipath in a marina): the
-  /// trailing wobble never gets flagged stationary, so it leaks into the
-  /// track as if still under way. [effectiveArrivalTime] is still a good time
-  /// estimate in that case (it doesn't depend on stop validation) — only the
-  /// position is untrustworthy. UI should show the time but skip any berth
-  /// marker/rings when this is false.
-  bool get endPositionReliable => endStop != null;
+  /// True only when [endStop] was detected — i.e. [arrivalPrecision] is
+  /// [TimePrecision.precise]. False means any "arrival position" (e.g.
+  /// [lastMovingPoint]) is just wherever GPS logging happened to trail off,
+  /// not a real berth location. This commonly happens when the boat
+  /// genuinely stopped but the GPS scatter there was too wide to pass stop
+  /// validation (a wide anchor swing, multipath in a marina): the trailing
+  /// wobble never gets flagged stationary, so it leaks into the track as if
+  /// still under way. [arrivalTime] is still a good time estimate in that
+  /// case (it doesn't depend on stop validation) — only the position is
+  /// untrustworthy. UI should show the time but skip any berth marker/rings
+  /// when this is false.
+  bool get endPositionReliable => arrivalPrecision == TimePrecision.precise;
 
   /// All non-break coords split at teleport breaks, min 2 points each.
   /// Used for overview map polyline rendering.
@@ -883,7 +923,79 @@ List<(double, double)> _uncertaintyBand(
   return [...left, ...right.reversed];
 }
 
-// ── Effective arrival time ────────────────────────────────────────────────────
+// ── Effective departure / arrival time ─────────────────────────────────────────
+
+/// Out of the next 10 fixes from a candidate crossing, how many must be above
+/// the underway threshold before it counts as genuinely under way, rather
+/// than a single noisy fix (e.g. one moving fix on 120 s overnight-mooring
+/// sampling, surrounded by stationary ones).
+const _sustainedMin = 7;
+
+bool _sustainedFrom(List<_Fix> fixes, int i, double underwayThresholdKn) {
+  if (i + 9 >= fixes.length) return false;
+  var count = 0;
+  for (int k = i; k <= i + 9; k++) {
+    if (fixes[k].winSpeedKn > underwayThresholdKn) count++;
+  }
+  return count >= _sustainedMin;
+}
+
+/// The moment the boat actually got under way, scanning windowed speed
+/// directly instead of trusting stop/segment classification. Returns the
+/// fix *index* (rather than just a time) so [_effectiveArrival] can use it
+/// as its search boundary.
+///
+/// Three cases, matching [TimePrecision]:
+///   - A start stop was detected: scan forward from its end for the first
+///     *sustained* crossing (not a single noisy fix) — [TimePrecision.precise].
+///   - No start stop, but the boat is not yet moving an eighth of the way
+///     into the track: scan forward for the first sustained crossing —
+///     [TimePrecision.estimated].
+///   - No start stop, and the boat is *already* moving an eighth of the way
+///     in: the real departure predates the track — [TimePrecision.unknown].
+({int index, TimePrecision precision}) _effectiveDeparture(
+  List<_Fix> fixes,
+  List<_StopSegment> stops,
+  double underwayThresholdKn,
+) {
+  final n = fixes.length;
+
+  _StopSegment? startStop;
+  for (final s in stops) {
+    if (s.kind == AnchorKind.start) { startStop = s; break; }
+  }
+
+  if (startStop != null) {
+    for (int i = startStop.endIdx + 1; i <= n - 10; i++) {
+      if (fixes[i].winSpeedKn > underwayThresholdKn &&
+          _sustainedFrom(fixes, i, underwayThresholdKn)) {
+        return (index: i, precision: TimePrecision.precise);
+      }
+    }
+    // No sustained crossing found (e.g. very short trip) — still bounded by
+    // the validated stop, so this stays precise.
+    return (
+      index: (startStop.endIdx + 1).clamp(0, n - 1),
+      precision: TimePrecision.precise,
+    );
+  }
+
+  // No start stop — the logger was already running before the trip. Skip
+  // the first eighth of the track to avoid edge noise.
+  final searchFrom = (n ~/ 8).clamp(0, n - 1);
+  if (fixes[searchFrom].winSpeedKn > underwayThresholdKn) {
+    return (index: searchFrom, precision: TimePrecision.unknown);
+  }
+
+  for (int i = searchFrom; i <= n - 10; i++) {
+    if (fixes[i].winSpeedKn > underwayThresholdKn &&
+        _sustainedFrom(fixes, i, underwayThresholdKn)) {
+      return (index: i, precision: TimePrecision.estimated);
+    }
+  }
+  // The track never really gets moving by this measure.
+  return (index: searchFrom, precision: TimePrecision.estimated);
+}
 
 /// The moment the boat stopped moving, scanning windowed speed directly
 /// instead of trusting stop/segment classification.
@@ -896,27 +1008,28 @@ List<(double, double)> _uncertaintyBand(
 /// arrival. This scan is independent of stop validation, so it isn't fooled
 /// the same way.
 ///
-/// Searches from just after the departure berth (any 'start'/'mid' stop), and
-/// always at least a quarter into the track, so a short trip's own departure
-/// excursion isn't mistaken for the tail. Returns the first fix of the
-/// resulting stationary period — i.e. one fix later than the last fix that
-/// was still moving — since that reads as "arrived", not "about to arrive".
-DateTime? _effectiveArrivalTime(
+/// When an end stop *was* validated, its own start is used directly — no
+/// need to re-derive it from the speed signal. Otherwise, searches from just
+/// after [departureIdx], and always at least a quarter into the track, so a
+/// short trip's own departure excursion isn't mistaken for the tail. Returns
+/// the first fix of the resulting stationary period — i.e. one fix later
+/// than the last fix that was still moving — since that reads as "arrived",
+/// not "about to arrive".
+({int index, TimePrecision precision}) _effectiveArrival(
   List<_Fix> fixes,
   List<_StopSegment> stops,
+  int departureIdx,
   double underwayThresholdKn,
 ) {
   final n = fixes.length;
-  if (n == 0) return null;
 
-  var startStopEnd = 0;
   for (final s in stops) {
-    if ((s.kind == AnchorKind.start || s.kind == AnchorKind.mid) &&
-        s.endIdx > startStopEnd) {
-      startStopEnd = s.endIdx;
+    if (s.kind == AnchorKind.end) {
+      return (index: s.startIdx, precision: TimePrecision.precise);
     }
   }
-  final searchFrom = max(startStopEnd + 1, n ~/ 4);
+
+  final searchFrom = max(departureIdx + 1, n ~/ 4);
 
   int? lastMovingIdx;
   for (int i = searchFrom; i < n; i++) {
@@ -924,9 +1037,10 @@ DateTime? _effectiveArrivalTime(
   }
 
   if (lastMovingIdx != null && lastMovingIdx + 1 < n) {
-    return fixes[lastMovingIdx + 1].pt.time;
+    return (index: lastMovingIdx + 1, precision: TimePrecision.estimated);
   }
-  return fixes[n - 1].pt.time; // still moving at track end (log cut short)
+  // Still moving at track end (log cut short).
+  return (index: n - 1, precision: TimePrecision.estimated);
 }
 
 // ── Display model builder ─────────────────────────────────────────────────────
@@ -961,8 +1075,11 @@ DisplayModel buildDisplayModel(
     _flagColdStart(fixes, stops, settings.coldStartSettleFactor);
   }
 
-  final effectiveArrivalTime =
-      _effectiveArrivalTime(fixes, stops, settings.speedThresholdKn);
+  final departure = _effectiveDeparture(fixes, stops, settings.speedThresholdKn);
+  final arrival = _effectiveArrival(
+      fixes, stops, departure.index, settings.speedThresholdKn);
+  final departureTime = fixes[departure.index].pt.time;
+  final arrivalTime = fixes[arrival.index].pt.time;
 
   // Per-fix uncertainty: compute base accuracy from stop scatter, then
   // infer jitter-based uncertainty for every moving fix.
@@ -1147,6 +1264,9 @@ DisplayModel buildDisplayModel(
     baseAccuracyM:     baseAccuracyM,
     rawMovingPoints:   rawMovingPoints,
     correlationPoints: correlationPoints,
-    effectiveArrivalTime: effectiveArrivalTime,
+    departureTime:      departureTime,
+    departurePrecision: departure.precision,
+    arrivalTime:        arrivalTime,
+    arrivalPrecision:   arrival.precision,
   );
 }

@@ -235,6 +235,8 @@
   "tracksNoTracks": "Keine Tracks vorhanden",
   "tracksNoTracksInPeriod": "Keine Tracks im gewählten Zeitraum",
   "arrivalTimeUncertainTooltip": "Ankunftszeit anhand der letzten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.",
+  "departureTimeEstimatedTooltip": "Abfahrtszeit anhand der ersten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.",
+  "departureTimeUnknownTooltip": "Diese Aufzeichnung beginnt, während das Boot bereits unterwegs war — die tatsächliche Abfahrtszeit wurde nicht erfasst.",
 
   "dayChangeDateTitle": "Falsches Datum?",
   "dayChangeDateContent": "Der GPX-Track enthält hauptsächlich Daten vom {from}, nicht vom {to}.\n\nTrotzdem verschieben?",

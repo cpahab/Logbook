@@ -2106,13 +2106,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         ? _dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
     final arrivalBearing = cleanedLatLngs.length >= 2
         ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
-    final startTimeStr = DateFormat('HH:mm').format(startPoint.time.toLocal());
-    // Effective arrival (from windowed speed) rather than the raw/segment-based
-    // endPoint time, which can read hours late when a genuine stop's GPS
-    // scatter was too wide to pass stop validation — see the doc comment on
-    // DisplayModel.effectiveArrivalTime.
+    // Effective departure/arrival (from windowed speed) rather than the raw/
+    // segment-based start/endPoint time, which can read hours off when a
+    // genuine stop's GPS scatter was too wide to pass stop validation — see
+    // the doc comments on DisplayModel.departureTime/arrivalTime.
+    final departurePrecision = display.departurePrecision;
+    final startTimeStr = switch (departurePrecision) {
+      TimePrecision.unknown => '—',
+      TimePrecision.estimated =>
+        '~ ${DateFormat('HH:mm').format((display.departureTime ?? startPoint.time).toLocal())}',
+      TimePrecision.precise =>
+        DateFormat('HH:mm').format((display.departureTime ?? startPoint.time).toLocal()),
+    };
     final endTimeStr = (endPositionReliable ? '' : '~ ') +
-        DateFormat('HH:mm').format((display.effectiveArrivalTime ?? endPoint.time).toLocal());
+        DateFormat('HH:mm').format((display.arrivalTime ?? endPoint.time).toLocal());
 
     // Stop halos: two concentric circles per stop
     final anchorCircles = <CircleMarker>[];
@@ -2269,22 +2276,35 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ...timelineMarkers,
       ...midStopMarkers,
       // ── Departure: label to the left, arrow at the coordinate ───────
+      // Only a validated start stop gives a real position/bearing — estimated
+      // and unknown departures still show a time (or "—"), but with a
+      // GPS-uncertain icon and a tooltip explaining why, instead of a
+      // directional arrow implying false precision.
       Marker(
         point: startPos,
         width: 82,
         height: 22,
         alignment: Alignment.centerRight,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _trackLabel(startTimeStr, cs),
-            const SizedBox(width: 5),
-            Transform.rotate(
-              angle: departureBearing,
-              child: _trackArrow(cs.primary),
-            ),
-          ],
+        child: Tooltip(
+          message: switch (departurePrecision) {
+            TimePrecision.precise => '',
+            TimePrecision.estimated => context.l10n.departureTimeEstimatedTooltip,
+            TimePrecision.unknown => context.l10n.departureTimeUnknownTooltip,
+          },
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _trackLabel(startTimeStr, cs),
+              const SizedBox(width: 5),
+              departurePrecision == TimePrecision.precise
+                  ? Transform.rotate(
+                      angle: departureBearing,
+                      child: _trackArrow(cs.primary),
+                    )
+                  : _trackArrow(cs.primary, icon: Icons.gps_not_fixed),
+            ],
+          ),
         ),
       ),
       // ── Arrival: arrow at the coordinate, label to the right ────────
@@ -3461,11 +3481,19 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
 
     final departureBearing = cleanedLatLngs.length >= 2 ? _dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
     final arrivalBearing   = cleanedLatLngs.length >= 2 ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
-    final startTimeStr = DateFormat('HH:mm').format(startPoint.time.toLocal());
-    // Effective arrival (from windowed speed) rather than the raw/segment-based
-    // endPoint time — see the doc comment on DisplayModel.effectiveArrivalTime.
+    // Effective departure/arrival (from windowed speed) rather than the raw/
+    // segment-based start/endPoint time — see the doc comments on
+    // DisplayModel.departureTime/arrivalTime.
+    final departurePrecision = display.departurePrecision;
+    final startTimeStr = switch (departurePrecision) {
+      TimePrecision.unknown => '—',
+      TimePrecision.estimated =>
+        '~ ${DateFormat('HH:mm').format((display.departureTime ?? startPoint.time).toLocal())}',
+      TimePrecision.precise =>
+        DateFormat('HH:mm').format((display.departureTime ?? startPoint.time).toLocal()),
+    };
     final endTimeStr = (endPositionReliable ? '' : '~ ') +
-        DateFormat('HH:mm').format((display.effectiveArrivalTime ?? endPoint.time).toLocal());
+        DateFormat('HH:mm').format((display.arrivalTime ?? endPoint.time).toLocal());
 
     final anchorCircles = <CircleMarker>[];
     for (final stop in display.stops) {
@@ -3586,10 +3614,19 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       ...fsMidStopMarkers,
       Marker(
         point: startPos, width: 82, height: 22, alignment: Alignment.centerRight,
-        child: Row(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.center, children: [
-          _trackLabel(startTimeStr, cs), const SizedBox(width: 5),
-          Transform.rotate(angle: departureBearing, child: _trackArrow(cs.primary)),
-        ]),
+        child: Tooltip(
+          message: switch (departurePrecision) {
+            TimePrecision.precise => '',
+            TimePrecision.estimated => context.l10n.departureTimeEstimatedTooltip,
+            TimePrecision.unknown => context.l10n.departureTimeUnknownTooltip,
+          },
+          child: Row(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.center, children: [
+            _trackLabel(startTimeStr, cs), const SizedBox(width: 5),
+            departurePrecision == TimePrecision.precise
+                ? Transform.rotate(angle: departureBearing, child: _trackArrow(cs.primary))
+                : _trackArrow(cs.primary, icon: Icons.gps_not_fixed),
+          ]),
+        ),
       ),
       Marker(
         point: endPos, width: 82, height: 22, alignment: Alignment.centerLeft,

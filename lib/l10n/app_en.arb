@@ -235,6 +235,8 @@
   "tracksNoTracks": "No tracks available",
   "tracksNoTracksInPeriod": "No tracks in selected period",
   "arrivalTimeUncertainTooltip": "Arrival time estimated from last motion. GPS position quality was insufficient to determine the exact berth location.",
+  "departureTimeEstimatedTooltip": "Departure time estimated from initial motion. GPS position quality was insufficient to determine the exact berth location.",
+  "departureTimeUnknownTooltip": "This track begins while the boat was already under way — the actual departure time is not recorded.",
 
   "dayChangeDateTitle": "Wrong date?",
   "dayChangeDateContent": "The GPX track mainly contains data from {from}, not {to}.\n\nMove anyway?",
