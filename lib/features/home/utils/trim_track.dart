@@ -677,6 +677,12 @@ class DisplayModel {
   /// to the berth rather than to a wrong GPS position.
   final List<TrackPoint> correlationPoints;
 
+  /// The moment the boat actually stopped moving, found by scanning windowed
+  /// speed rather than relying on segment/stop classification. Prefer this
+  /// over [lastMovingPoint].time for an "arrived at" display — see the class
+  /// doc on [endPositionReliable] for why the two can disagree by hours.
+  final DateTime? effectiveArrivalTime;
+
   const DisplayModel({
     this.segments           = const [],
     this.stops              = const [],
@@ -684,6 +690,7 @@ class DisplayModel {
     this.baseAccuracyM      = _defaultBaseAccuracyM,
     this.rawMovingPoints    = const [],
     this.correlationPoints  = const [],
+    this.effectiveArrivalTime,
   });
 
   /// First moving fix — departure time.
@@ -726,6 +733,18 @@ class DisplayModel {
   /// End stop (kind = end) if present.
   StopMarker? get endStop =>
       stops.where((s) => s.kind == AnchorKind.end).firstOrNull;
+
+  /// False when no end stop was validated, meaning [endStop] is null and any
+  /// "arrival position" (e.g. [lastMovingPoint]) is just wherever GPS logging
+  /// happened to trail off — not a real berth location. This commonly happens
+  /// when the boat genuinely stopped but the GPS scatter there was too wide to
+  /// pass stop validation (a wide anchor swing, multipath in a marina): the
+  /// trailing wobble never gets flagged stationary, so it leaks into the
+  /// track as if still under way. [effectiveArrivalTime] is still a good time
+  /// estimate in that case (it doesn't depend on stop validation) — only the
+  /// position is untrustworthy. UI should show the time but skip any berth
+  /// marker/rings when this is false.
+  bool get endPositionReliable => endStop != null;
 
   /// All non-break coords split at teleport breaks, min 2 points each.
   /// Used for overview map polyline rendering.
@@ -864,6 +883,52 @@ List<(double, double)> _uncertaintyBand(
   return [...left, ...right.reversed];
 }
 
+// ── Effective arrival time ────────────────────────────────────────────────────
+
+/// The moment the boat stopped moving, scanning windowed speed directly
+/// instead of trusting stop/segment classification.
+///
+/// A stop candidate that fails validation (spread > [FilterSettings.maxStopSpreadM]
+/// — e.g. a wide anchor swing, or GPS multipath scatter in a marina) never gets
+/// flagged stationary, so its fixes stay classified "moving" even though the
+/// boat has genuinely stopped. [DisplayModel.lastMovingPoint] then reports
+/// whatever the raw track trails off to, which can read hours after the real
+/// arrival. This scan is independent of stop validation, so it isn't fooled
+/// the same way.
+///
+/// Searches from just after the departure berth (any 'start'/'mid' stop), and
+/// always at least a quarter into the track, so a short trip's own departure
+/// excursion isn't mistaken for the tail. Returns the first fix of the
+/// resulting stationary period — i.e. one fix later than the last fix that
+/// was still moving — since that reads as "arrived", not "about to arrive".
+DateTime? _effectiveArrivalTime(
+  List<_Fix> fixes,
+  List<_StopSegment> stops,
+  double underwayThresholdKn,
+) {
+  final n = fixes.length;
+  if (n == 0) return null;
+
+  var startStopEnd = 0;
+  for (final s in stops) {
+    if ((s.kind == AnchorKind.start || s.kind == AnchorKind.mid) &&
+        s.endIdx > startStopEnd) {
+      startStopEnd = s.endIdx;
+    }
+  }
+  final searchFrom = max(startStopEnd + 1, n ~/ 4);
+
+  int? lastMovingIdx;
+  for (int i = searchFrom; i < n; i++) {
+    if (fixes[i].winSpeedKn > underwayThresholdKn) lastMovingIdx = i;
+  }
+
+  if (lastMovingIdx != null && lastMovingIdx + 1 < n) {
+    return fixes[lastMovingIdx + 1].pt.time;
+  }
+  return fixes[n - 1].pt.time; // still moving at track end (log cut short)
+}
+
 // ── Display model builder ─────────────────────────────────────────────────────
 
 String _connType(double? dBefore, double? dAfter, bool hasSpike) {
@@ -895,6 +960,9 @@ DisplayModel buildDisplayModel(
   if (settings.detectColdStart) {
     _flagColdStart(fixes, stops, settings.coldStartSettleFactor);
   }
+
+  final effectiveArrivalTime =
+      _effectiveArrivalTime(fixes, stops, settings.speedThresholdKn);
 
   // Per-fix uncertainty: compute base accuracy from stop scatter, then
   // infer jitter-based uncertainty for every moving fix.
@@ -1079,5 +1147,6 @@ DisplayModel buildDisplayModel(
     baseAccuracyM:     baseAccuracyM,
     rawMovingPoints:   rawMovingPoints,
     correlationPoints: correlationPoints,
+    effectiveArrivalTime: effectiveArrivalTime,
   );
 }

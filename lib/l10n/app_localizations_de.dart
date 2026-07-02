@@ -653,6 +653,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tracksNoTracksInPeriod => 'Keine Tracks im gewählten Zeitraum';
 
   @override
+  String get arrivalTimeUncertainTooltip =>
+      'Ankunftszeit anhand der letzten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.';
+
+  @override
   String get dayChangeDateTitle => 'Falsches Datum?';
 
   @override

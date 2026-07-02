@@ -2094,6 +2094,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     final startStop = display.startStop;
     final endStop   = display.endStop;
+    final endPositionReliable = display.endPositionReliable;
     final startPos  = startStop != null
         ? LatLng(startStop.lat, startStop.lon)
         : LatLng(startPoint.lat, startPoint.lon);
@@ -2106,7 +2107,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final arrivalBearing = cleanedLatLngs.length >= 2
         ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
     final startTimeStr = DateFormat('HH:mm').format(startPoint.time.toLocal());
-    final endTimeStr   = DateFormat('HH:mm').format(endPoint.time.toLocal());
+    // Effective arrival (from windowed speed) rather than the raw/segment-based
+    // endPoint time, which can read hours late when a genuine stop's GPS
+    // scatter was too wide to pass stop validation — see the doc comment on
+    // DisplayModel.effectiveArrivalTime.
+    final endTimeStr = (endPositionReliable ? '' : '~ ') +
+        DateFormat('HH:mm').format((display.effectiveArrivalTime ?? endPoint.time).toLocal());
 
     // Stop halos: two concentric circles per stop
     final anchorCircles = <CircleMarker>[];
@@ -2282,22 +2288,32 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         ),
       ),
       // ── Arrival: arrow at the coordinate, label to the right ────────
+      // When no end stop was validated, endPos is just wherever GPS logging
+      // trailed off, not a real berth — show a GPS-uncertain icon instead of
+      // a directional arrow, and let the tooltip explain why.
       Marker(
         point: endPos,
         width: 82,
         height: 22,
         alignment: Alignment.centerLeft,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Transform.rotate(
-              angle: arrivalBearing,
-              child: _trackArrow(cs.primary),
-            ),
-            const SizedBox(width: 5),
-            _trackLabel(endTimeStr, cs),
-          ],
+        child: Tooltip(
+          message: endPositionReliable
+              ? ''
+              : context.l10n.arrivalTimeUncertainTooltip,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              endPositionReliable
+                  ? Transform.rotate(
+                      angle: arrivalBearing,
+                      child: _trackArrow(cs.primary),
+                    )
+                  : _trackArrow(cs.primary, icon: Icons.gps_not_fixed),
+              const SizedBox(width: 5),
+              _trackLabel(endTimeStr, cs),
+            ],
+          ),
         ),
       ),
     ];
@@ -2359,6 +2375,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             TileLayer(
               urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
               userAgentPackageName: 'com.logbook.app',
+              // Keep more of the surrounding tile grid loaded across a
+              // pan/zoom transition so fewer tiles need a fresh fetch right
+              // when the gesture ends (default is 2).
+              keepBuffer: 4,
+              // Default is `.none`, which never retries a tile that failed
+              // once (transient network blip, tile-server rate limit) — it
+              // stays blank until this whole map widget is rebuilt. Evicting
+              // once it scrolls out of view lets it be re-fetched next time
+              // it's needed.
+              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
+              errorTileCallback: kDebugMode
+                  ? (tile, error, stackTrace) =>
+                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
+                  : null,
             ),
             _ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
             _ZoomAwareCircleLayer(circles: anchorCircles),
@@ -3216,7 +3246,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Map marker helpers ────────────────────────────────────────────
 
-  Widget _trackArrow(Color color) => Container(
+  Widget _trackArrow(Color color, {IconData icon = Icons.arrow_upward}) => Container(
         width: 15,
         height: 15,
         decoration: BoxDecoration(
@@ -3225,7 +3255,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           border: Border.all(color: Colors.white, width: 1.5),
         ),
         alignment: Alignment.center,
-        child: const Icon(Icons.arrow_upward, color: Colors.white, size: 8),
+        child: Icon(icon, color: Colors.white, size: 8),
       );
 
   Widget _trackLabel(String text, ColorScheme cs) => Container(
@@ -3364,7 +3394,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     return best;
   }
 
-  Widget _trackArrow(Color color) => Container(
+  Widget _trackArrow(Color color, {IconData icon = Icons.arrow_upward}) => Container(
     width: 15, height: 15,
     decoration: BoxDecoration(
       color: color.withValues(alpha: 0.85),
@@ -3372,7 +3402,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       border: Border.all(color: Colors.white, width: 1.5),
     ),
     alignment: Alignment.center,
-    child: const Icon(Icons.arrow_upward, color: Colors.white, size: 8),
+    child: Icon(icon, color: Colors.white, size: 8),
   );
 
   Widget _trackLabel(String text, ColorScheme cs) => Container(
@@ -3425,13 +3455,17 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
 
     final startStop = display.startStop;
     final endStop   = display.endStop;
+    final endPositionReliable = display.endPositionReliable;
     final startPos  = startStop != null ? LatLng(startStop.lat, startStop.lon) : LatLng(startPoint.lat, startPoint.lon);
     final endPos    = endStop   != null ? LatLng(endStop.lat,   endStop.lon)   : LatLng(endPoint.lat,   endPoint.lon);
 
     final departureBearing = cleanedLatLngs.length >= 2 ? _dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
     final arrivalBearing   = cleanedLatLngs.length >= 2 ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
     final startTimeStr = DateFormat('HH:mm').format(startPoint.time.toLocal());
-    final endTimeStr   = DateFormat('HH:mm').format(endPoint.time.toLocal());
+    // Effective arrival (from windowed speed) rather than the raw/segment-based
+    // endPoint time — see the doc comment on DisplayModel.effectiveArrivalTime.
+    final endTimeStr = (endPositionReliable ? '' : '~ ') +
+        DateFormat('HH:mm').format((display.effectiveArrivalTime ?? endPoint.time).toLocal());
 
     final anchorCircles = <CircleMarker>[];
     for (final stop in display.stops) {
@@ -3559,10 +3593,15 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       ),
       Marker(
         point: endPos, width: 82, height: 22, alignment: Alignment.centerLeft,
-        child: Row(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.center, children: [
-          Transform.rotate(angle: arrivalBearing, child: _trackArrow(cs.primary)),
-          const SizedBox(width: 5), _trackLabel(endTimeStr, cs),
-        ]),
+        child: Tooltip(
+          message: endPositionReliable ? '' : context.l10n.arrivalTimeUncertainTooltip,
+          child: Row(mainAxisAlignment: MainAxisAlignment.start, crossAxisAlignment: CrossAxisAlignment.center, children: [
+            endPositionReliable
+                ? Transform.rotate(angle: arrivalBearing, child: _trackArrow(cs.primary))
+                : _trackArrow(cs.primary, icon: Icons.gps_not_fixed),
+            const SizedBox(width: 5), _trackLabel(endTimeStr, cs),
+          ]),
+        ),
       ),
     ];
 
@@ -3636,6 +3675,20 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
             TileLayer(
               urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
               userAgentPackageName: 'com.logbook.app',
+              // Keep more of the surrounding tile grid loaded across a
+              // pan/zoom transition so fewer tiles need a fresh fetch right
+              // when the gesture ends (default is 2).
+              keepBuffer: 4,
+              // Default is `.none`, which never retries a tile that failed
+              // once (transient network blip, tile-server rate limit) — it
+              // stays blank until this whole map widget is rebuilt. Evicting
+              // once it scrolls out of view lets it be re-fetched next time
+              // it's needed.
+              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
+              errorTileCallback: kDebugMode
+                  ? (tile, error, stackTrace) =>
+                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
+                  : null,
             ),
             _ZoomAwareUncertaintyLayer(polygons: fsUncertaintyPolygons),
             _ZoomAwareCircleLayer(circles: anchorCircles),

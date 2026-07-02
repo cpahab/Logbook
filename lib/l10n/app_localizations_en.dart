@@ -653,6 +653,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tracksNoTracksInPeriod => 'No tracks in selected period';
 
   @override
+  String get arrivalTimeUncertainTooltip =>
+      'Arrival time estimated from last motion. GPS position quality was insufficient to determine the exact berth location.';
+
+  @override
   String get dayChangeDateTitle => 'Wrong date?';
 
   @override

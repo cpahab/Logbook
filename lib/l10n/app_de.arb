@@ -234,6 +234,7 @@
   "tracksSatelliteView": "Satellitenansicht",
   "tracksNoTracks": "Keine Tracks vorhanden",
   "tracksNoTracksInPeriod": "Keine Tracks im gewählten Zeitraum",
+  "arrivalTimeUncertainTooltip": "Ankunftszeit anhand der letzten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.",
 
   "dayChangeDateTitle": "Falsches Datum?",
   "dayChangeDateContent": "Der GPX-Track enthält hauptsächlich Daten vom {from}, nicht vom {to}.\n\nTrotzdem verschieben?",

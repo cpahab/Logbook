@@ -1328,6 +1328,12 @@ abstract class AppLocalizations {
   /// **'Keine Tracks im gewählten Zeitraum'**
   String get tracksNoTracksInPeriod;
 
+  /// No description provided for @arrivalTimeUncertainTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Ankunftszeit anhand der letzten Bewegung geschätzt. Die GPS-Positionsqualität reichte nicht aus, um den genauen Liegeplatz zu bestimmen.'**
+  String get arrivalTimeUncertainTooltip;
+
   /// No description provided for @dayChangeDateTitle.
   ///
   /// In de, this message translates to:

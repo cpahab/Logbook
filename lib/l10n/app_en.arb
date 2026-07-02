@@ -234,6 +234,7 @@
   "tracksSatelliteView": "Satellite view",
   "tracksNoTracks": "No tracks available",
   "tracksNoTracksInPeriod": "No tracks in selected period",
+  "arrivalTimeUncertainTooltip": "Arrival time estimated from last motion. GPS position quality was insufficient to determine the exact berth location.",
 
   "dayChangeDateTitle": "Wrong date?",
   "dayChangeDateContent": "The GPX track mainly contains data from {from}, not {to}.\n\nMove anyway?",
