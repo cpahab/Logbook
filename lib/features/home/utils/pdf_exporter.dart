@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_map/flutter_map.dart'
+    show BuiltInMapCachingProvider, CachedMapTile, CachedMapTileMetadata;
 
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
@@ -673,31 +675,98 @@ int _chooseZoom(double minLat, double maxLat, double minLon, double maxLon) {
   return 1;
 }
 
+Future<ui.Image?> _decodeBytes(Uint8List bytes) async {
+  final codec = await ui.instantiateImageCodec(bytes);
+  return (await codec.getNextFrame()).image;
+}
+
+// Shares the on-disk tile cache that flutter_map's map screens already use
+// (the same MapTiler tiles are frequently re-requested here for PDF export),
+// so exporting doesn't re-download tiles the map has already cached.
 Future<ui.Image?> _fetchTile(int z, int tx, int ty, String base) async {
+  // Supports both template URLs ({z}/{x}/{y} with optional query string)
+  // and plain base URLs (base/$z/$tx/$ty.png for OpenSeaMap-style servers).
+  final url = base.contains('{z}')
+      ? base
+          .replaceAll('{z}', '$z')
+          .replaceAll('{x}', '$tx')
+          .replaceAll('{y}', '$ty')
+      : '$base/$z/$tx/$ty.png';
+
+  final cache = BuiltInMapCachingProvider.getOrCreateInstance();
+  CachedMapTile? cached;
+  if (cache.isSupported) {
+    try {
+      cached = await cache.getTile(url);
+    } catch (_) {
+      cached = null;
+    }
+  }
+  if (cached != null && !cached.metadata.isStale) {
+    try {
+      return await _decodeBytes(cached.bytes);
+    } catch (_) {
+      // Corrupt cache entry - fall through and re-fetch from the network.
+    }
+  }
+
+  HttpClient? client;
   try {
-    final client = HttpClient()..userAgent = 'Logbuch/1.0 sailing logbook app';
-    // Supports both template URLs ({z}/{x}/{y} with optional query string)
-    // and plain base URLs (base/$z/$tx/$ty.png for OpenSeaMap-style servers).
-    final url = base.contains('{z}')
-        ? base
-            .replaceAll('{z}', '$z')
-            .replaceAll('{x}', '$tx')
-            .replaceAll('{y}', '$ty')
-        : '$base/$z/$tx/$ty.png';
+    client = HttpClient()..userAgent = 'Logbuch/1.0 sailing logbook app';
     final req = await client
         .getUrl(Uri.parse(url))
         .timeout(const Duration(seconds: 8));
+    if (cached != null) {
+      final lastModified = cached.metadata.lastModified;
+      final etag = cached.metadata.etag;
+      if (lastModified != null) {
+        req.headers.set(
+          HttpHeaders.ifModifiedSinceHeader,
+          HttpDate.format(lastModified),
+        );
+      }
+      if (etag != null) req.headers.set(HttpHeaders.ifNoneMatchHeader, etag);
+    }
     final res = await req.close().timeout(const Duration(seconds: 8));
-    if (res.statusCode != 200) { client.close(); return null; }
+
+    final headers = <String, String>{};
+    res.headers.forEach(
+      (name, values) => headers[name.toLowerCase()] = values.join(', '),
+    );
+
+    if (res.statusCode == HttpStatus.notModified && cached != null) {
+      if (cache.isSupported) {
+        try {
+          await cache.putTile(
+            url: url,
+            metadata: CachedMapTileMetadata.fromHttpHeaders(headers),
+          );
+        } catch (_) {}
+      }
+      return await _decodeBytes(cached.bytes);
+    }
+
+    if (res.statusCode != 200) return null;
     final chunks = <List<int>>[];
     await for (final c in res) { chunks.add(c); }
-    client.close();
     final bytes = Uint8List.fromList(chunks.expand((c) => c).toList());
-    final codec = await ui.instantiateImageCodec(bytes);
-    return (await codec.getNextFrame()).image;
+
+    if (cache.isSupported) {
+      try {
+        await cache.putTile(
+          url: url,
+          metadata: CachedMapTileMetadata.fromHttpHeaders(headers),
+          bytes: bytes,
+        );
+      } catch (_) {}
+    }
+
+    return await _decodeBytes(bytes);
   } catch (e) {
     if (kDebugMode) debugPrint('_fetchTile: $e');
     return null;
+  } finally {
+    client?.close();
   }
 }
 
