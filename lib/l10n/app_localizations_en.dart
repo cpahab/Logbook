@@ -639,13 +639,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tracksTitle => 'Voyage Tracks';
 
   @override
-  String get tracksOneYear => '1 Year';
+  String get tracksOneYear => 'This Year';
 
   @override
-  String get tracksOneMonth => '1 Month';
+  String get tracksOneMonth => 'Last Month';
 
   @override
-  String get tracksOneWeek => '1 Week';
+  String get tracksOneWeek => 'Last Week';
 
   @override
   String get tracksCustom => 'Custom';

@@ -1301,19 +1301,19 @@ abstract class AppLocalizations {
   /// No description provided for @tracksOneYear.
   ///
   /// In de, this message translates to:
-  /// **'1 Jahr'**
+  /// **'Dieses Jahr'**
   String get tracksOneYear;
 
   /// No description provided for @tracksOneMonth.
   ///
   /// In de, this message translates to:
-  /// **'1 Monat'**
+  /// **'Letzter Monat'**
   String get tracksOneMonth;
 
   /// No description provided for @tracksOneWeek.
   ///
   /// In de, this message translates to:
-  /// **'1 Woche'**
+  /// **'Letzte Woche'**
   String get tracksOneWeek;
 
   /// No description provided for @tracksCustom.

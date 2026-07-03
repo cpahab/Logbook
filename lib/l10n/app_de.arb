@@ -229,9 +229,9 @@
   "settingsScanTitle": "Logbuch-QR-Code scannen",
 
   "tracksTitle": "Fahrtstrecken",
-  "tracksOneYear": "1 Jahr",
-  "tracksOneMonth": "1 Monat",
-  "tracksOneWeek": "1 Woche",
+  "tracksOneYear": "Dieses Jahr",
+  "tracksOneMonth": "Letzter Monat",
+  "tracksOneWeek": "Letzte Woche",
   "tracksCustom": "Eigene",
   "tracksZoomIn": "Vergrössern",
   "tracksZoomOut": "Verkleinern",
