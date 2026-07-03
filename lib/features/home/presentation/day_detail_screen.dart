@@ -1177,37 +1177,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Time + label + action icons
+          // Label + time + action icons
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Entry-type icon — tappable to snap map when GPS data exists.
-              GestureDetector(
-                onTap: trackedPoint != null
-                    ? () => _mapController.move(
-                          LatLng(trackedPoint.lat, trackedPoint.lon),
-                          14,
-                        )
-                    : null,
-                child: Icon(
-                  isCrewEntry
-                      ? Icons.groups_outlined
-                      : isStatusEntry
-                          ? Icons.sailing
-                          : Icons.schedule,
-                  size: 16,
-                  color: trackedPoint != null ? cs.primary : cs.outlineVariant,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                timeStr,
-                style: GoogleFonts.newsreader(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: cs.primary,
-                ),
-              ),
-              const Spacer(),
               Flexible(
                 child: Text(
                   entryLabel,
@@ -1221,14 +1194,47 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 12),
-              Tooltip(
-                message: context.l10n.dayEditLogEntry,
-                child: GestureDetector(
-                  onTap: () => _editTimelineEntry(entry, t),
-                  child: Icon(Icons.edit_outlined,
-                      size: 16, color: cs.outline),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Entry-type icon — tappable to snap map when GPS data exists.
+                  GestureDetector(
+                    onTap: trackedPoint != null
+                        ? () => _mapController.move(
+                              LatLng(trackedPoint.lat, trackedPoint.lon),
+                              14,
+                            )
+                        : null,
+                    child: Icon(
+                      isCrewEntry
+                          ? Icons.groups_outlined
+                          : isStatusEntry
+                              ? Icons.sailing
+                              : Icons.schedule,
+                      size: 16,
+                      color:
+                          trackedPoint != null ? cs.primary : cs.outlineVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    timeStr,
+                    style: GoogleFonts.newsreader(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: cs.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Tooltip(
+                    message: context.l10n.dayEditLogEntry,
+                    child: GestureDetector(
+                      onTap: () => _editTimelineEntry(entry, t),
+                      child: Icon(Icons.edit_outlined,
+                          size: 16, color: cs.outline),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
