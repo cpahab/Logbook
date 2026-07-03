@@ -1209,6 +1209,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emergencyVesselSafetySection => 'VESSEL SAFETY INFO';
 
   @override
+  String get emergencyNoSafetyData => 'No safety data recorded.';
+
+  @override
   String get emergencyFrequenciesSection => 'COAST GUARD FREQUENCIES';
 
   @override

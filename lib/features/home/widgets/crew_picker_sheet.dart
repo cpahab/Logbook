@@ -101,7 +101,7 @@ class _RosterTile extends StatelessWidget {
     );
     if (!context.mounted || updated == null) return;
     updated.id = member.id;
-    repo.saveRosterMember(updated);
+    repo.saveEditedRosterMember(updated);
   }
 
   Future<void> _delete(BuildContext context) async {

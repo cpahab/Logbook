@@ -115,10 +115,10 @@ class _RosterListTile extends StatelessWidget {
     );
     if (!context.mounted || updated == null) return;
     updated.id = member.id;
-    repo.saveRosterMember(updated);
+    repo.saveEditedRosterMember(updated);
   }
 
-  Future<void> _confirmDelete(BuildContext context, ColorScheme cs) async {
+  Future<bool> _confirmDelete(BuildContext context, ColorScheme cs) async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -141,8 +141,9 @@ class _RosterListTile extends StatelessWidget {
         ],
       ),
     );
-    if (!context.mounted || confirmed != true) return;
+    if (!context.mounted || confirmed != true) return false;
     repo.deleteRosterMember(member.id!);
+    return true;
   }
 
   @override

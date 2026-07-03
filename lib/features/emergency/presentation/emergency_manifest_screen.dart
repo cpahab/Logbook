@@ -54,9 +54,15 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
     final vessel = context.watch<ThemeProvider>();
     final emergency = context.watch<EmergencyRepository>();
     final today = DateTime.now();
-    final homeRepo = context.read<HomeRepository>();
+    final homeRepo = context.watch<HomeRepository>();
     final todayCrew = homeRepo.getEntry(today)?.crew ?? [];
-    final crew = todayCrew.isNotEmpty ? todayCrew : homeRepo.lastCrew;
+    final rawCrew = todayCrew.isNotEmpty ? todayCrew : homeRepo.lastCrew;
+    // Resolve each person's personal/medical fields from their live roster
+    // record (if they have one), so editing the roster in Settings is
+    // reflected here immediately instead of showing whatever was copied
+    // into this day's entry when they were added.
+    final crew =
+        rawCrew.map((m) => homeRepo.rosterMemberById(m.id) ?? m).toList();
 
     final vhfLabels = [vessel.vhf1Label, vessel.vhf2Label, vessel.vhf3Label, vessel.vhf4Label];
     final canAddFrequency = vhfLabels.any((l) => l.isEmpty);
@@ -817,6 +823,38 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
     final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     final l10n = context.l10n;
     final v = widget.vessel;
+
+    final idFields = [
+      if (v.vesselMmsi.isNotEmpty)
+        _InfoField(label: 'MMSI NUMBER', value: v.vesselMmsi, mono: true),
+      if (v.vesselCallSign.isNotEmpty)
+        _InfoField(label: 'CALL SIGN', value: v.vesselCallSign),
+    ];
+    final safetyItems = [
+      if (v.lifeRaftInfo.isNotEmpty)
+        _SafetyItem(
+          icon: Icons.water,
+          iconColor: em.criticalColor,
+          title: l10n.emergencyLifeRaft,
+          detail: v.lifeRaftInfo,
+        ),
+      if (v.epirbInfo.isNotEmpty)
+        _SafetyItem(
+          icon: Icons.sensors,
+          iconColor: cs.secondary,
+          // EPIRB is an international maritime acronym — kept in English
+          title: 'EPIRB Location',
+          detail: v.epirbInfo,
+        ),
+      if (v.fireSuppInfo.isNotEmpty)
+        _SafetyItem(
+          icon: Icons.fire_extinguisher,
+          iconColor: em.criticalColor,
+          title: l10n.emergencyFireSuppression,
+          detail: v.fireSuppInfo,
+        ),
+    ];
+
     return Stack(
       children: [
         Positioned(
@@ -828,58 +866,40 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final fields = [
-                  _InfoField(
-                    label: 'MMSI NUMBER',
-                    value: v.vesselMmsi.isNotEmpty ? v.vesselMmsi : '—',
-                    mono: true,
-                  ),
-                  _InfoField(
-                    label: 'CALL SIGN',
-                    value: v.vesselCallSign.isNotEmpty ? v.vesselCallSign : '—',
-                  ),
-                ];
-                if (constraints.maxWidth < 300) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [fields[0], const SizedBox(height: 12), fields[1]],
+            if (idFields.isNotEmpty)
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  if (idFields.length == 1 || constraints.maxWidth < 300) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (int i = 0; i < idFields.length; i++) ...[
+                          if (i > 0) const SizedBox(height: 12),
+                          idFields[i],
+                        ],
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: idFields[0]),
+                      const SizedBox(width: 20),
+                      Expanded(child: idFields[1]),
+                    ],
                   );
-                }
-                return Row(
-                  children: [
-                    Expanded(child: fields[0]),
-                    const SizedBox(width: 20),
-                    Expanded(child: fields[1]),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            // Always shown (with a "—" placeholder when empty), matching the
-            // MMSI/Call Sign fields above — otherwise these rows disappear
-            // entirely until filled in, and there's no indication in the
-            // read view that the app tracks them at all.
-            _SafetyItem(
-              icon: Icons.water,
-              iconColor: em.criticalColor,
-              title: l10n.emergencyLifeRaft,
-              detail: v.lifeRaftInfo.isNotEmpty ? v.lifeRaftInfo : '—',
-            ),
-            _SafetyItem(
-              icon: Icons.sensors,
-              iconColor: cs.secondary,
-              // EPIRB is an international maritime acronym — kept in English
-              title: 'EPIRB Location',
-              detail: v.epirbInfo.isNotEmpty ? v.epirbInfo : '—',
-            ),
-            _SafetyItem(
-              icon: Icons.fire_extinguisher,
-              iconColor: em.criticalColor,
-              title: l10n.emergencyFireSuppression,
-              detail: v.fireSuppInfo.isNotEmpty ? v.fireSuppInfo : '—',
-            ),
+                },
+              ),
+            if (idFields.isNotEmpty && safetyItems.isNotEmpty)
+              const SizedBox(height: 16),
+            ...safetyItems,
+            if (idFields.isEmpty && safetyItems.isEmpty)
+              Text(
+                l10n.emergencyNoSafetyData,
+                style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: cs.onSurfaceVariant,
+                    fontStyle: FontStyle.italic),
+              ),
           ],
         ),
       ],
@@ -1326,8 +1346,6 @@ class _CrewMedicalCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
     final bloodType = member.bloodType ?? '';
-    final allergies = member.allergies ?? '';
-    final conditions = member.conditions ?? '';
     final personalEpirb = member.personalEpirb ?? '';
 
     return Material(
@@ -1377,38 +1395,12 @@ class _CrewMedicalCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      member.name,
-                                      style: GoogleFonts.newsreader(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.w500,
-                                          color: cs.primary),
-                                    ),
-                                    if (member.remarks?.isNotEmpty == true)
-                                      Container(
-                                        margin:
-                                            const EdgeInsets.only(top: 4),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: cs.surfaceContainer,
-                                          borderRadius:
-                                              BorderRadius.circular(99),
-                                        ),
-                                        child: Text(
-                                          (member.remarks as String)
-                                              .toUpperCase(),
-                                          style: GoogleFonts.inter(
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.w700,
-                                              letterSpacing: 0.5,
-                                              color: cs.onSurfaceVariant),
-                                        ),
-                                      ),
-                                  ],
+                                child: Text(
+                                  member.name,
+                                  style: GoogleFonts.newsreader(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500,
+                                      color: cs.primary),
                                 ),
                               ),
                               if (bloodType.isNotEmpty)
@@ -1436,20 +1428,8 @@ class _CrewMedicalCard extends StatelessWidget {
                                 ),
                             ],
                           ),
-                          if (allergies.isNotEmpty ||
-                              conditions.isNotEmpty ||
-                              personalEpirb.isNotEmpty)
+                          if (personalEpirb.isNotEmpty)
                             const SizedBox(height: 10),
-                          if (allergies.isNotEmpty)
-                            _MedicalRow(
-                                icon: Icons.heart_broken,
-                                color: cs.onErrorContainer,
-                                text: allergies),
-                          if (conditions.isNotEmpty)
-                            _MedicalRow(
-                                icon: Icons.medication,
-                                color: em.criticalColor,
-                                text: conditions),
                           if (personalEpirb.isNotEmpty)
                             _MedicalRow(
                                 icon: Icons.sensors,

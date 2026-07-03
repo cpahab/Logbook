@@ -6,7 +6,12 @@ import '../../../l10n/l10n_extension.dart';
 
 class AddCrewMemberDialog extends StatefulWidget {
   final CrewMember? initialMember;
-  final VoidCallback? onDelete;
+  /// Called when "Remove from crew" is tapped. Must perform (or cancel) the
+  /// deletion itself — e.g. showing its own confirmation dialog — and return
+  /// whether the member was actually deleted. The dialog only closes itself
+  /// if this resolves to `true`, so an in-progress or cancelled confirmation
+  /// doesn't get raced by this dialog popping out from under it.
+  final Future<bool> Function()? onDelete;
 
   const AddCrewMemberDialog({super.key, this.initialMember, this.onDelete});
 
@@ -255,9 +260,11 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                       width: double.infinity,
                       height: 48,
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          widget.onDelete!();
-                          Navigator.pop(context, null);
+                        onPressed: () async {
+                          final deleted = await widget.onDelete!();
+                          if (deleted && context.mounted) {
+                            Navigator.pop(context, null);
+                          }
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: cs.error,

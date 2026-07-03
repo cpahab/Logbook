@@ -2336,6 +2336,12 @@ abstract class AppLocalizations {
   /// **'SICHERHEITSINFO SCHIFF'**
   String get emergencyVesselSafetySection;
 
+  /// No description provided for @emergencyNoSafetyData.
+  ///
+  /// In de, this message translates to:
+  /// **'Noch keine Sicherheitsdaten erfasst.'**
+  String get emergencyNoSafetyData;
+
   /// No description provided for @emergencyFrequenciesSection.
   ///
   /// In de, this message translates to:

@@ -714,38 +714,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     color: cs.onSurface,
                   ),
                 ),
-                Row(
-                  children: [
-                    Text(
-                      isFirst ? context.l10n.labelSkipper.toUpperCase() : context.l10n.labelCrewRole.toUpperCase(),
-                      style: GoogleFonts.inter(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                        color: isFirst ? cs.primary : cs.outline,
-                      ),
-                    ),
-                    if (member.bloodType != null) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: cs.errorContainer,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          member.bloodType!,
-                          style: GoogleFonts.inter(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
-                            color: cs.onErrorContainer,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+                Text(
+                  isFirst ? context.l10n.labelSkipper.toUpperCase() : context.l10n.labelCrewRole.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    color: isFirst ? cs.primary : cs.outline,
+                  ),
                 ),
               ],
             ),
@@ -2859,14 +2835,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ),
     );
     if (!mounted || updated == null) return;
+    // AddCrewMemberDialog always builds a fresh CrewMember with no id, so the
+    // link to this person's roster record must be carried over explicitly —
+    // otherwise saving would silently create a disconnected duplicate.
+    updated.id = member.id;
+    context.read<HomeRepository>().saveEditedRosterMember(updated);
     setState(() {
       final i = _pendingCrew!.indexWhere((m) => m.name == member.name);
       if (i != -1) _pendingCrew![i] = updated;
     });
   }
 
-  void _removePendingMember(CrewMember member) {
+  Future<bool> _removePendingMember(CrewMember member) async {
     setState(() => _pendingCrew?.remove(member));
+    return true;
   }
 
   void _reorderPending(int oldIndex, int newIndex) {

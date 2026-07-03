@@ -65,6 +65,18 @@ class HomeRepository extends ChangeNotifier {
     return members;
   }
 
+  /// Finds this person's current roster record by [id], if one exists.
+  /// Used to resolve personal/medical fields to their latest known values
+  /// wherever a day-entry's embedded crew copy (which is only a snapshot
+  /// from whenever they were added) is displayed.
+  CrewMember? rosterMemberById(String? id) {
+    if (id == null) return null;
+    for (final m in _rosterBox.values) {
+      if (m.id == id) return m;
+    }
+    return null;
+  }
+
   List<CrewMember> get lastCrew {
     for (final e in entries.reversed) {
       if (e.crew.isNotEmpty) {
@@ -75,6 +87,7 @@ class HomeRepository extends ChangeNotifier {
                   allergies: m.allergies,
                   conditions: m.conditions,
                   remarks: m.remarks,
+                  id: m.id,
                   personalEpirb: m.personalEpirb,
                 ))
             .toList();
@@ -666,6 +679,23 @@ class HomeRepository extends ChangeNotifier {
     _rosterBox.put(m.id!, m);
     _syncRosterToFirestore();
     notifyListeners();
+  }
+
+  /// Saves an edit made to a crew member from outside the roster screen
+  /// (e.g. editing a person on a specific day's crew list). If [m] has no id
+  /// yet — crew added/edited before the roster link existed — this reuses an
+  /// existing roster entry with the same name instead of creating a
+  /// duplicate.
+  void saveEditedRosterMember(CrewMember m) {
+    if (m.id == null) {
+      for (final r in _rosterBox.values) {
+        if (r.name.trim().toLowerCase() == m.name.trim().toLowerCase()) {
+          m.id = r.id;
+          break;
+        }
+      }
+    }
+    saveRosterMember(m);
   }
 
   void deleteRosterMember(String id) {

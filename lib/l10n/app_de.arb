@@ -443,6 +443,7 @@
   "emergencyGuideShort": "Notsignal-\nHandbuch",
   "emergencyContactsSection": "NOTFALLKONTAKTE",
   "emergencyVesselSafetySection": "SICHERHEITSINFO SCHIFF",
+  "emergencyNoSafetyData": "Noch keine Sicherheitsdaten erfasst.",
   "emergencyFrequenciesSection": "KÜSTENWACHE-FREQUENZEN",
   "emergencyCrewMedicalSection": "MEDIZINISCHE BESATZUNGSÜBERSICHT",
   "emergencyCrewAutoNote": "Automatisch aus dem aktuellsten Logeintrag übernommen.\nBesatzungsdaten werden im Logbuch gepflegt.",
