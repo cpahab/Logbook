@@ -33,6 +33,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _vesselNameCtrl;
   late TextEditingController _vesselMmsiCtrl;
   late TextEditingController _vesselCallSignCtrl;
+  late TextEditingController _lifeRaftCtrl;
+  late TextEditingController _epirbCtrl;
+  late TextEditingController _fireSuppCtrl;
   bool _syncing = false;
   bool _trackFilterExpanded = false;
   List<Map<String, dynamic>> _logbooks = [];
@@ -51,6 +54,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _vesselNameCtrl = TextEditingController(text: p.vesselName);
     _vesselMmsiCtrl = TextEditingController(text: p.vesselMmsi);
     _vesselCallSignCtrl = TextEditingController(text: p.vesselCallSign);
+    _lifeRaftCtrl = TextEditingController(text: p.lifeRaftInfo);
+    _epirbCtrl = TextEditingController(text: p.epirbInfo);
+    _fireSuppCtrl = TextEditingController(text: p.fireSuppInfo);
     _logbookIdNotifier = context.read<ValueNotifier<String?>>();
     // Refresh list whenever the active boat changes (e.g. async init completes)
     _logbookIdNotifier.addListener(_refreshLogbooks);
@@ -71,6 +77,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _vesselNameCtrl.dispose();
     _vesselMmsiCtrl.dispose();
     _vesselCallSignCtrl.dispose();
+    _lifeRaftCtrl.dispose();
+    _epirbCtrl.dispose();
+    _fireSuppCtrl.dispose();
     super.dispose();
   }
 
@@ -774,16 +783,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 20),
 
+            // ── App settings ─────────────────────────────────────────────
             // ── Account ───────────────────────────────────────────────
             _buildAccountSection(cs),
             const SizedBox(height: 16),
 
-            // ── Vessel Information ────────────────────────────────────
-            _buildVesselSection(p, cs),
-            const SizedBox(height: 16),
-
             // ── Display & Appearance ──────────────────────────────────
             _buildDisplaySection(p, cs),
+            const SizedBox(height: 24),
+
+            // ── Logbook / vessel settings ────────────────────────────────
+            // ── Logbooks ──────────────────────────────────────────────
+            _buildLogbooksSection(cs),
+            const SizedBox(height: 16),
+
+            // ── Vessel Information ────────────────────────────────────
+            _buildVesselSection(p, cs),
             const SizedBox(height: 16),
 
             // ── Track Filter ──────────────────────────────────────────
@@ -792,10 +807,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // ── Crew Roster ───────────────────────────────────────────
             _buildCrewRosterSection(cs),
-            const SizedBox(height: 16),
-
-            // ── Logbooks ──────────────────────────────────────────────
-            _buildLogbooksSection(cs),
             const SizedBox(height: 32),
 
             // ── App version ───────────────────────────────────────────
@@ -885,6 +896,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     controller: _vesselCallSignCtrl,
                     hint: l10n.settingsFieldCallSignHint,
                     onChanged: p.setVesselCallSign,
+                    cs: cs,
+                  ),
+                  _rowDivider(cs),
+                  _vesselRow(
+                    label: l10n.emergencyLifeRaft,
+                    controller: _lifeRaftCtrl,
+                    hint: l10n.settingsFieldLifeRaftHint,
+                    onChanged: p.setLifeRaftInfo,
+                    cs: cs,
+                  ),
+                  _rowDivider(cs),
+                  _vesselRow(
+                    // EPIRB is an international maritime acronym — kept in
+                    // English, matching the emergency manifest screen.
+                    label: 'EPIRB',
+                    controller: _epirbCtrl,
+                    hint: l10n.settingsFieldEpirbHint,
+                    onChanged: p.setEpirbInfo,
+                    cs: cs,
+                  ),
+                  _rowDivider(cs),
+                  _vesselRow(
+                    label: l10n.emergencyFireSuppression,
+                    controller: _fireSuppCtrl,
+                    hint: l10n.settingsFieldFireSuppHint,
+                    onChanged: p.setFireSuppInfo,
                     cs: cs,
                     isLast: true,
                   ),

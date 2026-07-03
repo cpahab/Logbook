@@ -15,11 +15,12 @@ class AddCrewMemberDialog extends StatefulWidget {
 }
 
 class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
-  final _nameCtrl       = TextEditingController();
-  final _bloodTypeCtrl  = TextEditingController();
-  final _allergiesCtrl  = TextEditingController();
-  final _conditionsCtrl = TextEditingController();
-  final _remarksCtrl    = TextEditingController();
+  final _nameCtrl         = TextEditingController();
+  final _bloodTypeCtrl    = TextEditingController();
+  final _allergiesCtrl    = TextEditingController();
+  final _conditionsCtrl   = TextEditingController();
+  final _remarksCtrl      = TextEditingController();
+  final _personalEpirbCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
       _allergiesCtrl.text  = m.allergies ?? '';
       _conditionsCtrl.text = m.conditions ?? '';
       _remarksCtrl.text    = m.remarks ?? '';
+      _personalEpirbCtrl.text = m.personalEpirb ?? '';
     }
   }
 
@@ -41,6 +43,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
     _allergiesCtrl.dispose();
     _conditionsCtrl.dispose();
     _remarksCtrl.dispose();
+    _personalEpirbCtrl.dispose();
     super.dispose();
   }
 
@@ -55,6 +58,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
         allergies:  _allergiesCtrl.text.trim().isEmpty ? null : _allergiesCtrl.text.trim(),
         conditions: _conditionsCtrl.text.trim().isEmpty ? null : _conditionsCtrl.text.trim(),
         remarks:    _remarksCtrl.text.trim().isEmpty ? null : _remarksCtrl.text.trim(),
+        personalEpirb: _personalEpirbCtrl.text.trim().isEmpty ? null : _personalEpirbCtrl.text.trim(),
       ),
     );
   }
@@ -166,6 +170,26 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                           cs: cs,
                           maxLines: 2,
                           italic: true,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+                  // ── Safety Equipment ──────────────────────────────────
+                  _sectionHeader(Icons.sensors, l10n.crewSectionSafety, cs),
+                  const SizedBox(height: 12),
+                  _card(
+                    cs: cs,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _label(l10n.crewFieldPersonalEpirb, cs),
+                        const SizedBox(height: 6),
+                        _field(
+                          controller: _personalEpirbCtrl,
+                          hint: l10n.crewFieldPersonalEpirbHint,
+                          cs: cs,
                         ),
                       ],
                     ),

@@ -857,43 +857,29 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
               },
             ),
             const SizedBox(height: 16),
-            if (v.lifeRaftInfo.isNotEmpty)
-              _SafetyItem(
-                icon: Icons.water,
-                iconColor: em.criticalColor,
-                title: l10n.emergencyLifeRaft,
-                detail: v.lifeRaftInfo,
-              ),
-            if (v.epirbInfo.isNotEmpty)
-              _SafetyItem(
-                icon: Icons.sensors,
-                iconColor: cs.secondary,
-                // EPIRB is an international maritime acronym — kept in English
-                title: 'EPIRB Location',
-                detail: v.epirbInfo,
-              ),
-            if (v.fireSuppInfo.isNotEmpty)
-              _SafetyItem(
-                icon: Icons.fire_extinguisher,
-                iconColor: em.criticalColor,
-                title: l10n.emergencyFireSuppression,
-                detail: v.fireSuppInfo,
-              ),
-            if (v.vesselMmsi.isEmpty &&
-                v.vesselCallSign.isEmpty &&
-                v.lifeRaftInfo.isEmpty &&
-                v.epirbInfo.isEmpty &&
-                v.fireSuppInfo.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  l10n.emergencyNoSafetyData,
-                  style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: cs.onSurfaceVariant,
-                      fontStyle: FontStyle.italic),
-                ),
-              ),
+            // Always shown (with a "—" placeholder when empty), matching the
+            // MMSI/Call Sign fields above — otherwise these rows disappear
+            // entirely until filled in, and there's no indication in the
+            // read view that the app tracks them at all.
+            _SafetyItem(
+              icon: Icons.water,
+              iconColor: em.criticalColor,
+              title: l10n.emergencyLifeRaft,
+              detail: v.lifeRaftInfo.isNotEmpty ? v.lifeRaftInfo : '—',
+            ),
+            _SafetyItem(
+              icon: Icons.sensors,
+              iconColor: cs.secondary,
+              // EPIRB is an international maritime acronym — kept in English
+              title: 'EPIRB Location',
+              detail: v.epirbInfo.isNotEmpty ? v.epirbInfo : '—',
+            ),
+            _SafetyItem(
+              icon: Icons.fire_extinguisher,
+              iconColor: em.criticalColor,
+              title: l10n.emergencyFireSuppression,
+              detail: v.fireSuppInfo.isNotEmpty ? v.fireSuppInfo : '—',
+            ),
           ],
         ),
       ],
@@ -1342,122 +1328,265 @@ class _CrewMedicalCard extends StatelessWidget {
     final bloodType = member.bloodType ?? '';
     final allergies = member.allergies ?? '';
     final conditions = member.conditions ?? '';
+    final personalEpirb = member.personalEpirb ?? '';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant),
-        boxShadow: [
-          BoxShadow(
-            color: em.cardShadowColor,
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+        onTap: () => _showCrewDetail(context, member),
+        child: Container(
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cs.outlineVariant),
+            boxShadow: [
+              BoxShadow(
+                color: em.cardShadowColor,
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 6,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [cs.tertiary, cs.primaryContainer],
+                        stops: const [0.5, 0.5],
+                        tileMode: TileMode.repeated,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      member.name,
+                                      style: GoogleFonts.newsreader(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w500,
+                                          color: cs.primary),
+                                    ),
+                                    if (member.remarks?.isNotEmpty == true)
+                                      Container(
+                                        margin:
+                                            const EdgeInsets.only(top: 4),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: cs.surfaceContainer,
+                                          borderRadius:
+                                              BorderRadius.circular(99),
+                                        ),
+                                        child: Text(
+                                          (member.remarks as String)
+                                              .toUpperCase(),
+                                          style: GoogleFonts.inter(
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 0.5,
+                                              color: cs.onSurfaceVariant),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              if (bloodType.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: em.criticalBgColor,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Text(context.l10n.emergencyBloodBadge,
+                                          style: GoogleFonts.inter(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w700,
+                                              color: cs.onErrorContainer)),
+                                      Text(bloodType,
+                                          style: GoogleFonts.inter(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w700,
+                                              color: cs.onErrorContainer)),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (allergies.isNotEmpty ||
+                              conditions.isNotEmpty ||
+                              personalEpirb.isNotEmpty)
+                            const SizedBox(height: 10),
+                          if (allergies.isNotEmpty)
+                            _MedicalRow(
+                                icon: Icons.heart_broken,
+                                color: cs.onErrorContainer,
+                                text: allergies),
+                          if (conditions.isNotEmpty)
+                            _MedicalRow(
+                                icon: Icons.medication,
+                                color: em.criticalColor,
+                                text: conditions),
+                          if (personalEpirb.isNotEmpty)
+                            _MedicalRow(
+                                icon: Icons.sensors,
+                                color: cs.secondary,
+                                text: personalEpirb),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: IntrinsicHeight(
-         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+    );
+  }
+}
+
+void _showCrewDetail(BuildContext context, CrewMember member) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => _CrewDetailSheet(member: member),
+  );
+}
+
+class _CrewDetailSheet extends StatelessWidget {
+  final CrewMember member;
+  const _CrewDetailSheet({required this.member});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+
+    final rows = <(IconData, String, String)>[
+      if (member.bloodType?.isNotEmpty == true)
+        (Icons.bloodtype, l10n.crewFieldBloodGroup, member.bloodType!),
+      if (member.allergies?.isNotEmpty == true)
+        (Icons.heart_broken, l10n.crewFieldAllergies, member.allergies!),
+      if (member.conditions?.isNotEmpty == true)
+        (Icons.medication, l10n.crewFieldConditions, member.conditions!),
+      if (member.personalEpirb?.isNotEmpty == true)
+        (Icons.sensors, l10n.crewFieldPersonalEpirb, member.personalEpirb!),
+      if (member.remarks?.isNotEmpty == true)
+        (Icons.description, l10n.crewSectionRemarks, member.remarks!),
+    ];
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 6,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [cs.tertiary, cs.primaryContainer],
-                  stops: const [0.5, 0.5],
-                  tileMode: TileMode.repeated,
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: cs.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Text(
+              member.name,
+              style: GoogleFonts.newsreader(
+                fontSize: 24,
+                fontWeight: FontWeight.w500,
+                color: cs.primary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (rows.isEmpty)
+              Text(
+                l10n.crewDetailNoInfo,
+                style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontStyle: FontStyle.italic,
+                    color: cs.onSurfaceVariant),
+              )
+            else
+              ...rows.map((r) => Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Icon(r.$1, size: 20, color: cs.secondary),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                member.name,
-                                style: GoogleFonts.newsreader(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w500,
-                                    color: cs.primary),
+                                r.$2.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 1.0,
+                                    color: cs.outline),
                               ),
-                              if (member.remarks?.isNotEmpty == true)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 4),
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: cs.surfaceContainer,
-                                    borderRadius: BorderRadius.circular(99),
-                                  ),
-                                  child: Text(
-                                    (member.remarks as String).toUpperCase(),
-                                    style: GoogleFonts.inter(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.5,
-                                        color: cs.onSurfaceVariant),
-                                  ),
-                                ),
+                              const SizedBox(height: 2),
+                              Text(
+                                r.$3,
+                                style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.onSurface),
+                              ),
                             ],
                           ),
                         ),
-                        if (bloodType.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: em.criticalBgColor,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(context.l10n.emergencyBloodBadge,
-                                    style: GoogleFonts.inter(
-                                        fontSize: 8, fontWeight: FontWeight.w700,
-                                        color: cs.onErrorContainer)),
-                                Text(bloodType,
-                                    style: GoogleFonts.inter(
-                                        fontSize: 18, fontWeight: FontWeight.w700,
-                                        color: cs.onErrorContainer)),
-                              ],
-                            ),
-                          ),
                       ],
                     ),
-                    if (allergies.isNotEmpty || conditions.isNotEmpty)
-                      const SizedBox(height: 10),
-                    if (allergies.isNotEmpty)
-                      _MedicalRow(
-                          icon: Icons.heart_broken,
-                          color: cs.onErrorContainer,
-                          text: allergies),
-                    if (conditions.isNotEmpty)
-                      _MedicalRow(
-                          icon: Icons.medication,
-                          color: em.criticalColor,
-                          text: conditions),
-                  ],
+                  )),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: cs.primary,
+                  side: BorderSide(color: cs.primary.withValues(alpha: 0.25)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
+                child: Text(l10n.close),
               ),
             ),
           ],
         ),
-       ),
       ),
     );
   }

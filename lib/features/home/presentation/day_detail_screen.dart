@@ -124,6 +124,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   List<CrewMember>? _pendingCrew;
   final _fromHarborCtrl = TextEditingController();
   final _toHarborCtrl = TextEditingController();
+  final _fromHarborFocus = FocusNode();
+  final _toHarborFocus = FocusNode();
   @override
   void initState() {
     super.initState();
@@ -132,6 +134,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         if (mounted) _addTimelineEntry(context);
       });
     }
+    // Save as soon as focus leaves both route fields, not just on explicit
+    // "Done"/checkmark — otherwise navigating away mid-edit silently
+    // discards whatever was typed.
+    _fromHarborFocus.addListener(_onRouteFocusChange);
+    _toHarborFocus.addListener(_onRouteFocusChange);
+  }
+
+  void _onRouteFocusChange() {
+    if (_fromHarborFocus.hasFocus || _toHarborFocus.hasFocus) return;
+    if (!_editingRoute) return;
+    final entry = context
+        .read<HomeRepository>()
+        .getEntry(DateTime(widget.year, widget.month, widget.day));
+    if (entry != null) _saveRoute(entry);
   }
 
   @override
@@ -139,6 +155,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     _markerDismissTimer?.cancel();
     _fromHarborCtrl.dispose();
     _toHarborCtrl.dispose();
+    _fromHarborFocus.dispose();
+    _toHarborFocus.dispose();
     _mapController.dispose();
     super.dispose();
   }
@@ -803,6 +821,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                 children: [
                                   TextField(
                                     controller: _fromHarborCtrl,
+                                    focusNode: _fromHarborFocus,
                                     autofocus: true,
                                     decoration: InputDecoration(
                                       hintText: context.l10n.dayDeparturePort,
@@ -830,6 +849,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                   ),
                                   TextField(
                                     controller: _toHarborCtrl,
+                                    focusNode: _toHarborFocus,
                                     decoration: InputDecoration(
                                       hintText: context.l10n.dayDestinationPort,
                                       border: InputBorder.none,
@@ -2763,6 +2783,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 conditions: m.conditions,
                 remarks: m.remarks,
                 id: m.id,
+                personalEpirb: m.personalEpirb,
               ))
           .toList();
     });

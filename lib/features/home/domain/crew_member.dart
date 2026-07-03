@@ -22,6 +22,9 @@ class CrewMember extends HiveObject {
   @HiveField(5)
   String? id;
 
+  @HiveField(6)
+  String? personalEpirb;
+
   CrewMember({
     required this.name,
     this.bloodType,
@@ -29,5 +32,6 @@ class CrewMember extends HiveObject {
     this.conditions,
     this.remarks,
     this.id,
+    this.personalEpirb,
   });
 }

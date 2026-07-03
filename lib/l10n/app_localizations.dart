@@ -752,6 +752,24 @@ abstract class AppLocalizations {
   /// **'z.B. Benötigt Inhalator (Asthma)…'**
   String get crewFieldConditionsHint;
 
+  /// No description provided for @crewSectionSafety.
+  ///
+  /// In de, this message translates to:
+  /// **'Sicherheitsausrüstung'**
+  String get crewSectionSafety;
+
+  /// No description provided for @crewFieldPersonalEpirb.
+  ///
+  /// In de, this message translates to:
+  /// **'Persönlicher EPIRB / PLB'**
+  String get crewFieldPersonalEpirb;
+
+  /// No description provided for @crewFieldPersonalEpirbHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Ja, McMurdo FastFind 220'**
+  String get crewFieldPersonalEpirbHint;
+
   /// No description provided for @crewSectionRemarks.
   ///
   /// In de, this message translates to:
@@ -769,6 +787,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Zur Besatzung hinzufügen'**
   String get crewButtonAddToCrew;
+
+  /// No description provided for @crewDetailNoInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Für diese Person sind keine weiteren Angaben erfasst.'**
+  String get crewDetailNoInfo;
 
   /// No description provided for @crewButtonRemoveFromCrew.
   ///
@@ -877,6 +901,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'z.B. HB-9-XY'**
   String get settingsFieldCallSignHint;
+
+  /// No description provided for @settingsFieldLifeRaftHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Cockpitfach, 6 Personen'**
+  String get settingsFieldLifeRaftHint;
+
+  /// No description provided for @settingsFieldEpirbHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Navigationstisch'**
+  String get settingsFieldEpirbHint;
+
+  /// No description provided for @settingsFieldFireSuppHint.
+  ///
+  /// In de, this message translates to:
+  /// **'z.B. Kombüse, Motorraum'**
+  String get settingsFieldFireSuppHint;
 
   /// No description provided for @settingsAppearanceSection.
   ///
@@ -2347,12 +2389,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Kontakt bearbeiten'**
   String get emergencyEditContactTitle;
-
-  /// No description provided for @emergencyNoSafetyData.
-  ///
-  /// In de, this message translates to:
-  /// **'Noch keine Sicherheitsdaten erfasst.'**
-  String get emergencyNoSafetyData;
 
   /// No description provided for @emergencyBloodBadge.
   ///

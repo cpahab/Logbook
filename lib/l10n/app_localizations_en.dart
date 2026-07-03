@@ -336,6 +336,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get crewFieldConditionsHint => 'e.g. Requires inhaler (asthma)…';
 
   @override
+  String get crewSectionSafety => 'Safety equipment';
+
+  @override
+  String get crewFieldPersonalEpirb => 'Personal EPIRB / PLB';
+
+  @override
+  String get crewFieldPersonalEpirbHint => 'e.g. Yes, McMurdo FastFind 220';
+
+  @override
   String get crewSectionRemarks => 'Remarks';
 
   @override
@@ -343,6 +352,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get crewButtonAddToCrew => 'Add to crew';
+
+  @override
+  String get crewDetailNoInfo =>
+      'No additional information recorded for this person.';
 
   @override
   String get crewButtonRemoveFromCrew => 'Remove from crew';
@@ -400,6 +413,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsFieldCallSignHint => 'e.g. HB-9-XY';
+
+  @override
+  String get settingsFieldLifeRaftHint => 'e.g. Cockpit locker, 6-person';
+
+  @override
+  String get settingsFieldEpirbHint => 'e.g. Nav station';
+
+  @override
+  String get settingsFieldFireSuppHint => 'e.g. Galley, engine room';
 
   @override
   String get settingsAppearanceSection => 'Appearance';
@@ -1213,9 +1235,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emergencyEditContactTitle => 'Edit contact';
-
-  @override
-  String get emergencyNoSafetyData => 'No safety data recorded.';
 
   @override
   String get emergencyBloodBadge => 'BLOOD';

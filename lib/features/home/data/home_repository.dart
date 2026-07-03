@@ -75,6 +75,7 @@ class HomeRepository extends ChangeNotifier {
                   allergies: m.allergies,
                   conditions: m.conditions,
                   remarks: m.remarks,
+                  personalEpirb: m.personalEpirb,
                 ))
             .toList();
       }

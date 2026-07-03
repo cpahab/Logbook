@@ -23,13 +23,14 @@ class CrewMemberAdapter extends TypeAdapter<CrewMember> {
       conditions: fields[3] as String?,
       remarks: fields[4] as String?,
       id: fields[5] as String?,
+      personalEpirb: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CrewMember obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class CrewMemberAdapter extends TypeAdapter<CrewMember> {
       ..writeByte(4)
       ..write(obj.remarks)
       ..writeByte(5)
-      ..write(obj.id);
+      ..write(obj.id)
+      ..writeByte(6)
+      ..write(obj.personalEpirb);
   }
 
   @override

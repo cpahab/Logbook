@@ -331,6 +331,7 @@ class FirestoreService {
         'allergies': c.allergies,
         'conditions': c.conditions,
         'remarks': c.remarks,
+        'personalEpirb': c.personalEpirb,
       };
 
   static DayEntry _fromMap(Map<String, dynamic> d, DateTime date) => DayEntry(
@@ -412,6 +413,7 @@ class FirestoreService {
         allergies: d['allergies'] as String?,
         conditions: d['conditions'] as String?,
         remarks: d['remarks'] as String?,
+        personalEpirb: d['personalEpirb'] as String?,
       );
 
   // ── Roster serialization ───────────────────────────────────────────────────
@@ -423,6 +425,7 @@ class FirestoreService {
         'allergies': m.allergies,
         'conditions': m.conditions,
         'remarks': m.remarks,
+        'personalEpirb': m.personalEpirb,
       };
 
   static List<CrewMember> _rosterFromDoc(Map<String, dynamic> data) {
@@ -439,6 +442,7 @@ class FirestoreService {
         conditions: d['conditions'] as String?,
         remarks: d['remarks'] as String?,
         id: d['id'] as String?,
+        personalEpirb: d['personalEpirb'] as String?,
       );
 
   // ── Private helpers ────────────────────────────────────────────────────────
