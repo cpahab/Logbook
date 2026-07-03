@@ -85,6 +85,12 @@ class ThemeProvider extends ChangeNotifier {
   ThemeMode get themeMode               => _mode;
   Locale    get locale                  => _locale;
   String    get localeString            => _locale.languageCode == 'de' ? 'de_CH' : 'en_GB';
+  // Region-qualified locale for Flutter's own Material widgets (date pickers,
+  // calendars): a bare Locale('en') resolves to US month/day ordering, so we
+  // need the country code to get day/month/year everywhere.
+  Locale    get materialLocale          => _locale.languageCode == 'de'
+      ? const Locale('de', 'CH')
+      : const Locale('en', 'GB');
   StationaryMode get filterMode         => _filterMode;
   double get minStopMinutes             => _minStopMinutes;
   double get maxStopSpreadM             => _maxStopSpreadM;

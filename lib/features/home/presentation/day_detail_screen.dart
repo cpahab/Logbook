@@ -2520,7 +2520,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       initialDate: current,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      locale: context.read<ThemeProvider>().locale,
+      locale: context.read<ThemeProvider>().materialLocale,
     );
     if (!mounted || picked == null) return;
     final newDate = DateTime(picked.year, picked.month, picked.day);

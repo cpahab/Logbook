@@ -335,7 +335,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
               initialDate: _selectedDate,
               firstDate: DateTime(2000),
               lastDate: DateTime.now().add(const Duration(days: 365)),
-              locale: Locale(locale),
+              locale: context.read<ThemeProvider>().materialLocale,
             );
             if (picked == null || !mounted) return;
             setState(() {
@@ -383,7 +383,7 @@ class _DatePickerRow extends StatelessWidget {
           initialDate: selected,
           firstDate: DateTime(2000),
           lastDate: DateTime.now().add(const Duration(days: 365)),
-          locale: Locale(locale),
+          locale: context.read<ThemeProvider>().materialLocale,
         );
         if (picked != null) {
           onChanged(DateTime(picked.year, picked.month, picked.day));

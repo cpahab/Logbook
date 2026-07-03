@@ -185,7 +185,7 @@ class _TracksScreenState extends State<TracksScreen> {
       firstDate: DateTime(2000),
       lastDate: now,
       initialDateRange: initial,
-      locale: context.read<ThemeProvider>().locale,
+      locale: context.read<ThemeProvider>().materialLocale,
       builder: (context, child) => MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.0,
         child: child!,

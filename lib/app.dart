@@ -20,7 +20,7 @@ class Logbook extends StatelessWidget {
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: provider.themeMode,
-      locale: provider.locale,
+      locale: provider.materialLocale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
     );
