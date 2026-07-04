@@ -2,6 +2,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart' show BuiltInMapCachingProvider;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
@@ -88,6 +89,19 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('de_CH');
   await initializeDateFormatting('en_GB');
+
+  // Configure flutter_map's built-in disk tile cache before any tile is
+  // fetched (by a map screen or the PDF exporter) — first caller otherwise
+  // locks in the library defaults. 14 days is generous for coastlines/roads,
+  // which change slowly; try/catch so a fresh install with no storage access
+  // yet still starts with network-only tiles.
+  try {
+    BuiltInMapCachingProvider.getOrCreateInstance(
+      overrideFreshAge: const Duration(days: 14),
+    );
+  } catch (_) {
+    // Tile caching unavailable — tiles will still load, just uncached.
+  }
 
   await Hive.initFlutter();
 
