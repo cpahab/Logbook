@@ -7,7 +7,7 @@ const kMapTilerApiKey = String.fromEnvironment(
 
 /// MapTiler OpenStreetMap style — flutter_map TileLayer urlTemplate.
 const kBaseTileUrl =
-    'https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.png?key=$kMapTilerApiKey';
+    'https://api.maptiler.com/tiles/openstreetmap/{z}/{x}/{y}.jpg?key=$kMapTilerApiKey';
 
 /// MapTiler satellite imagery (plain, no labels) — flutter_map TileLayer urlTemplate.
 const kSatelliteUrl =
