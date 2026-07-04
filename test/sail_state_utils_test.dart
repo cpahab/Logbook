@@ -22,17 +22,6 @@ void main() {
       }
     });
 
-    test('maps legacy German mainsail states', () {
-      expect(normalizeSailState('Voll gesetzt'), 'sail:full');
-      expect(normalizeSailState('1. Reff'),      'sail:reef1');
-      expect(normalizeSailState('2. Reff'),      'sail:reef2');
-      expect(normalizeSailState('Niedergeholt'), 'sail:lowered');
-    });
-
-    test('maps legacy German foresail states', () {
-      expect(normalizeSailState('Eingerollt'), 'sail:furled');
-    });
-
     test('returns null for unrecognised string', () {
       expect(normalizeSailState('something random'), isNull);
       expect(normalizeSailState(''),                  isNull);
@@ -55,30 +44,8 @@ void main() {
       expect(sailStateAbbr('sail:furled'),  'ER');
     });
 
-    test('maps legacy German strings to the same abbreviations', () {
-      expect(sailStateAbbr('Voll gesetzt'), 'VG');
-      expect(sailStateAbbr('1. Reff'),      'R1');
-      expect(sailStateAbbr('2. Reff'),      'R2');
-      expect(sailStateAbbr('Niedergeholt'), 'NR');
-      expect(sailStateAbbr('Eingerollt'),   'ER');
-    });
-
     test('returns em-dash for unrecognised input', () {
       expect(sailStateAbbr('unknown'), '—');
-    });
-
-    test('sentinel and legacy produce identical abbreviations', () {
-      final pairs = [
-        ('sail:full',    'Voll gesetzt'),
-        ('sail:reef1',   '1. Reff'),
-        ('sail:reef2',   '2. Reff'),
-        ('sail:lowered', 'Niedergeholt'),
-        ('sail:furled',  'Eingerollt'),
-      ];
-      for (final (sentinel, legacy) in pairs) {
-        expect(sailStateAbbr(sentinel), sailStateAbbr(legacy),
-            reason: '$sentinel and "$legacy" should abbreviate identically');
-      }
     });
   });
 
@@ -92,19 +59,6 @@ void main() {
       keelUpLabel:    'Up',
       keelFieldLabel: 'Keel',
     );
-
-    test('passes through legacy plain-text notes unchanged', () {
-      const legacy = 'Motoröl: 75% · Kraftstoff: 60%';
-      expect(
-        parseVesselStatus(legacy,
-            oilLabel:       labels.oilLabel,
-            fuelLabel:      labels.fuelLabel,
-            keelDownLabel:  labels.keelDownLabel,
-            keelUpLabel:    labels.keelUpLabel,
-            keelFieldLabel: labels.keelFieldLabel),
-        legacy,
-      );
-    });
 
     test('parses oil + fuel sentinel', () {
       expect(

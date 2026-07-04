@@ -61,38 +61,29 @@ class DayDetailScreen extends StatefulWidget {
 }
 
 class _DayDetailScreenState extends State<DayDetailScreen> {
-  // Detects crew notes stored with either the new sentinel ('crew:') or the
-  // legacy format ('Besatzung: ') so Firestore entries written before the
-  // sentinel rename continue to render correctly.
-  static bool _isCrewNote(String? note) =>
-      note?.startsWith('crew:') == true ||
-      note?.startsWith('Besatzung: ') == true;
+  // Detects crew notes, stored as 'crew:role=0:Alice · Bob'.
+  static bool _isCrewNote(String? note) => note?.startsWith('crew:') == true;
 
   // Returns the display string for a crew note, stripping the sentinel prefix
   // and prepending a localisation-ready display label.
-  // New format: 'crew:role=0:Alice · Bob' → 'Crew: Alice (Skipper) · Bob'
-  // Legacy format: 'crew:Alice (Skipper) · Bob' — passes through verbatim after stripping prefix.
+  // 'crew:role=0:Alice · Bob' → 'Crew: Alice (Skipper) · Bob'
   static String _crewNoteDisplay(String note, String crewLabel, String skipperLabel) {
-    if (note.startsWith('crew:')) {
-      final body = note.substring(5).split(' · ').map((part) {
-        if (part.startsWith('role=0:')) return '${part.substring(7)} ($skipperLabel)';
-        return part;
-      }).join(' · ');
-      return '$crewLabel: $body';
-    }
-    return note; // legacy format already begins with 'Besatzung: '
+    final body = note.substring(5).split(' · ').map((part) {
+      if (part.startsWith('role=0:')) return '${part.substring(7)} ($skipperLabel)';
+      return part;
+    }).join(' · ');
+    return '$crewLabel: $body';
   }
 
-  // Parses a vessel-status sentinel note (`vs:oil=75,fuel=60`, `vs:keel=down`)
-  // and returns a localised display string. Legacy notes (no `vs:` prefix) are
-  // returned verbatim so old Firestore documents continue to display correctly.
+  // Maps a sail-state sentinel (grossState/fockState, e.g. 'sail:reef1') to
+  // its localised display string.
   static String _sailStateDisplay(String s, AppLocalizations l10n) => switch (s) {
     'sail:full'    => l10n.sailFull,
     'sail:reef1'   => l10n.sailReef1,
     'sail:reef2'   => l10n.sailReef2,
     'sail:lowered' => l10n.sailLowered,
     'sail:furled'  => l10n.sailFurled,
-    _              => s, // legacy German text — display verbatim
+    _              => s, // unreachable: grossState/fockState are always one of the sentinels above
   };
 
   static String _vesselStatusDisplay(String note, AppLocalizations l10n) =>
