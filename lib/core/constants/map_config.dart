@@ -10,9 +10,11 @@ const kMapTilerApiKey = String.fromEnvironment(
 /// Deliberately on the Maps API, not the Tiles API: there is no raster
 /// "openstreetmap" tileset under /tiles/ (confirmed via MapTiler's own
 /// "Tileset with this identifier does not exist" error) — /maps/openstreetmap
-/// is the only endpoint that serves this basemap as raster tiles.
+/// is the only endpoint that serves this basemap as raster tiles. .jpg is
+/// MapTiler's own declared format for this style (see its tiles.json:
+/// "format":"jpg"), not just a same-endpoint tweak.
 const kBaseTileUrl =
-    'https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.png?key=$kMapTilerApiKey';
+    'https://api.maptiler.com/maps/openstreetmap/{z}/{x}/{y}.jpg?key=$kMapTilerApiKey';
 
 /// MapTiler satellite imagery (plain, no labels) — flutter_map TileLayer urlTemplate.
 const kSatelliteUrl =
