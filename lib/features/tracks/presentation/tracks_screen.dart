@@ -473,6 +473,15 @@ class _TracksScreenState extends State<TracksScreen> {
                   ? (tile, error, stackTrace) =>
                       debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
                   : null,
+              // Fade-in on arrival is TileLayer's default (tileDisplay:
+              // TileDisplay.fadeIn()); this only overrides the tile that
+              // failed to load, in place of a blank grey square.
+              tileBuilder: (context, tileWidget, tile) => tile.loadError
+                  ? Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: const Icon(Icons.map_outlined, size: 20),
+                    )
+                  : tileWidget,
             ),
             Builder(builder: (ctx) {
               if (MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
@@ -1228,6 +1237,15 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
                   ? (tile, error, stackTrace) =>
                       debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
                   : null,
+              // Fade-in on arrival is TileLayer's default (tileDisplay:
+              // TileDisplay.fadeIn()); this only overrides the tile that
+              // failed to load, in place of a blank grey square.
+              tileBuilder: (context, tileWidget, tile) => tile.loadError
+                  ? Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: const Icon(Icons.map_outlined, size: 20),
+                    )
+                  : tileWidget,
             ),
             Builder(builder: (ctx) {
               if (MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();

@@ -2411,6 +2411,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   ? (tile, error, stackTrace) =>
                       debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
                   : null,
+              // Fade-in on arrival is TileLayer's default (tileDisplay:
+              // TileDisplay.fadeIn()); this only overrides the tile that
+              // failed to load, in place of a blank grey square.
+              tileBuilder: (context, tileWidget, tile) => tile.loadError
+                  ? Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: const Icon(Icons.map_outlined, size: 20),
+                    )
+                  : tileWidget,
             ),
             _ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
             _ZoomAwareCircleLayer(circles: anchorCircles),
@@ -3735,6 +3744,15 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
                   ? (tile, error, stackTrace) =>
                       debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
                   : null,
+              // Fade-in on arrival is TileLayer's default (tileDisplay:
+              // TileDisplay.fadeIn()); this only overrides the tile that
+              // failed to load, in place of a blank grey square.
+              tileBuilder: (context, tileWidget, tile) => tile.loadError
+                  ? Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: const Icon(Icons.map_outlined, size: 20),
+                    )
+                  : tileWidget,
             ),
             _ZoomAwareUncertaintyLayer(polygons: fsUncertaintyPolygons),
             _ZoomAwareCircleLayer(circles: anchorCircles),
