@@ -1,4 +1,9 @@
-const kMapTilerApiKey = 'vp4ZSDwE0yUaVvFJOs4G';
+// Injected at build time via --dart-define=MAPTILER_KEY=...
+// For local dev: add to .vscode/launch.json toolArgs (gitignored).
+const kMapTilerApiKey = String.fromEnvironment(
+  'MAPTILER_KEY',
+  defaultValue: '',
+);
 
 /// MapTiler OpenStreetMap style — flutter_map TileLayer urlTemplate.
 const kBaseTileUrl =
