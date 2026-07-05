@@ -512,13 +512,24 @@ class _TracksScreenState extends State<TracksScreen> {
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(
               attributions: [
-                TextSourceAttribution('MapTiler', onTap: () async {
-                  final uri = Uri.parse('https://www.maptiler.com/copyright/');
-                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }),
-                if (!_satelliteView)
-                  TextSourceAttribution('OpenStreetMap contributors', onTap: () async {
-                    final uri = Uri.parse('https://www.openstreetmap.org/copyright');
+                // MapTiler version (temporarily disabled, see map_config.dart):
+                // TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
+                //   final uri = Uri.parse(kBaseAttributionUrl);
+                //   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                // }),
+                // if (!_satelliteView)
+                //   TextSourceAttribution(kOsmAttributionLabel, onTap: () async {
+                //     final uri = Uri.parse(kOsmAttributionUrl);
+                //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                //   }),
+                if (_satelliteView)
+                  TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
+                    final uri = Uri.parse(kSatelliteAttributionUrl);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  })
+                else
+                  TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
+                    final uri = Uri.parse(kBaseAttributionUrl);
                     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                   }),
               ],
@@ -1275,13 +1286,24 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
             }),
             MarkerLayer(markers: arrowMarkers),
             RichAttributionWidget(attributions: [
-              TextSourceAttribution('MapTiler', onTap: () async {
-                final uri = Uri.parse('https://www.maptiler.com/copyright/');
-                if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }),
-              if (!_satelliteView)
-                TextSourceAttribution('OpenStreetMap contributors', onTap: () async {
-                  final uri = Uri.parse('https://www.openstreetmap.org/copyright');
+              // MapTiler version (temporarily disabled, see map_config.dart):
+              // TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
+              //   final uri = Uri.parse(kBaseAttributionUrl);
+              //   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              // }),
+              // if (!_satelliteView)
+              //   TextSourceAttribution(kOsmAttributionLabel, onTap: () async {
+              //     final uri = Uri.parse(kOsmAttributionUrl);
+              //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              //   }),
+              if (_satelliteView)
+                TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
+                  final uri = Uri.parse(kSatelliteAttributionUrl);
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                })
+              else
+                TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
+                  final uri = Uri.parse(kBaseAttributionUrl);
                   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                 }),
             ]),
