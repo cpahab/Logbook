@@ -17,6 +17,9 @@ TextTheme _buildDarkTextTheme() {
     headlineLarge: base.headlineLarge?.copyWith(fontWeight: FontWeight.w500),
     headlineMedium: base.headlineMedium?.copyWith(fontWeight: FontWeight.w500),
     headlineSmall: base.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
+    // Eyebrow labels (bold, tracked, uppercase small-caps style) app-wide.
+    labelSmall: base.labelSmall?.copyWith(
+        fontWeight: FontWeight.w700, letterSpacing: 1.5),
   );
 }
 

@@ -54,10 +54,7 @@ class CrewPickerSheet extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       context.l10n.crewPickerTitle,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
                     ),
@@ -177,8 +174,8 @@ class _RosterTile extends StatelessWidget {
                   if (sub.isNotEmpty)
                     Text(
                       sub,
-                      style: GoogleFonts.dmSans(
-                          fontSize: 12, color: cs.onSurfaceVariant),
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                          color: cs.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

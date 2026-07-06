@@ -182,10 +182,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         ),
         title: Text(
           '$dayName · $dateStr',
-          style: GoogleFonts.dmSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.0,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(
             color: cs.primary,
           ),
           overflow: TextOverflow.ellipsis,
@@ -320,10 +317,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       children: [
         Text(
           context.l10n.sectionNotes.toUpperCase(),
-          style: GoogleFonts.dmSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(
             color: cs.secondary,
           ),
         ),
@@ -349,8 +343,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               padding: const EdgeInsets.all(16),
               child: Text(
                 entry.freeText!,
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: cs.onSurface,
                   height: 1.5,
                 ),
@@ -394,10 +387,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       children: [
         Text(
           context.l10n.sectionDiary.toUpperCase(),
-          style: GoogleFonts.dmSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(
             color: cs.secondary,
           ),
         ),
@@ -459,10 +449,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           children: [
             Text(
               context.l10n.sectionCrew.toUpperCase(),
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(
                 color: cs.secondary,
               ),
             ),
@@ -501,10 +488,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       const SizedBox(width: 4),
                       Text(
                         entry.crew.isEmpty ? context.l10n.add.toUpperCase() : context.l10n.change.toUpperCase(),
-                        style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
                           color: cs.secondary,
                         ),
                       ),
@@ -744,10 +728,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       children: [
         Text(
           context.l10n.sectionRoute.toUpperCase(),
-          style: GoogleFonts.dmSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(
             color: cs.secondary,
           ),
         ),
@@ -1031,10 +1012,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           children: [
             Text(
               context.l10n.sectionLogEntries.toUpperCase(),
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(
                 color: cs.secondary,
               ),
             ),
@@ -1175,10 +1153,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               Flexible(
                 child: Text(
                   entryLabel,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(
                     color: cs.secondary,
                   ),
                   maxLines: 1,
@@ -1248,8 +1223,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 isCrewEntry
                     ? _crewNoteDisplay(t.vesselStatusNote!, context.l10n.dataCrewNote, context.l10n.labelSkipper)
                     : _vesselStatusDisplay(t.vesselStatusNote!, context.l10n),
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: cs.onSurfaceVariant,
                   height: 1.5,
                 ),
@@ -1279,8 +1253,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   if (t.motorOn != null)
                     '${context.l10n.dataMotor}: ${t.motorOn! ? context.l10n.on : context.l10n.off}',
                 ].join(' · '),
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: cs.onSurfaceVariant,
                   height: 1.5,
                 ),
@@ -1482,9 +1455,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           children: [
             Text(
               label,
-              style: GoogleFonts.dmSans(
-                fontSize: 11, fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(
                 color: isOriginal ? cs.mutedLabel : cs.secondary,
               ),
             ),
@@ -1506,13 +1477,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         if (details.isNotEmpty) ...[
           const SizedBox(height: 2),
           Text(details,
-            style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant)),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurfaceVariant)),
         ],
         if (remarks?.isNotEmpty == true) ...[
           const SizedBox(height: 2),
           Text(remarks!,
-            style: GoogleFonts.dmSans(
-              fontSize: 13, fontStyle: FontStyle.italic, color: cs.onSurface)),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(
+              fontStyle: FontStyle.italic, color: cs.onSurface)),
         ],
         if (reason != null) ...[
           const SizedBox(height: 6),
@@ -1524,7 +1495,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
             child: Text(
               reason,
-              style: GoogleFonts.dmSans(fontSize: 12, color: cs.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurfaceVariant),
             ),
           ),
         ],
@@ -1547,10 +1518,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           children: [
             Text(
               context.l10n.sectionPhotos.toUpperCase(),
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(
                 color: cs.secondary,
               ),
             ),
@@ -1599,8 +1567,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 const SizedBox(height: 8),
                 Text(
                   context.l10n.dayImportingPhotos,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 14,
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                     fontStyle: FontStyle.italic,
                     color: cs.onSurfaceVariant,
                   ),
@@ -1826,10 +1793,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           children: [
             Text(
               context.l10n.sectionVesselStatus.toUpperCase(),
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(
                 color: cs.secondary,
               ),
             ),
@@ -1844,10 +1808,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     const SizedBox(width: 4),
                     Text(
                       context.l10n.update.toUpperCase(),
-                      style: GoogleFonts.dmSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(
                         color: cs.secondary,
                       ),
                     ),
@@ -1904,10 +1865,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     children: [
                       Text(
                         context.l10n.entryDialogKeelLabel.toUpperCase(),
-                        style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
                           color: cardFg.withValues(alpha: 0.70),
                         ),
                       ),
@@ -1955,10 +1913,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.dmSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(
             color: onCard.withValues(alpha: 0.70),
           ),
         ),

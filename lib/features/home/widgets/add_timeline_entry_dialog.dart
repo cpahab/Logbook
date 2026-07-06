@@ -626,10 +626,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         const SizedBox(width: 8),
         Text(
           label.toUpperCase(),
-          style: GoogleFonts.dmSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(
             color: cs.onSurfaceVariant,
           ),
         ),

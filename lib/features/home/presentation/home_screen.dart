@@ -445,10 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Text(
                   context.l10n.homeAllButton.toUpperCase(),
-                  style: GoogleFonts.dmSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(
                     color: _showAllYears ? cs.onPrimary : cs.onSurfaceVariant,
                   ),
                 ),
@@ -491,10 +488,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Text(
                   '$year',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(
                     color:
                         active ? cs.onPrimary : cs.onSurfaceVariant,
                   ),
@@ -621,8 +615,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       TextSpan(
                         text: ' $unit',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 12,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
                       ),
@@ -655,10 +648,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               label,
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(
                 color: cs.secondary,
               ),
             ),
@@ -763,10 +753,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             Expanded(
                               child: Text(
                                 '${DateFormat('EEEE', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()} · ${DateFormat('d. MMM', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()}',
-                                style: GoogleFonts.dmSans(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.5,
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(
                                   color: cs.mutedLabel,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -817,8 +804,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 2),
                           Text(
                             note!,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 13,
+                            style: Theme.of(context).textTheme.bodySmall!.copyWith(
                               fontStyle: FontStyle.italic,
                               color: cs.onSurfaceVariant,
                             ),

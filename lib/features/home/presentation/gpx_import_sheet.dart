@@ -187,7 +187,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
           const SizedBox(height: 8),
           Text(
             l10n.gpxShareMergedNote(widget.resolution.trackCount),
-            style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurfaceVariant),
           ),
         ],
         const SizedBox(height: 16),
@@ -296,18 +296,18 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
         _buildHandle(),
         Text(
           incomingLine(),
-          style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant),
+          style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 4),
         Text(
           existingLine(),
-          style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant),
+          style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurfaceVariant),
         ),
         if (widget.resolution.trackCount > 1) ...[
           const SizedBox(height: 8),
           Text(
             l10n.gpxShareMergedNote(widget.resolution.trackCount),
-            style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurfaceVariant),
           ),
         ],
         const SizedBox(height: 20),

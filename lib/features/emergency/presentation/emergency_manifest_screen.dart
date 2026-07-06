@@ -72,15 +72,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         centerTitle: true,
-        title: Text(
-          l10n.emergencyManifestTitle,
-          style: GoogleFonts.dmSans(
-            fontSize: 24,
-            fontWeight: FontWeight.w500,
-            letterSpacing: -0.24,
-            color: cs.onSurface,
-          ),
-        ),
+        title: Text(l10n.emergencyManifestTitle),
         actions: [
           IconButton(
             icon: Icon(
@@ -312,10 +304,7 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: GoogleFonts.dmSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(
             color: cs.onSurfaceVariant,
           ),
         ),
@@ -408,8 +397,7 @@ class _ContactsCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Text(
                 context.l10n.emergencyNoContacts,
-                style: GoogleFonts.dmSans(
-                  fontSize: 13,
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
                   color: cs.onSurfaceVariant,
                   fontStyle: FontStyle.italic,
                 ),
@@ -489,8 +477,7 @@ class _ContactRow extends StatelessWidget {
                 ),
                 Text(
                   '${contact.role} · ${contact.phone}',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 13,
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
                 ),
@@ -896,8 +883,7 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
             if (idFields.isEmpty && safetyItems.isEmpty)
               Text(
                 l10n.emergencyNoSafetyData,
-                style: GoogleFonts.dmSans(
-                    fontSize: 13,
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
                     color: cs.onSurfaceVariant,
                     fontStyle: FontStyle.italic),
               ),
@@ -943,7 +929,7 @@ class _VesselEditField extends StatelessWidget {
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
           onChanged: onChanged,
-          style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurface),
+          style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurface),
           decoration: InputDecoration(
             isDense: true,
             contentPadding:
@@ -1020,8 +1006,8 @@ class _SafetyItem extends StatelessWidget {
                         fontSize: 14, fontWeight: FontWeight.w600,
                         color: cs.onSurface)),
                 Text(detail,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 13, color: cs.onSurfaceVariant)),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: cs.onSurfaceVariant)),
               ],
             ),
           ),
@@ -1061,8 +1047,7 @@ class _FrequenciesCard extends StatelessWidget {
               padding: const EdgeInsets.all(6),
               child: Text(
                 context.l10n.emergencyNoFrequencies,
-                style: GoogleFonts.dmSans(
-                    fontSize: 13,
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(
                     color: cs.onSurfaceVariant,
                     fontStyle: FontStyle.italic),
               ),
@@ -1154,8 +1139,7 @@ class _FrequencyRow extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: urgent ? em.criticalColor : cs.primary)),
                 Text(desc,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 13,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         color: urgent ? cs.onErrorContainer : cs.onSurfaceVariant)),
               ],
             ),
@@ -1513,8 +1497,7 @@ class _CrewDetailSheet extends StatelessWidget {
             if (rows.isEmpty)
               Text(
                 l10n.crewDetailNoInfo,
-                style: GoogleFonts.dmSans(
-                    fontSize: 14,
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                     fontStyle: FontStyle.italic,
                     color: cs.onSurfaceVariant),
               )
@@ -1624,8 +1607,7 @@ class _EmptyCrewHint extends StatelessWidget {
         children: [
           Text(
             l10n.emergencyNoCrewHint,
-            style: GoogleFonts.dmSans(
-                fontSize: 13,
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(
                 color: cs.onSurfaceVariant,
                 fontStyle: FontStyle.italic),
           ),

@@ -129,10 +129,7 @@ class _SectionHeader extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Text(
       title.toUpperCase(),
-      style: GoogleFonts.dmSans(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 2,
+      style: Theme.of(context).textTheme.labelSmall!.copyWith(
         color: cs.mutedLabel,
       ),
     );
@@ -297,8 +294,7 @@ class _SignalCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       color: cs.onSurfaceVariant,
                       fontStyle: FontStyle.italic,
                       height: 1.4,
@@ -382,8 +378,7 @@ class _FlagSignalCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               context.l10n.emergencyFlagSignalSubtitle,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 12,
+                              style: Theme.of(context).textTheme.bodySmall!.copyWith(
                                 color: cs.onSurfaceVariant,
                                 fontStyle: FontStyle.italic,
                                 height: 1.4,
@@ -534,8 +529,7 @@ class _ElectronicItem extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 12,
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
                     color: cs.onSurfaceVariant,
                     height: 1.4,
                   ),
@@ -599,8 +593,7 @@ class _MaydayCard extends StatelessWidget {
               Text(
                 // MAYDAY within tip text is part of the instruction — kept as protocol reference
                 l10n.emergencyRadioProtocolTip,
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: Colors.white.withValues(alpha: 0.8),
                   height: 1.5,
                 ),

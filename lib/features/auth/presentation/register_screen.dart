@@ -113,8 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 6),
                 Text(
                   l10n.authRegisterSubtitle,
-                  style: GoogleFonts.dmSans(
-                      fontSize: 14, color: cs.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 32),
 
@@ -206,8 +205,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(l10n.authAlreadyHaveAccount,
-                        style: GoogleFonts.dmSans(
-                            fontSize: 14, color: cs.onSurfaceVariant)),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant)),
                     TextButton(
                       onPressed: () => context.pop(),
                       child: Text(l10n.authSignInLink,

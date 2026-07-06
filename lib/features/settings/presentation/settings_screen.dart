@@ -742,15 +742,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         centerTitle: true,
-        title: Text(
-          l10n.settingsTitle,
-          style: GoogleFonts.dmSans(
-            fontSize: 24,
-            fontWeight: FontWeight.w500,
-            letterSpacing: -0.24,
-            color: cs.onSurface,
-          ),
-        ),
+        title: Text(l10n.settingsTitle),
       ),
       bottomNavigationBar: AppBottomNav(
         active: NavTab.settings,
@@ -848,10 +840,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsVesselSection.toUpperCase(),
-                        style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.5,
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
                           color: cs.secondary,
                         ),
                       ),
@@ -1003,10 +992,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 l10n.settingsAppearanceSection.toUpperCase(),
-                style: GoogleFonts.dmSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   color: cs.secondary,
                 ),
               ),
@@ -1175,10 +1161,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     context.l10n.settingsTrackFilterSection.toUpperCase(),
-                    style: GoogleFonts.dmSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
+                    style: Theme.of(context).textTheme.labelSmall!.copyWith(
                       color: cs.secondary,
                     ),
                   ),
@@ -1199,8 +1182,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       p.filterMode == StationaryMode.speed
                           ? context.l10n.settingsFilterModeMooring
                           : context.l10n.settingsFilterModeExact,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 12,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         color: cs.onSurfaceVariant,
                       ),
                     ),
@@ -1240,8 +1222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     context.l10n.settingsStationaryDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 13,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       color: cs.onSurfaceVariant,
                     ),
                   ),
@@ -1276,8 +1257,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     p.filterMode == StationaryMode.speed
                         ? context.l10n.settingsMooringDesc
                         : context.l10n.settingsExactPositionDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1314,8 +1294,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsMinStopDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1352,8 +1331,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsMaxAnchorDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1379,8 +1357,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsColdStartDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1417,8 +1394,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     Text(
                       context.l10n.settingsTrimSharpnessDesc,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 12,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         fontStyle: FontStyle.italic,
                         color: cs.onSurfaceVariant,
                       ),
@@ -1456,8 +1432,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsUnderwayDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1494,8 +1469,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsPercentileDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1532,8 +1506,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsMaxSpeedDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1559,8 +1532,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsShowRawTrackDesc,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1575,8 +1547,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             size: 16, color: cs.onSurfaceVariant),
                         label: Text(
                           context.l10n.reset,
-                          style: GoogleFonts.dmSans(
-                            fontSize: 13,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
                             color: cs.onSurfaceVariant,
                           ),
                         ),
@@ -1663,10 +1634,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text(
                             context.l10n.settingsCrewSection.toUpperCase(),
-                            style: GoogleFonts.dmSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.5,
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(
                               color: cs.secondary,
                             ),
                           ),
@@ -1678,8 +1646,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 count == 0
                                     ? context.l10n.settingsNoEntries
                                     : '$count ${context.l10n.settingsPersonCount(count)}',
-                                style: GoogleFonts.dmSans(
-                                  fontSize: 13,
+                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
                                   color: cs.onSurfaceVariant,
                                 ),
                               );
@@ -1734,10 +1701,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 l10n.settingsLogbooksSection.toUpperCase(),
-                style: GoogleFonts.dmSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   color: cs.secondary,
                 ),
               ),
@@ -1771,8 +1735,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(l10n.settingsNoLogbooks,
-                  style: GoogleFonts.dmSans(
-                      fontSize: 13, color: cs.onSurfaceVariant)),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: cs.onSurfaceVariant)),
             )
           else
             ...(_logbooks.map((logbook) => _buildBoatRow(logbook, activeLogbookId, cs, uid))),
@@ -1832,8 +1796,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     !isActive && _isOffline
                         ? l10n.offlineLabel
                         : isOwner ? l10n.settingsRoleOwner : l10n.settingsRoleGuest,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 12, color: cs.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: cs.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -1873,10 +1837,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(
                 '$logbookName · ${l10n.settingsShare}'.toUpperCase(),
-                style: GoogleFonts.dmSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   color: cs.secondary,
                 ),
               ),
@@ -1933,7 +1894,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   side: BorderSide(color: cs.outlineVariant),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
-                  textStyle: GoogleFonts.dmSans(fontSize: 13),
+                  textStyle: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
             ),
@@ -1947,7 +1908,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   side: BorderSide(color: cs.outlineVariant),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
-                  textStyle: GoogleFonts.dmSans(fontSize: 13),
+                  textStyle: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
             ),
@@ -2017,8 +1978,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(left: 4),
                   child: Text(l10n.settingsNoGuests,
-                      style: GoogleFonts.dmSans(
-                          fontSize: 13, color: cs.onSurfaceVariant)),
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                          color: cs.onSurfaceVariant)),
                 );
               }
               return Column(
@@ -2036,8 +1997,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text('…$shortId',
-                              style: GoogleFonts.dmSans(
-                                  fontSize: 13, color: cs.onSurface)),
+                              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                  color: cs.onSurface)),
                         ),
                         TextButton(
                           style: TextButton.styleFrom(
@@ -2095,10 +2056,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 l10n.settingsAccountSection.toUpperCase(),
-                style: GoogleFonts.dmSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   color: cs.secondary,
                 ),
               ),
@@ -2109,8 +2067,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (user != null) ...[
             Text(
               l10n.settingsAccountSignedInAs,
-              style: GoogleFonts.dmSans(
-                fontSize: 13,
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
                 color: cs.onSurfaceVariant,
               ),
             ),
@@ -2184,8 +2141,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
                 icon: Icon(Icons.logout, size: 18, color: cs.error),
                 label: Text(l10n.authSignOut,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 14, color: cs.error)),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        color: cs.error)),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: cs.outlineVariant),
                   shape: RoundedRectangleBorder(
@@ -2320,8 +2277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ] else ...[
             Text(
               l10n.settingsAccountNotSignedIn,
-              style: GoogleFonts.dmSans(
-                fontSize: 13,
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
                 color: cs.onSurfaceVariant,
               ),
             ),

@@ -323,15 +323,7 @@ class _TracksScreenState extends State<TracksScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         centerTitle: true,
-        title: Text(
-          context.l10n.tracksTitle,
-          style: GoogleFonts.dmSans(
-            fontSize: 24,
-            fontWeight: FontWeight.w500,
-            letterSpacing: -0.24,
-            color: cs.onSurface,
-          ),
-        ),
+        title: Text(context.l10n.tracksTitle),
       ),
       bottomNavigationBar: AppBottomNav(
         active: NavTab.map,
@@ -400,7 +392,6 @@ class _TracksScreenState extends State<TracksScreen> {
   Widget _chip(String label, _FilterPreset preset, ColorScheme cs,
       {bool isCustom = false}) {
     final isActive = _preset == preset;
-    final isDateRange = isCustom && _preset == preset && _customRange != null;
     return GestureDetector(
       onTap: () => isCustom ? _pickDateRange() : _applyPreset(preset),
       child: AnimatedContainer(
@@ -412,10 +403,7 @@ class _TracksScreenState extends State<TracksScreen> {
         ),
         child: Text(
           label,
-          style: GoogleFonts.dmSans(
-            fontSize: isDateRange ? 11 : 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: isDateRange ? 0.3 : 1.5,
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(
             color: isActive ? cs.onPrimary : cs.onSurfaceVariant,
           ),
         ),
@@ -734,8 +722,7 @@ class _TracksScreenState extends State<TracksScreen> {
                     if (unit.isNotEmpty)
                       TextSpan(
                         text: ' $unit',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 12,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
                       ),
@@ -860,10 +847,7 @@ class _TracksScreenState extends State<TracksScreen> {
                                 Expanded(
                                   child: Text(
                                     dateLabel.toUpperCase(),
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 1.5,
+                                    style: Theme.of(context).textTheme.labelSmall!.copyWith(
                                       color: cs.mutedLabel,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -888,8 +872,7 @@ class _TracksScreenState extends State<TracksScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 notes!,
-                                style: GoogleFonts.dmSans(
-                                  fontSize: 13,
+                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
                                   fontStyle: FontStyle.italic,
                                   color: cs.onSurfaceVariant,
                                 ),

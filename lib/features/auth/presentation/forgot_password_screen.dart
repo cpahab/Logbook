@@ -86,7 +86,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SizedBox(height: 8),
           Text(
             l10n.authForgotPasswordDesc,
-            style: GoogleFonts.dmSans(fontSize: 14, color: cs.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 32),
 

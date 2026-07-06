@@ -126,8 +126,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 6),
                 Text(
                   l10n.authLoginSubtitle,
-                  style: GoogleFonts.dmSans(
-                      fontSize: 14, color: cs.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                      color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 32),
 
@@ -169,8 +169,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: TextButton(
                     onPressed: () => context.push('/auth/forgot-password'),
                     child: Text(l10n.authForgotPasswordLink,
-                        style: GoogleFonts.dmSans(
-                            fontSize: 13, color: cs.primary)),
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: cs.primary)),
                   ),
                 ),
 
@@ -224,8 +224,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(l10n.authNoAccount,
-                        style: GoogleFonts.dmSans(
-                            fontSize: 14, color: cs.onSurfaceVariant)),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: cs.onSurfaceVariant)),
                     TextButton(
                       onPressed: () => context.push('/auth/register'),
                       child: Text(l10n.authRegisterLink,

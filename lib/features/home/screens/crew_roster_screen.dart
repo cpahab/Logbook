@@ -54,8 +54,8 @@ class CrewRosterScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     l10n.crewRosterEmptyHint,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 13, color: cs.mutedLabel),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: cs.mutedLabel),
                   ),
                 ],
               ),
@@ -173,8 +173,8 @@ class _RosterListTile extends StatelessWidget {
       subtitle: sub.isNotEmpty
           ? Text(
               sub,
-              style:
-                  GoogleFonts.dmSans(fontSize: 12, color: cs.onSurfaceVariant),
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  color: cs.onSurfaceVariant),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             )

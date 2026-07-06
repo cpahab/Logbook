@@ -94,8 +94,8 @@ class AuthOrDivider extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(label,
-              style: GoogleFonts.dmSans(
-                  fontSize: 12, color: cs.onSurfaceVariant)),
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                  color: cs.onSurfaceVariant)),
         ),
         Expanded(child: Divider(color: cs.outlineVariant)),
       ],

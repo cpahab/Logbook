@@ -63,7 +63,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               Text(
                 l10n.authVerifyEmailTitle,
                 style: GoogleFonts.dmSans(
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: FontWeight.w600,
                   color: cs.onSurface,
                 ),
@@ -72,8 +72,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               const SizedBox(height: 12),
               Text(
                 l10n.authVerifyEmailBody(email),
-                style: GoogleFonts.dmSans(
-                    fontSize: 14, color: cs.onSurfaceVariant, height: 1.5),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                    color: cs.onSurfaceVariant, height: 1.5),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
@@ -109,15 +109,15 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: cs.primary))
                     : Text(l10n.authVerifyEmailResend,
-                        style: GoogleFonts.dmSans(fontSize: 14)),
+                        style: Theme.of(context).textTheme.bodyMedium),
               ),
               const SizedBox(height: 24),
               TextButton(
                 onPressed: busy ? null : context.read<AuthService>().signOut,
                 child: Text(
                   context.l10n.authSignOut,
-                  style: GoogleFonts.dmSans(
-                      fontSize: 13, color: cs.onSurfaceVariant),
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: cs.onSurfaceVariant),
                 ),
               ),
             ],
