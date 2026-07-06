@@ -322,6 +322,7 @@ class _TracksScreenState extends State<TracksScreen> {
       backgroundColor: cs.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        centerTitle: true,
         title: Text(
           context.l10n.tracksTitle,
           style: GoogleFonts.dmSans(

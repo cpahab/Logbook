@@ -110,7 +110,7 @@ class _MaydayScreenState extends State<MaydayScreen>
           onPressed: () => context.pop(),
         ),
         title: Text(
-          context.l10n.maydayScreenTitle,
+          context.l10n.emergencyRadioProtocolLabel,
           style: GoogleFonts.dmSans(
             color: cs.onError,
             fontSize: 18,
@@ -130,10 +130,6 @@ class _MaydayScreenState extends State<MaydayScreen>
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
-          // Distress Signal Guide link
-          _DistressSignalCard(),
-          const SizedBox(height: 16),
-
           // Procedure header
           _ProcedureHeader(),
           const SizedBox(height: 16),
@@ -183,72 +179,6 @@ class _MaydayScreenState extends State<MaydayScreen>
   }
 }
 
-// ─── Distress Signal Guide card ───────────────────────────────────────────────
-
-class _DistressSignalCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final em = cs;
-    final l10n = context.l10n;
-    return GestureDetector(
-      onTap: () => context.push('/emergency/distress'),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
-          boxShadow: [
-            BoxShadow(
-              color: em.cardShadowColor,
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.menu_book, color: cs.onPrimaryContainer, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.emergencyGuideTitle,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  Text(
-                    l10n.emergencyDistressGuideSubtitle,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      color: cs.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right, color: cs.outlineVariant),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ─── Procedure Header ─────────────────────────────────────────────────────────
 
 class _ProcedureHeader extends StatelessWidget {
@@ -260,33 +190,6 @@ class _ProcedureHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.emergency, color: em.criticalColor, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              l10n.emergencyUrgentProcedure,
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 2.4,
-                color: em.criticalColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          // "MAYDAY" in the title is the international distress call — kept as protocol reference
-          l10n.emergencyRadioProtocolLabel,
-          style: GoogleFonts.dmSans(
-            fontSize: 36,
-            fontWeight: FontWeight.w700,
-            color: em.criticalColor,
-            height: 1.1,
-          ),
-        ),
-        const SizedBox(height: 6),
         Divider(color: em.criticalMutedColor, thickness: 2),
         const SizedBox(height: 4),
         Text(

@@ -71,13 +71,14 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
       backgroundColor: cs.surface,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        centerTitle: true,
         title: Text(
-          l10n.emergencyManifestTitle.toUpperCase(),
+          l10n.emergencyManifestTitle,
           style: GoogleFonts.dmSans(
-            color: cs.primary,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
+            fontSize: 24,
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.24,
+            color: cs.onSurface,
           ),
         ),
         actions: [

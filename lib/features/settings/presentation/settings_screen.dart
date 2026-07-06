@@ -740,11 +740,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/'),
-        ),
         automaticallyImplyLeading: false,
+        centerTitle: true,
+        title: Text(
+          l10n.settingsTitle,
+          style: GoogleFonts.dmSans(
+            fontSize: 24,
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.24,
+            color: cs.onSurface,
+          ),
+        ),
       ),
       bottomNavigationBar: AppBottomNav(
         active: NavTab.settings,
@@ -763,26 +769,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Page header ───────────────────────────────────────────
-            Text(
-              l10n.settingsTitle,
-              style: GoogleFonts.dmSans(
-                fontSize: 24,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.24,
-                color: cs.onSurface,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              l10n.settingsSubtitle,
-              style: GoogleFonts.dmSans(
-                fontSize: 15,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 20),
-
             // ── App settings ─────────────────────────────────────────────
             // ── Account ───────────────────────────────────────────────
             _buildAccountSection(cs),

@@ -412,10 +412,9 @@ class _HomeScreenState extends State<HomeScreen> {
   // ── Year filter pills ─────────────────────────────────────────────
   Widget _buildYearPills(
       List<int> years, int? effectiveYear, ColorScheme cs) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
+    final pillsRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
@@ -504,9 +503,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         }),
-        ],
-      ),
+      ],
     );
+    return LayoutBuilder(builder: (context, constraints) {
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minWidth: constraints.maxWidth),
+          child: Center(child: pillsRow),
+        ),
+      );
+    });
   }
 
   // ── Stats bento grid ─────────────────────────────────────────────

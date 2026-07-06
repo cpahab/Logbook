@@ -181,7 +181,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           onPressed: () => context.go('/'),
         ),
         title: Text(
-          '$dayName · $dateStr · LOGBUCH',
+          '$dayName · $dateStr',
           style: GoogleFonts.dmSans(
             fontSize: 11,
             fontWeight: FontWeight.w700,
