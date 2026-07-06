@@ -639,7 +639,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tracksTitle => 'Voyage Tracks';
 
   @override
-  String get tracksOneYear => 'This Year';
+  String get tracksOneYear => 'Last Year';
 
   @override
   String get tracksOneMonth => 'Last Month';

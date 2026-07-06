@@ -1301,7 +1301,7 @@ abstract class AppLocalizations {
   /// No description provided for @tracksOneYear.
   ///
   /// In de, this message translates to:
-  /// **'Dieses Jahr'**
+  /// **'Letztes Jahr'**
   String get tracksOneYear;
 
   /// No description provided for @tracksOneMonth.

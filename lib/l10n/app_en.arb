@@ -229,7 +229,7 @@
   "settingsScanTitle": "Scan logbook QR code",
 
   "tracksTitle": "Voyage Tracks",
-  "tracksOneYear": "This Year",
+  "tracksOneYear": "Last Year",
   "tracksOneMonth": "Last Month",
   "tracksOneWeek": "Last Week",
   "tracksCustom": "Custom",
