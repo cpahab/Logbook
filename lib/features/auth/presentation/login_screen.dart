@@ -118,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 20),
                 Text(
                   l10n.authLoginTitle,
-                  style: GoogleFonts.newsreader(
+                  style: GoogleFonts.dmSans(
                     fontSize: 28, fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                   ),
@@ -126,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 6),
                 Text(
                   l10n.authLoginSubtitle,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                       fontSize: 14, color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 32),
@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: TextButton(
                     onPressed: () => context.push('/auth/forgot-password'),
                     child: Text(l10n.authForgotPasswordLink,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                             fontSize: 13, color: cs.primary)),
                   ),
                 ),
@@ -189,7 +189,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: cs.onPrimary))
                         : Text(l10n.authSignIn,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                 ),
@@ -224,12 +224,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(l10n.authNoAccount,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                             fontSize: 14, color: cs.onSurfaceVariant)),
                     TextButton(
                       onPressed: () => context.push('/auth/register'),
                       child: Text(l10n.authRegisterLink,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.dmSans(
                               fontSize: 14, fontWeight: FontWeight.w600,
                               color: cs.primary)),
                     ),

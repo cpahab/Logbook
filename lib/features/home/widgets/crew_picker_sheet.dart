@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../app/theme/theme_extensions.dart';
 import '../data/home_repository.dart';
 import '../domain/crew_member.dart';
 import 'add_crew_member_dialog.dart';
@@ -53,7 +54,7 @@ class CrewPickerSheet extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       context.l10n.crewPickerTitle,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.dmSans(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.5,
@@ -168,7 +169,7 @@ class _RosterTile extends StatelessWidget {
                 children: [
                   Text(
                     member.name,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface),
@@ -176,7 +177,7 @@ class _RosterTile extends StatelessWidget {
                   if (sub.isNotEmpty)
                     Text(
                       sub,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.dmSans(
                           fontSize: 12, color: cs.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -185,7 +186,7 @@ class _RosterTile extends StatelessWidget {
               ),
             ),
             IconButton(
-              icon: Icon(Icons.edit_outlined, size: 18, color: cs.outline),
+              icon: Icon(Icons.edit_outlined, size: 18, color: cs.mutedLabel),
               onPressed: () => _edit(context),
               tooltip: context.l10n.edit,
             ),
@@ -233,7 +234,7 @@ class _NewPersonTile extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               context.l10n.crewPickerNewPerson,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: cs.primary,

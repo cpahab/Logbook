@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'theme_extensions.dart';
-
-// Dark theme
-const _darkNavy = Color(0xFF0D1E33); // Very dark background
-const _lightBlue = Color(0xFF7DB3F0); // Primary (light)
-const _cyan = Color(0xFF4CC9D4); // Secondary (cyan)
+// Dark theme — Horizon Minimalist
+const _darkNavy = Color(0xFF0D1E33); // legacy ink — still used for onSecondary (unlisted role)
+const _lightBlue = Color(0xFF7DB3F0); // Primary (unchanged — matches Horizon Minimalist)
+const _secondary = Color(0xFFFFE088); // Secondary (was cyan)
+const _surface = Color(0xFF031428);
+const _onPrimary = Color(0xFF031428); // same value as surface, per spec
+const _outline = Color(0xFF3E3E3F);
+const _container = Color(0xFF0B1C31); // surfaceContainer (base tier)
+const _onSurfaceVariant = Color(0xFFC3C6CF);
 
 TextTheme _buildDarkTextTheme() {
-  final base = GoogleFonts.interTextTheme();
+  final base = GoogleFonts.dmSansTextTheme();
   return base.copyWith(
-    displayLarge: GoogleFonts.newsreader(textStyle: base.displayLarge),
-    displayMedium: GoogleFonts.newsreader(textStyle: base.displayMedium),
-    displaySmall: GoogleFonts.newsreader(textStyle: base.displaySmall),
-    headlineLarge: GoogleFonts.newsreader(
-        textStyle: base.headlineLarge?.copyWith(fontWeight: FontWeight.w500)),
-    headlineMedium: GoogleFonts.newsreader(
-        textStyle: base.headlineMedium?.copyWith(fontWeight: FontWeight.w500)),
-    headlineSmall: GoogleFonts.newsreader(
-        textStyle: base.headlineSmall?.copyWith(fontWeight: FontWeight.w600)),
+    headlineLarge: base.headlineLarge?.copyWith(fontWeight: FontWeight.w500),
+    headlineMedium: base.headlineMedium?.copyWith(fontWeight: FontWeight.w500),
+    headlineSmall: base.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
   );
 }
 
@@ -29,12 +26,12 @@ final ThemeData darkTheme = ThemeData(
     brightness: Brightness.dark,
     // ── Primary — Light Blue ─────────────────────────────────────────
     primary: _lightBlue,
-    onPrimary: _darkNavy,
+    onPrimary: _onPrimary,
     primaryContainer: Color(0xFF4C7FD9),
     onPrimaryContainer: Color(0xFF001C37),
     inversePrimary: Color(0xFF002B6A),
-    // ── Secondary — Cyan ────────────────────────────────────────────
-    secondary: _cyan,
+    // ── Secondary — Captain's Gold ───────────────────────────────────
+    secondary: _secondary,
     onSecondary: _darkNavy,
     secondaryContainer: Color(0xFF4CBFD4),
     onSecondaryContainer: Color(0xFF00474E),
@@ -49,11 +46,11 @@ final ThemeData darkTheme = ThemeData(
     errorContainer: Color(0xFF93000A),
     onErrorContainer: Color(0xFFFFDAD6),
     // ── Neutrals ───────────────────────────────────────────────────
-    surface: _darkNavy,
+    surface: _surface,
     onSurface: Color(0xFFF2F0F1),
-    onSurfaceVariant: Color(0xFFC3C6CF),
+    onSurfaceVariant: _onSurfaceVariant,
     surfaceContainerHighest: Color(0xFF3E3E3F),
-    outline: Color(0xFF8D9199),
+    outline: _outline,
     outlineVariant: Color(0xFF49454E),
     inverseSurface: Color(0xFFF2F0F1),
     onInverseSurface: Color(0xFF1B1C1D),
@@ -67,7 +64,7 @@ final ThemeData darkTheme = ThemeData(
     // ── Surface containers ─────────────────────────────────────────
     surfaceContainerLowest: const Color(0xFF0A0A0E),
     surfaceContainerLow: const Color(0xFF17191D),
-    surfaceContainer: const Color(0xFF1B1D22),
+    surfaceContainer: _container,
     surfaceContainerHigh: const Color(0xFF25272C),
     surfaceContainerHighest: const Color(0xFF3E3E3F),
     // ── Primary fixed ──────────────────────────────────────────────
@@ -88,32 +85,35 @@ final ThemeData darkTheme = ThemeData(
   ),
   textTheme: _buildDarkTextTheme(),
   dialogTheme: const DialogThemeData(
-    backgroundColor: Color(0xFF1B1D22),
+    backgroundColor: _container,
     surfaceTintColor: Colors.transparent,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
   ),
-  appBarTheme: const AppBarTheme(
-    backgroundColor: Color(0xFF0D1E33), // surface (Dark Navy)
-    foregroundColor: Color(0xFF7DB3F0), // primary (Light Blue)
+  appBarTheme: AppBarTheme(
+    backgroundColor: _surface,
+    foregroundColor: _lightBlue,
     elevation: 0,
-    scrolledUnderElevation: 1,
-    shadowColor: Colors.black12,
-    centerTitle: true, // top-level tabs and sub-screens alike — consistent centring
-    iconTheme:        IconThemeData(color: Color(0xFF7DB3F0)),
-    actionsIconTheme: IconThemeData(color: Color(0xFF7DB3F0)),
+    scrolledUnderElevation: 0,
+    centerTitle: false, // Horizon Minimalist: left-aligned titles
+    titleTextStyle: GoogleFonts.dmSans(
+      fontSize: 18, fontWeight: FontWeight.bold, color: _lightBlue,
+    ),
+    shape: const Border(bottom: BorderSide(color: _outline, width: 1)),
+    iconTheme:        const IconThemeData(color: _lightBlue),
+    actionsIconTheme: const IconThemeData(color: _lightBlue),
   ),
   cardTheme: const CardThemeData(
-    elevation: 1,
+    elevation: 2.0,
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(12)),
+      borderRadius: BorderRadius.all(Radius.circular(16)),
     ),
   ),
   chipTheme: ChipThemeData(
     shape: const StadiumBorder(),
     showCheckmark: false,
     selectedColor: _lightBlue,
-    labelStyle: GoogleFonts.inter(
+    labelStyle: GoogleFonts.dmSans(
       fontSize: 12,
       fontWeight: FontWeight.w700,
       letterSpacing: 0.5,
@@ -125,45 +125,32 @@ final ThemeData darkTheme = ThemeData(
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
   ),
   datePickerTheme: DatePickerThemeData(
-    backgroundColor: const Color(0xFF1B1D22),           // surfaceContainer
+    backgroundColor: _container,                        // surfaceContainer
     headerBackgroundColor: const Color(0xFF17191D),     // surfaceContainerLow
     headerForegroundColor: const Color(0xFFF2F0F1),     // onSurface
-    headerHeadlineStyle: GoogleFonts.newsreader(
+    headerHeadlineStyle: GoogleFonts.dmSans(
         fontSize: 28, fontWeight: FontWeight.w600, color: Color(0xFFF2F0F1)),
-    weekdayStyle: GoogleFonts.inter(fontSize: 12, color: Color(0xFFC3C6CF)),
-    dayStyle: GoogleFonts.inter(fontSize: 13, color: Color(0xFFF2F0F1)),
-    rangePickerBackgroundColor: const Color(0xFF0D1E33),
-    rangePickerHeaderBackgroundColor: const Color(0xFF0D1E33),
+    weekdayStyle: GoogleFonts.dmSans(fontSize: 12, color: Color(0xFFC3C6CF)),
+    dayStyle: GoogleFonts.dmSans(fontSize: 13, color: Color(0xFFF2F0F1)),
+    rangePickerBackgroundColor: _surface,
+    rangePickerHeaderBackgroundColor: _surface,
     rangePickerHeaderForegroundColor: const Color(0xFFF2F0F1),
-    rangePickerHeaderHelpStyle: GoogleFonts.inter(
+    rangePickerHeaderHelpStyle: GoogleFonts.dmSans(
         fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFC3C6CF),
         letterSpacing: 1.2),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: const Color(0xFF25272C),
-      labelStyle: GoogleFonts.inter(fontSize: 12, color: Color(0xFFC3C6CF)),
+      labelStyle: GoogleFonts.dmSans(fontSize: 12, color: Color(0xFFC3C6CF)),
       border: const OutlineInputBorder(
-        borderSide: BorderSide(color: Color(0xFF8D9199)),
+        borderSide: BorderSide(color: _outline),
       ),
       enabledBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Color(0xFF8D9199)),
+        borderSide: BorderSide(color: _outline),
       ),
       focusedBorder: const OutlineInputBorder(
         borderSide: BorderSide(color: _lightBlue, width: 2),
       ),
     ),
   ),
-  extensions: const [
-    LogbookTimelineColors(
-      crewAccent:      Color(0xFF4CC9D4), // cs.secondary — Cyan
-      dividerColor:    Color(0x4D49454E), // cs.outlineVariant @ 30 %
-      cardShadowColor: Color(0x0DFFFFFF), // white @ 5 %
-    ),
-    LogbookEmergencyColors(
-      criticalColor:      Color(0xFFFFB4AB), // cs.error (dark)
-      criticalBgColor:    Color(0xFF93000A), // cs.errorContainer (dark)
-      criticalMutedColor: Color(0x33FFB4AB), // cs.error @ 20 %
-      cardShadowColor:    Color(0x0DFFFFFF), // white @ 5 %
-    ),
-  ],
 );

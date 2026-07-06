@@ -26,7 +26,7 @@ class GpsConsentService {
           surfaceTintColor: Colors.transparent,
           title: Text(
             l10n.gpsConsentTitle,
-            style: GoogleFonts.newsreader(
+            style: GoogleFonts.dmSans(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: cs.onSurface,

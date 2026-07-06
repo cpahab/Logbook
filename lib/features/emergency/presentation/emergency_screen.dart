@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../app/theme/theme_extensions.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../../l10n/l10n_extension.dart';
 
@@ -15,18 +16,13 @@ class EmergencyScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.primary,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        shadowColor: Colors.black12,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: cs.primary),
           onPressed: () => context.pop(),
         ),
         title: Text(
           l10n.emergencyGuideTitle,
-          style: GoogleFonts.newsreader(
+          style: GoogleFonts.dmSans(
             color: cs.primary,
             fontSize: 22,
             fontWeight: FontWeight.w600,
@@ -48,7 +44,7 @@ class EmergencyScreen extends StatelessWidget {
         children: [
           Text(
             l10n.emergencyGuideIntro,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
               fontSize: 15,
               height: 1.6,
               color: cs.onSurfaceVariant,
@@ -133,11 +129,11 @@ class _SectionHeader extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Text(
       title.toUpperCase(),
-      style: GoogleFonts.inter(
+      style: GoogleFonts.dmSans(
         fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 2,
-        color: cs.outline,
+        color: cs.mutedLabel,
       ),
     );
   }
@@ -279,7 +275,7 @@ class _SignalCard extends StatelessWidget {
                           ),
                           child: Text(
                             badge!,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.dmSans(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -292,7 +288,7 @@ class _SignalCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     title,
-                    style: GoogleFonts.newsreader(
+                    style: GoogleFonts.dmSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: cs.onSurface,
@@ -301,7 +297,7 @@ class _SignalCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       color: cs.onSurfaceVariant,
                       fontStyle: FontStyle.italic,
@@ -359,7 +355,7 @@ class _FlagSignalCard extends StatelessWidget {
                       const Spacer(),
                       Text(
                         'Code: NC',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: cs.primary,
@@ -377,7 +373,7 @@ class _FlagSignalCard extends StatelessWidget {
                           children: [
                             Text(
                               context.l10n.emergencyFlagSignalTitle,
-                              style: GoogleFonts.newsreader(
+                              style: GoogleFonts.dmSans(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: cs.onSurface,
@@ -386,7 +382,7 @@ class _FlagSignalCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Text(
                               context.l10n.emergencyFlagSignalSubtitle,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.dmSans(
                                 fontSize: 12,
                                 color: cs.onSurfaceVariant,
                                 fontStyle: FontStyle.italic,
@@ -456,7 +452,7 @@ class _SoundCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 title,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: cs.onSurface,
@@ -465,7 +461,7 @@ class _SoundCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 11,
                   color: cs.onSurfaceVariant,
                   height: 1.4,
@@ -529,7 +525,7 @@ class _ElectronicItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: cs.onSurface,
@@ -538,7 +534,7 @@ class _ElectronicItem extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                     fontSize: 12,
                     color: cs.onSurfaceVariant,
                     height: 1.4,
@@ -590,7 +586,7 @@ class _MaydayCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       l10n.emergencyRadioProtocolLabel,
-                      style: GoogleFonts.newsreader(
+                      style: GoogleFonts.dmSans(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -603,7 +599,7 @@ class _MaydayCard extends StatelessWidget {
               Text(
                 // MAYDAY within tip text is part of the instruction — kept as protocol reference
                 l10n.emergencyRadioProtocolTip,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 14,
                   color: Colors.white.withValues(alpha: 0.8),
                   height: 1.5,
@@ -624,7 +620,7 @@ class _MaydayCard extends StatelessWidget {
                   icon: const Icon(Icons.launch, size: 18),
                   label: Text(
                     l10n.emergencyOpenChecklist,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,

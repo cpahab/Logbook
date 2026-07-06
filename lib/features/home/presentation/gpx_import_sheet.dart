@@ -152,7 +152,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
         _buildHandle(),
         Icon(Icons.error_outline, size: 40, color: cs.error),
         const SizedBox(height: 12),
-        Text(msg, style: GoogleFonts.inter(fontSize: 15, color: cs.onSurface)),
+        Text(msg, style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface)),
         const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
@@ -181,13 +181,13 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
             fmt.format(days.first),
             fmt.format(days.last),
           ),
-          style: GoogleFonts.inter(fontSize: 15, color: cs.onSurface),
+          style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface),
         ),
         if (widget.resolution.trackCount > 1) ...[
           const SizedBox(height: 8),
           Text(
             l10n.gpxShareMergedNote(widget.resolution.trackCount),
-            style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
+            style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant),
           ),
         ],
         const SizedBox(height: 16),
@@ -231,7 +231,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
         _buildHandle(),
         Text(
           l10n.gpxShareNoTimestamps,
-          style: GoogleFonts.inter(fontSize: 15, color: cs.onSurface),
+          style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface),
         ),
         const SizedBox(height: 16),
         _DatePickerRow(
@@ -296,18 +296,18 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
         _buildHandle(),
         Text(
           incomingLine(),
-          style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
+          style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 4),
         Text(
           existingLine(),
-          style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
+          style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant),
         ),
         if (widget.resolution.trackCount > 1) ...[
           const SizedBox(height: 8),
           Text(
             l10n.gpxShareMergedNote(widget.resolution.trackCount),
-            style: GoogleFonts.inter(fontSize: 13, color: cs.onSurfaceVariant),
+            style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurfaceVariant),
           ),
         ],
         const SizedBox(height: 20),
@@ -400,7 +400,7 @@ class _DatePickerRow extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             fmt.format(selected),
-            style: GoogleFonts.inter(fontSize: 15, color: cs.onSurface),
+            style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface),
           ),
           const Spacer(),
           Icon(Icons.chevron_right, size: 18, color: cs.outlineVariant),

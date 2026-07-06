@@ -4,11 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/theme/theme_extensions.dart';
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../widgets/nav_bar.dart';
+import '../widgets/stat_inline.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../core/services/gps_consent_service.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -156,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 12),
             Text(
               label,
-              style: GoogleFonts.newsreader(
+              style: GoogleFonts.dmSans(
                 color: cs.onPrimaryContainer,
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
@@ -290,12 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: cs.surface,
       // ── Light app bar ──────────────────────────────────────────
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.primary, // overrides default primary color for text/icons
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        shadowColor: Colors.black12,
-        centerTitle: true,
+        centerTitle: true, // branded hero title stays centered, unlike the flat/left-aligned default
         automaticallyImplyLeading: false,
         toolbarHeight: 72,
         title: Column(
@@ -360,7 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               context.l10n.homeRecentEntries,
-                              style: GoogleFonts.newsreader(
+                              style: GoogleFonts.dmSans(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
                                 color: cs.primary,
@@ -449,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Text(
                   context.l10n.homeAllButton.toUpperCase(),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.5,
@@ -495,7 +492,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Text(
                   '$year',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.5,
@@ -593,11 +590,11 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   label.toUpperCase(),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.5,
-                    color: cs.outline,
+                    color: cs.mutedLabel,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -608,7 +605,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       TextSpan(
                         text: value,
-                        style: GoogleFonts.newsreader(
+                        style: GoogleFonts.dmSans(
                           fontSize: 22,
                           fontWeight: FontWeight.w500,
                           color: cs.primary,
@@ -617,7 +614,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       TextSpan(
                         text: ' $unit',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 12,
                           color: cs.onSurfaceVariant,
                         ),
@@ -651,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5,
@@ -669,7 +666,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Text(
                   '$count',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: cs.onSecondaryContainer,
@@ -759,11 +756,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             Expanded(
                               child: Text(
                                 '${DateFormat('EEEE', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()} · ${DateFormat('d. MMM', context.read<ThemeProvider>().localeString).format(entry.date).toUpperCase()}',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.dmSans(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 1.5,
-                                  color: cs.outline,
+                                  color: cs.mutedLabel,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -771,7 +768,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ..._weatherIcons(entry.timeline).map((ic) => Padding(
                               padding: const EdgeInsets.only(left: 4),
                               child: Icon(ic, size: 16,
-                                  color: isActive ? cs.secondary : cs.outline),
+                                  color: isActive ? cs.secondary : cs.mutedLabel),
                             )),
                             Builder(builder: (context) {
                               final wind = _maxWindKnots(entry.timeline);
@@ -782,7 +779,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Icon(
                                   strong ? Icons.storm : Icons.air,
                                   size: 16,
-                                  color: isActive ? cs.secondary : cs.outline,
+                                  color: isActive ? cs.secondary : cs.mutedLabel,
                                 ),
                               );
                             }),
@@ -799,7 +796,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (entry.toHarbor?.isNotEmpty ?? false)
                                 entry.toHarbor!,
                             ].join(' → '),
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.dmSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: isActive ? cs.primary : cs.onSurfaceVariant,
@@ -813,7 +810,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           const SizedBox(height: 2),
                           Text(
                             note!,
-                            style: GoogleFonts.newsreader(
+                            style: GoogleFonts.dmSans(
                               fontSize: 13,
                               fontStyle: FontStyle.italic,
                               color: cs.onSurfaceVariant,
@@ -822,16 +819,31 @@ class _HomeScreenState extends State<HomeScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
-                        // Line 4: Stats (distance only)
-                        if (stats != null && stats.distanceNm > 0) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            '${stats.distanceNm.toStringAsFixed(1)} nm',
-                            style: GoogleFonts.newsreader(
-                              fontSize: 13,
-                              fontStyle: FontStyle.italic,
-                              color: cs.outline,
-                            ),
+                        // Line 4: Stats (average speed + distance)
+                        if (stats != null &&
+                            (stats.avgMakingWayKn > 0 ||
+                                stats.distanceNm > 0)) ...[
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 2,
+                            children: [
+                              if (stats.avgMakingWayKn > 0)
+                                statInline(
+                                  Icons.speed,
+                                  // Moving average, not distance/total-elapsed-time —
+                                  // avgSpeed (avgOverGroundKn) would be diluted by any
+                                  // stop in the middle of the track.
+                                  '${stats.avgMakingWayKn.toStringAsFixed(1)} kn',
+                                  cs,
+                                ),
+                              if (stats.distanceNm > 0)
+                                statInline(
+                                  Icons.straighten,
+                                  '${stats.distanceNm.toStringAsFixed(1)} nm',
+                                  cs,
+                                ),
+                            ],
                           ),
                         ],
                       ],

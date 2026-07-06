@@ -121,7 +121,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
                               const SizedBox(width: 4),
                               Text(
                                 context.l10n.offlineLabel,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.dmSans(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
                                   color: cs.onTertiaryContainer
@@ -189,7 +189,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: cs.secondaryContainer,
+            color: cs.primary, // Horizon Minimalist: active tab pill in brand primary
             borderRadius: BorderRadius.circular(24),
           ),
           child: FittedBox(
@@ -197,16 +197,16 @@ class _AppBottomNavState extends State<AppBottomNav> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, color: cs.onSecondaryContainer, size: 22),
+                Icon(icon, color: cs.onPrimary, size: 22),
                 const SizedBox(height: 2),
                 Text(
                   label.toUpperCase(),
                   maxLines: 1,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                     fontSize: 9,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
-                    color: cs.onSecondaryContainer,
+                    color: cs.onPrimary,
                   ),
                 ),
               ],
@@ -231,7 +231,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
               Text(
                 label.toUpperCase(),
                 maxLines: 1,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,

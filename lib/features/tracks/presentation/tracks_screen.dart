@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/theme/theme_extensions.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/domain/day_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
@@ -18,6 +19,7 @@ import '../../home/utils/trim_track.dart'
     show trimStationaryEnds, buildDisplayModel, DisplayModel, SegmentKind,
         splitTrackSegments;
 import '../../home/widgets/nav_bar.dart';
+import '../../home/widgets/stat_inline.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../core/constants/map_config.dart';
@@ -319,15 +321,10 @@ class _TracksScreenState extends State<TracksScreen> {
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        backgroundColor: cs.surface,
-        foregroundColor: cs.primary,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        shadowColor: Colors.black12,
         automaticallyImplyLeading: false,
         title: Text(
           context.l10n.tracksTitle,
-          style: GoogleFonts.newsreader(
+          style: GoogleFonts.dmSans(
             fontSize: 24,
             fontWeight: FontWeight.w500,
             letterSpacing: -0.24,
@@ -414,7 +411,7 @@ class _TracksScreenState extends State<TracksScreen> {
         ),
         child: Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.dmSans(
             fontSize: isDateRange ? 11 : 11,
             fontWeight: FontWeight.w700,
             letterSpacing: isDateRange ? 0.3 : 1.5,
@@ -713,11 +710,11 @@ class _TracksScreenState extends State<TracksScreen> {
             children: [
               Text(
                 label.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.5,
-                  color: cs.outline,
+                  color: cs.mutedLabel,
                 ),
               ),
               const SizedBox(height: 2),
@@ -726,7 +723,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   children: [
                     TextSpan(
                       text: value,
-                      style: GoogleFonts.newsreader(
+                      style: GoogleFonts.dmSans(
                         fontSize: 22,
                         fontWeight: FontWeight.w500,
                         color: cs.primary,
@@ -736,7 +733,7 @@ class _TracksScreenState extends State<TracksScreen> {
                     if (unit.isNotEmpty)
                       TextSpan(
                         text: ' $unit',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 12,
                           color: cs.onSurfaceVariant,
                         ),
@@ -862,11 +859,11 @@ class _TracksScreenState extends State<TracksScreen> {
                                 Expanded(
                                   child: Text(
                                     dateLabel.toUpperCase(),
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.dmSans(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 1.5,
-                                      color: cs.outline,
+                                      color: cs.mutedLabel,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -877,7 +874,7 @@ class _TracksScreenState extends State<TracksScreen> {
                             // Route title
                             Text(
                               routeTitle,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.dmSans(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: cs.primary,
@@ -890,7 +887,7 @@ class _TracksScreenState extends State<TracksScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 notes!,
-                                style: GoogleFonts.newsreader(
+                                style: GoogleFonts.dmSans(
                                   fontSize: 13,
                                   fontStyle: FontStyle.italic,
                                   color: cs.onSurfaceVariant,
@@ -899,17 +896,18 @@ class _TracksScreenState extends State<TracksScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
-                            // Chips
+                            // Stats
                             if (wind != null ||
                                 (d.stats?.avgMakingWayKn ?? 0) > 0) ...[
                               const SizedBox(height: 4),
                               Wrap(
-                                spacing: 6,
+                                spacing: 10,
+                                runSpacing: 2,
                                 children: [
                                   if (wind != null)
-                                    _miniChip(Icons.air, wind, cs),
+                                    statInline(Icons.air, wind, cs),
                                   if ((d.stats?.avgMakingWayKn ?? 0) > 0)
-                                    _miniChip(
+                                    statInline(
                                       Icons.speed,
                                       // Moving average, not distance/total-elapsed-time —
                                       // avgSpeed (avgOverGroundKn) would be diluted by any
@@ -919,7 +917,7 @@ class _TracksScreenState extends State<TracksScreen> {
                                     ),
                                   if (d.stats != null &&
                                       d.stats!.distanceNm > 0)
-                                    _miniChip(
+                                    statInline(
                                       Icons.straighten,
                                       '${d.stats!.distanceNm.toStringAsFixed(1)} nm',
                                       cs,
@@ -935,32 +933,6 @@ class _TracksScreenState extends State<TracksScreen> {
                   ],
                 ),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _miniChip(IconData icon, String label, ColorScheme cs) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: cs.onSurfaceVariant),
-          const SizedBox(width: 4),
-          Text(
-            label.toUpperCase(),
-            style: GoogleFonts.inter(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-              color: cs.primary,
             ),
           ),
         ],

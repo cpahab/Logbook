@@ -32,7 +32,7 @@ class AuthField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
                 fontSize: 13, fontWeight: FontWeight.w600,
                 color: cs.onSurface)),
         const SizedBox(height: 6),
@@ -43,10 +43,10 @@ class AuthField extends StatelessWidget {
           textInputAction: textInputAction,
           onFieldSubmitted: onFieldSubmitted,
           validator: validator,
-          style: GoogleFonts.inter(fontSize: 15, color: cs.onSurface),
+          style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.inter(
+            hintStyle: GoogleFonts.dmSans(
                 fontSize: 15, color: cs.onSurfaceVariant),
             suffixIcon: suffixIcon,
             filled: true,
@@ -94,7 +94,7 @@ class AuthOrDivider extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                   fontSize: 12, color: cs.onSurfaceVariant)),
         ),
         Expanded(child: Divider(color: cs.outlineVariant)),
@@ -120,7 +120,7 @@ class AuthSocialButton extends StatelessWidget {
         onPressed: onPressed,
         icon: icon,
         label: Text(label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
                 fontSize: 14, fontWeight: FontWeight.w500,
                 color: cs.onSurface)),
         style: OutlinedButton.styleFrom(

@@ -79,14 +79,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         children: [
           Text(
             l10n.authForgotPasswordTitle,
-            style: GoogleFonts.newsreader(
+            style: GoogleFonts.dmSans(
               fontSize: 28, fontWeight: FontWeight.w600, color: cs.onSurface,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             l10n.authForgotPasswordDesc,
-            style: GoogleFonts.inter(fontSize: 14, color: cs.onSurfaceVariant),
+            style: GoogleFonts.dmSans(fontSize: 14, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 32),
 
@@ -119,7 +119,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: cs.onPrimary))
                   : Text(l10n.authSendResetEmail,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.dmSans(
                           fontSize: 15, fontWeight: FontWeight.w600)),
             ),
           ),
@@ -136,7 +136,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 20),
         Text(
           l10n.authResetEmailSent,
-          style: GoogleFonts.newsreader(
+          style: GoogleFonts.dmSans(
               fontSize: 22, fontWeight: FontWeight.w600, color: cs.onSurface),
         ),
         const SizedBox(height: 24),
@@ -144,7 +144,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           onPressed: () => context.pop(),
           icon: Icon(Icons.arrow_back, size: 18, color: cs.primary),
           label: Text(l10n.authBackToSignIn,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                   fontSize: 14, color: cs.primary,
                   fontWeight: FontWeight.w600)),
         ),

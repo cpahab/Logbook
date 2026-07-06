@@ -49,7 +49,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final em = cs;
     final l10n = context.l10n;
     final vessel = context.watch<ThemeProvider>();
     final emergency = context.watch<EmergencyRepository>();
@@ -73,7 +73,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
         automaticallyImplyLeading: false,
         title: Text(
           l10n.emergencyManifestTitle.toUpperCase(),
-          style: GoogleFonts.newsreader(
+          style: GoogleFonts.dmSans(
             color: cs.primary,
             fontSize: 18,
             fontWeight: FontWeight.w700,
@@ -269,7 +269,7 @@ class _QuickActionCard extends StatelessWidget {
             const Spacer(),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5,
@@ -279,7 +279,7 @@ class _QuickActionCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               title,
-              style: GoogleFonts.newsreader(
+              style: GoogleFonts.dmSans(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: borderColor == Theme.of(context).colorScheme.error
@@ -311,7 +311,7 @@ class _SectionHeader extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.dmSans(
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 2,
@@ -366,7 +366,7 @@ class _EditButton extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               l10n.edit.toUpperCase(),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1,
@@ -407,7 +407,7 @@ class _ContactsCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Text(
                 context.l10n.emergencyNoContacts,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 13,
                   color: cs.onSurfaceVariant,
                   fontStyle: FontStyle.italic,
@@ -456,7 +456,7 @@ class _ContactRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final em = cs;
     return Container(
       margin: const EdgeInsets.all(10),
       padding: const EdgeInsets.all(12),
@@ -480,7 +480,7 @@ class _ContactRow extends StatelessWidget {
               children: [
                 Text(
                   contact.name,
-                  style: GoogleFonts.newsreader(
+                  style: GoogleFonts.dmSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: cs.primary,
@@ -488,7 +488,7 @@ class _ContactRow extends StatelessWidget {
                 ),
                 Text(
                   '${contact.role} · ${contact.phone}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                     fontSize: 13,
                     color: cs.onSurfaceVariant,
                   ),
@@ -548,7 +548,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
       title: Text(context.l10n.emergencyAddContactTitle,
-          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -638,7 +638,7 @@ class _EditContactDialogState extends State<_EditContactDialog> {
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
       title: Text(context.l10n.emergencyEditContactTitle,
-          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -820,7 +820,7 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
   }
 
   Widget _buildReadView(ColorScheme cs) {
-    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final em = cs;
     final l10n = context.l10n;
     final v = widget.vessel;
 
@@ -895,7 +895,7 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
             if (idFields.isEmpty && safetyItems.isEmpty)
               Text(
                 l10n.emergencyNoSafetyData,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                     fontSize: 13,
                     color: cs.onSurfaceVariant,
                     fontStyle: FontStyle.italic),
@@ -930,7 +930,7 @@ class _VesselEditField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.dmSans(
               fontSize: 10,
               fontWeight: FontWeight.w700,
               letterSpacing: 1.5,
@@ -942,7 +942,7 @@ class _VesselEditField extends StatelessWidget {
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
           onChanged: onChanged,
-          style: GoogleFonts.inter(fontSize: 13, color: cs.onSurface),
+          style: GoogleFonts.dmSans(fontSize: 13, color: cs.onSurface),
           decoration: InputDecoration(
             isDense: true,
             contentPadding:
@@ -973,17 +973,17 @@ class _InfoField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
                 fontSize: 10, fontWeight: FontWeight.w700,
                 letterSpacing: 1.5, color: cs.onSurfaceVariant)),
         const SizedBox(height: 2),
         Text(
           value,
           style: mono
-              ? GoogleFonts.inter(
+              ? GoogleFonts.dmSans(
                   fontSize: 16, fontWeight: FontWeight.w600,
                   letterSpacing: 3, color: cs.primary)
-              : GoogleFonts.newsreader(
+              : GoogleFonts.dmSans(
                   fontSize: 17, fontWeight: FontWeight.w600, color: cs.primary),
         ),
       ],
@@ -1015,11 +1015,11 @@ class _SafetyItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 14, fontWeight: FontWeight.w600,
                         color: cs.onSurface)),
                 Text(detail,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 13, color: cs.onSurfaceVariant)),
               ],
             ),
@@ -1060,7 +1060,7 @@ class _FrequenciesCard extends StatelessWidget {
               padding: const EdgeInsets.all(6),
               child: Text(
                 context.l10n.emergencyNoFrequencies,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                     fontSize: 13,
                     color: cs.onSurfaceVariant,
                     fontStyle: FontStyle.italic),
@@ -1131,7 +1131,7 @@ class _FrequencyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final em = cs;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -1148,12 +1148,12 @@ class _FrequencyRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: GoogleFonts.newsreader(
+                    style: GoogleFonts.dmSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: urgent ? em.criticalColor : cs.primary)),
                 Text(desc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 13,
                         color: urgent ? cs.onErrorContainer : cs.onSurfaceVariant)),
               ],
@@ -1196,7 +1196,7 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
       title: Text(context.l10n.emergencyAddFrequencyTitle,
-          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1276,7 +1276,7 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
       title: Text(context.l10n.emergencyEditFrequencyTitle,
-          style: GoogleFonts.newsreader(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1344,7 +1344,7 @@ class _CrewMedicalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final em = Theme.of(context).extension<LogbookEmergencyColors>()!;
+    final em = cs;
     final bloodType = member.bloodType ?? '';
     final personalEpirb = member.personalEpirb ?? '';
 
@@ -1397,7 +1397,7 @@ class _CrewMedicalCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   member.name,
-                                  style: GoogleFonts.newsreader(
+                                  style: GoogleFonts.dmSans(
                                       fontSize: 20,
                                       fontWeight: FontWeight.w500,
                                       color: cs.primary),
@@ -1414,12 +1414,12 @@ class _CrewMedicalCard extends StatelessWidget {
                                   child: Column(
                                     children: [
                                       Text(context.l10n.emergencyBloodBadge,
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.dmSans(
                                               fontSize: 8,
                                               fontWeight: FontWeight.w700,
                                               color: cs.onErrorContainer)),
                                       Text(bloodType,
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.dmSans(
                                               fontSize: 18,
                                               fontWeight: FontWeight.w700,
                                               color: cs.onErrorContainer)),
@@ -1502,7 +1502,7 @@ class _CrewDetailSheet extends StatelessWidget {
             ),
             Text(
               member.name,
-              style: GoogleFonts.newsreader(
+              style: GoogleFonts.dmSans(
                 fontSize: 24,
                 fontWeight: FontWeight.w500,
                 color: cs.primary,
@@ -1512,7 +1512,7 @@ class _CrewDetailSheet extends StatelessWidget {
             if (rows.isEmpty)
               Text(
                 l10n.crewDetailNoInfo,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
                     color: cs.onSurfaceVariant),
@@ -1531,16 +1531,16 @@ class _CrewDetailSheet extends StatelessWidget {
                             children: [
                               Text(
                                 r.$2.toUpperCase(),
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.dmSans(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 1.0,
-                                    color: cs.outline),
+                                    color: cs.mutedLabel),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 r.$3,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.dmSans(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
                                     color: cs.onSurface),
@@ -1590,7 +1590,7 @@ class _MedicalRow extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: color),
@@ -1623,7 +1623,7 @@ class _EmptyCrewHint extends StatelessWidget {
         children: [
           Text(
             l10n.emergencyNoCrewHint,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
                 fontSize: 13,
                 color: cs.onSurfaceVariant,
                 fontStyle: FontStyle.italic),
@@ -1642,7 +1642,7 @@ class _EmptyCrewHint extends StatelessWidget {
                   foregroundColor: cs.primary,
                   side: BorderSide(color: cs.primary.withValues(alpha: 0.3)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  textStyle: GoogleFonts.inter(
+                  textStyle: GoogleFonts.dmSans(
                       fontSize: 13, fontWeight: FontWeight.w600),
                 ),
               ),

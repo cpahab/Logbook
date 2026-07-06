@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../app/theme/theme_extensions.dart';
 import '../domain/timeline_entry.dart';
 import '../utils/sail_state_utils.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -180,7 +181,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
             widget.isAmendment ? l10n.amendmentDialogTitle
                 : isEdit ? l10n.entryDialogTitleEdit
                 : l10n.entryDialogTitleNew,
-            style: GoogleFonts.newsreader(
+            style: GoogleFonts.dmSans(
               fontSize: 22,
               fontStyle: FontStyle.italic,
               fontWeight: FontWeight.w500,
@@ -220,7 +221,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           },
                           child: Text(
                             selectedTime.format(context),
-                            style: GoogleFonts.newsreader(
+                            style: GoogleFonts.dmSans(
                               fontSize: 28,
                               fontWeight: FontWeight.w500,
                               color: cs.primary,
@@ -300,7 +301,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                   child: DropdownButton<String>(
                                     value: _windDir,
                                     isExpanded: true,
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.dmSans(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w600,
                                         color: cs.primary),
@@ -308,7 +309,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                         .map((d) => DropdownMenuItem(
                                               value: d,
                                               child: Text(d,
-                                                  style: GoogleFonts.inter(
+                                                  style: GoogleFonts.dmSans(
                                                       fontSize: 15,
                                                       fontWeight:
                                                           FontWeight.w600,
@@ -339,7 +340,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                     Expanded(
                                       child: TextField(
                                         controller: windStrengthCtrl,
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.dmSans(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w600,
                                             color: cs.primary),
@@ -351,7 +352,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                                   horizontal: 12,
                                                   vertical: 12),
                                           hintText: '0',
-                                          hintStyle: GoogleFonts.inter(
+                                          hintStyle: GoogleFonts.dmSans(
                                               fontSize: 15,
                                               color: cs.outline),
                                         ),
@@ -366,11 +367,11 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                     Padding(
                                       padding: const EdgeInsets.only(right: 12),
                                       child: Text('kn',
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.dmSans(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w700,
                                               letterSpacing: 0.5,
-                                              color: cs.outline)),
+                                              color: cs.mutedLabel)),
                                     ),
                                   ],
                                 ),
@@ -493,7 +494,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                   _plainCard(
                     child: TextField(
                       controller: remarksCtrl,
-                      style: GoogleFonts.newsreader(
+                      style: GoogleFonts.dmSans(
                         fontSize: 15,
                         fontStyle: FontStyle.italic,
                         color: cs.primary,
@@ -503,7 +504,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                         hintText: l10n.entryDialogRemarksHint,
-                        hintStyle: GoogleFonts.newsreader(
+                        hintStyle: GoogleFonts.dmSans(
                           fontSize: 15,
                           fontStyle: FontStyle.italic,
                           color: cs.onSurface.withValues(alpha: 0.3),
@@ -526,7 +527,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       cs: cs,
                       child: TextField(
                         controller: amendmentReasonCtrl,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
@@ -536,7 +537,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                           hintText: l10n.amendmentReasonHint,
-                          hintStyle: GoogleFonts.inter(
+                          hintStyle: GoogleFonts.dmSans(
                             fontSize: 15,
                             color: cs.onSurface.withValues(alpha: 0.3),
                           ),
@@ -560,7 +561,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         foregroundColor: cs.onPrimary,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        textStyle: GoogleFonts.inter(
+                        textStyle: GoogleFonts.dmSans(
                             fontSize: 15, fontWeight: FontWeight.w600),
                       ),
                       icon: const Icon(Icons.anchor, size: 20),
@@ -579,7 +580,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                             color: cs.primary.withValues(alpha: 0.25)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        textStyle: GoogleFonts.inter(
+                        textStyle: GoogleFonts.dmSans(
                             fontSize: 15, fontWeight: FontWeight.w600),
                       ),
                       child: Text(l10n.cancel),
@@ -602,7 +603,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           foregroundColor: cs.error,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
-                          textStyle: GoogleFonts.inter(
+                          textStyle: GoogleFonts.dmSans(
                               fontSize: 15, fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -625,7 +626,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         const SizedBox(width: 8),
         Text(
           label.toUpperCase(),
-          style: GoogleFonts.inter(
+          style: GoogleFonts.dmSans(
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -693,7 +694,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
               Expanded(
                 child: TextField(
                   controller: controller,
-                  style: GoogleFonts.newsreader(
+                  style: GoogleFonts.dmSans(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: cs.primary,
@@ -703,7 +704,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
                     hintText: placeholder,
-                    hintStyle: GoogleFonts.newsreader(
+                    hintStyle: GoogleFonts.dmSans(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: cs.outline,
@@ -717,10 +718,10 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
               const SizedBox(width: 4),
               Text(
                 unit,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: cs.outline,
+                  color: cs.mutedLabel,
                 ),
               ),
             ],
@@ -735,7 +736,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       TextEditingController ctrl, String hint, ColorScheme cs) {
     return TextField(
       controller: ctrl,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.dmSans(
           fontSize: 15, fontWeight: FontWeight.w600, color: cs.primary),
       decoration: InputDecoration(
         border: InputBorder.none,
@@ -743,7 +744,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         contentPadding: EdgeInsets.zero,
         hintText: hint,
         hintStyle:
-            GoogleFonts.inter(fontSize: 15, color: cs.outline),
+            GoogleFonts.dmSans(fontSize: 15, color: cs.outline),
       ),
       textInputAction: TextInputAction.next,
     );
@@ -800,7 +801,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         ),
         child: Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.dmSans(
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: isSelected ? cs.onPrimary : cs.onSurfaceVariant,
@@ -814,11 +815,11 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   Widget _labelSm(String text, ColorScheme cs) {
     return Text(
       text,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.dmSans(
         fontSize: 9,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.0,
-        color: cs.outline,
+        color: cs.mutedLabel,
       ),
     );
   }

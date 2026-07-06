@@ -105,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Text(
                   l10n.authRegisterTitle,
-                  style: GoogleFonts.newsreader(
+                  style: GoogleFonts.dmSans(
                     fontSize: 28, fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                   ),
@@ -113,7 +113,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 6),
                 Text(
                   l10n.authRegisterSubtitle,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                       fontSize: 14, color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 32),
@@ -185,7 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: cs.onPrimary))
                         : Text(l10n.authCreateAccount,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.dmSans(
                                 fontSize: 15, fontWeight: FontWeight.w600)),
                   ),
                 ),
@@ -206,12 +206,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(l10n.authAlreadyHaveAccount,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                             fontSize: 14, color: cs.onSurfaceVariant)),
                     TextButton(
                       onPressed: () => context.pop(),
                       child: Text(l10n.authSignInLink,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.dmSans(
                               fontSize: 14, fontWeight: FontWeight.w600,
                               color: cs.primary)),
                     ),

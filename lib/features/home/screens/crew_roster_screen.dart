@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/theme/theme_extensions.dart';
 import '../data/home_repository.dart';
 import '../domain/crew_member.dart';
 import '../widgets/add_crew_member_dialog.dart';
@@ -24,7 +25,7 @@ class CrewRosterScreen extends StatelessWidget {
         ),
         title: Text(
           context.l10n.crewRosterTitle,
-          style: GoogleFonts.newsreader(
+          style: GoogleFonts.dmSans(
             fontSize: 22,
             fontStyle: FontStyle.italic,
             fontWeight: FontWeight.w500,
@@ -47,14 +48,14 @@ class CrewRosterScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     l10n.crewRosterEmpty,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 15, color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     l10n.crewRosterEmptyHint,
-                    style: GoogleFonts.inter(
-                        fontSize: 13, color: cs.outline),
+                    style: GoogleFonts.dmSans(
+                        fontSize: 13, color: cs.mutedLabel),
                   ),
                 ],
               ),
@@ -166,14 +167,14 @@ class _RosterListTile extends StatelessWidget {
       ),
       title: Text(
         member.name,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.dmSans(
             fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface),
       ),
       subtitle: sub.isNotEmpty
           ? Text(
               sub,
               style:
-                  GoogleFonts.inter(fontSize: 12, color: cs.onSurfaceVariant),
+                  GoogleFonts.dmSans(fontSize: 12, color: cs.onSurfaceVariant),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             )

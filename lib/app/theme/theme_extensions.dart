@@ -1,95 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// Semantic colour tokens for the timeline / day-detail / crew areas.
-@immutable
-class LogbookTimelineColors extends ThemeExtension<LogbookTimelineColors> {
-  const LogbookTimelineColors({
-    required this.crewAccent,
-    required this.dividerColor,
-    required this.cardShadowColor,
-  });
-
+/// Semantic colour tokens for the timeline / day-detail / crew areas,
+/// derived from [ColorScheme] roles rather than hardcoded per theme.
+extension LogbookTimelineColors on ColorScheme {
   /// Colour used for all crew-note elements (icons, labels, backgrounds, chips).
-  final Color crewAccent;
+  Color get crewAccent => secondary;
 
   /// Border/divider colour for timeline entry cards.
-  /// Typically `outlineVariant` at 30 % opacity.
-  final Color dividerColor;
+  Color get dividerColor => outlineVariant.withValues(alpha: 0.3);
 
-  /// Box-shadow tint on timeline/day cards.
+  /// Box-shadow tint on timeline/day and emergency cards.
   /// Adapts between themes (near-black in light, near-white in dark).
-  final Color cardShadowColor;
-
-  @override
-  LogbookTimelineColors copyWith({
-    Color? crewAccent,
-    Color? dividerColor,
-    Color? cardShadowColor,
-  }) =>
-      LogbookTimelineColors(
-        crewAccent: crewAccent ?? this.crewAccent,
-        dividerColor: dividerColor ?? this.dividerColor,
-        cardShadowColor: cardShadowColor ?? this.cardShadowColor,
-      );
-
-  @override
-  LogbookTimelineColors lerp(LogbookTimelineColors? other, double t) {
-    if (other is! LogbookTimelineColors) return this;
-    return LogbookTimelineColors(
-      crewAccent: Color.lerp(crewAccent, other.crewAccent, t)!,
-      dividerColor: Color.lerp(dividerColor, other.dividerColor, t)!,
-      cardShadowColor: Color.lerp(cardShadowColor, other.cardShadowColor, t)!,
-    );
-  }
+  Color get cardShadowColor => brightness == Brightness.dark
+      ? Colors.white.withValues(alpha: 0.05)
+      : Colors.black.withValues(alpha: 0.04);
 }
 
-/// Semantic colour tokens for the emergency / mayday screens.
-@immutable
-class LogbookEmergencyColors extends ThemeExtension<LogbookEmergencyColors> {
-  const LogbookEmergencyColors({
-    required this.criticalColor,
-    required this.criticalBgColor,
-    required this.criticalMutedColor,
-    required this.cardShadowColor,
-  });
+/// General-purpose text colours, derived from [ColorScheme] roles.
+extension LogbookTextColors on ColorScheme {
+  /// Small-caps eyebrow labels, secondary stat/date text, and similar
+  /// low-emphasis content. Softer than `onSurfaceVariant` on its own —
+  /// bold/tracked/uppercase styling reads visually heavier at full
+  /// strength, so this keeps it level with adjacent plain-weight text.
+  Color get mutedLabel => onSurfaceVariant.withValues(alpha: 0.8);
+}
 
+/// Semantic colour tokens for the emergency / mayday screens, derived
+/// from [ColorScheme] roles rather than hardcoded per theme.
+extension LogbookEmergencyColors on ColorScheme {
   /// Solid critical/urgent colour (borders, pulse border, delete icons).
-  /// Matches `ColorScheme.error`.
-  final Color criticalColor;
+  Color get criticalColor => error;
 
   /// Background fill for critical/urgent cards.
-  /// Matches `ColorScheme.errorContainer`.
-  final Color criticalBgColor;
+  Color get criticalBgColor => errorContainer;
 
   /// Muted variant at ~20 % opacity: pulsing ring, section dividers.
-  final Color criticalMutedColor;
-
-  /// Box-shadow tint on emergency cards.
-  final Color cardShadowColor;
-
-  @override
-  LogbookEmergencyColors copyWith({
-    Color? criticalColor,
-    Color? criticalBgColor,
-    Color? criticalMutedColor,
-    Color? cardShadowColor,
-  }) =>
-      LogbookEmergencyColors(
-        criticalColor: criticalColor ?? this.criticalColor,
-        criticalBgColor: criticalBgColor ?? this.criticalBgColor,
-        criticalMutedColor: criticalMutedColor ?? this.criticalMutedColor,
-        cardShadowColor: cardShadowColor ?? this.cardShadowColor,
-      );
-
-  @override
-  LogbookEmergencyColors lerp(LogbookEmergencyColors? other, double t) {
-    if (other is! LogbookEmergencyColors) return this;
-    return LogbookEmergencyColors(
-      criticalColor: Color.lerp(criticalColor, other.criticalColor, t)!,
-      criticalBgColor: Color.lerp(criticalBgColor, other.criticalBgColor, t)!,
-      criticalMutedColor:
-          Color.lerp(criticalMutedColor, other.criticalMutedColor, t)!,
-      cardShadowColor: Color.lerp(cardShadowColor, other.cardShadowColor, t)!,
-    );
-  }
+  Color get criticalMutedColor => error.withValues(alpha: 0.2);
 }

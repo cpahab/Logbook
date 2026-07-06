@@ -397,7 +397,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
                 Text(
                   cl.settingsNewLogbookTitle,
-                  style: GoogleFonts.newsreader(
+                  style: GoogleFonts.dmSans(
                     fontSize: 20,
                     fontStyle: FontStyle.italic,
                     fontWeight: FontWeight.w500,
@@ -674,7 +674,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(cl.settingsShowQrCode,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface)),
@@ -766,7 +766,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Page header ───────────────────────────────────────────
             Text(
               l10n.settingsTitle,
-              style: GoogleFonts.newsreader(
+              style: GoogleFonts.dmSans(
                 fontSize: 24,
                 fontWeight: FontWeight.w500,
                 letterSpacing: -0.24,
@@ -776,7 +776,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 2),
             Text(
               l10n.settingsSubtitle,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 15,
                 color: cs.onSurfaceVariant,
               ),
@@ -819,7 +819,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 return Center(
                   child: Text(
                     version,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 11,
                       color: cs.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
@@ -862,7 +862,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsVesselSection.toUpperCase(),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 1.5,
@@ -951,7 +951,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             width: 96,
             child: Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 15,
                 color: cs.onSurfaceVariant,
               ),
@@ -963,7 +963,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               textAlign: TextAlign.right,
               keyboardType: keyboard,
               textInputAction: TextInputAction.next,
-              style: GoogleFonts.newsreader(
+              style: GoogleFonts.dmSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: cs.onSurface,
@@ -973,7 +973,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
                 hintText: hint,
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.dmSans(
                   fontSize: 15,
                   color: cs.outline.withValues(alpha: 0.5),
                 ),
@@ -1017,7 +1017,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 l10n.settingsAppearanceSection.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.5,
@@ -1031,7 +1031,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           Text(
             l10n.settingsThemeLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: cs.onSurface,
@@ -1055,7 +1055,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           Text(
             l10n.settingsLanguageLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: cs.onSurface,
@@ -1105,7 +1105,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
               fontSize: 14,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               color: isActive ? cs.primary : cs.onSurfaceVariant,
@@ -1141,7 +1141,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
               fontSize: 14,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               color: isActive ? cs.primary : cs.onSurfaceVariant,
@@ -1189,7 +1189,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     context.l10n.settingsTrackFilterSection.toUpperCase(),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.5,
@@ -1213,7 +1213,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       p.filterMode == StationaryMode.speed
                           ? context.l10n.settingsFilterModeMooring
                           : context.l10n.settingsFilterModeExact,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.dmSans(
                         fontSize: 12,
                         color: cs.onSurfaceVariant,
                       ),
@@ -1245,7 +1245,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 12),
                   Text(
                     context.l10n.settingsStationaryLabel,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: cs.onSurface,
@@ -1254,7 +1254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     context.l10n.settingsStationaryDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 13,
                       color: cs.onSurfaceVariant,
                     ),
@@ -1290,7 +1290,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     p.filterMode == StationaryMode.speed
                         ? context.l10n.settingsMooringDesc
                         : context.l10n.settingsExactPositionDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
@@ -1303,7 +1303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsMinStopLabel,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
@@ -1311,7 +1311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Text(
                         '${p.minStopMinutes.round()} ${context.l10n.settingsMinUnit}',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: cs.primary,
@@ -1328,7 +1328,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsMinStopDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
@@ -1341,7 +1341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsMaxAnchorLabel,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
@@ -1349,7 +1349,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Text(
                         '${p.maxStopSpreadM.round()} ${context.l10n.settingsMetersUnit}',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: cs.primary,
@@ -1366,7 +1366,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsMaxAnchorDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
@@ -1379,7 +1379,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsColdStartLabel,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
@@ -1393,7 +1393,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsColdStartDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
@@ -1406,7 +1406,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text(
                           context.l10n.settingsTrimSharpnessLabel,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.dmSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: cs.onSurface,
@@ -1414,7 +1414,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         Text(
                           p.coldStartSettleFactor.toStringAsFixed(1),
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.dmSans(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: cs.primary,
@@ -1431,7 +1431,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     Text(
                       context.l10n.settingsTrimSharpnessDesc,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.dmSans(
                         fontSize: 12,
                         fontStyle: FontStyle.italic,
                         color: cs.onSurfaceVariant,
@@ -1445,7 +1445,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsUnderwayLabel,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
@@ -1453,7 +1453,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Text(
                         '${p.makingWayThresholdKn.toStringAsFixed(1)} kn',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: cs.primary,
@@ -1470,7 +1470,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsUnderwayDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
@@ -1483,7 +1483,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsPercentileLabel,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
@@ -1491,7 +1491,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Text(
                         'p${(p.topSpeedPercentile * 100).round()}',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: cs.primary,
@@ -1508,7 +1508,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsPercentileDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
@@ -1521,7 +1521,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsMaxSpeedLabel,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
@@ -1529,7 +1529,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       Text(
                         '${p.maxSpeedKn.round()} kn',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                           color: cs.primary,
@@ -1546,7 +1546,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsMaxSpeedDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
@@ -1559,7 +1559,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsShowRawTrackLabel,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurface,
@@ -1573,7 +1573,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   Text(
                     context.l10n.settingsShowRawTrackDesc,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontStyle: FontStyle.italic,
                       color: cs.onSurfaceVariant,
@@ -1589,7 +1589,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             size: 16, color: cs.onSurfaceVariant),
                         label: Text(
                           context.l10n.reset,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.dmSans(
                             fontSize: 13,
                             color: cs.onSurfaceVariant,
                           ),
@@ -1636,7 +1636,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.dmSans(
               fontSize: 13,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               color: isActive ? cs.primary : cs.onSurfaceVariant,
@@ -1677,7 +1677,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           Text(
                             context.l10n.settingsCrewSection.toUpperCase(),
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.dmSans(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1.5,
@@ -1692,7 +1692,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 count == 0
                                     ? context.l10n.settingsNoEntries
                                     : '$count ${context.l10n.settingsPersonCount(count)}',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.dmSans(
                                   fontSize: 13,
                                   color: cs.onSurfaceVariant,
                                 ),
@@ -1748,7 +1748,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 l10n.settingsLogbooksSection.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.5,
@@ -1785,7 +1785,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(l10n.settingsNoLogbooks,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                       fontSize: 13, color: cs.onSurfaceVariant)),
             )
           else
@@ -1835,7 +1835,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     name,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                       fontSize: 15,
                       fontWeight:
                           isActive ? FontWeight.w700 : FontWeight.w500,
@@ -1846,7 +1846,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     !isActive && _isOffline
                         ? l10n.offlineLabel
                         : isOwner ? l10n.settingsRoleOwner : l10n.settingsRoleGuest,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 12, color: cs.onSurfaceVariant),
                   ),
                 ],
@@ -1887,7 +1887,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Expanded(
               child: Text(
                 '$logbookName · ${l10n.settingsShare}'.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.5,
@@ -1947,7 +1947,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   side: BorderSide(color: cs.outlineVariant),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
-                  textStyle: GoogleFonts.inter(fontSize: 13),
+                  textStyle: GoogleFonts.dmSans(fontSize: 13),
                 ),
               ),
             ),
@@ -1961,7 +1961,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   side: BorderSide(color: cs.outlineVariant),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8)),
-                  textStyle: GoogleFonts.inter(fontSize: 13),
+                  textStyle: GoogleFonts.dmSans(fontSize: 13),
                 ),
               ),
             ),
@@ -1996,7 +1996,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Expanded(
                   child: Text(
                     l10n.settingsManageGuests,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: cs.onSurface),
@@ -2031,7 +2031,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(left: 4),
                   child: Text(l10n.settingsNoGuests,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.dmSans(
                           fontSize: 13, color: cs.onSurfaceVariant)),
                 );
               }
@@ -2050,7 +2050,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text('…$shortId',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.dmSans(
                                   fontSize: 13, color: cs.onSurface)),
                         ),
                         TextButton(
@@ -2109,7 +2109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 l10n.settingsAccountSection.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.5,
@@ -2123,7 +2123,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (user != null) ...[
             Text(
               l10n.settingsAccountSignedInAs,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 13,
                 color: cs.onSurfaceVariant,
               ),
@@ -2131,7 +2131,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 2),
             Text(
               user.email ?? user.displayName ?? '',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: cs.onSurface,
@@ -2198,7 +2198,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
                 icon: Icon(Icons.logout, size: 18, color: cs.error),
                 label: Text(l10n.authSignOut,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 14, color: cs.error)),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: cs.outlineVariant),
@@ -2279,7 +2279,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     color: dcs.error),
                                 title: Text(
                                   l10n.authDeleteCleanupFailedTitle,
-                                  style: GoogleFonts.newsreader(
+                                  style: GoogleFonts.dmSans(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                     color: dcs.onSurface,
@@ -2334,7 +2334,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ] else ...[
             Text(
               l10n.settingsAccountNotSignedIn,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.dmSans(
                 fontSize: 13,
                 color: cs.onSurfaceVariant,
               ),
@@ -2349,7 +2349,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 child: Text(l10n.settingsAccountManage,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.dmSans(
                         fontSize: 14, fontWeight: FontWeight.w600)),
               ),
             ),

@@ -62,7 +62,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               const SizedBox(height: 28),
               Text(
                 l10n.authVerifyEmailTitle,
-                style: GoogleFonts.newsreader(
+                style: GoogleFonts.dmSans(
                   fontSize: 26,
                   fontWeight: FontWeight.w600,
                   color: cs.onSurface,
@@ -72,7 +72,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               const SizedBox(height: 12),
               Text(
                 l10n.authVerifyEmailBody(email),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.dmSans(
                     fontSize: 14, color: cs.onSurfaceVariant, height: 1.5),
                 textAlign: TextAlign.center,
               ),
@@ -91,7 +91,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: cs.onPrimary))
                     : Text(l10n.authVerifyEmailCheck,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.dmSans(
                             fontSize: 15, fontWeight: FontWeight.w600)),
               ),
               const SizedBox(height: 12),
@@ -109,14 +109,14 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: cs.primary))
                     : Text(l10n.authVerifyEmailResend,
-                        style: GoogleFonts.inter(fontSize: 14)),
+                        style: GoogleFonts.dmSans(fontSize: 14)),
               ),
               const SizedBox(height: 24),
               TextButton(
                 onPressed: busy ? null : context.read<AuthService>().signOut,
                 child: Text(
                   context.l10n.authSignOut,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.dmSans(
                       fontSize: 13, color: cs.onSurfaceVariant),
                 ),
               ),
