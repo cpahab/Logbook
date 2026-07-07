@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -34,9 +35,9 @@ class EmergencyScreen extends StatelessWidget {
         active: NavTab.safety,
         showFab: false,
         onSelect: (tab) {
-          if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.go('/tracks');
-          if (tab == NavTab.settings) context.go('/settings');
+          if (tab == NavTab.journal) context.goNamed(AppRoute.home);
+          if (tab == NavTab.map) context.goNamed(AppRoute.tracks);
+          if (tab == NavTab.settings) context.goNamed(AppRoute.settings);
         },
       ),
       body: ListView(
@@ -602,7 +603,7 @@ class _MaydayCard extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => context.push('/emergency/mayday'),
+                  onPressed: () => context.pushNamed(AppRoute.mayday),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: cs.secondaryFixed,
                     foregroundColor: cs.onSecondaryFixed,

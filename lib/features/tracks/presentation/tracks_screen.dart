@@ -10,19 +10,21 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/domain/day_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
 import '../../home/domain/track_point.dart';
 import '../../home/utils/trim_track.dart'
-    show trimStationaryEnds, buildDisplayModel, DisplayModel, SegmentKind,
+    show trimStationaryEnds, DisplayModel, SegmentKind,
         splitTrackSegments;
 import '../../home/widgets/nav_bar.dart';
 import '../../home/widgets/stat_inline.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../core/constants/map_config.dart';
+import '../utils/track_computation_cache.dart';
 
 // Bearing (radians, clockwise from north) between two LatLng points.
 double _trackBearing(LatLng from, LatLng to) {
@@ -90,6 +92,7 @@ class _TracksScreenState extends State<TracksScreen> {
   static _FilterPreset _preset = _FilterPreset.month1;
   static DateTimeRange? _customRange;
   static bool _satelliteView = false;
+
   @override
   void initState() {
     super.initState();
@@ -196,13 +199,24 @@ class _TracksScreenState extends State<TracksScreen> {
     if (range != null) _applyPreset(_FilterPreset.custom, custom: range);
   }
 
+  Widget _bottomNav(BuildContext context) => AppBottomNav(
+        active: NavTab.map,
+        showFab: false,
+        onSelect: (tab) {
+          if (tab == NavTab.journal) context.goNamed(AppRoute.home);
+          if (tab == NavTab.settings) context.goNamed(AppRoute.settings);
+          if (tab == NavTab.safety) context.goNamed(AppRoute.emergencyManifest);
+        },
+      );
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     final repo           = context.watch<HomeRepository>();
     final provider       = context.watch<ThemeProvider>();
     final filterSettings = provider.filterSettings;
     final showRawTrack   = provider.showRawTrack;
-    final cs             = Theme.of(context).colorScheme;
 
     final trackedDays = repo.dailyTracks.keys.toList()..sort();
     final totalTracks =
@@ -213,14 +227,21 @@ class _TracksScreenState extends State<TracksScreen> {
     for (final day in trackedDays) {
       final track = repo.dailyTracks[day]!;
       if (track.points.isEmpty) continue;
-      final display = buildDisplayModel(track.points, settings: filterSettings);
+
+      final cached = TrackComputationCache.get(
+        day: day,
+        sourcePoints: track.points,
+        settings: filterSettings,
+      );
+      final display = cached.display;
+
       trackData.add(_DayTrackData(
         day: day,
         display: display,
         rawPoints: display.rawMovingPoints,
         color: _colorForIndex(trackIdx, totalTracks),
         entry: repo.getEntry(day),
-        stats: computeDailyStats(track.points, settings: filterSettings),
+        stats: cached.stats,
         startTime: display.firstMovingPoint?.time.toLocal(),
       ));
       trackIdx++;
@@ -325,15 +346,7 @@ class _TracksScreenState extends State<TracksScreen> {
         centerTitle: true,
         title: Text(context.l10n.tracksTitle),
       ),
-      bottomNavigationBar: AppBottomNav(
-        active: NavTab.map,
-        showFab: false,
-        onSelect: (tab) {
-          if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.settings) context.go('/settings');
-          if (tab == NavTab.safety) context.go('/emergency');
-        },
-      ),
+      bottomNavigationBar: _bottomNav(context),
       body: trackData.isEmpty
           ? _buildEmpty(cs)
           : Column(
@@ -569,8 +582,8 @@ class _TracksScreenState extends State<TracksScreen> {
                 bgColor: cs.surfaceContainerLowest,
                 fgColor: cs.primary,
                 tooltip: context.l10n.tracksFullscreen,
-                onTap: () => context.push(
-                  '/tracks/fullscreen',
+                onTap: () => context.pushNamed(
+                  AppRoute.tracksFullscreen,
                   extra: _TracksFullScreenArgs(
                     displayed: displayed,
                     initialBounds: initialBounds,

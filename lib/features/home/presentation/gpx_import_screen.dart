@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/route_names.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../settings/domain/theme_provider.dart';
@@ -144,7 +145,11 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.l10n.gpxShareImported(dateStr))),
     );
-    context.go('/day/${date.year}/${date.month}/${date.day}');
+    context.goNamed(AppRoute.dayDetail, pathParameters: {
+      'year': '${date.year}',
+      'month': '${date.month}',
+      'day': '${date.day}',
+    });
   }
 
   @override
@@ -154,7 +159,7 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => context.go('/'),
+          onPressed: () => context.goNamed(AppRoute.home),
         ),
         title: Text(l10n.gpxImportTitle),
       ),
@@ -197,7 +202,7 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
                   style: Theme.of(context).textTheme.bodyLarge),
               const SizedBox(height: 32),
               FilledButton(
-                onPressed: () => context.go('/'),
+                onPressed: () => context.goNamed(AppRoute.home),
                 child: Text(l10n.close),
               ),
             ],
@@ -352,7 +357,7 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
 
             const SizedBox(height: 12),
             TextButton(
-              onPressed: _importing ? null : () => context.go('/'),
+              onPressed: _importing ? null : () => context.goNamed(AppRoute.home),
               child: Text(l10n.cancel),
             ),
           ],

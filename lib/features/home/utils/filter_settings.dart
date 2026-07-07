@@ -90,4 +90,42 @@ class FilterSettings {
     this.topSpeedPercentile    = 0.99,
     this.maxSpeedKn            = 12.0,
   });
+
+  // Value equality — the settings live behind a getter that constructs a new
+  // instance on every access, so callers that want to detect "did this
+  // actually change" (e.g. to invalidate a cache) need this instead of
+  // identity.
+  @override
+  bool operator ==(Object other) =>
+      other is FilterSettings &&
+      stationaryMode == other.stationaryMode &&
+      speedThresholdKn == other.speedThresholdKn &&
+      spreadThresholdM == other.spreadThresholdM &&
+      window == other.window &&
+      smoothWindow == other.smoothWindow &&
+      minStopMinutes == other.minStopMinutes &&
+      maxStopSpreadM == other.maxStopSpreadM &&
+      detectColdStart == other.detectColdStart &&
+      coldStartSettleFactor == other.coldStartSettleFactor &&
+      detectBadFirstFix == other.detectBadFirstFix &&
+      makingWayThresholdKn == other.makingWayThresholdKn &&
+      topSpeedPercentile == other.topSpeedPercentile &&
+      maxSpeedKn == other.maxSpeedKn;
+
+  @override
+  int get hashCode => Object.hash(
+        stationaryMode,
+        speedThresholdKn,
+        spreadThresholdM,
+        window,
+        smoothWindow,
+        minStopMinutes,
+        maxStopSpreadM,
+        detectColdStart,
+        coldStartSettleFactor,
+        detectBadFirstFix,
+        makingWayThresholdKn,
+        topSpeedPercentile,
+        maxSpeedKn,
+      );
 }

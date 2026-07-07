@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/route_names.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../l10n/l10n_extension.dart';
 import 'auth_widgets.dart';
@@ -57,7 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await context
           .read<AuthService>()
           .registerWithEmail(_emailCtrl.text, _passwordCtrl.text);
-      if (mounted) context.go('/');
+      if (mounted) context.goNamed(AppRoute.home);
     } on FirebaseAuthException catch (e) {
       _showError(_localizedError(e));
     } finally {
@@ -71,7 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final genericError = context.l10n.authErrorGeneric;
     try {
       await auth.signInWithGoogle();
-      if (mounted) context.go('/');
+      if (mounted) context.goNamed(AppRoute.home);
     } on FirebaseAuthException catch (e) {
       _showError(_localizedError(e));
     } catch (_) {

@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import 'route_names.dart';
 import '../core/config/feature_flags.dart';
 import '../core/services/auth_service.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
@@ -48,34 +49,41 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
       // ── Auth ────────────────────────────────────────────────────────
       GoRoute(
         path: '/auth/login',
+        name: AppRoute.login,
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: '/auth/register',
+        name: AppRoute.register,
         builder: (context, state) => const RegisterScreen(),
       ),
       GoRoute(
         path: '/auth/forgot-password',
+        name: AppRoute.forgotPassword,
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: '/auth/verify-email',
+        name: AppRoute.verifyEmail,
         builder: (context, state) => const VerifyEmailScreen(),
       ),
 
       // ── App ─────────────────────────────────────────────────────────
       GoRoute(
         path: '/',
+        name: AppRoute.home,
         builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: '/gpx-import',
+        name: AppRoute.gpxImport,
         redirect: (context, state) => state.extra == null ? '/' : null,
         builder: (context, state) =>
             GpxImportScreen(filePath: state.extra! as String),
       ),
       GoRoute(
         path: '/day/:year/:month/:day',
+        name: AppRoute.dayDetail,
         builder: (context, state) {
           final year = int.parse(state.pathParameters['year']!);
           final month = int.parse(state.pathParameters['month']!);
@@ -87,30 +95,37 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
       ),
       GoRoute(
         path: '/settings',
+        name: AppRoute.settings,
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/settings/crew-roster',
+        name: AppRoute.crewRoster,
         builder: (context, state) => const CrewRosterScreen(),
       ),
       GoRoute(
         path: '/tracks',
+        name: AppRoute.tracks,
         builder: (context, state) => const TracksScreen(),
       ),
       GoRoute(
         path: '/tracks/fullscreen',
+        name: AppRoute.tracksFullscreen,
         builder: tracksFullScreenRouteBuilder,
       ),
       GoRoute(
         path: '/emergency',
+        name: AppRoute.emergencyManifest,
         builder: (context, state) => const EmergencyManifestScreen(),
       ),
       GoRoute(
         path: '/emergency/mayday',
+        name: AppRoute.mayday,
         builder: (context, state) => const MaydayScreen(),
       ),
       GoRoute(
         path: '/emergency/distress',
+        name: AppRoute.emergencyGuide,
         builder: (context, state) => const EmergencyScreen(),
       ),
     ],

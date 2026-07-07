@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/route_names.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../data/home_repository.dart';
@@ -169,6 +170,10 @@ class GpxShareHandler {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.l10n.gpxShareImported(dateStr))),
     );
-    context.go('/day/${date.year}/${date.month}/${date.day}');
+    context.goNamed(AppRoute.dayDetail, pathParameters: {
+      'year': '${date.year}',
+      'month': '${date.month}',
+      'day': '${date.day}',
+    });
   }
 }

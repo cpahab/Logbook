@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
+import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/gps_consent_service.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -122,9 +123,9 @@ class _MaydayScreenState extends State<MaydayScreen>
         active: NavTab.safety,
         showFab: false,
         onSelect: (tab) {
-          if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.go('/tracks');
-          if (tab == NavTab.settings) context.go('/settings');
+          if (tab == NavTab.journal) context.goNamed(AppRoute.home);
+          if (tab == NavTab.map) context.goNamed(AppRoute.tracks);
+          if (tab == NavTab.settings) context.goNamed(AppRoute.settings);
         },
       ),
       body: ListView(

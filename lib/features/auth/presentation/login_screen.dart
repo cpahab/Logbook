@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/route_names.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../l10n/l10n_extension.dart';
 import 'auth_widgets.dart';
@@ -167,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () => context.push('/auth/forgot-password'),
+                    onPressed: () => context.pushNamed(AppRoute.forgotPassword),
                     child: Text(l10n.authForgotPasswordLink,
                         style: Theme.of(context).textTheme.bodySmall!.copyWith(
                             color: cs.primary)),
@@ -227,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                             color: cs.onSurfaceVariant)),
                     TextButton(
-                      onPressed: () => context.push('/auth/register'),
+                      onPressed: () => context.pushNamed(AppRoute.register),
                       child: Text(l10n.authRegisterLink,
                           style: GoogleFonts.dmSans(
                               fontSize: 14, fontWeight: FontWeight.w600,

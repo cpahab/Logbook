@@ -22,8 +22,10 @@ import 'features/settings/domain/theme_provider.dart';
 import 'core/services/logbook_service.dart';
 import 'core/services/firestore_service.dart';
 import 'core/services/storage_service.dart';
+import 'features/tracks/utils/warm_tracks_cache.dart';
 import 'firebase_options.dart';
 
+import 'app/route_names.dart';
 import 'app/router.dart';
 import 'app.dart';
 
@@ -172,7 +174,7 @@ void main() async {
   // Navigate to the import screen from anywhere in the app — using the router
   // directly avoids the issue of calling context.go from a non-top-level screen.
   gpxShareService.gpxFilePaths.listen((path) {
-    router.go('/gpx-import', extra: path);
+    router.goNamed(AppRoute.gpxImport, extra: path);
   });
 
   // Check for a GPX file that arrived before the engine was ready. Done here
@@ -200,6 +202,13 @@ void main() async {
       child: Logbook(router: router),
     ),
   );
+
+  // Warm the tracks screen's computation cache in the background, after the
+  // first frame, so it's already computed if/when the user opens it —
+  // scheduled as idle-priority tasks so it never competes with real UI work.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    warmTracksCache(repo, themeProvider.filterSettings);
+  });
 }
 
 void unawaited(Future<void> future) => future.catchError((_) {});

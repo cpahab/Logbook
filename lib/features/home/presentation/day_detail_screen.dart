@@ -39,6 +39,7 @@ import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/constants/map_config.dart';
+import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 
 
@@ -178,7 +179,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: cs.primary),
-          onPressed: () => context.go('/'),
+          // Usually pushed from the home screen's day list (pop() correctly
+          // reveals the existing Home instance with its scroll position and
+          // reverses the entrance animation). But GPX-import flows reach
+          // this screen via go(), leaving nothing to pop back to — fall
+          // back to Home in that case.
+          onPressed: () => context.canPop()
+              ? context.pop()
+              : context.goNamed(AppRoute.home),
         ),
         title: Text(
           '$dayName · $dateStr',
@@ -264,10 +272,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         active: NavTab.journal,
         onFabTap: () => _addTimelineEntry(context),
         onSelect: (tab) {
-          if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.push('/tracks');
-          if (tab == NavTab.settings) context.push('/settings');
-          if (tab == NavTab.safety) context.push('/emergency');
+          if (tab == NavTab.journal) context.goNamed(AppRoute.home);
+          if (tab == NavTab.map) context.pushNamed(AppRoute.tracks);
+          if (tab == NavTab.settings) context.pushNamed(AppRoute.settings);
+          if (tab == NavTab.safety) context.pushNamed(AppRoute.emergencyManifest);
         },
       ),
       body: entry == null
@@ -2541,7 +2549,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           content: Text(context.l10n.dayDateExistsError)));
       return;
     }
-    context.go('/day/${newDate.year}/${newDate.month}/${newDate.day}');
+    context.goNamed(AppRoute.dayDetail, pathParameters: {
+      'year': '${newDate.year}',
+      'month': '${newDate.month}',
+      'day': '${newDate.day}',
+    });
   }
 
   void _startEditRoute(DayEntry entry) {
@@ -3155,7 +3167,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted || confirmed != true) return;
     await repo.removeEntry(day);
     if (!mounted) return;
-    context.go('/');
+    context.goNamed(AppRoute.home);
   }
 
   // ── Map helpers ───────────────────────────────────────────────────

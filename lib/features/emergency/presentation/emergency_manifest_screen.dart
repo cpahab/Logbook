@@ -9,6 +9,7 @@ import '../../home/domain/crew_member.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
+import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../data/emergency_repository.dart';
 import '../domain/emergency_contact.dart';
@@ -88,9 +89,9 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
         active: NavTab.safety,
         showFab: false,
         onSelect: (tab) {
-          if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.go('/tracks');
-          if (tab == NavTab.settings) context.go('/settings');
+          if (tab == NavTab.journal) context.goNamed(AppRoute.home);
+          if (tab == NavTab.map) context.goNamed(AppRoute.tracks);
+          if (tab == NavTab.settings) context.goNamed(AppRoute.settings);
         },
       ),
       body: ListView(
@@ -111,7 +112,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
                   cardBg: cs.surfaceContainerLowest,
                   trailingIcon: Icons.arrow_forward_ios,
                   trailingColor: cs.primary,
-                  onTap: () => context.push('/emergency/mayday'),
+                  onTap: () => context.pushNamed(AppRoute.mayday),
                 )),
                 const SizedBox(width: 12),
                 Expanded(child: _QuickActionCard(
@@ -124,7 +125,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
                   cardBg: em.criticalBgColor,
                   trailingIcon: Icons.flare,
                   trailingColor: em.criticalColor,
-                  onTap: () => context.push('/emergency/distress'),
+                  onTap: () => context.pushNamed(AppRoute.emergencyGuide),
                 )),
               ],
             ),
@@ -1616,8 +1617,13 @@ class _EmptyCrewHint extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.push(
-                  '/day/${latestEntry.date.year}/${latestEntry.date.month}/${latestEntry.date.day}',
+                onPressed: () => context.pushNamed(
+                  AppRoute.dayDetail,
+                  pathParameters: {
+                    'year': '${latestEntry.date.year}',
+                    'month': '${latestEntry.date.month}',
+                    'day': '${latestEntry.date.day}',
+                  },
                 ),
                 icon: const Icon(Icons.auto_stories, size: 16),
                 label: Text(l10n.emergencyOpenDayEntry),

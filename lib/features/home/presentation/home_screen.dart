@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
@@ -67,8 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedYear = picked.year;
       _pendingScrollDate = picked;
     });
-    GoRouter.of(context)
-        .push('/day/${picked.year}/${picked.month}/${picked.day}');
+    GoRouter.of(context).pushNamed(AppRoute.dayDetail, pathParameters: {
+      'year': '${picked.year}',
+      'month': '${picked.month}',
+      'day': '${picked.day}',
+    });
   }
 
   void _createTimelineEntry() {
@@ -78,8 +82,15 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
     final recent = entries.last;
-    context.push(
-        '/day/${recent.date.year}/${recent.date.month}/${recent.date.day}?addEntry=1');
+    context.pushNamed(
+      AppRoute.dayDetail,
+      pathParameters: {
+        'year': '${recent.date.year}',
+        'month': '${recent.date.month}',
+        'day': '${recent.date.day}',
+      },
+      queryParameters: const {'addEntry': '1'},
+    );
   }
 
   void _showAddMenu() {
@@ -328,9 +339,9 @@ class _HomeScreenState extends State<HomeScreen> {
         active: NavTab.journal,
         onFabTap: _showAddMenu,
         onSelect: (tab) {
-          if (tab == NavTab.map) context.push('/tracks');
-          if (tab == NavTab.settings) context.push('/settings');
-          if (tab == NavTab.safety) context.push('/emergency');
+          if (tab == NavTab.map) context.pushNamed(AppRoute.tracks);
+          if (tab == NavTab.settings) context.pushNamed(AppRoute.settings);
+          if (tab == NavTab.safety) context.pushNamed(AppRoute.emergencyManifest);
         },
       ),
       body: Column(
@@ -716,8 +727,11 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.only(left: 32, bottom: 16),
           child: GestureDetector(
-            onTap: () => context.push(
-                '/day/${entry.date.year}/${entry.date.month}/${entry.date.day}'),
+            onTap: () => context.pushNamed(AppRoute.dayDetail, pathParameters: {
+                  'year': '${entry.date.year}',
+                  'month': '${entry.date.month}',
+                  'day': '${entry.date.day}',
+                }),
             child: Opacity(
               opacity: isActive ? 1.0 : 0.85,
               child: Container(

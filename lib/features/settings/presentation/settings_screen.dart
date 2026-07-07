@@ -20,6 +20,7 @@ import '../../home/data/home_repository.dart';
 import '../../home/utils/filter_settings.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../domain/theme_provider.dart';
+import '../../../app/route_names.dart';
 import '../../../l10n/l10n_extension.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -748,9 +749,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         active: NavTab.settings,
         showFab: false,
         onSelect: (tab) {
-          if (tab == NavTab.journal) context.go('/');
-          if (tab == NavTab.map) context.go('/tracks');
-          if (tab == NavTab.safety) context.go('/emergency');
+          if (tab == NavTab.journal) context.goNamed(AppRoute.home);
+          if (tab == NavTab.map) context.goNamed(AppRoute.tracks);
+          if (tab == NavTab.safety) context.goNamed(AppRoute.emergencyManifest);
         },
       ),
       body: RefreshIndicator(
@@ -1608,7 +1609,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildCrewRosterSection(ColorScheme cs) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => context.push('/settings/crew-roster'),
+      onTap: () => context.pushNamed(AppRoute.crewRoster),
       child: Container(
         decoration: BoxDecoration(
           color: cs.surfaceContainerLowest,
@@ -2285,7 +2286,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () => context.push('/auth/login'),
+                onPressed: () => context.pushNamed(AppRoute.login),
                 style: FilledButton.styleFrom(
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
