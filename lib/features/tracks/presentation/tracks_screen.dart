@@ -355,14 +355,14 @@ class _TracksScreenState extends State<TracksScreen> {
                 _buildFilterStrip(cs, displayed),
                 // ── Map ────────────────────────────────────────────────
                 Expanded(
-                  flex: 3,
+                  flex: 12,
                   child: _buildMapSection(
                       displayed, polylines, showRawTrack,
                       anchorCircles, arrowMarkers, cs),
                 ),
                 // ── List ───────────────────────────────────────────────
                 Expanded(
-                  flex: 2,
+                  flex: 13,
                   child: displayed.isEmpty
                       ? _buildEmptyFilter(cs)
                       : _buildListSection(displayed, cs),

@@ -1126,7 +1126,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get emergencyOpenChecklist => 'FUNK-CHECKLISTE ÖFFNEN';
 
   @override
-  String get emergencyManifestTitle => 'Notfallmanifest';
+  String get emergencyManifestTitle => 'Notfall Manifest';
 
   @override
   String get maydayScreenTitle => 'Funkprotokoll';

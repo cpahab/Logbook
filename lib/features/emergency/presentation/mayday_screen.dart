@@ -983,7 +983,7 @@ class _StepCard extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 2,
-                        color: iconColor,
+                        color: cs.error,
                       ),
                     ),
                     const SizedBox(height: 6),

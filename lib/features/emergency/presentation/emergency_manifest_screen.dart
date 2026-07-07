@@ -301,12 +301,12 @@ class _SectionHeader extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
-        Icon(icon, size: 16, color: cs.onSurfaceVariant),
+        Icon(icon, size: 16, color: cs.secondary),
         const SizedBox(width: 6),
         Text(
           label,
           style: Theme.of(context).textTheme.labelSmall!.copyWith(
-            color: cs.onSurfaceVariant,
+            color: cs.secondary,
           ),
         ),
       ],

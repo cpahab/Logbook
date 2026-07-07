@@ -46,8 +46,26 @@ class FirestoreService {
 
   // ── Write ──────────────────────────────────────────────────────────────────
 
-  Future<void> saveEntry(DayEntry entry) =>
-      _entriesRef.doc(_dateKey(entry.date)).set(_toMap(entry));
+  /// Saves [entry]. When [changedFields] is null, the whole document is
+  /// replaced — appropriate for genuinely new documents or deliberate full
+  /// resyncs. When [changedFields] is given, only those keys (plus
+  /// createdAt/updatedAt) are written via a merge, so a device holding a
+  /// stale copy of *other* fields (e.g. one it hasn't yet pulled from another
+  /// device) cannot clobber them with an unrelated edit.
+  Future<void> saveEntry(DayEntry entry, {Set<String>? changedFields}) {
+    final data = _toMap(entry);
+    if (changedFields == null) {
+      return _entriesRef.doc(_dateKey(entry.date)).set(data);
+    }
+    final partial = <String, dynamic>{
+      for (final field in changedFields) field: data[field],
+      'createdAt': data['createdAt'],
+      'updatedAt': data['updatedAt'],
+    };
+    return _entriesRef
+        .doc(_dateKey(entry.date))
+        .set(partial, SetOptions(merge: true));
+  }
 
   Future<void> deleteEntry(DateTime date) =>
       _entriesRef.doc(_dateKey(date)).delete();

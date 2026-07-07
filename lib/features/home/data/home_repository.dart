@@ -37,6 +37,12 @@ class HomeRepository extends ChangeNotifier {
   // ── Debounce timers (keyed by entry date) ──────────────────────────────────
   final Map<DateTime, Timer> _syncTimers = {};
 
+  /// Field names accumulated across debounced saveEntry() calls to the same
+  /// date, so a quick sequence of edits to different fields still pushes all
+  /// of them once the debounce timer fires (rather than only the last call's
+  /// fields).
+  final Map<DateTime, Set<String>> _pendingSyncFields = {};
+
   // ── Real-time Firestore stream subscriptions ───────────────────────────────
   StreamSubscription<void>? _entrySub;
   StreamSubscription<void>? _rosterSub;
@@ -188,11 +194,18 @@ class HomeRepository extends ChangeNotifier {
 
       var changed = false;
       for (final e in remote) {
-        // Do not overwrite an entry that was edited locally after the last sync
-        // — we just pushed that version in step 1, and the stream will echo it
-        // back; skipping here avoids a transient overwrite flash.
+        // Do not overwrite an entry that was edited locally *after* the server
+        // last saved this version — we just pushed that version in step 1, and
+        // the stream will echo it back; skipping here avoids a transient
+        // overwrite flash. Compared against this entry's own updatedAt (not
+        // the global lastSync) so a genuinely newer remote write from another
+        // device is never mistaken for stale data.
         final localEdit = _localEditTime(e.date);
-        if (localEdit != null && localEdit.isAfter(lastSync)) continue;
+        if (localEdit != null &&
+            e.updatedAt != null &&
+            localEdit.isAfter(e.updatedAt!)) {
+          continue;
+        }
 
         _entries[e.date] = e;
         await _dayBox.put(e.date.toIso8601String(), e);
@@ -236,14 +249,18 @@ class HomeRepository extends ChangeNotifier {
   Future<void> _applyRemoteEntries(
       ({List<DayEntry> upserted, List<DateTime> removed}) changes) async {
     var changed = false;
-    final lastSync = _lastSyncAt;
     for (final e in changes.upserted) {
       if (_syncTimers.containsKey(e.date)) continue;
-      // Skip entries edited locally after the last confirmed server sync —
-      // the cache stream reflects pre-offline state and must not overwrite
-      // pending local writes that haven't reached the server yet.
+      // Skip only if our local edit is newer than *this specific* server
+      // version (not the global lastSync) — otherwise a device with any
+      // pending local edit would ignore every subsequent remote update for
+      // that date indefinitely, even ones newer than its own edit.
       final localEdit = _localEditTime(e.date);
-      if (localEdit != null && localEdit.isAfter(lastSync)) continue;
+      if (localEdit != null &&
+          e.updatedAt != null &&
+          localEdit.isAfter(e.updatedAt!)) {
+        continue;
+      }
       _entries[e.date] = e;
       await _dayBox.put(e.date.toIso8601String(), e);
       changed = true;
@@ -404,14 +421,21 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Save ───────────────────────────────────────────────────────────────────
 
-  void saveEntry(DayEntry entry) {
+  /// Saves [entry] locally and schedules a debounced Firestore push.
+  ///
+  /// [changedFields] must name exactly the DayEntry/Firestore field keys this
+  /// call actually mutated (e.g. `{'notes'}`, `{'oilLevel', 'fuelLevel'}`).
+  /// Only those fields are pushed to Firestore (merged, not replaced), so
+  /// editing one field on one device can never clobber a different field
+  /// another device wrote concurrently to the same day.
+  void saveEntry(DayEntry entry, {required Set<String> changedFields}) {
     final now = DateTime.now();
     entry.createdAt ??= now; // backfill for entries created before timestamping
     entry.updatedAt = now;
     entry.save();
     _recordLocalEdit(entry.date);
     notifyListeners();
-    _debouncedSync(entry);
+    _debouncedSync(entry, changedFields);
   }
 
   // ── Timeline management ────────────────────────────────────────────────────
@@ -467,7 +491,7 @@ class HomeRepository extends ChangeNotifier {
     syncKeelFromTimeline(d);
     _dayBox.put(normalized.toIso8601String(), d);
     _recordLocalEdit(normalized);
-    _syncToFirestore(d);
+    _syncToFirestore(d, {'timeline', 'keelDown'});
     notifyListeners();
   }
 
@@ -521,7 +545,9 @@ class HomeRepository extends ChangeNotifier {
     if (entry != null) {
       await _dayBox.put(normalized.toIso8601String(), entry);
       _recordLocalEdit(normalized);
-      _syncToFirestore(entry);
+      // GPX tracks are stored outside the DayEntry document (see class doc),
+      // so no entry field actually changed here — just bump the timestamps.
+      _syncToFirestore(entry, const {});
     }
 
     notifyListeners();
@@ -733,17 +759,24 @@ class HomeRepository extends ChangeNotifier {
   // ── Private Firestore helpers ──────────────────────────────────────────────
 
   // Coalesces rapid successive edits to the same day (e.g. typing in a text
-  // field) into a single Firestore write instead of one per keystroke.
-  void _debouncedSync(DayEntry entry) {
+  // field) into a single Firestore write instead of one per keystroke. Field
+  // names accumulate across coalesced calls so nothing gets dropped from the
+  // eventual push.
+  void _debouncedSync(DayEntry entry, Set<String> changedFields) {
+    _pendingSyncFields.putIfAbsent(entry.date, () => {}).addAll(changedFields);
     _syncTimers[entry.date]?.cancel();
     _syncTimers[entry.date] = Timer(const Duration(seconds: 2), () {
-      _syncToFirestore(entry);
+      final fields = _pendingSyncFields.remove(entry.date) ?? changedFields;
+      _syncToFirestore(entry, fields);
       _syncTimers.remove(entry.date);
     });
   }
 
-  void _syncToFirestore(DayEntry entry) {
-    _firestore?.saveEntry(entry).catchError((_) {});
+  // [changedFields] null means "replace the whole document" — only correct
+  // for genuinely new documents or deliberate full resyncs (see saveEntry's
+  // doc comment for why a live edit must always pass an explicit field set).
+  void _syncToFirestore(DayEntry entry, [Set<String>? changedFields]) {
+    _firestore?.saveEntry(entry, changedFields: changedFields).catchError((_) {});
   }
 
   @override

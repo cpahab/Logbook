@@ -305,11 +305,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           children: [
             _buildCrewList(entry, cs),
             _buildReflection(entry, cs),
-            _buildFreeText(entry, cs),
             _buildPhotoStrip(entry, cs),
             _buildRouteMap(entry, track, stats, cs),
             _buildLogSection(entry, correlatedMap, cs),
             _buildVesselStatus(entry, cs),
+            _buildFreeText(entry, cs),
           ],
         ),
       ),
@@ -382,7 +382,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted || result == null) return;
     setState(() {
       entry.freeText = result.trim().isEmpty ? null : result.trim();
-      context.read<HomeRepository>().saveEntry(entry);
+      context.read<HomeRepository>().saveEntry(entry, changedFields: {'freeText'});
     });
   }
 
@@ -1731,7 +1731,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       final repo = context.read<HomeRepository>();
       final fresh = repo.getEntry(day) ?? entry;
       fresh.photos.addAll(paths);
-      repo.saveEntry(fresh);
+      repo.saveEntry(fresh, changedFields: {'photos'});
     } finally {
       if (mounted) setState(() => _importingPhotos = false);
     }
@@ -1768,7 +1768,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final day = DateTime(widget.year, widget.month, widget.day);
     final fresh = repo.getEntry(day) ?? entry;
     fresh.photos.remove(storagePath);
-    repo.saveEntry(fresh);
+    repo.saveEntry(fresh, changedFields: {'photos'});
     await PhotoService.delete(storagePath);
     if (mounted) setState(() => _deletingPhotos.remove(storagePath));
   }
@@ -1910,6 +1910,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ],
           ),
         ),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -2483,7 +2484,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted || result == null) return;
     setState(() {
       entry.notes = result.trim().isEmpty ? null : result.trim();
-      context.read<HomeRepository>().saveEntry(entry);
+      context.read<HomeRepository>().saveEntry(entry, changedFields: {'notes'});
     });
   }
 
@@ -2570,7 +2571,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       entry.toHarbor = _toHarborCtrl.text.trim().isEmpty
           ? null
           : _toHarborCtrl.text.trim();
-      context.read<HomeRepository>().saveEntry(entry);
+      context.read<HomeRepository>().saveEntry(entry,
+          changedFields: {'fromHarbor', 'toHarbor'});
       _editingRoute = false;
     });
   }
@@ -2671,20 +2673,26 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       entry.oilLevel = oilVal;
       entry.fuelLevel = fuelVal;
       entry.keelDown = keelVal;
+      var timelineTouched = false;
       if (oilVal != oldOil || fuelVal != oldFuel) {
         entry.timeline.add(TimelineEntry(
           time: entryTime,
           vesselStatusNote: 'vs:oil=$oilVal,fuel=$fuelVal',
         ));
+        timelineTouched = true;
       }
       if (keelVal != oldKeel && keelVal != null) {
         entry.timeline.add(TimelineEntry(
           time: entryTime,
           vesselStatusNote: keelVal! ? 'vs:keel=down' : 'vs:keel=up',
         ));
+        timelineTouched = true;
       }
       entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-      context.read<HomeRepository>().saveEntry(entry);
+      context.read<HomeRepository>().saveEntry(entry, changedFields: {
+        'oilLevel', 'fuelLevel', 'keelDown',
+        if (timelineTouched) 'timeline',
+      });
     });
   }
 
@@ -2718,14 +2726,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (!mounted || member == null) return;
     final fresh = repo.getEntry(day) ?? entry;
     fresh.crew.add(member);
-    if (fresh.timeline.isNotEmpty) {
+    final touchedTimeline = fresh.timeline.isNotEmpty;
+    if (touchedTimeline) {
       final now = DateTime.now();
       final ts = DateTime(widget.year, widget.month, widget.day, now.hour, now.minute);
       fresh.timeline.add(TimelineEntry(
           time: ts, vesselStatusNote: HomeRepository.buildCrewNote(fresh.crew)));
       fresh.timeline.sort((a, b) => a.time.compareTo(b.time));
     }
-    repo.saveEntry(fresh);
+    repo.saveEntry(fresh, changedFields: {
+      'crew',
+      if (touchedTimeline) 'timeline',
+    });
   }
 
   // Activate edit mode (locked → editing, non-empty crew only).
@@ -2764,7 +2776,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     fresh.crew = List<CrewMember>.from(_pendingCrew!);
 
-    if (fresh.timeline.isNotEmpty && fresh.crew.isNotEmpty) {
+    final touchedTimeline = fresh.timeline.isNotEmpty && fresh.crew.isNotEmpty;
+    if (touchedTimeline) {
       final now = DateTime.now();
       final ts = DateTime(
           widget.year, widget.month, widget.day, now.hour, now.minute);
@@ -2773,7 +2786,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       fresh.timeline.sort((a, b) => a.time.compareTo(b.time));
     }
 
-    repo.saveEntry(fresh);
+    repo.saveEntry(fresh, changedFields: {
+      'crew',
+      if (touchedTimeline) 'timeline',
+    });
     setState(() {
       _crewEditing = false;
       _pendingCrew = null;
@@ -2861,7 +2877,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       entry.timeline.remove(t);
       final repo = context.read<HomeRepository>();
       repo.syncKeelFromTimeline(entry);
-      repo.saveEntry(entry);
+      repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(context.l10n.dayEntryDeleted),
@@ -2874,7 +2890,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             entry.timeline.sort((a, b) => a.time.compareTo(b.time));
             final repo = context.read<HomeRepository>();
             repo.syncKeelFromTimeline(entry);
-            repo.saveEntry(entry);
+            repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
           });
         },
       ),
@@ -2923,7 +2939,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         entry.timeline.sort((a, b) => a.time.compareTo(b.time));
         final repo = context.read<HomeRepository>();
         repo.syncKeelFromTimeline(entry);
-        repo.saveEntry(entry);
+        repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(

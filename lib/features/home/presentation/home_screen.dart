@@ -447,7 +447,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             offset: const Offset(0, 2),
                           ),
                           BoxShadow(
-                            color: cs.secondaryFixed.withValues(alpha: 0.30),
+                            color: cs.secondary.withValues(alpha: 0.30),
                             blurRadius: 0,
                             spreadRadius: 1.5,
                           ),
@@ -490,7 +490,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           // ring-1 ring-secondary-fixed/30
                           BoxShadow(
-                            color: cs.secondaryFixed.withValues(alpha: 0.30),
+                            color: cs.secondary.withValues(alpha: 0.30),
                             blurRadius: 0,
                             spreadRadius: 1.5,
                           ),
@@ -742,7 +742,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border(
                     left: BorderSide(
-                      color: isActive ? cs.secondaryFixed : cs.outlineVariant,
+                      color: isActive ? cs.secondary : cs.outlineVariant,
                       width: 4,
                     ),
                   ),
@@ -775,8 +775,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             ..._weatherIcons(entry.timeline).map((ic) => Padding(
                               padding: const EdgeInsets.only(left: 4),
-                              child: Icon(ic, size: 16,
-                                  color: isActive ? cs.secondary : cs.mutedLabel),
+                              child: Icon(ic, size: 16, color: cs.secondary),
                             )),
                             Builder(builder: (context) {
                               final wind = _maxWindKnots(entry.timeline);
@@ -787,7 +786,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Icon(
                                   strong ? Icons.storm : Icons.air,
                                   size: 16,
-                                  color: isActive ? cs.secondary : cs.mutedLabel,
+                                  color: cs.secondary,
                                 ),
                               );
                             }),

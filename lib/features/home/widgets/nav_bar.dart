@@ -179,45 +179,11 @@ class _AppBottomNavState extends State<AppBottomNav> {
   Widget _tab(BuildContext context, ColorScheme cs, NavTab tab,
       IconData icon, String label) {
     final isActive = widget.active == tab;
-    final inactiveColor = cs.onTertiaryContainer;
-
-    void handleTap() => widget.onSelect?.call(tab);
-
-    if (isActive) {
-      return GestureDetector(
-        onTap: handleTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: cs.primary, // Horizon Minimalist: active tab pill in brand primary
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, color: cs.onPrimary, size: 22),
-                const SizedBox(height: 2),
-                Text(
-                  label.toUpperCase(),
-                  maxLines: 1,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                    color: cs.onPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    // Active state reads purely from the gold icon/label — no pill.
+    final color = isActive ? cs.secondary : cs.onTertiaryContainer;
 
     return InkWell(
-      onTap: handleTap,
+      onTap: () => widget.onSelect?.call(tab),
       borderRadius: BorderRadius.circular(20),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -226,7 +192,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: inactiveColor, size: 22),
+              Icon(icon, color: color, size: 22),
               const SizedBox(height: 2),
               Text(
                 label.toUpperCase(),
@@ -235,7 +201,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
                   fontSize: 9,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
-                  color: inactiveColor,
+                  color: color,
                 ),
               ),
             ],

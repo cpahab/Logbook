@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/route_names.dart';
-import '../../../app/theme/theme_extensions.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../../l10n/l10n_extension.dart';
 
@@ -131,7 +130,7 @@ class _SectionHeader extends StatelessWidget {
     return Text(
       title.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall!.copyWith(
-        color: cs.mutedLabel,
+        color: cs.secondary,
       ),
     );
   }
@@ -576,7 +575,7 @@ class _MaydayCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.radio, color: cs.secondaryFixed, size: 22),
+                  Icon(Icons.radio, color: cs.secondary, size: 22),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -605,8 +604,8 @@ class _MaydayCard extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: () => context.pushNamed(AppRoute.mayday),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: cs.secondaryFixed,
-                    foregroundColor: cs.onSecondaryFixed,
+                    backgroundColor: cs.secondary,
+                    foregroundColor: cs.onSecondary,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: const StadiumBorder(),
                     elevation: 0,

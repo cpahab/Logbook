@@ -415,7 +415,7 @@
   "emergencyRadioProtocolTip": "UKW-Kanal 16. \"MAYDAY\" dreimal nennen, dann Schiffsname und Position.",
   "emergencyOpenChecklist": "FUNK-CHECKLISTE ÖFFNEN",
 
-  "emergencyManifestTitle": "Notfallmanifest",
+  "emergencyManifestTitle": "Notfall Manifest",
   "maydayScreenTitle": "Funkprotokoll",
   "maydayStateThreeTimes": "(dreimal sagen)",
   "emergencyDistressGuideSubtitle": "Visuelle, akustische & elektronische Signale",

@@ -108,7 +108,6 @@ final ThemeData darkTheme = ThemeData(
     titleTextStyle: GoogleFonts.dmSans(
       fontSize: 18, fontWeight: FontWeight.bold, color: _lightBlue,
     ),
-    shape: const Border(bottom: BorderSide(color: _outline, width: 1)),
     iconTheme:        const IconThemeData(color: _lightBlue),
     actionsIconTheme: const IconThemeData(color: _lightBlue),
   ),

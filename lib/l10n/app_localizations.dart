@@ -2177,7 +2177,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyManifestTitle.
   ///
   /// In de, this message translates to:
-  /// **'Notfallmanifest'**
+  /// **'Notfall Manifest'**
   String get emergencyManifestTitle;
 
   /// No description provided for @maydayScreenTitle.

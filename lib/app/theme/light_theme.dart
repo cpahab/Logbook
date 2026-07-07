@@ -33,12 +33,19 @@ final ThemeData lightTheme = ThemeData(
     onPrimaryContainer: Color(0xFF87A4CC),
     inversePrimary:     Color(0xFFABC9F2),
     // ── Secondary — Captain's Gold ──────────────────────────────────
-    // Same hue as before (~46°) but higher saturation/less blue — reads as
-    // a warmer, more vivid gold instead of a muddy olive-brown.
-    secondary:            Color(0xFF7E6207),
+    // Same ~45° gold/goldenrod hue, pushed noticeably brighter/more
+    // saturated than the previous pass — low lightness was what read as
+    // "brown" rather than gold. Contrast against the surface drops to
+    // ~3.6:1: below the 4.5:1 body-text bar, but this label/icon use is
+    // closer to a UI-component/large-accent-text role (3:1 minimum) — a
+    // deliberate trade favoring "looks properly gold" for this specific,
+    // sparingly-used accent. secondaryContainer stays a pale background
+    // fill (not the dark theme's pale secondary reused — different role,
+    // designed as text against near-black, not a light-mode fill).
+    secondary:            Color(0xFFA47C04),
     onSecondary:          Color(0xFFFFFFFF),
     secondaryContainer:   Color(0xFFFFE088),
-    onSecondaryContainer: Color(0xFF7E6207),
+    onSecondaryContainer: Color(0xFFA47C04),
     // ── Tertiary — Seafoam / Dark Navy ─────────────────────────────
     tertiary:            Color(0xFF142435),
     onTertiary:          Color(0xFFFFFFFF),
@@ -102,7 +109,6 @@ final ThemeData lightTheme = ThemeData(
     titleTextStyle: GoogleFonts.dmSans(
       fontSize: 18, fontWeight: FontWeight.bold, color: _primary,
     ),
-    shape: const Border(bottom: BorderSide(color: _outline, width: 1)),
     iconTheme:        const IconThemeData(color: _primary),
     actionsIconTheme: const IconThemeData(color: _primary),
   ),
