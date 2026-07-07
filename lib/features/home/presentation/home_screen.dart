@@ -439,20 +439,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   border: Border.all(
                     color: _showAllYears ? cs.primary : cs.outlineVariant,
                   ),
-                  boxShadow: _showAllYears
-                      ? [
-                          BoxShadow(
-                            color: cs.primary.withValues(alpha: 0.25),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                          BoxShadow(
-                            color: cs.secondary.withValues(alpha: 0.30),
-                            blurRadius: 0,
-                            spreadRadius: 1.5,
-                          ),
-                        ]
-                      : null,
                 ),
                 child: Text(
                   context.l10n.homeAllButton.toUpperCase(),
@@ -481,21 +467,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   border: Border.all(
                     color: active ? cs.primary : cs.outlineVariant,
                   ),
-                  boxShadow: active
-                      ? [
-                          BoxShadow(
-                            color: cs.primary.withValues(alpha: 0.25),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                          // ring-1 ring-secondary-fixed/30
-                          BoxShadow(
-                            color: cs.secondary.withValues(alpha: 0.30),
-                            blurRadius: 0,
-                            spreadRadius: 1.5,
-                          ),
-                        ]
-                      : null,
                 ),
                 child: Text(
                   '$year',
