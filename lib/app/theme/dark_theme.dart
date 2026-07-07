@@ -34,10 +34,14 @@ final ThemeData darkTheme = ThemeData(
     onPrimaryContainer: Color(0xFF001C37),
     inversePrimary: Color(0xFF002B6A),
     // ── Secondary — Captain's Gold ───────────────────────────────────
+    // secondaryContainer/onSecondaryContainer were still the pre-redesign
+    // cyan (left over from when secondary itself was cyan) — a rich
+    // goldenrod fill with a dark ink "on" color, matching how
+    // primaryContainer/onPrimaryContainer relate to primary here.
     secondary: _secondary,
     onSecondary: _darkNavy,
-    secondaryContainer: Color(0xFF4CBFD4),
-    onSecondaryContainer: Color(0xFF00474E),
+    secondaryContainer: Color(0xFFB8860B),
+    onSecondaryContainer: Color(0xFF3A2E00),
     // ── Tertiary — Seafoam (lighter than light theme) ────────────────
     tertiary: Color(0xFFB7C8DE),
     onTertiary: Color(0xFF0B1D2D),
@@ -75,11 +79,14 @@ final ThemeData darkTheme = ThemeData(
     primaryFixedDim: const Color(0xFFABC9F2),
     onPrimaryFixed: const Color(0xFF001C37),
     onPrimaryFixedVariant: const Color(0xFF2A486B),
-    // ── Secondary fixed (cyan) ─────────────────────────────────────
-    secondaryFixed: const Color(0xFFB5E7FF),
-    secondaryFixedDim: const Color(0xFF80CFEA),
-    onSecondaryFixed: const Color(0xFF00474E),
-    onSecondaryFixedVariant: const Color(0xFF1F5E6E),
+    // ── Secondary fixed (gold) ──────────────────────────────────────
+    // "Fixed" roles are meant to stay the same across brightness (that's
+    // the point) — these were still the pre-redesign cyan. Match light
+    // theme's values exactly instead of inventing a separate dark-mode set.
+    secondaryFixed: const Color(0xFFFFE088),
+    secondaryFixedDim: const Color(0xFFE1C46F),
+    onSecondaryFixed: const Color(0xFF241A00),
+    onSecondaryFixedVariant: const Color(0xFF574500),
     // ── Tertiary fixed (dark navy) ──────────────────────────────────
     tertiaryFixed: const Color(0xFFD3E4FB),
     tertiaryFixedDim: const Color(0xFFB7C8DE),

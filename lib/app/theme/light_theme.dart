@@ -33,10 +33,12 @@ final ThemeData lightTheme = ThemeData(
     onPrimaryContainer: Color(0xFF87A4CC),
     inversePrimary:     Color(0xFFABC9F2),
     // ── Secondary — Captain's Gold ──────────────────────────────────
-    secondary:            Color(0xFF725C10),
+    // Same hue as before (~46°) but higher saturation/less blue — reads as
+    // a warmer, more vivid gold instead of a muddy olive-brown.
+    secondary:            Color(0xFF7E6207),
     onSecondary:          Color(0xFFFFFFFF),
     secondaryContainer:   Color(0xFFFFE088),
-    onSecondaryContainer: Color(0xFF786216),
+    onSecondaryContainer: Color(0xFF7E6207),
     // ── Tertiary — Seafoam / Dark Navy ─────────────────────────────
     tertiary:            Color(0xFF142435),
     onTertiary:          Color(0xFFFFFFFF),
