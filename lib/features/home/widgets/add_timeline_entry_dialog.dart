@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../domain/timeline_entry.dart';
 import '../utils/sail_state_utils.dart';
@@ -181,10 +180,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
             widget.isAmendment ? l10n.amendmentDialogTitle
                 : isEdit ? l10n.entryDialogTitleEdit
                 : l10n.entryDialogTitleNew,
-            style: GoogleFonts.dmSans(
-              fontSize: 22,
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.w500,
+            style: Theme.of(context).textTheme.dialogTitle.copyWith(
               color: cs.primary,
             ),
           ),
@@ -221,9 +217,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           },
                           child: Text(
                             selectedTime.format(context),
-                            style: GoogleFonts.dmSans(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w500,
+                            style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                               color: cs.primary,
                             ),
                           ),
@@ -301,18 +295,13 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                   child: DropdownButton<String>(
                                     value: _windDir,
                                     isExpanded: true,
-                                    style: GoogleFonts.dmSans(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
+                                    style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                                         color: cs.primary),
                                     items: _windDirs
                                         .map((d) => DropdownMenuItem(
                                               value: d,
                                               child: Text(d,
-                                                  style: GoogleFonts.dmSans(
-                                                      fontSize: 15,
-                                                      fontWeight:
-                                                          FontWeight.w600,
+                                                  style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                                                       color: cs.onSurface)),
                                             ))
                                         .toList(),
@@ -340,9 +329,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                     Expanded(
                                       child: TextField(
                                         controller: windStrengthCtrl,
-                                        style: GoogleFonts.dmSans(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
+                                        style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                                             color: cs.primary),
                                         decoration: InputDecoration(
                                           border: InputBorder.none,
@@ -352,8 +339,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                                   horizontal: 12,
                                                   vertical: 12),
                                           hintText: '0',
-                                          hintStyle: GoogleFonts.dmSans(
-                                              fontSize: 15,
+                                          hintStyle: Theme.of(context).textTheme.fieldHintCompact.copyWith(
                                               color: cs.outline),
                                         ),
                                         keyboardType: TextInputType.number,
@@ -367,9 +353,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                                     Padding(
                                       padding: const EdgeInsets.only(right: 12),
                                       child: Text('kn',
-                                          style: GoogleFonts.dmSans(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
+                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(
                                               letterSpacing: 0.5,
                                               color: cs.mutedLabel)),
                                     ),
@@ -494,8 +478,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                   _plainCard(
                     child: TextField(
                       controller: remarksCtrl,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 15,
+                      style: Theme.of(context).textTheme.fieldHintCompact.copyWith(
                         fontStyle: FontStyle.italic,
                         color: cs.primary,
                       ),
@@ -504,8 +487,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
                         hintText: l10n.entryDialogRemarksHint,
-                        hintStyle: GoogleFonts.dmSans(
-                          fontSize: 15,
+                        hintStyle: Theme.of(context).textTheme.fieldHintCompact.copyWith(
                           fontStyle: FontStyle.italic,
                           color: cs.onSurface.withValues(alpha: 0.3),
                         ),
@@ -527,9 +509,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       cs: cs,
                       child: TextField(
                         controller: amendmentReasonCtrl,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                        style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                           color: cs.onSurface,
                         ),
                         decoration: InputDecoration(
@@ -537,8 +517,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                           hintText: l10n.amendmentReasonHint,
-                          hintStyle: GoogleFonts.dmSans(
-                            fontSize: 15,
+                          hintStyle: Theme.of(context).textTheme.fieldHintCompact.copyWith(
                             color: cs.onSurface.withValues(alpha: 0.3),
                           ),
                         ),
@@ -561,8 +540,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         foregroundColor: cs.onPrimary,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        textStyle: GoogleFonts.dmSans(
-                            fontSize: 15, fontWeight: FontWeight.w600),
+                        textStyle: Theme.of(context).textTheme.fieldValueCompact,
                       ),
                       icon: const Icon(Icons.anchor, size: 20),
                       label: Text(isEdit ? l10n.saveChanges : l10n.entryDialogSubmitNew),
@@ -580,8 +558,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                             color: cs.primary.withValues(alpha: 0.25)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        textStyle: GoogleFonts.dmSans(
-                            fontSize: 15, fontWeight: FontWeight.w600),
+                        textStyle: Theme.of(context).textTheme.fieldValueCompact,
                       ),
                       child: Text(l10n.cancel),
                     ),
@@ -603,8 +580,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           foregroundColor: cs.error,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
-                          textStyle: GoogleFonts.dmSans(
-                              fontSize: 15, fontWeight: FontWeight.w600),
+                          textStyle: Theme.of(context).textTheme.fieldValueCompact,
                         ),
                       ),
                     ),
@@ -691,9 +667,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
               Expanded(
                 child: TextField(
                   controller: controller,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                  style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                     color: cs.primary,
                   ),
                   decoration: InputDecoration(
@@ -701,9 +675,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
                     hintText: placeholder,
-                    hintStyle: GoogleFonts.dmSans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                    hintStyle: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                       color: cs.outline,
                     ),
                   ),
@@ -715,9 +687,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
               const SizedBox(width: 4),
               Text(
                 unit,
-                style: GoogleFonts.dmSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                style: Theme.of(context).textTheme.unitLabel.copyWith(
                   color: cs.mutedLabel,
                 ),
               ),
@@ -733,15 +703,13 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       TextEditingController ctrl, String hint, ColorScheme cs) {
     return TextField(
       controller: ctrl,
-      style: GoogleFonts.dmSans(
-          fontSize: 15, fontWeight: FontWeight.w600, color: cs.primary),
+      style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.primary),
       decoration: InputDecoration(
         border: InputBorder.none,
         isDense: true,
         contentPadding: EdgeInsets.zero,
         hintText: hint,
-        hintStyle:
-            GoogleFonts.dmSans(fontSize: 15, color: cs.outline),
+        hintStyle: Theme.of(context).textTheme.fieldHintCompact.copyWith(color: cs.outline),
       ),
       textInputAction: TextInputAction.next,
     );
@@ -798,9 +766,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         ),
         child: Text(
           label,
-          style: GoogleFonts.dmSans(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+          style: Theme.of(context).textTheme.chipLabel.copyWith(
             color: isSelected ? cs.onPrimary : cs.onSurfaceVariant,
           ),
         ),
@@ -812,10 +778,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   Widget _labelSm(String text, ColorScheme cs) {
     return Text(
       text,
-      style: GoogleFonts.dmSans(
-        fontSize: 9,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.0,
+      style: Theme.of(context).textTheme.microLabel.copyWith(
         color: cs.mutedLabel,
       ),
     );

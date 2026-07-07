@@ -1277,7 +1277,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get emergencyEpirbLocation => 'EPIRB-Standort';
 
   @override
-  String get emergencyFireSuppression => 'Feuerlöschanlage';
+  String get emergencyFireSuppression => 'Feuerlöscher';
 
   @override
   String get navJournal => 'Journal';

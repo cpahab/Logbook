@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -712,10 +711,8 @@ class _TracksScreenState extends State<TracksScreen> {
             children: [
               Text(
                 label.toUpperCase(),
-                style: GoogleFonts.dmSans(
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
                   color: cs.mutedLabel,
                 ),
               ),
@@ -725,8 +722,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   children: [
                     TextSpan(
                       text: value,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 22,
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(
                         fontWeight: FontWeight.w500,
                         color: cs.primary,
                         height: 1.1,
@@ -872,9 +868,7 @@ class _TracksScreenState extends State<TracksScreen> {
                             // Route title
                             Text(
                               routeTitle,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
+                              style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                                 color: cs.primary,
                               ),
                               maxLines: 1,
@@ -902,9 +896,9 @@ class _TracksScreenState extends State<TracksScreen> {
                                 runSpacing: 2,
                                 children: [
                                   if (wind != null)
-                                    statInline(Icons.air, wind, cs),
+                                    statInline(context, Icons.air, wind, cs),
                                   if ((d.stats?.avgMakingWayKn ?? 0) > 0)
-                                    statInline(
+                                    statInline(context, 
                                       Icons.speed,
                                       // Moving average, not distance/total-elapsed-time —
                                       // avgSpeed (avgOverGroundKn) would be diluted by any
@@ -914,7 +908,7 @@ class _TracksScreenState extends State<TracksScreen> {
                                     ),
                                   if (d.stats != null &&
                                       d.stats!.distanceNm > 0)
-                                    statInline(
+                                    statInline(context, 
                                       Icons.straighten,
                                       '${d.stats!.distanceNm.toStringAsFixed(1)} nm',
                                       cs,

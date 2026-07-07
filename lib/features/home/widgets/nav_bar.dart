@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../../app/theme/theme_extensions.dart';
 import '../../../l10n/l10n_extension.dart';
 
 enum NavTab { journal, map, settings, safety }
@@ -121,7 +121,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
                               const SizedBox(width: 4),
                               Text(
                                 context.l10n.offlineLabel,
-                                style: GoogleFonts.dmSans(
+                                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
                                   color: cs.onTertiaryContainer
@@ -179,8 +179,9 @@ class _AppBottomNavState extends State<AppBottomNav> {
   Widget _tab(BuildContext context, ColorScheme cs, NavTab tab,
       IconData icon, String label) {
     final isActive = widget.active == tab;
-    // Active state reads purely from the gold icon/label — no pill.
-    final color = isActive ? cs.secondary : cs.onTertiaryContainer;
+    // Active state reads purely from the gold icon/label — no pill. Uses the
+    // paler secondaryContainer gold (matches the custom-range picker highlight).
+    final color = isActive ? cs.secondaryContainer : cs.onTertiaryContainer;
 
     return InkWell(
       onTap: () => widget.onSelect?.call(tab),
@@ -197,9 +198,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
               Text(
                 label.toUpperCase(),
                 maxLines: 1,
-                style: GoogleFonts.dmSans(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
+                style: Theme.of(context).textTheme.microLabel.copyWith(
                   letterSpacing: 0.5,
                   color: color,
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import '../../../app/theme/theme_extensions.dart';
 
 class AuthField extends StatelessWidget {
   final TextEditingController controller;
@@ -32,8 +33,7 @@ class AuthField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: GoogleFonts.dmSans(
-                fontSize: 13, fontWeight: FontWeight.w600,
+            style: Theme.of(context).textTheme.chipLabel.copyWith(
                 color: cs.onSurface)),
         const SizedBox(height: 6),
         TextFormField(
@@ -43,11 +43,11 @@ class AuthField extends StatelessWidget {
           textInputAction: textInputAction,
           onFieldSubmitted: onFieldSubmitted,
           validator: validator,
-          style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface),
+          style: Theme.of(context).textTheme.fieldHintCompact.copyWith(color: cs.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.dmSans(
-                fontSize: 15, color: cs.onSurfaceVariant),
+            hintStyle: Theme.of(context).textTheme.fieldHintCompact.copyWith(
+                color: cs.onSurfaceVariant),
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: cs.surfaceContainerLow,
@@ -120,8 +120,8 @@ class AuthSocialButton extends StatelessWidget {
         onPressed: onPressed,
         icon: icon,
         label: Text(label,
-            style: GoogleFonts.dmSans(
-                fontSize: 14, fontWeight: FontWeight.w500,
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                fontWeight: FontWeight.w500,
                 color: cs.onSurface)),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: cs.outlineVariant),

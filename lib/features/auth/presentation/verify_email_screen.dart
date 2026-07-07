@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import '../../../app/theme/theme_extensions.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/services/auth_service.dart';
@@ -62,8 +63,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
               const SizedBox(height: 28),
               Text(
                 l10n.authVerifyEmailTitle,
-                style: GoogleFonts.dmSans(
-                  fontSize: 28,
+                style: Theme.of(context).textTheme.headlineMedium!.copyWith(
                   fontWeight: FontWeight.w600,
                   color: cs.onSurface,
                 ),
@@ -91,8 +91,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: cs.onPrimary))
                     : Text(l10n.authVerifyEmailCheck,
-                        style: GoogleFonts.dmSans(
-                            fontSize: 15, fontWeight: FontWeight.w600)),
+                        style: Theme.of(context).textTheme.fieldValueCompact),
               ),
               const SizedBox(height: 12),
               OutlinedButton(

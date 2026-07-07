@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/route_names.dart';
+import '../../../app/theme/theme_extensions.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../../l10n/l10n_extension.dart';
 
@@ -22,12 +22,7 @@ class EmergencyScreen extends StatelessWidget {
         ),
         title: Text(
           l10n.emergencyGuideTitle,
-          style: GoogleFonts.dmSans(
-            color: cs.primary,
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            fontStyle: FontStyle.italic,
-          ),
+          style: Theme.of(context).textTheme.dialogTitle.copyWith(fontWeight: FontWeight.w600, color: cs.primary),
         ),
       ),
       bottomNavigationBar: AppBottomNav(
@@ -44,11 +39,7 @@ class EmergencyScreen extends StatelessWidget {
         children: [
           Text(
             l10n.emergencyGuideIntro,
-            style: GoogleFonts.dmSans(
-              fontSize: 15,
-              height: 1.6,
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.fieldHintCompact.copyWith(height: 1.6, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 20),
           _SectionHeader(title: l10n.emergencyVisualSignals),
@@ -167,8 +158,9 @@ class _PyrotechnicCard extends StatelessWidget {
               right: 6,
               child: Text(
                 'edtech.com.sg',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   fontSize: 7,
+                  letterSpacing: 0,
                   color: Colors.white.withValues(alpha: 0.75),
                   shadows: const [Shadow(blurRadius: 2, color: Colors.black54)],
                 ),
@@ -272,12 +264,7 @@ class _SignalCard extends StatelessWidget {
                           ),
                           child: Text(
                             badge!,
-                            style: GoogleFonts.dmSans(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                              color: badgeFg,
-                            ),
+                            style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: badgeFg),
                           ),
                         ),
                     ],
@@ -285,11 +272,7 @@ class _SignalCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     title,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -351,11 +334,7 @@ class _FlagSignalCard extends StatelessWidget {
                       const Spacer(),
                       Text(
                         'Code: NC',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: cs.primary,
-                        ),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 0, color: cs.primary),
                       ),
                     ],
                   ),
@@ -369,11 +348,7 @@ class _FlagSignalCard extends StatelessWidget {
                           children: [
                             Text(
                               context.l10n.emergencyFlagSignalTitle,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: cs.onSurface,
-                              ),
+                              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -447,20 +422,12 @@ class _SoundCard extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 title,
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
               ),
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: GoogleFonts.dmSans(
-                  fontSize: 11,
-                  color: cs.onSurfaceVariant,
-                  height: 1.4,
-                ),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11, height: 1.4, color: cs.onSurfaceVariant),
               ),
             ],
           ),
@@ -520,11 +487,7 @@ class _ElectronicItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -580,11 +543,7 @@ class _MaydayCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       l10n.emergencyRadioProtocolLabel,
-                      style: GoogleFonts.dmSans(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
+                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white),
                     ),
                   ),
                 ],
@@ -613,11 +572,7 @@ class _MaydayCard extends StatelessWidget {
                   icon: const Icon(Icons.launch, size: 18),
                   label: Text(
                     l10n.emergencyOpenChecklist,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                   ),
                 ),
               ),

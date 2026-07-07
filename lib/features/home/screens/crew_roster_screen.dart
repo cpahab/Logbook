@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
@@ -25,10 +24,7 @@ class CrewRosterScreen extends StatelessWidget {
         ),
         title: Text(
           context.l10n.crewRosterTitle,
-          style: GoogleFonts.dmSans(
-            fontSize: 22,
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.w500,
+          style: Theme.of(context).textTheme.dialogTitle.copyWith(
             color: cs.primary,
           ),
         ),
@@ -48,8 +44,8 @@ class CrewRosterScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     l10n.crewRosterEmpty,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 15, color: cs.onSurfaceVariant),
+                    style: Theme.of(context).textTheme.fieldHintCompact.copyWith(
+                        color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -126,8 +122,8 @@ class _RosterListTile extends StatelessWidget {
       builder: (_) => AlertDialog(
         backgroundColor: cs.surface,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
-        contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+        titleTextStyle: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+        contentTextStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
         title: Text(l10n.crewRosterRemoveTitle),
         content: Text(l10n.crewRosterRemoveContent(member.name)),
         actions: [
@@ -159,16 +155,14 @@ class _RosterListTile extends StatelessWidget {
         backgroundColor: cs.primaryContainer,
         child: Text(
           member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-          style: TextStyle(
+          style: Theme.of(context).textTheme.bodyLarge!.copyWith(
               color: cs.onPrimaryContainer,
-              fontWeight: FontWeight.w700,
-              fontSize: 16),
+              fontWeight: FontWeight.w700),
         ),
       ),
       title: Text(
         member.name,
-        style: GoogleFonts.dmSans(
-            fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface),
+        style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
       ),
       subtitle: sub.isNotEmpty
           ? Text(

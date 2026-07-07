@@ -169,11 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(width: 12),
             Text(
               label,
-              style: GoogleFonts.dmSans(
-                color: cs.onPrimaryContainer,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 15, fontWeight: FontWeight.w500, color: cs.onPrimaryContainer),
             ),
           ],
         ),
@@ -368,11 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               context.l10n.homeRecentEntries,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: cs.primary,
-                              ),
+                              style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.primary),
                             ),
                             const Spacer(),
                           ],
@@ -573,12 +565,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   label.toUpperCase(),
-                  style: GoogleFonts.dmSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.5,
-                    color: cs.mutedLabel,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, color: cs.mutedLabel),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -588,12 +575,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       TextSpan(
                         text: value,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w500,
-                          color: cs.primary,
-                          height: 1.1,
-                        ),
+                        style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w500, height: 1.1, color: cs.primary),
                       ),
                       TextSpan(
                         text: ' $unit',
@@ -645,11 +627,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Text(
                   '$count',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: cs.onSecondaryContainer,
-                  ),
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, letterSpacing: 0, color: cs.onSecondaryContainer),
                 ),
               ),
             ],
@@ -713,7 +691,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border(
                     left: BorderSide(
-                      color: isActive ? cs.secondary : cs.outlineVariant,
+                      color: isActive ? cs.secondaryContainer : cs.outlineVariant,
                       width: 4,
                     ),
                   ),
@@ -774,11 +752,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               if (entry.toHarbor?.isNotEmpty ?? false)
                                 entry.toHarbor!,
                             ].join(' → '),
-                            style: GoogleFonts.dmSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isActive ? cs.primary : cs.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: isActive ? cs.primary : cs.onSurfaceVariant),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -806,7 +780,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             runSpacing: 2,
                             children: [
                               if (stats.avgMakingWayKn > 0)
-                                statInline(
+                                statInline(context, 
                                   Icons.speed,
                                   // Moving average, not distance/total-elapsed-time —
                                   // avgSpeed (avgOverGroundKn) would be diluted by any
@@ -815,7 +789,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   cs,
                                 ),
                               if (stats.distanceNm > 0)
-                                statInline(
+                                statInline(context, 
                                   Icons.straighten,
                                   '${stats.distanceNm.toStringAsFixed(1)} nm',
                                   cs,

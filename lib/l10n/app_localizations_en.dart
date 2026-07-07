@@ -1270,7 +1270,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emergencyEpirbLocation => 'EPIRB Location';
 
   @override
-  String get emergencyFireSuppression => 'Fire Suppression';
+  String get emergencyFireSuppression => 'Fire Extinguisher';
 
   @override
   String get navJournal => 'Journal';

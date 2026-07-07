@@ -37,3 +37,36 @@ extension LogbookEmergencyColors on ColorScheme {
   /// Muted variant at ~20 % opacity: pulsing ring, section dividers.
   Color get criticalMutedColor => error.withValues(alpha: 0.2);
 }
+
+/// Recurring dialog/form text styles that don't match a stock Material
+/// role, derived from [TextTheme] roles rather than hardcoded per call
+/// site. Callers still supply `color` (and, where meaningful, `fontStyle`)
+/// via `.copyWith` — those are legitimate per-instance choices, unlike
+/// size/weight which belong here.
+extension LogbookFormTextStyles on TextTheme {
+  /// Fullscreen-dialog title (e.g. add/edit timeline entry, add/edit crew).
+  TextStyle get dialogTitle =>
+      titleLarge!.copyWith(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500);
+
+  /// Compact field value/input text — dense multi-column forms (timeline
+  /// entry's time/course/speed/wind/remarks, dialog buttons).
+  TextStyle get fieldValueCompact => bodyLarge!.copyWith(fontSize: 15, fontWeight: FontWeight.w600);
+
+  /// Compact field hint text — same size as [fieldValueCompact] but at
+  /// bodyLarge's default (regular) weight.
+  TextStyle get fieldHintCompact => bodyLarge!.copyWith(fontSize: 15);
+
+  /// Prose field value/hint text — single-column forms with more room
+  /// (crew dialog's name/blood type/allergies/etc.).
+  TextStyle get fieldValueProse => bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w600);
+
+  /// Field-level eyebrow label (e.g. "COURSE", "BLOOD GROUP") — smaller and
+  /// less tracked than a section header's [TextTheme.labelSmall].
+  TextStyle get microLabel => labelSmall!.copyWith(fontSize: 9, letterSpacing: 1.0);
+
+  /// Selectable chip text (sail state, motor/keel toggles).
+  TextStyle get chipLabel => bodyMedium!.copyWith(fontSize: 13, fontWeight: FontWeight.w600);
+
+  /// Small unit suffix next to a numeric field (e.g. "deg", "kn").
+  TextStyle get unitLabel => bodySmall!.copyWith(fontWeight: FontWeight.w600);
+}

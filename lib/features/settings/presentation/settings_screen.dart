@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
@@ -19,6 +18,7 @@ import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/utils/filter_settings.dart';
 import '../../home/widgets/nav_bar.dart';
+import '../../../app/theme/theme_extensions.dart';
 import '../domain/theme_provider.dart';
 import '../../../app/route_names.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -197,10 +197,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cs = Theme.of(ctx).colorScheme;
         final cl = ctx.l10n;
         return AlertDialog(
-          titleTextStyle: TextStyle(
-              color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w600),
+          titleTextStyle: Theme.of(ctx).textTheme.titleLarge!.copyWith(
+              fontSize: 20, fontWeight: FontWeight.w600, color: cs.onSurface),
           contentTextStyle:
-              TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+              Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
           title: Text(cl.settingsSwitchLogbookTitle),
           content: Text(cl.settingsJoinContent(resolvedName)),
           actions: [
@@ -251,8 +251,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final cs = Theme.of(ctx).colorScheme;
         final cl = ctx.l10n;
         return AlertDialog(
-          titleTextStyle: TextStyle(
-              color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w600),
+          titleTextStyle: Theme.of(ctx).textTheme.titleLarge!.copyWith(
+              fontSize: 20, fontWeight: FontWeight.w600, color: cs.onSurface),
           title: Text(cl.settingsSwitchTo(name)),
           actions: [
             TextButton(
@@ -398,19 +398,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 20),
                 Text(
                   cl.settingsNewLogbookTitle,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 20,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w500,
-                    color: cs.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.dialogTitle.copyWith(fontSize: 20, color: cs.onSurface),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: ctrl,
                   autofocus: true,
                   textCapitalization: TextCapitalization.words,
-                  style: TextStyle(color: cs.onSurface, fontSize: 16),
+                  style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: cs.onSurface),
                   decoration: InputDecoration(
                     hintText: cl.settingsNewLogbookHint,
                     hintStyle: TextStyle(color: cs.onSurfaceVariant),
@@ -557,8 +552,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return AlertDialog(
           backgroundColor: cs.surface,
           surfaceTintColor: Colors.transparent,
-          titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
-          contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
           title: Text(cl.settingsDeleteLogbook),
           content: Text(cl.settingsDeleteLogbookConfirm(name)),
           actions: [
@@ -613,8 +608,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return AlertDialog(
           backgroundColor: cs.surface,
           surfaceTintColor: Colors.transparent,
-          titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
-          contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
           title: Text(cl.settingsLeaveLogbook),
           content: Text(cl.settingsLeaveLogbookConfirm(name)),
           actions: [
@@ -675,10 +670,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(cl.settingsShowQrCode,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface)),
+                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface)),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -798,10 +790,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 return Center(
                   child: Text(
                     version,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 11,
-                      color: cs.onSurfaceVariant.withValues(alpha: 0.5),
-                    ),
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11, color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
                   ),
                 );
               },
@@ -924,13 +913,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Row(
         children: [
           SizedBox(
-            width: 96,
+            width: 150,
             child: Text(
               label,
-              style: GoogleFonts.dmSans(
-                fontSize: 15,
-                color: cs.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                  fontWeight: FontWeight.w600, color: cs.onSurface),
             ),
           ),
           Expanded(
@@ -939,20 +926,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               textAlign: TextAlign.right,
               keyboardType: keyboard,
               textInputAction: TextInputAction.next,
-              style: GoogleFonts.dmSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
-              ),
+              style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
               decoration: InputDecoration(
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
                 hintText: hint,
-                hintStyle: GoogleFonts.dmSans(
-                  fontSize: 15,
-                  color: cs.outline.withValues(alpha: 0.5),
-                ),
+                hintStyle: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.outline.withValues(alpha: 0.5)),
               ),
               onChanged: onChanged,
               onSubmitted: (_) => FocusScope.of(context).unfocus(),
@@ -1004,11 +984,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           Text(
             l10n.settingsThemeLabel,
-            style: GoogleFonts.dmSans(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
-            ),
+            style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
           ),
           const SizedBox(height: 8),
           Container(
@@ -1028,11 +1004,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           Text(
             l10n.settingsLanguageLabel,
-            style: GoogleFonts.dmSans(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
-            ),
+            style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
           ),
           const SizedBox(height: 8),
           Container(
@@ -1078,11 +1050,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.dmSans(
-              fontSize: 14,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive ? cs.primary : cs.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: isActive ? cs.primary : cs.onSurfaceVariant),
           ),
         ),
       ),
@@ -1114,11 +1082,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.dmSans(
-              fontSize: 14,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive ? cs.primary : cs.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: isActive ? cs.primary : cs.onSurfaceVariant),
           ),
         ),
       ),
@@ -1214,11 +1178,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 12),
                   Text(
                     context.l10n.settingsStationaryLabel,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: cs.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1270,19 +1230,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsMinStopLabel,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                       ),
                       Text(
                         '${p.minStopMinutes.round()} ${context.l10n.settingsMinUnit}',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
+                        style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
                       ),
                     ],
                   ),
@@ -1307,19 +1259,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsMaxAnchorLabel,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                       ),
                       Text(
                         '${p.maxStopSpreadM.round()} ${context.l10n.settingsMetersUnit}',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
+                        style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
                       ),
                     ],
                   ),
@@ -1344,11 +1288,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsColdStartLabel,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                       ),
                       Switch(
                         value: p.detectColdStart,
@@ -1370,19 +1310,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text(
                           context.l10n.settingsTrimSharpnessLabel,
-                          style: GoogleFonts.dmSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                         ),
                         Text(
                           p.coldStartSettleFactor.toStringAsFixed(1),
-                          style: GoogleFonts.dmSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: cs.primary,
-                          ),
+                          style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
                         ),
                       ],
                     ),
@@ -1408,19 +1340,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsUnderwayLabel,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                       ),
                       Text(
                         '${p.makingWayThresholdKn.toStringAsFixed(1)} kn',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
+                        style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
                       ),
                     ],
                   ),
@@ -1445,19 +1369,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsPercentileLabel,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                       ),
                       Text(
                         'p${(p.topSpeedPercentile * 100).round()}',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
+                        style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
                       ),
                     ],
                   ),
@@ -1482,19 +1398,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsMaxSpeedLabel,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                       ),
                       Text(
                         '${p.maxSpeedKn.round()} kn',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: cs.primary,
-                        ),
+                        style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
                       ),
                     ],
                   ),
@@ -1519,11 +1427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       Text(
                         context.l10n.settingsShowRawTrackLabel,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                       ),
                       Switch(
                         value: p.showRawTrack,
@@ -1594,11 +1498,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.dmSans(
-              fontSize: 13,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive ? cs.primary : cs.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.chipLabel.copyWith(fontWeight: isActive ? FontWeight.w600 : FontWeight.w400, color: isActive ? cs.primary : cs.onSurfaceVariant),
           ),
         ),
       ),
@@ -1786,12 +1686,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     name,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 15,
-                      fontWeight:
-                          isActive ? FontWeight.w700 : FontWeight.w500,
-                      color: cs.onSurface,
-                    ),
+                    style: Theme.of(context).textTheme.fieldValueCompact.copyWith(fontWeight: isActive ? FontWeight.w700 : FontWeight.w500, color: cs.onSurface),
                   ),
                   Text(
                     !isActive && _isOffline
@@ -1944,10 +1839,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Expanded(
                   child: Text(
                     l10n.settingsManageGuests,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onSurface),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                   ),
                 ),
                 Icon(
@@ -2075,11 +1967,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 2),
             Text(
               user.email ?? user.displayName ?? '',
-              style: GoogleFonts.dmSans(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurface,
-              ),
+              style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -2095,8 +1983,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     builder: (ctx) => AlertDialog(
                       backgroundColor: cs.surface,
                       surfaceTintColor: Colors.transparent,
-                      titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
-                      contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+                      titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+                      contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
                       title: Text(l10n.authSignOut),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -2114,7 +2002,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 Expanded(
                                   child: Text(
                                     l10n.authSignOutOfflineWarning,
-                                    style: TextStyle(
+                                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                                         color: cs.error, fontSize: 13),
                                   ),
                                 ),
@@ -2223,16 +2111,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     color: dcs.error),
                                 title: Text(
                                   l10n.authDeleteCleanupFailedTitle,
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: dcs.onSurface,
-                                  ),
+                                  style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: dcs.onSurface),
                                 ),
                                 content: Text(
                                   l10n.authDeleteCleanupFailedBody,
-                                  style: TextStyle(
-                                    fontSize: 14,
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                                     height: 1.5,
                                     color: dcs.onSurfaceVariant,
                                   ),
@@ -2292,8 +2175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       borderRadius: BorderRadius.circular(10)),
                 ),
                 child: Text(l10n.settingsAccountManage,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600)),
               ),
             ),
           ],

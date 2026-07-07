@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -421,13 +420,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               padding: const EdgeInsets.all(16),
               child: Text(
                 '"${entry.notes!}"',
-                style: GoogleFonts.dmSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  fontStyle: FontStyle.italic,
-                  color: cs.onSurface,
-                  height: 1.5,
-                ),
+                style: Theme.of(context).textTheme.fieldValueProse.copyWith(fontStyle: FontStyle.italic, height: 1.5, color: cs.onSurface),
               ),
             ),
           )
@@ -620,8 +613,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    textStyle: GoogleFonts.dmSans(
-                        fontSize: 13, fontWeight: FontWeight.w600),
+                    textStyle: Theme.of(context).textTheme.chipLabel,
                   ),
                   child: Text(context.l10n.cancel),
                 ),
@@ -636,8 +628,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    textStyle: GoogleFonts.dmSans(
-                        fontSize: 13, fontWeight: FontWeight.w600),
+                    textStyle: Theme.of(context).textTheme.chipLabel,
                   ),
                   child: Text(context.l10n.apply),
                 ),
@@ -691,20 +682,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               children: [
                 Text(
                   member.name,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurface,
-                  ),
+                  style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
                 ),
                 Text(
                   isFirst ? context.l10n.labelSkipper.toUpperCase() : context.l10n.labelCrewRole.toUpperCase(),
-                  style: GoogleFonts.dmSans(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                    color: isFirst ? cs.primary : cs.mutedLabel,
-                  ),
+                  style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: isFirst ? cs.primary : cs.mutedLabel),
                 ),
               ],
             ),
@@ -784,16 +766,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                       border: InputBorder.none,
                                       isDense: true,
                                       contentPadding: EdgeInsets.zero,
-                                      hintStyle: GoogleFonts.dmSans(
-                                        fontSize: 15,
-                                        color: cs.onSurfaceVariant,
-                                      ),
+                                      hintStyle: Theme.of(context).textTheme.fieldHintCompact.copyWith(color: cs.onSurfaceVariant),
                                     ),
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: cs.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
                                     textCapitalization:
                                         TextCapitalization.words,
                                     textInputAction: TextInputAction.next,
@@ -811,16 +786,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                       border: InputBorder.none,
                                       isDense: true,
                                       contentPadding: EdgeInsets.zero,
-                                      hintStyle: GoogleFonts.dmSans(
-                                        fontSize: 15,
-                                        color: cs.onSurfaceVariant,
-                                      ),
+                                      hintStyle: Theme.of(context).textTheme.fieldHintCompact.copyWith(color: cs.onSurfaceVariant),
                                     ),
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                      color: cs.onSurface,
-                                    ),
+                                    style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
                                     textCapitalization:
                                         TextCapitalization.words,
                                     textInputAction: TextInputAction.done,
@@ -861,20 +829,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                   child: routeLabel != null
                                       ? Text(
                                           routeLabel,
-                                          style: GoogleFonts.dmSans(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            color: cs.onSurface,
-                                          ),
+                                          style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
                                           overflow: TextOverflow.ellipsis,
                                         )
                                       : Text(
                                           context.l10n.dayCaptureRoute,
-                                          style: GoogleFonts.dmSans(
-                                            fontSize: 15,
-                                            fontStyle: FontStyle.italic,
-                                            color: cs.onSurfaceVariant,
-                                          ),
+                                          style: Theme.of(context).textTheme.fieldHintCompact.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
                                         ),
                                 ),
                                 Icon(Icons.edit,
@@ -909,11 +869,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   context.l10n.dayAddGpxTrack,
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 15,
-                                    fontStyle: FontStyle.italic,
-                                    color: cs.onSurfaceVariant,
-                                  ),
+                                  style: Theme.of(context).textTheme.fieldHintCompact.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -990,21 +946,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.dmSans(
-            fontSize: 9,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.0,
-            color: cs.mutedLabel,
-          ),
+          style: Theme.of(context).textTheme.microLabel.copyWith(color: cs.mutedLabel),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.dmSans(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: cs.primary,
-          ),
+          style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.primary),
         ),
       ],
     );
@@ -1193,11 +1140,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   const SizedBox(width: 8),
                   Text(
                     timeStr,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: cs.primary,
-                    ),
+                    style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.primary),
                   ),
                   const SizedBox(width: 12),
                   Tooltip(
@@ -1217,11 +1160,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 t.remarks!,
-                style: GoogleFonts.dmSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
+                style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
               ),
             ],
             // Vessel status note (auto-generated)
@@ -1300,12 +1239,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
-                color: cs.mutedLabel,
-              ),
+              style: Theme.of(context).textTheme.unitLabel.copyWith(fontSize: 11, letterSpacing: 0.3, color: cs.mutedLabel),
             ),
           ),
           Icon(Icons.chevron_right, size: 14, color: cs.outlineVariant),
@@ -1355,10 +1289,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   l10n.amendmentHistoryTitle,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 20, fontWeight: FontWeight.w600,
-                    fontStyle: FontStyle.italic, color: cs.primary,
-                  ),
+                  style: Theme.of(context).textTheme.dialogTitle.copyWith(fontSize: 20, fontWeight: FontWeight.w600, color: cs.primary),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1470,17 +1401,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             if (dateStr.isNotEmpty) ...[
               const SizedBox(width: 8),
               Text(dateStr,
-                style: GoogleFonts.dmSans(fontSize: 11, color: cs.mutedLabel)),
+                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11, color: cs.mutedLabel)),
             ],
           ],
         ),
         const SizedBox(height: 4),
         Text(
           timeStr,
-          style: GoogleFonts.dmSans(
-            fontSize: 20, fontWeight: FontWeight.w500,
-            color: isOriginal ? cs.mutedLabel : cs.primary,
-          ),
+          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w500, color: isOriginal ? cs.mutedLabel : cs.primary),
         ),
         if (details.isNotEmpty) ...[
           const SizedBox(height: 2),
@@ -1744,10 +1672,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         final cs = Theme.of(ctx).colorScheme;
         return AlertDialog(
           backgroundColor: cs.surfaceContainerHigh,
-          titleTextStyle: TextStyle(
-              color: cs.onSurface,
-              fontSize: 18,
-              fontWeight: FontWeight.w600),
+          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
           title: Text(ctx.l10n.dayDeletePhoto),
           actions: [
             TextButton(
@@ -1893,13 +1818,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                             entry.keelDown == null
                                 ? '—'
                                 : (entry.keelDown! ? context.l10n.vesselKeelDown.toUpperCase() : context.l10n.vesselKeelUp.toUpperCase()),
-                            style: GoogleFonts.dmSans(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: entry.keelDown == null
+                            style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: entry.keelDown == null
                                   ? cardFg.withValues(alpha: 0.45)
-                                  : cardFg,
-                            ),
+                                  : cardFg),
                           ),
                         ],
                       ),
@@ -1933,11 +1854,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             const SizedBox(width: 8),
             Text(
               level != null ? '$level%' : '—',
-              style: GoogleFonts.dmSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: level != null ? onCard : onCard.withValues(alpha: 0.54),
-              ),
+              style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: level != null ? onCard : onCard.withValues(alpha: 0.54)),
             ),
           ],
         ),
@@ -1961,21 +1878,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           children: [
             Text(
               context.l10n.vesselEmptyLabel.toUpperCase(),
-              style: GoogleFonts.dmSans(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                color: onCard.withValues(alpha: 0.50),
-              ),
+              style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: onCard.withValues(alpha: 0.50)),
             ),
             Text(
               context.l10n.vesselFullLabel.toUpperCase(),
-              style: GoogleFonts.dmSans(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                color: onCard.withValues(alpha: 0.50),
-              ),
+              style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: onCard.withValues(alpha: 0.50)),
             ),
           ],
         ),
@@ -2003,11 +1910,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             const SizedBox(width: 8),
             Text(
               label,
-              style: GoogleFonts.dmSans(
-                fontSize: 15,
-                fontStyle: FontStyle.italic,
-                color: cs.onSurfaceVariant,
-              ),
+              style: Theme.of(context).textTheme.fieldHintCompact.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
             ),
           ],
         ),
@@ -2520,8 +2423,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             return AlertDialog(
               backgroundColor: cs.surface,
               surfaceTintColor: Colors.transparent,
-              titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
-              contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+              titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+              contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
               title: Text(context.l10n.dayChangeDateTitle),
               content: Text(context.l10n.dayChangeDateContent(
                 DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
@@ -2589,9 +2492,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           return AlertDialog(
             title: Text(
               context.l10n.vesselStatusTitle,
-              style: GoogleFonts.dmSans(
-                  fontSize: 18, fontWeight: FontWeight.w600,
-                  color: cs.onSurface),
+              style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -2601,7 +2502,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   children: [
                     Text(context.l10n.vesselOilLabel, style: TextStyle(color: cs.onSurface)),
                     Text('$oilVal%',
-                        style: TextStyle(
+                        style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
                             fontWeight: FontWeight.w600, color: cs.onSurface)),
                   ],
                 ),
@@ -2618,7 +2519,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   children: [
                     Text(context.l10n.vesselFuelLabel, style: TextStyle(color: cs.onSurface)),
                     Text('$fuelVal%',
-                        style: TextStyle(
+                        style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
                             fontWeight: FontWeight.w600, color: cs.onSurface)),
                   ],
                 ),
@@ -2636,7 +2537,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     const Spacer(),
                     Text(
                       keelVal == null ? '—' : (keelVal! ? context.l10n.vesselKeelDown : context.l10n.vesselKeelUp),
-                      style: TextStyle(
+                      style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
                           fontWeight: FontWeight.w600, color: cs.onSurface),
                     ),
                     const SizedBox(width: 8),
@@ -2998,8 +2899,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           return AlertDialog(
             backgroundColor: cs.surface,
             surfaceTintColor: Colors.transparent,
-            titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
-            contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+            titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+            contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
             title: Text(context.l10n.dayChangeDateTitle),
             content: Text(
               context.l10n.dayGpxWrongDateContent(
@@ -3126,8 +3027,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         return AlertDialog(
           backgroundColor: cs.surface,
           surfaceTintColor: Colors.transparent,
-          titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
-          contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
           title: Text(context.l10n.dayGpxDeleteTitle),
           content: Text(context.l10n.dayGpxDeleteContent),
           actions: [
@@ -3240,10 +3141,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ),
               child: Text(
                 'GPX',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(
                   color: Theme.of(context).colorScheme.onPrimary,
                   fontSize: 7,
-                  fontWeight: FontWeight.bold,
                   height: 1,
                   letterSpacing: 0,
                 ),
@@ -3289,11 +3189,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         ),
         child: Text(
           text,
-          style: GoogleFonts.dmSans(
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            color: Colors.white,
-          ),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, letterSpacing: 0, color: Colors.white),
         ),
       );
 
@@ -3434,8 +3330,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       color: cs.primary.withValues(alpha: 0.85),
       borderRadius: BorderRadius.circular(4),
     ),
-    child: Text(text, style: GoogleFonts.dmSans(
-      fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+    child: Text(text, style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, letterSpacing: 0, color: Colors.white)),
   );
 
   Widget _mapBtn(IconData icon, VoidCallback onTap, ColorScheme cs) =>
@@ -3973,7 +3868,7 @@ class _EditTextDialogState extends State<_EditTextDialog> {
       surfaceTintColor: Colors.transparent,
       title: Text(
         widget.title,
-        style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface),
+        style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
       ),
       content: SizedBox(
         width: double.maxFinite,

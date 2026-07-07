@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -79,8 +79,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         children: [
           Text(
             l10n.authForgotPasswordTitle,
-            style: GoogleFonts.dmSans(
-              fontSize: 28, fontWeight: FontWeight.w600, color: cs.onSurface,
+            style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+              fontWeight: FontWeight.w600, color: cs.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -119,8 +119,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: cs.onPrimary))
                   : Text(l10n.authSendResetEmail,
-                      style: GoogleFonts.dmSans(
-                          fontSize: 15, fontWeight: FontWeight.w600)),
+                      style: Theme.of(context).textTheme.fieldValueCompact),
             ),
           ),
         ],
@@ -136,16 +135,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         const SizedBox(height: 20),
         Text(
           l10n.authResetEmailSent,
-          style: GoogleFonts.dmSans(
-              fontSize: 22, fontWeight: FontWeight.w600, color: cs.onSurface),
+          style: Theme.of(context).textTheme.titleLarge!.copyWith(
+              fontWeight: FontWeight.w600, color: cs.onSurface),
         ),
         const SizedBox(height: 24),
         TextButton.icon(
           onPressed: () => context.pop(),
           icon: Icon(Icons.arrow_back, size: 18, color: cs.primary),
           label: Text(l10n.authBackToSignIn,
-              style: GoogleFonts.dmSans(
-                  fontSize: 14, color: cs.primary,
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                  color: cs.primary,
                   fontWeight: FontWeight.w600)),
         ),
       ],

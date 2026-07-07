@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../app/theme/theme_extensions.dart';
 import '../../l10n/l10n_extension.dart';
 
 class GpsConsentService {
@@ -26,9 +26,7 @@ class GpsConsentService {
           surfaceTintColor: Colors.transparent,
           title: Text(
             l10n.gpsConsentTitle,
-            style: GoogleFonts.dmSans(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+            style: Theme.of(ctx).textTheme.fieldValueProse.copyWith(
               color: cs.onSurface,
             ),
           ),

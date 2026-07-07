@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -263,24 +262,14 @@ class _QuickActionCard extends StatelessWidget {
             const Spacer(),
             Text(
               label,
-              style: GoogleFonts.dmSans(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
-                color: borderColor,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, color: borderColor),
             ),
             const SizedBox(height: 2),
             Text(
               title,
-              style: GoogleFonts.dmSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: borderColor == Theme.of(context).colorScheme.error
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, height: 1.25, color: borderColor == Theme.of(context).colorScheme.error
                     ? Theme.of(context).colorScheme.onErrorContainer
-                    : borderColor,
-                height: 1.25,
-              ),
+                    : borderColor),
             ),
           ],
         ),
@@ -357,12 +346,7 @@ class _EditButton extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               l10n.edit.toUpperCase(),
-              style: GoogleFonts.dmSans(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1,
-                color: cs.primary,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, letterSpacing: 1, color: cs.primary),
             ),
           ],
         ),
@@ -470,11 +454,7 @@ class _ContactRow extends StatelessWidget {
               children: [
                 Text(
                   contact.name,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: cs.primary,
-                  ),
+                  style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.primary),
                 ),
                 Text(
                   '${contact.role} · ${contact.phone}',
@@ -537,7 +517,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
       title: Text(context.l10n.emergencyAddContactTitle,
-          style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -627,7 +607,7 @@ class _EditContactDialogState extends State<_EditContactDialog> {
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
       title: Text(context.l10n.emergencyEditContactTitle,
-          style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -918,11 +898,7 @@ class _VesselEditField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.dmSans(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-              color: cs.onSurfaceVariant),
+          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, color: cs.onSurfaceVariant),
         ),
         const SizedBox(height: 4),
         TextField(
@@ -961,18 +937,13 @@ class _InfoField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: GoogleFonts.dmSans(
-                fontSize: 10, fontWeight: FontWeight.w700,
-                letterSpacing: 1.5, color: cs.onSurfaceVariant)),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, color: cs.onSurfaceVariant)),
         const SizedBox(height: 2),
         Text(
           value,
           style: mono
-              ? GoogleFonts.dmSans(
-                  fontSize: 16, fontWeight: FontWeight.w600,
-                  letterSpacing: 3, color: cs.primary)
-              : GoogleFonts.dmSans(
-                  fontSize: 17, fontWeight: FontWeight.w600, color: cs.primary),
+              ? Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, letterSpacing: 3, color: cs.primary)
+              : Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 17, fontWeight: FontWeight.w600, color: cs.primary),
         ),
       ],
     );
@@ -1003,9 +974,7 @@ class _SafetyItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 14, fontWeight: FontWeight.w600,
-                        color: cs.onSurface)),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface)),
                 Text(detail,
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         color: cs.onSurfaceVariant)),
@@ -1135,10 +1104,7 @@ class _FrequencyRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: urgent ? em.criticalColor : cs.primary)),
+                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: urgent ? em.criticalColor : cs.primary)),
                 Text(desc,
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         color: urgent ? cs.onErrorContainer : cs.onSurfaceVariant)),
@@ -1182,7 +1148,7 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
       title: Text(context.l10n.emergencyAddFrequencyTitle,
-          style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1262,7 +1228,7 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
       title: Text(context.l10n.emergencyEditFrequencyTitle,
-          style: GoogleFonts.dmSans(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onSurface)),
+          style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1383,10 +1349,7 @@ class _CrewMedicalCard extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   member.name,
-                                  style: GoogleFonts.dmSans(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w500,
-                                      color: cs.primary),
+                                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w500, color: cs.primary),
                                 ),
                               ),
                               if (bloodType.isNotEmpty)
@@ -1400,15 +1363,9 @@ class _CrewMedicalCard extends StatelessWidget {
                                   child: Column(
                                     children: [
                                       Text(context.l10n.emergencyBloodBadge,
-                                          style: GoogleFonts.dmSans(
-                                              fontSize: 8,
-                                              fontWeight: FontWeight.w700,
-                                              color: cs.onErrorContainer)),
+                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 8, letterSpacing: 0, color: cs.onErrorContainer)),
                                       Text(bloodType,
-                                          style: GoogleFonts.dmSans(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w700,
-                                              color: cs.onErrorContainer)),
+                                          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onErrorContainer)),
                                     ],
                                   ),
                                 ),
@@ -1488,11 +1445,7 @@ class _CrewDetailSheet extends StatelessWidget {
             ),
             Text(
               member.name,
-              style: GoogleFonts.dmSans(
-                fontSize: 24,
-                fontWeight: FontWeight.w500,
-                color: cs.primary,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 24, fontWeight: FontWeight.w500, color: cs.primary),
             ),
             const SizedBox(height: 16),
             if (rows.isEmpty)
@@ -1519,19 +1472,12 @@ class _CrewDetailSheet extends StatelessWidget {
                             children: [
                               Text(
                                 r.$2.toUpperCase(),
-                                style: GoogleFonts.dmSans(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 1.0,
-                                    color: cs.mutedLabel),
+                                style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, letterSpacing: 1.0, color: cs.mutedLabel),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 r.$3,
-                                style: GoogleFonts.dmSans(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: cs.onSurface),
+                                style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
                               ),
                             ],
                           ),
@@ -1579,10 +1525,7 @@ class _MedicalRow extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: GoogleFonts.dmSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
             ),
           ),
         ],
@@ -1635,8 +1578,7 @@ class _EmptyCrewHint extends StatelessWidget {
                   foregroundColor: cs.primary,
                   side: BorderSide(color: cs.primary.withValues(alpha: 0.3)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  textStyle: GoogleFonts.dmSans(
-                      fontSize: 13, fontWeight: FontWeight.w600),
+                  textStyle: Theme.of(context).textTheme.chipLabel,
                 ),
               ),
             ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/theme/theme_extensions.dart';
 import '../domain/crew_member.dart';
@@ -82,10 +81,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
           automaticallyImplyLeading: false,
           title: Text(
             isEdit ? l10n.crewDialogTitleEdit : l10n.crewDialogTitleAdd,
-            style: GoogleFonts.dmSans(
-              fontSize: 22,
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.w500,
+            style: Theme.of(context).textTheme.dialogTitle.copyWith(
               color: cs.primary,
             ),
           ),
@@ -228,8 +224,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                         foregroundColor: cs.onPrimary,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        textStyle: GoogleFonts.dmSans(
-                            fontSize: 15, fontWeight: FontWeight.w600),
+                        textStyle: Theme.of(context).textTheme.fieldValueCompact,
                       ),
                       icon: const Icon(Icons.anchor, size: 20),
                       label: Text(isEdit
@@ -249,8 +244,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                             color: cs.primary.withValues(alpha: 0.25)),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
-                        textStyle: GoogleFonts.dmSans(
-                            fontSize: 15, fontWeight: FontWeight.w600),
+                        textStyle: Theme.of(context).textTheme.fieldValueCompact,
                       ),
                       child: Text(l10n.cancel),
                     ),
@@ -273,8 +267,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                               color: cs.error.withValues(alpha: 0.4)),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
-                          textStyle: GoogleFonts.dmSans(
-                              fontSize: 15, fontWeight: FontWeight.w600),
+                          textStyle: Theme.of(context).textTheme.fieldValueCompact,
                         ),
                         icon: const Icon(Icons.person_remove_outlined,
                             size: 20),
@@ -329,10 +322,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
   Widget _label(String text, ColorScheme cs) {
     return Text(
       text,
-      style: GoogleFonts.dmSans(
-        fontSize: 9,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.0,
+      style: Theme.of(context).textTheme.microLabel.copyWith(
         color: cs.mutedLabel,
       ),
     );
@@ -356,9 +346,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
       textInputAction:
           maxLines > 1 ? TextInputAction.newline : TextInputAction.next,
       textCapitalization: capitalization,
-      style: GoogleFonts.dmSans(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
+      style: Theme.of(context).textTheme.fieldValueProse.copyWith(
         fontStyle: italic ? FontStyle.italic : FontStyle.normal,
         color: cs.primary,
       ),
@@ -367,9 +355,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
         isDense: true,
         contentPadding: EdgeInsets.zero,
         hintText: hint,
-        hintStyle: GoogleFonts.dmSans(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
+        hintStyle: Theme.of(context).textTheme.fieldValueProse.copyWith(
           fontStyle: italic ? FontStyle.italic : FontStyle.normal,
           color: cs.outline,
         ),

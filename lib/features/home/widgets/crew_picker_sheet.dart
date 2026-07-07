@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../../../app/theme/theme_extensions.dart';
 import '../data/home_repository.dart';
@@ -110,8 +109,8 @@ class _RosterTile extends StatelessWidget {
       builder: (_) => AlertDialog(
         backgroundColor: cs.surface,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w600),
-        contentTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+        titleTextStyle: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+        contentTextStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
         title: Text(l10n.crewPickerRemoveTitle),
         content: Text('${member.name} ${l10n.crewPickerRemoveContent}'),
         actions: [
@@ -153,10 +152,9 @@ class _RosterTile extends StatelessWidget {
               backgroundColor: cs.primaryContainer,
               child: Text(
                 member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                style: TextStyle(
+                style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                     color: cs.onPrimaryContainer,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14),
+                    fontWeight: FontWeight.w700),
               ),
             ),
             const SizedBox(width: 12),
@@ -166,9 +164,7 @@ class _RosterTile extends StatelessWidget {
                 children: [
                   Text(
                     member.name,
-                    style: GoogleFonts.dmSans(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                    style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
                         color: cs.onSurface),
                   ),
                   if (sub.isNotEmpty)
@@ -231,7 +227,7 @@ class _NewPersonTile extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               context.l10n.crewPickerNewPerson,
-              style: GoogleFonts.dmSans(
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: cs.primary,

@@ -2,10 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/route_names.dart';
+import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../l10n/l10n_extension.dart';
 import 'auth_widgets.dart';
@@ -106,8 +106,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Text(
                   l10n.authRegisterTitle,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 28, fontWeight: FontWeight.w600,
+                  style: Theme.of(context).textTheme.headlineMedium!.copyWith(
+                    fontWeight: FontWeight.w600,
                     color: cs.onSurface,
                   ),
                 ),
@@ -185,8 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: cs.onPrimary))
                         : Text(l10n.authCreateAccount,
-                            style: GoogleFonts.dmSans(
-                                fontSize: 15, fontWeight: FontWeight.w600)),
+                            style: Theme.of(context).textTheme.fieldValueCompact),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -210,8 +209,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextButton(
                       onPressed: () => context.pop(),
                       child: Text(l10n.authSignInLink,
-                          style: GoogleFonts.dmSans(
-                              fontSize: 14, fontWeight: FontWeight.w600,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                              fontWeight: FontWeight.w600,
                               color: cs.primary)),
                     ),
                   ],

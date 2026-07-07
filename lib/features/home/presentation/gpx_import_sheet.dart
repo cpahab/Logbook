@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../../app/theme/theme_extensions.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../domain/daily_track.dart';
@@ -152,7 +152,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
         _buildHandle(),
         Icon(Icons.error_outline, size: 40, color: cs.error),
         const SizedBox(height: 12),
-        Text(msg, style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface)),
+        Text(msg, style: Theme.of(context).textTheme.fieldHintCompact.copyWith(color: cs.onSurface)),
         const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
@@ -181,7 +181,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
             fmt.format(days.first),
             fmt.format(days.last),
           ),
-          style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface),
+          style: Theme.of(context).textTheme.fieldHintCompact.copyWith(color: cs.onSurface),
         ),
         if (widget.resolution.trackCount > 1) ...[
           const SizedBox(height: 8),
@@ -231,7 +231,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
         _buildHandle(),
         Text(
           l10n.gpxShareNoTimestamps,
-          style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface),
+          style: Theme.of(context).textTheme.fieldHintCompact.copyWith(color: cs.onSurface),
         ),
         const SizedBox(height: 16),
         _DatePickerRow(
@@ -400,7 +400,7 @@ class _DatePickerRow extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             fmt.format(selected),
-            style: GoogleFonts.dmSans(fontSize: 15, color: cs.onSurface),
+            style: Theme.of(context).textTheme.fieldHintCompact.copyWith(color: cs.onSurface),
           ),
           const Spacer(),
           Icon(Icons.chevron_right, size: 18, color: cs.outlineVariant),

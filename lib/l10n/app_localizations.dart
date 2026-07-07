@@ -2459,7 +2459,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyFireSuppression.
   ///
   /// In de, this message translates to:
-  /// **'Feuerlöschanlage'**
+  /// **'Feuerlöscher'**
   String get emergencyFireSuppression;
 
   /// No description provided for @navJournal.

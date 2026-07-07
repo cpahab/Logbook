@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../home/data/home_repository.dart';
@@ -112,11 +111,7 @@ class _MaydayScreenState extends State<MaydayScreen>
         ),
         title: Text(
           context.l10n.emergencyRadioProtocolLabel,
-          style: GoogleFonts.dmSans(
-            color: cs.onError,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w600, color: cs.onError),
         ),
       ),
       bottomNavigationBar: AppBottomNav(
@@ -195,13 +190,7 @@ class _ProcedureHeader extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           l10n.emergencyFollowScript,
-          style: GoogleFonts.dmSans(
-            fontSize: 14,
-            fontStyle: FontStyle.italic,
-            fontWeight: FontWeight.w500,
-            color: cs.onSurfaceVariant,
-            height: 1.5,
-          ),
+          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontStyle: FontStyle.italic, fontWeight: FontWeight.w500, height: 1.5, color: cs.onSurfaceVariant),
         ),
       ],
     );
@@ -265,12 +254,7 @@ class _StepDsc extends StatelessWidget {
                         Text(
                           // Maritime protocol step label — kept in English per SOLAS/IMO standard
                           'STEP 1: DSC DISTRESS ALERT',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
-                            color: em.criticalColor,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 2, color: em.criticalColor),
                         ),
                         const SizedBox(height: 8),
                         _DscAction(
@@ -298,11 +282,7 @@ class _StepDsc extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   l10n.emergencyDscWait,
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: cs.onSecondaryContainer,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: cs.onSecondaryContainer),
                                 ),
                               ),
                             ],
@@ -343,11 +323,7 @@ class _DscAction extends StatelessWidget {
           child: Center(
             child: Text(
               number,
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: em.criticalColor,
-              ),
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 0, color: em.criticalColor),
             ),
           ),
         ),
@@ -355,12 +331,7 @@ class _DscAction extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: GoogleFonts.dmSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: cs.onSurface,
-              height: 1.3,
-            ),
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, height: 1.3, color: cs.onSurface),
           ),
         ),
       ],
@@ -421,23 +392,12 @@ class _StepSignal extends StatelessWidget {
                         Text(
                           // Protocol step labels and radio script kept in English — international maritime standard (SOLAS/IMO)
                           'STEP 2: SIGNAL',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
-                            color: em.criticalColor,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 2, color: em.criticalColor),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'MAYDAY, MAYDAY, MAYDAY',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: cs.onSurface,
-                            letterSpacing: -0.5,
-                            height: 1.2,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.2, color: cs.onSurface),
                         ),
                       ],
                     ),
@@ -479,19 +439,12 @@ class _StepIdentification extends StatelessWidget {
         children: [
           Text(
             l10n.emergencyIdentifyVessel,
-            style: GoogleFonts.dmSans(
-              fontSize: 13,
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 13, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
           Text.rich(
             TextSpan(
-              style: GoogleFonts.dmSans(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: cs.onSurface,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
               children: [
                 const TextSpan(text: 'THIS IS YACHT '),
                 _underlinedSpan(vesselName, cs),
@@ -505,20 +458,12 @@ class _StepIdentification extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             l10n.maydayStateThreeTimes,
-            style: GoogleFonts.dmSans(
-              fontSize: 11,
-              fontStyle: FontStyle.italic,
-              color: cs.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11, fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 6),
           Text.rich(
             TextSpan(
-              style: GoogleFonts.dmSans(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: cs.onSurface,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
               children: [
                 const TextSpan(text: 'CALLSIGN '),
                 _underlinedSpan(callSign, cs),
@@ -528,11 +473,7 @@ class _StepIdentification extends StatelessWidget {
           const SizedBox(height: 6),
           Text.rich(
             TextSpan(
-              style: GoogleFonts.dmSans(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: cs.onSurface,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
               children: [
                 const TextSpan(text: 'MMSI '),
                 _underlinedSpan(mmsi, cs),
@@ -542,11 +483,7 @@ class _StepIdentification extends StatelessWidget {
           const SizedBox(height: 6),
           Text.rich(
             TextSpan(
-              style: GoogleFonts.dmSans(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: cs.onSurface,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
               children: [
                 const TextSpan(text: 'MAYDAY '),
                 _underlinedSpan(vesselName, cs),
@@ -592,12 +529,7 @@ class _StepPosition extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             l10n.emergencyPositionUnavailable,
-            style: GoogleFonts.dmSans(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: em.criticalColor,
-              fontStyle: FontStyle.italic,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, fontStyle: FontStyle.italic, color: em.criticalColor),
           ),
         ],
       );
@@ -615,11 +547,7 @@ class _StepPosition extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             l10n.emergencyAcquiringGps,
-            style: GoogleFonts.dmSans(
-              fontSize: 14,
-              color: cs.onSurfaceVariant,
-              fontStyle: FontStyle.italic,
-            ),
+            style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
           ),
         ],
       );
@@ -631,12 +559,7 @@ class _StepPosition extends StatelessWidget {
           Flexible(
             child: Text(
               positionText!,
-              style: GoogleFonts.dmSans(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: cs.onSurface,
-                letterSpacing: 0.5,
-              ),
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: cs.onSurface),
             ),
           ),
         ],
@@ -656,11 +579,7 @@ class _StepPosition extends StatelessWidget {
         children: [
           Text(
             'POSITION:',
-            style: GoogleFonts.dmSans(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: cs.onSurface,
-            ),
+            style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onSurface),
           ),
           const SizedBox(height: 6),
           Container(
@@ -747,21 +666,12 @@ class _StepDistress extends StatelessWidget {
                       children: [
                         Text(
                           'STEP 5: NATURE OF DISTRESS',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
-                            color: em.criticalColor,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 2, color: em.criticalColor),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'NATURE OF DISTRESS:',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: cs.onSurface,
-                          ),
+                          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onSurface),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -780,11 +690,7 @@ class _StepDistress extends StatelessWidget {
                                 ),
                                 child: Text(
                                   options[i],
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: selected ? cs.onError : cs.onSurfaceVariant,
-                                  ),
+                                  style: Theme.of(context).textTheme.chipLabel.copyWith(color: selected ? cs.onError : cs.onSurfaceVariant),
                                 ),
                               ),
                             );
@@ -820,11 +726,7 @@ class _StepCrew extends StatelessWidget {
       borderColor: cs.secondary,
       child: Text.rich(
         TextSpan(
-          style: GoogleFonts.dmSans(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-            color: cs.onSurface,
-          ),
+          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
           children: [
             const TextSpan(text: 'NUMBER OF PERSONS ON BOARD: '),
             TextSpan(
@@ -883,21 +785,12 @@ class _StepClosing extends StatelessWidget {
             children: [
               Text(
                 'STEP 7: CLOSING',
-                style: GoogleFonts.dmSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
-                  color: cs.onPrimaryContainer,
-                ),
+                style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 2, color: cs.onPrimaryContainer),
               ),
               const SizedBox(height: 4),
               Text(
                 'OVER',
-                style: GoogleFonts.dmSans(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: cs.onPrimary,
-                ),
+                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w700, color: cs.onPrimary),
               ),
             ],
           ),
@@ -979,12 +872,7 @@ class _StepCard extends StatelessWidget {
                   children: [
                     Text(
                       'STEP $step: $label',
-                      style: GoogleFonts.dmSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2,
-                        color: cs.error,
-                      ),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 2, color: cs.error),
                     ),
                     const SizedBox(height: 6),
                     child,
@@ -1027,11 +915,7 @@ class _TipsSection extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 l10n.emergencyCriticalTips,
-                style: GoogleFonts.dmSans(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurface,
-                ),
+                style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 17, fontWeight: FontWeight.w600, color: cs.onSurface),
               ),
             ],
           ),
@@ -1072,11 +956,7 @@ class _Tip extends StatelessWidget {
         Expanded(
           child: Text.rich(
             TextSpan(
-              style: GoogleFonts.dmSans(
-                fontSize: 14,
-                color: cs.onSurfaceVariant,
-                height: 1.5,
-              ),
+              style: Theme.of(context).textTheme.bodyMedium!.copyWith(height: 1.5, color: cs.onSurfaceVariant),
               children: [
                 TextSpan(
                   text: '$title ',
