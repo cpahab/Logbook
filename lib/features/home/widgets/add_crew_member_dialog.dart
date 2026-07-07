@@ -294,12 +294,12 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
   Widget _sectionHeader(IconData icon, String label, ColorScheme cs) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: cs.primary),
+        Icon(icon, size: 20, color: cs.secondary),
         const SizedBox(width: 8),
         Text(
           label.toUpperCase(),
           style: Theme.of(context).textTheme.labelSmall!.copyWith(
-            color: cs.onSurfaceVariant,
+            color: cs.secondary,
           ),
         ),
       ],

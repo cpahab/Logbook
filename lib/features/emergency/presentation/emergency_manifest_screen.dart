@@ -1508,7 +1508,10 @@ class _CrewDetailSheet extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(r.$1, size: 20, color: cs.secondary),
+                        Icon(r.$1, size: 20,
+                            color: r.$1 == Icons.bloodtype
+                                ? cs.error
+                                : cs.secondary),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -1565,6 +1568,7 @@ class _MedicalRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
@@ -1578,7 +1582,7 @@ class _MedicalRow extends StatelessWidget {
               style: GoogleFonts.dmSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: color),
+                  color: cs.onSurface),
             ),
           ),
         ],

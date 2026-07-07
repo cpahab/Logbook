@@ -33,19 +33,23 @@ final ThemeData lightTheme = ThemeData(
     onPrimaryContainer: Color(0xFF87A4CC),
     inversePrimary:     Color(0xFFABC9F2),
     // ── Secondary — Captain's Gold ──────────────────────────────────
-    // Same ~45° gold/goldenrod hue, pushed noticeably brighter/more
-    // saturated than the previous pass — low lightness was what read as
-    // "brown" rather than gold. Contrast against the surface drops to
-    // ~3.6:1: below the 4.5:1 body-text bar, but this label/icon use is
-    // closer to a UI-component/large-accent-text role (3:1 minimum) — a
-    // deliberate trade favoring "looks properly gold" for this specific,
-    // sparingly-used accent. secondaryContainer stays a pale background
-    // fill (not the dark theme's pale secondary reused — different role,
-    // designed as text against near-black, not a light-mode fill).
-    secondary:            Color(0xFFA47C04),
-    onSecondary:          Color(0xFFFFFFFF),
+    // Pushed further toward true "Swiss Post yellow" (~48-50° hue, fully
+    // saturated) than the previous, more conservative gold passes. True
+    // yellow (e.g. #FFCC00) is ~1.4:1 against this surface — unusably low —
+    // so this lands at ~L38%, contrast ~2.3:1: below even the 3:1
+    // UI-component floor, a deliberate trade the user chose explicitly,
+    // prioritizing "reads as yellow" over AA/UI contrast minimums for this
+    // sparingly-used accent. Because it's this bright, white foreground text
+    // (onSecondary) is no longer legible on it — flipped to the same dark
+    // ink used for onSecondaryFixed. onSecondaryContainer is likewise no
+    // longer safe to mirror secondary (contrast vs. the pale
+    // secondaryContainer fill would collapse to ~1.9:1); it now reuses
+    // onSecondaryFixedVariant's dark-gold ink instead, decoupled from
+    // secondary for the first time.
+    secondary:            Color(0xFF9C7501),
+    onSecondary:          Color(0xFF241A00),
     secondaryContainer:   Color(0xFFFFE088),
-    onSecondaryContainer: Color(0xFFA47C04),
+    onSecondaryContainer: Color(0xFF9C7501),
     // ── Tertiary — Seafoam / Dark Navy ─────────────────────────────
     tertiary:            Color(0xFF142435),
     onTertiary:          Color(0xFFFFFFFF),
