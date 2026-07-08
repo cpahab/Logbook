@@ -7,6 +7,10 @@ import '../domain/crew_member.dart';
 import '../widgets/add_crew_member_dialog.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// The persistent crew roster (Settings → Crew Roster): everyone who has
+/// ever sailed on this boat, distinct from any single day's crew list. Add,
+/// edit, and remove members here; adding a day's crew from the roster
+/// (crew_picker_sheet.dart) copies from these records.
 class CrewRosterScreen extends StatelessWidget {
   const CrewRosterScreen({super.key});
 
@@ -76,6 +80,7 @@ class CrewRosterScreen extends StatelessWidget {
     );
   }
 
+  /// Opens the add-crew-member dialog and saves the result to the roster.
   Future<void> _addMember(BuildContext context) async {
     final repo = context.read<HomeRepository>();
     final member = await showDialog<CrewMember>(
@@ -87,12 +92,15 @@ class CrewRosterScreen extends StatelessWidget {
   }
 }
 
+/// One roster member's row: avatar, name, blood-type/allergies/conditions
+/// preview line, tap to edit.
 class _RosterListTile extends StatelessWidget {
   final CrewMember member;
   final HomeRepository repo;
 
   const _RosterListTile({required this.member, required this.repo});
 
+  /// Blood type / allergies / conditions preview line, joined with " · ".
   String _subtitle(BuildContext context) {
     final parts = <String>[];
     if (member.bloodType != null) parts.add('${context.l10n.crewBloodGroupPrefix} ${member.bloodType}');
@@ -101,6 +109,7 @@ class _RosterListTile extends StatelessWidget {
     return parts.join(' · ');
   }
 
+  /// Opens the edit dialog and saves changes back to the roster.
   Future<void> _edit(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
     final updated = await showDialog<CrewMember>(
@@ -115,6 +124,8 @@ class _RosterListTile extends StatelessWidget {
     repo.saveEditedRosterMember(updated);
   }
 
+  /// Confirms, then permanently removes this person from the roster.
+  /// Returns whether the deletion actually happened.
   Future<bool> _confirmDelete(BuildContext context, ColorScheme cs) async {
     final l10n = context.l10n;
     final confirmed = await showDialog<bool>(

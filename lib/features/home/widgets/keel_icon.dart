@@ -27,6 +27,7 @@ class KeelIcon extends StatelessWidget {
   }
 }
 
+/// Draws the hull silhouette and (if applicable) the keel fin/stub for [KeelIcon].
 class _KeelPainter extends CustomPainter {
   final Color color;
   final bool? keelDown;

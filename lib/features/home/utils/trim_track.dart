@@ -35,6 +35,7 @@ const _mergeGap   = 4; // merge stationary runs separated by ≤ this many movin
 
 // ── Geometry ─────────────────────────────────────────────────────────────────
 
+/// Great-circle distance in metres between two lat/lon points.
 double _haversineM(double lat1, double lon1, double lat2, double lon2) {
   const r = 6371000.0;
   final dLat = (lat2 - lat1) * pi / 180;
@@ -61,6 +62,10 @@ class _Fix {
 
 // ── Pass 1 — annotate ────────────────────────────────────────────────────────
 
+/// Computes each fix's instantaneous speed plus a centred-window speed and
+/// positional spread (used for stationary detection), stopping the window at
+/// any already-flagged spike so a bad fix can't smear its influence onto
+/// its neighbours.
 void _annotate(List<_Fix> fixes, int window) {
   final n = fixes.length;
 
@@ -326,6 +331,9 @@ int _flagColdStart(
 
 // ── Pass 3 — spike detection ─────────────────────────────────────────────────
 
+/// Flags moving fixes whose instantaneous speed is a statistical outlier
+/// (median + [_accelSigma] MAD-sigmas) or exceeds the hard [maxSpeedKn]
+/// ceiling — implausible GPS glitches rather than real boat speed.
 int _flagSpikes(List<_Fix> fixes, double maxSpeedKn) {
   final movingSpds = fixes
       .where((f) => !f.stationary && f.instSpeedKn > 0)
@@ -349,6 +357,8 @@ int _flagSpikes(List<_Fix> fixes, double maxSpeedKn) {
 
 // ── Pass 4 — smoothing ───────────────────────────────────────────────────────
 
+/// Sliding-median smoothing on the kept moving track (independently on lat
+/// and lon) — softens residual GPS jitter without the lag of a mean filter.
 List<TrackPoint> _smoothMedian(List<TrackPoint> pts, int window) {
   if (window < 2 || pts.length <= window) return pts;
   final half = window ~/ 2;
@@ -1045,6 +1055,9 @@ bool _sustainedFrom(List<_Fix> fixes, int i, double underwayThresholdKn) {
 
 // ── Display model builder ─────────────────────────────────────────────────────
 
+/// Classifies the connector between a stop and its neighboring moving track:
+/// a genuine GPS teleport, a plain position shift, or close enough to treat
+/// as still on-track.
 String _connType(double? dBefore, double? dAfter, bool hasSpike) {
   final maxD = max(dBefore ?? 0.0, dAfter ?? 0.0);
   if (hasSpike && maxD > _teleportM) return 'teleport';

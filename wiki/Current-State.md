@@ -19,7 +19,7 @@ see [Data Model](Data-Model). For a walkthrough of each screen's behavior, see
 | Auth | firebase_auth + google_sign_in + sign_in_with_apple | Email/password, Google, Apple — all three wired up and working |
 | State management | provider (`ChangeNotifier`) | `HomeRepository`, `ThemeProvider`, `EmergencyRepository`, `AuthService` |
 | Navigation | go_router | Flat route list, single auth-gating `redirect` |
-| Maps | flutter_map + MapTiler | Nautical/satellite tiles via MapTiler API key — no policy-violating demo tile servers |
+| Maps | flutter_map | **Temporarily** on free public OSM/Esri tile servers — MapTiler is implemented but commented out in `map_config.dart` after the free-tier quota was exhausted (resets 2026-07-21); must be restored before an App Store submission, see [Roadmap](Roadmap) |
 | Platform targets | iOS ✓ macOS ✓ Android ✓ | Android Firebase registered (`google-services.json` present, real appId) |
 | Localization | flutter_localizations + intl, ARB-based | German (default) + English; `flutter gen-l10n` from `lib/l10n/app_{de,en}.arb` |
 | Billing / IAP | None (deliberate) | See [Billing & Cost](Billing-and-Cost) — absorbing Firebase costs at current scale |

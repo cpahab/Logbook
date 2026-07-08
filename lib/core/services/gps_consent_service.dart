@@ -4,8 +4,11 @@ import 'package:geolocator/geolocator.dart';
 import '../../app/theme/theme_extensions.dart';
 import '../../l10n/l10n_extension.dart';
 
+/// Gatekeeper in front of the OS location-permission prompt: shows our own
+/// plain-language explanation dialog first, so the user isn't hit with the
+/// system prompt (which most people reflexively deny) without context.
 class GpsConsentService {
-  /// Shows a purpose-explanation dialog once, then triggers the OS permission
+  /// Shows the explanation dialog once, then triggers the OS permission
   /// prompt.  Returns immediately if permission is already resolved.
   static Future<void> requestIfNeeded(BuildContext context) async {
     final permission = await Geolocator.checkPermission();
@@ -16,6 +19,7 @@ class GpsConsentService {
     }
     if (!context.mounted) return;
 
+    // ── Explanation dialog (title + body + Later/Allow actions) ──
     final allowed = await showDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -46,7 +50,7 @@ class GpsConsentService {
           ],
         );
       },
-    );
+    ); // ── end explanation dialog ──
 
     if (allowed == true) {
       await Geolocator.requestPermission();

@@ -16,6 +16,9 @@ enum StationaryMode {
   both,
 }
 
+/// Tuning knobs for the GPS track-cleaning pipeline used by
+/// [computeDailyStats]/`trim_track.dart`: what counts as "stationary",
+/// how aggressively to strip GPS noise, and speed thresholds for stats.
 class FilterSettings {
   /// Which stationary-detection mode to apply.
   final StationaryMode stationaryMode;

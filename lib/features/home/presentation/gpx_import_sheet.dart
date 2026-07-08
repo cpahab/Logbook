@@ -9,6 +9,7 @@ import '../domain/daily_track.dart';
 import '../utils/gpx_date_resolver.dart';
 import '../utils/gpx_parser.dart';
 
+/// Which decision view the sheet is currently showing.
 enum GpxImportState {
   error,
   multiDay,
@@ -16,6 +17,7 @@ enum GpxImportState {
   conflict,
 }
 
+/// Specific reason a GPX file can't be imported, for the error view's message.
 enum GpxErrorKind {
   invalidEncoding,
   invalidXml,
@@ -31,6 +33,9 @@ class GpxImportChoice {
   const GpxImportChoice({required this.date, required this.action});
 }
 
+/// What to do with an incoming GPX track relative to any existing one for
+/// that day. `clear` means "no conflict — just import" (multi-day/no-timestamp
+/// flows where there was nothing to replace or merge).
 enum GpxImportAction { replace, merge, clear }
 
 /// Shows the GPX import decision bottom sheet and returns the user's choice,
@@ -57,6 +62,8 @@ Future<GpxImportChoice?> showGpxImportSheet({
   );
 }
 
+/// The bottom sheet's content, switching between error/multi-day/
+/// no-timestamps/conflict views based on [GpxImportState].
 class _GpxImportSheet extends StatefulWidget {
   final GpxParseResult parseResult;
   final GpxDateResolution resolution;
@@ -85,6 +92,8 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
     _currentExisting = widget.existingTrack;
   }
 
+  /// Which view to show, re-evaluated as the user picks a date or the sheet
+  /// re-checks for a conflict on the newly picked date.
   GpxImportState get _state {
     final r = widget.resolution;
     if (r.hasRoutesOnly || r.hasWaypointsOnly ||
@@ -97,6 +106,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
     return GpxImportState.error; // should not reach here — caller skips sheet for clear
   }
 
+  /// Specific error reason for the error view's message.
   GpxErrorKind get _errorKind {
     if (widget.resolution.hasRoutesOnly) return GpxErrorKind.hasRoutesOnly;
     if (widget.resolution.hasWaypointsOnly) return GpxErrorKind.hasWaypointsOnly;
@@ -125,6 +135,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
     );
   }
 
+  /// Small drag-handle bar at the top of every sheet view.
   Widget _buildHandle() => Center(
     child: Container(
       width: 36, height: 4,
@@ -136,6 +147,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
     ),
   );
 
+  /// Unrecoverable-error view: message + a single "close" action.
   Widget _buildError(ColorScheme cs) {
     final l10n = context.l10n;
     final msg = switch (_errorKind) {
@@ -165,6 +177,8 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
     );
   }
 
+  /// Multi-day-span view: lets the user confirm or override which spanned
+  /// day to import into.
   Widget _buildMultiDay(ColorScheme cs) {
     final l10n = context.l10n;
     final locale = context.read<ThemeProvider>().localeString;
@@ -221,6 +235,8 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
     );
   }
 
+  /// No-timestamps view: the track has no usable dates, so the user must
+  /// pick which day it belongs to manually.
   Widget _buildNoTimestamps(ColorScheme cs) {
     final l10n = context.l10n;
     final locale = context.read<ThemeProvider>().localeString;
@@ -261,6 +277,8 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
     );
   }
 
+  /// Conflict view: an existing track already covers this day — offers
+  /// Replace, Merge, pick a different day, or Cancel.
   Widget _buildConflict(ColorScheme cs) {
     final l10n = context.l10n;
     final locale = context.read<ThemeProvider>().localeString;
@@ -360,6 +378,7 @@ class _GpxImportSheetState extends State<_GpxImportSheet> {
   }
 }
 
+/// Tappable row showing [selected] and opening a date picker on tap.
 class _DatePickerRow extends StatelessWidget {
   final DateTime selected;
   final String locale;
@@ -410,6 +429,7 @@ class _DatePickerRow extends StatelessWidget {
   }
 }
 
+/// Full-width outlined action button used in the conflict view.
 class _ConflictButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;

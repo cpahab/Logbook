@@ -1,5 +1,8 @@
 import 'gpx_parser.dart';
 
+/// Result of [GpxDateResolver.resolve]: which day to import a GPX track
+/// into, plus flags for edge cases (multi-day span, routes/waypoints-only
+/// files, points missing timestamps) the import UI needs to warn about.
 class GpxDateResolution {
   final DateTime? resolvedDate;
   final bool isMultiDay;
@@ -29,6 +32,8 @@ class GpxDateResolution {
 /// touches and report [GpxDateResolution.isMultiDay]/[spannedDays] so the
 /// import UI can warn the user and let them confirm or pick a different day.
 class GpxDateResolver {
+  /// Resolves [result] to a [GpxDateResolution], anchoring multi-day tracks
+  /// to their first day.
   static GpxDateResolution resolve(GpxParseResult result) {
     if (result.hasRoutesOnly) {
       return GpxDateResolution(

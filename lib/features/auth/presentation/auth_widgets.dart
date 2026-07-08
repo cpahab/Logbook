@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../app/theme/theme_extensions.dart';
 
+/// Labeled text input used across every auth screen (login, register, forgot
+/// password): eyebrow label above a filled, rounded `TextFormField` with
+/// theme-consistent focus/error border states.
 class AuthField extends StatelessWidget {
   final TextEditingController controller;
   final String label;
@@ -81,6 +84,8 @@ class AuthField extends StatelessWidget {
   }
 }
 
+/// "── or ──" style horizontal divider with a centered [label], separating
+/// email/password sign-in from the social sign-in buttons below it.
 class AuthOrDivider extends StatelessWidget {
   final String label;
   const AuthOrDivider({super.key, required this.label});
@@ -103,6 +108,8 @@ class AuthOrDivider extends StatelessWidget {
   }
 }
 
+/// Full-width outlined button for a third-party sign-in provider (Google,
+/// Apple), pairing a provider [icon] with a [label].
 class AuthSocialButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String label;
@@ -133,6 +140,8 @@ class AuthSocialButton extends StatelessWidget {
   }
 }
 
+/// Minimal text-only stand-in for the Google "G" logo (avoids pulling in an
+/// image asset just for one letter).
 class GoogleLogo extends StatelessWidget {
   const GoogleLogo({super.key});
 

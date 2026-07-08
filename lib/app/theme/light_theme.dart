@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Light theme — Horizon Minimalist
+// Light theme — Horizon Minimalist. Pairs with dark_theme.dart, which
+// mirrors this file's structure/roles with its own dark-mode palette; see
+// wiki/design.md for the full color rationale and usage table.
 const _primary            = Color(0xFF002B49); // Deep Navy
 const _primaryContainer   = Color(0xFF1A3A5C);
 const _seafoam            = Color(0xFFB7C8DE); // Seafoam accent  (tertiaryFixedDim)
@@ -10,6 +12,8 @@ const _outline            = Color(0xFFC3C6CF);
 const _container          = Color(0xFFF2F4F6); // surfaceContainer (base tier)
 const _onSurfaceVariant   = Color(0xFF43474E);
 
+/// DM Sans text theme, with a few weight overrides on top of the Google
+/// Fonts default so headlines/eyebrow labels match the design spec.
 TextTheme _buildTextTheme() {
   final base = GoogleFonts.dmSansTextTheme();
   return base.copyWith(
@@ -95,11 +99,13 @@ final ThemeData lightTheme = ThemeData(
     onTertiaryFixedVariant: const Color(0xFF38485A),
   ),
   textTheme: _buildTextTheme(),
+  // Full-screen dialogs (add/edit timeline entry, add/edit crew): white card, 16px corners.
   dialogTheme: const DialogThemeData(
     backgroundColor: Color(0xFFFFFFFF),
     surfaceTintColor: Colors.transparent,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
   ),
+  // Top app bar: flush with the surface (no elevation shadow), left-aligned title.
   appBarTheme: AppBarTheme(
     backgroundColor: _surface,
     foregroundColor: _primary,
@@ -112,6 +118,7 @@ final ThemeData lightTheme = ThemeData(
     iconTheme:        const IconThemeData(color: _primary),
     actionsIconTheme: const IconThemeData(color: _primary),
   ),
+  // Section/data cards throughout the app: flat (no shadow), 16px corners.
   cardTheme: const CardThemeData(
     elevation: 0,
     margin: EdgeInsets.zero,
@@ -119,6 +126,7 @@ final ThemeData lightTheme = ThemeData(
       borderRadius: BorderRadius.all(Radius.circular(16)),
     ),
   ),
+  // Filter/selection pills (e.g. date-range filter, sail-state chips): stadium shape, no checkmark.
   chipTheme: ChipThemeData(
     shape: const StadiumBorder(),
     showCheckmark: false,
@@ -135,6 +143,7 @@ final ThemeData lightTheme = ThemeData(
     foregroundColor: const Color(0xFFFFFFFF),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
   ),
+  // Date-range filter picker on the home/tracks screens.
   datePickerTheme: DatePickerThemeData(
     backgroundColor: const Color(0xFFFFFFFF),
     headerBackgroundColor: _primary,

@@ -4,6 +4,9 @@ import '../../../app/theme/theme_extensions.dart';
 import '../domain/crew_member.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// Fullscreen dialog for adding a new crew member or editing an existing
+/// one's identity/medical/safety-equipment/remarks fields. Returns the
+/// resulting [CrewMember] via `Navigator.pop`, or null if cancelled.
 class AddCrewMemberDialog extends StatefulWidget {
   final CrewMember? initialMember;
   /// Called when "Remove from crew" is tapped. Must perform (or cancel) the
@@ -52,6 +55,8 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
     super.dispose();
   }
 
+  /// Validates (name required) and pops the dialog with the resulting
+  /// [CrewMember]; no-ops if the name is empty.
   void _submit() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
@@ -121,6 +126,8 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                     ),
                   ),
 
+                  // ── end Identity ──
+
                   const SizedBox(height: 24),
                   // ── Medical Info ──────────────────────────────────────
                   _sectionHeader(Icons.medical_services, l10n.crewSectionMedical, cs),
@@ -177,6 +184,8 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                     ),
                   ),
 
+                  // ── end Medical Info ──
+
                   const SizedBox(height: 24),
                   // ── Safety Equipment ──────────────────────────────────
                   _sectionHeader(Icons.sensors, l10n.crewSectionSafety, cs),
@@ -197,6 +206,8 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                     ),
                   ),
 
+                  // ── end Safety Equipment ──
+
                   const SizedBox(height: 24),
                   // ── Remarks ───────────────────────────────────────────
                   _sectionHeader(Icons.description, l10n.crewSectionRemarks, cs),
@@ -211,6 +222,8 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                       italic: true,
                     ),
                   ),
+
+                  // ── end Remarks ──
 
                   const SizedBox(height: 32),
                   // ── Actions ───────────────────────────────────────────
@@ -275,6 +288,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                       ),
                     ),
                   ],
+                  // ── end Actions ──
                 ],
               ),
             ),
@@ -284,6 +298,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
     );
   }
 
+  /// Small-caps eyebrow label with a leading icon, above each form section.
   Widget _sectionHeader(IconData icon, String label, ColorScheme cs) {
     return Row(
       children: [
@@ -299,6 +314,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
     );
   }
 
+  /// Bordered card shell wrapping one field (or group of fields).
   Widget _card({required Widget child, required ColorScheme cs}) {
     return Container(
       width: double.infinity,
@@ -319,6 +335,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
     );
   }
 
+  /// Small muted field label above a [_field].
   Widget _label(String text, ColorScheme cs) {
     return Text(
       text,
@@ -328,6 +345,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
     );
   }
 
+  /// Borderless text input styled to sit flush inside a [_card].
   Widget _field({
     required TextEditingController controller,
     required String hint,

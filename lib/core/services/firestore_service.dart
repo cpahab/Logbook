@@ -67,6 +67,7 @@ class FirestoreService {
         .set(partial, SetOptions(merge: true));
   }
 
+  /// Deletes the entry document for [date] entirely.
   Future<void> deleteEntry(DateTime date) =>
       _entriesRef.doc(_dateKey(date)).delete();
 
@@ -146,12 +147,14 @@ class FirestoreService {
 
   // ── Meta: vessel settings ──────────────────────────────────────────────────
 
+  /// Overwrites the vessel/VHF settings document with [settings].
   Future<void> saveSettings(Map<String, String> settings) =>
       _metaDoc('settings').set({
         ...settings,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+  /// One-shot fetch of the settings document from the server.
   Future<Map<String, String>?> fetchSettings() async {
     final doc = await _metaDoc('settings')
         .get(const GetOptions(source: Source.server))
@@ -212,12 +215,14 @@ class FirestoreService {
 
   // ── Meta: emergency contacts ───────────────────────────────────────────────
 
+  /// Overwrites the emergency contacts list document with [contacts].
   Future<void> saveEmergencyContacts(List<Map<String, String>> contacts) =>
       _metaDoc('contacts').set({
         'list': contacts,
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+  /// One-shot fetch of the emergency contacts document from the server.
   Future<List<Map<String, String>>?> fetchEmergencyContacts() async {
     final doc = await _metaDoc('contacts')
         .get(const GetOptions(source: Source.server))
@@ -241,12 +246,15 @@ class FirestoreService {
 
   // ── Meta: crew roster ─────────────────────────────────────────────────────
 
+  /// Overwrites the crew roster document with [members].
   Future<void> saveRoster(List<CrewMember> members) =>
       _metaDoc('crew_roster').set({
         'members': members.map(_rosterMemberToMap).toList(),
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+  /// One-shot fetch of the crew roster from the server. Returns `[]` if no
+  /// roster document exists yet.
   Future<List<CrewMember>> fetchRoster() async {
     final doc = await _metaDoc('crew_roster')
         .get(const GetOptions(source: Source.server))
@@ -256,6 +264,7 @@ class FirestoreService {
     return data == null ? [] : _rosterFromDoc(data);
   }
 
+  /// Real-time stream of the crew roster.
   Stream<List<CrewMember>> rosterChanges() =>
       _metaDoc('crew_roster').snapshots().map((doc) {
         if (!doc.exists) return <CrewMember>[];
@@ -264,7 +273,10 @@ class FirestoreService {
       });
 
   // ── Serialization ──────────────────────────────────────────────────────────
+  // Each domain model has a _xToMap/_xFromMap pair below converting it
+  // to/from the plain Map Firestore reads and writes.
 
+  /// Firestore document ID for an entry: `yyyy-MM-dd`.
   static String _dateKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
@@ -471,6 +483,8 @@ class FirestoreService {
     return null;
   }
 
+  /// Like [_tsToDate] but for required (non-nullable) date fields — throws
+  /// if the value is missing or unparseable.
   static DateTime _parseDate(dynamic v) =>
       _tsToDate(v) ?? (throw FormatException('Cannot parse date: $v'));
 

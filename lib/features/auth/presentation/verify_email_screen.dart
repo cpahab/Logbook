@@ -6,6 +6,9 @@ import 'package:provider/provider.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// Blocking screen shown to signed-in users with an unverified email, when
+/// `kEnforceEmailVerification` (core/config/feature_flags.dart) is on.
+/// Offers "I've verified, check again" and "resend email" actions.
 class VerifyEmailScreen extends StatefulWidget {
   const VerifyEmailScreen({super.key});
 
@@ -17,6 +20,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   bool _resending = false;
   bool _checking = false;
 
+  /// Re-sends the Firebase verification email.
   Future<void> _resend() async {
     setState(() => _resending = true);
     try {

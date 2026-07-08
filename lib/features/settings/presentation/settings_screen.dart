@@ -23,6 +23,13 @@ import '../domain/theme_provider.dart';
 import '../../../app/route_names.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// The app's Settings screen: vessel/VHF info, display preferences (theme,
+/// locale, units), GPS track-filter tuning, crew roster shortcut, multi-boat
+/// logbook management (create/join/switch/share/leave/delete, guest
+/// management via share code or QR), and account actions (sign out, delete
+/// account). Vessel/filter fields write straight through to [ThemeProvider]
+/// on every change; logbook membership actions go through [LogbookService]
+/// and re-point every repository at the new logbook via [_reinitFirestore].
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -84,12 +91,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
+  /// Formats an 8-char share code as "XXXX-XXXX" for display.
   String _formatCode(String code) {
     if (code.length == 8) return '${code.substring(0, 4)}-${code.substring(4)}';
     return code;
   }
 
 
+  /// Reloads the current user's list of accessible logbooks (owned + joined).
   Future<void> _refreshLogbooks() async {
     final user = context.read<AuthService>().currentUser;
     if (user == null || !mounted) return;
@@ -106,6 +115,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Switches every repository/provider over to [logbookId]'s Firestore
+  /// backend: clears local per-boat caches first (so the new boat's remote
+  /// data always wins), then re-attaches. Requires connectivity — the new
+  /// logbook's data must download before local state is replaced.
   Future<void> _reinitFirestore(String logbookId) async {
     // Cache context-dependent objects before any await.
     final repo          = context.read<HomeRepository>();
@@ -140,6 +153,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) notifier.value = logbookId;
   }
 
+  /// Looks up [rawCode], confirms with the user, joins as a guest, and
+  /// switches this device to the found logbook.
   Future<void> _joinLogbook(String rawCode) async {
     final l10n = context.l10n;
     final code = rawCode.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
@@ -240,6 +255,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Confirms, then makes [logbook] the active logbook for [uid] and
+  /// switches this device to it.
   Future<void> _switchLogbook(Map<String, dynamic> logbook, String uid) async {
     final l10n = context.l10n;
     final logbookId = logbook['logbookId'] as String;
@@ -290,6 +307,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Owner-only actions sheet for a logbook: rename, share (QR), delete.
   void _showLogbookOptionsSheet(Map<String, dynamic> logbook, String uid) {
     final logbookId = logbook['logbookId'] as String;
     final name = logbook['name'] as String;
@@ -335,6 +353,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Guest-only actions sheet for a logbook: leave.
   void _showGuestOptionsSheet(Map<String, dynamic> logbook, String uid) {
     final logbookId = logbook['logbookId'] as String;
     final name = logbook['name'] as String;
@@ -362,6 +381,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Prompts for a name, creates a new logbook owned by [uid], and switches
+  /// this device to it.
   Future<void> _showNewLogbookDialog(String uid) async {
     final l10n = context.l10n;
     final ctrl = TextEditingController();
@@ -477,6 +498,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Prompts for a new name and renames the logbook.
   Future<void> _showRenameDialog(
       String logbookId, String currentName, String uid) async {
     final l10n = context.l10n;
@@ -541,6 +563,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Confirms, then permanently deletes the logbook (owner-only) and — if it
+  /// was this device's active logbook — switches to whichever logbook is
+  /// now active for [uid].
   Future<void> _showDeleteLogbookDialog(
       String logbookId, String name, String uid) async {
     final l10n = context.l10n;
@@ -597,6 +622,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Confirms, then removes [uid] as a guest member of the logbook and — if
+  /// it was this device's active logbook — switches to whichever logbook is
+  /// now active.
   Future<void> _showLeaveLogbookDialog(
       String logbookId, String name, String uid) async {
     final l10n = context.l10n;
@@ -653,6 +681,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  /// Shows [shareCode] as a scannable QR code (`logbook://join/{code}`) for
+  /// another device to join this logbook.
   void _showQrModal(String shareCode) {
     showDialog(
       context: context,
@@ -706,6 +736,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Opens the "connect to a logbook" bottom sheet (scan QR or type a code).
   void _showConnectSheet() {
     showModalBottomSheet(
       context: context,
@@ -724,6 +755,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Scaffold: app bar, bottom nav, and the scrollable settings body
+  /// (account, display, logbooks, vessel info, track filter, crew roster,
+  /// app version), pull-to-refresh reloading the logbook list.
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ThemeProvider>();
@@ -805,6 +839,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Vessel Information ──────────────────────────────────────────────
+  /// Name/MMSI/call sign/life raft/EPIRB/fire suppression fields, each
+  /// writing straight through to [ThemeProvider] on every keystroke.
   Widget _buildVesselSection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
     return Container(
@@ -899,6 +935,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// One label/value row within [_buildVesselSection].
   Widget _vesselRow({
     required String label,
     required TextEditingController controller,
@@ -943,6 +980,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Thin divider between [_vesselRow]s.
   Widget _rowDivider(ColorScheme cs) => Divider(
         color: cs.surfaceContainerHigh,
         height: 16,
@@ -950,6 +988,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
 
   // ── Display & Appearance ────────────────────────────────────────────
+  /// Theme mode (system/light/dark) and language (German/English) segmented
+  /// pickers.
   Widget _buildDisplaySection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
     return Container(
@@ -1025,6 +1065,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// One segment of the theme-mode picker.
   Widget _themeButton(
       String label, ThemeMode mode, ThemeProvider p, ColorScheme cs) {
     final isActive = p.themeMode == mode;
@@ -1057,6 +1098,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// One segment of the language picker.
   Widget _langButton(
       String label, Locale locale, ThemeProvider p, ColorScheme cs) {
     final isActive = p.locale == locale;
@@ -1089,6 +1131,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Whether any GPX track-filter value differs from its factory default —
+  /// shows a dot badge on the collapsed section header and a "reset" button
+  /// when expanded.
   bool _filterIsModified(ThemeProvider p) =>
       p.filterMode != StationaryMode.speed ||
       p.minStopMinutes != 5.0 ||
@@ -1100,6 +1145,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       p.maxSpeedKn != 12.0;
 
   // ── Track Filter ────────────────────────────────────────────────────
+  /// Collapsible advanced section tuning the GPS track-cleaning pipeline
+  /// (see [FilterSettings]): stationary-detection mode, min stop duration,
+  /// max anchor swing, cold-start trimming, underway threshold, max-speed
+  /// percentile/ceiling, and a raw-track debug overlay toggle.
   Widget _buildTrackFilterSection(ThemeProvider p, ColorScheme cs) {
     return Container(
       decoration: BoxDecoration(
@@ -1462,12 +1511,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+            // ── end expandable content ──
           ),
         ],
       ),
     );
   }
 
+  /// One segment of the stationary-detection-mode picker.
   Widget _filterModeButton({
     required String label,
     required StationaryMode mode,
@@ -1506,6 +1557,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Crew Roster ──────────────────────────────────────────────────────
+  /// Tappable shortcut card into [CrewRosterScreen], showing the current
+  /// roster count.
   Widget _buildCrewRosterSection(ColorScheme cs) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -1568,6 +1621,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Logbooks ─────────────────────────────────────────────────────────
+  /// Lists every logbook this user can access (as a [_buildBoatRow] each),
+  /// with an add-logbook button, and — only when the active logbook is
+  /// owned by this user — the share/manage-guests section below it.
   Widget _buildLogbooksSection(ColorScheme cs) {
     final l10n = context.l10n;
     final auth = context.watch<AuthService>();
@@ -1650,6 +1706,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// One logbook's row: active-indicator dot, name, owner/guest badge, and
+  /// (long-press or trailing icon) its options sheet. Tapping a non-active
+  /// row switches to it (disabled while offline or already syncing).
   Widget _buildBoatRow(Map<String, dynamic> logbook, String? activeLogbookId,
       ColorScheme cs, String uid) {
     final logbookId = logbook['logbookId'] as String;
@@ -1715,6 +1774,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Owner-only share block for the active logbook: copyable share code, QR
+  /// code button, "join another logbook" shortcut, and the guest-management list.
   Widget _buildShareSection(
       Map<String, dynamic> activeMeta, ColorScheme cs, String uid) {
     final l10n = context.l10n;
@@ -1816,6 +1877,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Collapsible list of the active logbook's guest members (fetched lazily
+  /// on first expand), each removable by the owner.
   Widget _buildManageGuests(String logbookId, ColorScheme cs, String uid) {
     final l10n = context.l10n;
     return Column(
@@ -1924,6 +1987,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ── Account ──────────────────────────────────────────────────────────
+  /// Signed-in-as line plus sign-out and delete-account actions. Both
+  /// destructive actions require connectivity: sign-out warns (but allows)
+  /// offline, while account deletion blocks outright so Firestore cleanup
+  /// can't fail silently and leave the Auth account deleted with orphaned data.
   Widget _buildAccountSection(ColorScheme cs) {
     final l10n = context.l10n;
     final user = context.watch<AuthService>().currentUser;
@@ -2186,7 +2253,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 // ── Connect bottom sheet (scan / enter code) ─────────────────────────────────
-
+/// Two-tab sheet for joining another logbook: a QR scanner tab and a
+/// type-the-code tab, both calling [onCode] with the resolved 8-char code.
 class _ConnectBottomSheet extends StatefulWidget {
   final Future<void> Function(String code) onCode;
   const _ConnectBottomSheet({required this.onCode});
@@ -2225,6 +2293,8 @@ class _ConnectBottomSheetState extends State<_ConnectBottomSheet>
     super.dispose();
   }
 
+  /// Handles a scanned QR code: strips the `logbook://join/` scheme prefix
+  /// if present, then closes the sheet and reports the code.
   void _onDetect(BarcodeCapture capture) {
     if (_scanHandled) return;
     final raw = capture.barcodes.firstOrNull?.rawValue;

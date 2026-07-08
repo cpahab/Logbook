@@ -6,6 +6,10 @@ import 'package:hive/hive.dart';
 import '../../../core/services/firestore_service.dart';
 import '../domain/emergency_contact.dart';
 
+/// Local (Hive) + cloud (Firestore) store for the emergency contacts list
+/// shown on the Emergency Manifest screen. Mirrors HomeRepository's
+/// last-writer-wins sync strategy, but scoped to one small document instead
+/// of per-day entries.
 class EmergencyRepository extends ChangeNotifier {
   late Box<EmergencyContact> _box;
 
@@ -98,6 +102,7 @@ class EmergencyRepository extends ChangeNotifier {
 
   // ── Mutations ──────────────────────────────────────────────────────────────
 
+  /// Adds [contact] locally and pushes the updated list to Firestore.
   Future<void> addContact(EmergencyContact contact) async {
     await _box.add(contact);
     _markModified();
@@ -105,6 +110,7 @@ class EmergencyRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Removes [contact] locally and pushes the updated list to Firestore.
   Future<void> removeContact(EmergencyContact contact) async {
     await contact.delete();
     _markModified();
@@ -112,6 +118,8 @@ class EmergencyRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replaces the contact at Hive key [key] with [updated] and pushes the
+  /// updated list to Firestore.
   Future<void> updateContact(int key, EmergencyContact updated) async {
     await _box.put(key, updated);
     _markModified();

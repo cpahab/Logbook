@@ -6,12 +6,17 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
+/// Picks, compresses, uploads, and locally caches day-entry photos, backed
+/// by Firebase Storage with a documents-directory disk cache so a photo
+/// already downloaded once doesn't need re-fetching.
 class PhotoService {
   // Max long-side dimension for uploaded photos.
   // Covers Retina screen display and 4-up PDF thumbnails at 300 dpi.
   static const int _maxSide = 1920;
   static const int _jpegQuality = 85;
 
+  /// The local disk-cache directory for downloaded/uploaded photos, creating
+  /// it if it doesn't exist yet.
   static Future<Directory> _cacheDir() async {
     final docs = await getApplicationDocumentsDirectory();
     final dir = Directory('${docs.path}/photo_cache');
@@ -19,6 +24,8 @@ class PhotoService {
     return dir;
   }
 
+  /// The local cache filename for a Firebase Storage [storagePath] — just
+  /// its last path segment.
   static String _cacheFilename(String storagePath) =>
       storagePath.split('/').last;
 

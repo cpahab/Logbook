@@ -19,12 +19,14 @@ class StorageService {
   // Write
   // ------------------------------------------------------------------
 
+  /// Uploads (or overwrites) the raw GPX file for [date].
   Future<void> uploadTrack(DateTime date, Uint8List bytes) =>
       _ref(date).putData(
         bytes,
         SettableMetadata(contentType: 'application/gpx+xml'),
       );
 
+  /// Deletes the GPX file for [date].
   Future<void> deleteTrack(DateTime date) => _ref(date).delete();
 
   // ------------------------------------------------------------------
@@ -47,8 +49,6 @@ class StorageService {
       _ref(date).getData(10 * 1024 * 1024);
 
   // ------------------------------------------------------------------
-
-  // ------------------------------------------------------------------
   // Bulk delete
   // ------------------------------------------------------------------
 
@@ -57,6 +57,7 @@ class StorageService {
   static Future<void> deleteLogbookFolder(String logbookId) =>
       _deleteRef(FirebaseStorage.instance.ref('logbooks/$logbookId'));
 
+  /// Recursively deletes every file and sub-folder under [ref].
   static Future<void> _deleteRef(Reference ref) async {
     final result = await ref.listAll();
     await Future.wait([
@@ -67,6 +68,7 @@ class StorageService {
 
   // ------------------------------------------------------------------
 
+  /// Storage filename stem for a track: `yyyy-MM-dd`.
   static String _dateKey(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'

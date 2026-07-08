@@ -6,6 +6,13 @@ import 'package:hive/hive.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../home/utils/filter_settings.dart';
 
+/// Despite the name, this is the app's general local-preferences +
+/// cloud-synced-settings store, not just theming: theme mode, locale, last
+/// route, GPX track-filter tuning, vessel/VHF info, and month-expansion UI
+/// state. The synced fields (filter tuning, vessel/VHF info, UI state) use
+/// the same last-writer-wins-by-`updatedAt` sync strategy as
+/// [HomeRepository] and [EmergencyRepository]; theme mode/locale/last-route
+/// are deliberately device-local and never pushed to Firestore.
 class ThemeProvider extends ChangeNotifier {
   static const _boxName             = 'settings';
   static const _themeKey            = 'theme_mode';
@@ -140,6 +147,9 @@ class ThemeProvider extends ChangeNotifier {
     return stored == 'true';
   }
 
+  /// Sets whether [monthKey]'s section is expanded on the home timeline, and
+  /// pushes the full expansion map to Firestore (synced UI state, shared
+  /// across devices/crew on this logbook).
   void setMonthExpanded(String monthKey, bool expanded) {
     _box.put('mex_$monthKey', expanded.toString());
     _box.put(_uiModifiedKey, DateTime.now().millisecondsSinceEpoch.toString());
@@ -147,6 +157,8 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Every month-expansion flag currently stored locally, keyed by month
+  /// (the `mex_` prefix stripped) — the shape pushed to/pulled from Firestore.
   Map<String, bool> get _monthExpandedMap {
     final map = <String, bool>{};
     for (final k in _box.keys) {
@@ -164,8 +176,12 @@ class ThemeProvider extends ChangeNotifier {
     return ms == null ? null : DateTime.fromMillisecondsSinceEpoch(ms);
   }
 
+  /// Whether this device has never completed a first cloud sync — gates the
+  /// "push local first, then pull" migration path in [attachFirestore].
   bool get needsInitialSync => _box.get(_initialSyncDoneKey) == null;
   void markInitialSyncDone() => _box.put(_initialSyncDoneKey, 'true');
+  /// Forces the next [attachFirestore] call to redo the initial-sync path —
+  /// used after a project/UID change so local data gets pushed to the new target.
   void resetInitialSync()    => _box.delete(_initialSyncDoneKey);
 
   /// Resets all synced vessel / VHF settings to defaults in memory and Hive,
@@ -234,6 +250,8 @@ class ThemeProvider extends ChangeNotifier {
 
   // ── Init ───────────────────────────────────────────────────────────────────
 
+  /// Opens the settings Hive box and loads every field from it (or its
+  /// default). Must complete before any other method is called.
   Future<void> init() async {
     _box = await Hive.openBox<String>(_boxName);
     _mode                  = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
@@ -267,6 +285,7 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   // ── Non-synced setters ─────────────────────────────────────────────────────
+  // Device-local preferences — never pushed to Firestore.
 
   void setThemeMode(ThemeMode mode) {
     if (_mode == mode) return;
@@ -359,6 +378,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Restores every GPX track-filter tuning value to its factory default and pushes it.
   void resetFilterDefaults() {
     _filterMode           = StationaryMode.speed;
     _minStopMinutes       = 5.0;
@@ -381,6 +401,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets the app's display title, falling back to "Logbuch" if cleared.
   void setLogbuchTitle(String title) {
     final trimmed = title.trim().isEmpty ? 'Logbuch' : title.trim();
     if (_title == trimmed) return;
@@ -389,6 +410,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets the external weather-forecast URL shown as a link in Settings.
   void setWeatherUrl(String url) {
     final trimmed = url.trim();
     if (_weatherUrl == trimmed) return;
@@ -398,6 +420,8 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   // ── Synced vessel / VHF setters ────────────────────────────────────────────
+  // Each setter: trim, no-op if unchanged, write to Hive, push to Firestore,
+  // notify. Shared logbook data — every setter below follows this pattern.
 
   void setVesselName(String v) {
     final t = v.trim();
@@ -453,6 +477,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets the VHF channel preset in slot [idx] (1-4).
   void setVhfEntry(int idx, String label, String desc) {
     final l = label.trim();
     final d = desc.trim();
@@ -555,6 +580,8 @@ class ThemeProvider extends ChangeNotifier {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
+  /// Serializes every synced field (vessel/VHF info + filter tuning) into
+  /// the flat string map Firestore stores/compares.
   Map<String, String> _toSettingsMap() => {
         _vesselNameKey:      _vesselName,
         _vesselMmsiKey:      _vesselMmsi,
@@ -598,6 +625,8 @@ class ThemeProvider extends ChangeNotifier {
         () => _firestore?.saveSettings(_toSettingsMap()).catchError((_) {}));
   }
 
+  /// Applies a remote settings map [r] field-by-field, only touching fields
+  /// that actually differ from the current local value.
   void _applyRemoteSettings(Map<String, String> r) {
     var changed = false;
     void apply(String key, String current, void Function(String) set) {
@@ -655,6 +684,7 @@ class ThemeProvider extends ChangeNotifier {
     if (changed) notifyListeners();
   }
 
+  /// Applies remote month-expansion state, only writing keys that changed.
   void _applyRemoteUiState(Map<String, bool> remote) {
     var changed = false;
     for (final e in remote.entries) {
@@ -668,6 +698,8 @@ class ThemeProvider extends ChangeNotifier {
     if (changed) notifyListeners();
   }
 
+  /// Value equality for two settings maps — used to detect and skip the
+  /// Firestore echo of this device's own push.
   static bool _mapsEqual(Map<String, String> a, Map<String, String> b) {
     if (a.length != b.length) return false;
     for (final k in a.keys) {
@@ -676,21 +708,25 @@ class ThemeProvider extends ChangeNotifier {
     return true;
   }
 
+  /// Parses a stored locale code, defaulting to German for anything unrecognized.
   static Locale _parseLocale(String v) =>
       v == 'en' ? const Locale('en') : const Locale('de');
 
+  /// Parses a stored theme-mode string, defaulting to [ThemeMode.system].
   static ThemeMode _fromString(String v) => switch (v) {
         'light' => ThemeMode.light,
         'dark'  => ThemeMode.dark,
         _       => ThemeMode.system,
       };
 
+  /// Serializes a [ThemeMode] for Hive storage.
   static String _toString(ThemeMode m) => switch (m) {
         ThemeMode.light => 'light',
         ThemeMode.dark  => 'dark',
         _               => 'system',
       };
 
+  /// Parses a stored stationary-mode name, defaulting to [StationaryMode.speed].
   static StationaryMode _parseFilterMode(String v) =>
       StationaryMode.values.firstWhere(
         (m) => m.name == v,

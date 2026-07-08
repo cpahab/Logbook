@@ -43,6 +43,8 @@ class TrackComputationCache {
   }
 }
 
+/// One cached (display, stats) pair plus the inputs that produced it, so a
+/// cache hit can be validated by identity/equality before reuse.
 class _Entry {
   final List<TrackPoint> sourcePoints;
   final FilterSettings settings;

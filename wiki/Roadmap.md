@@ -1,22 +1,30 @@
 # Roadmap — Remaining Work
 
-Auth, multilingual support (German/English), Android Firebase registration, and the
-MapTiler migration are all **done** — see [Architectural Decisions](Architectural-Decisions)
-for what shipped vs. the original plan. What's left, roughly in priority order:
+Auth, multilingual support (German/English), and Android Firebase registration are all
+**done** — see [Architectural Decisions](Architectural-Decisions) for what shipped vs. the
+original plan. The MapTiler migration is implemented but **currently rolled back**: a quota
+exhaustion incident forced a temporary switch to free public OSM/Esri tiles (see
+[Current State](Current-State)); restoring MapTiler is listed below under App Store
+submission blockers. What's left otherwise, roughly in priority order:
 
 ---
 
 ## Before App Store submission
 
-1. **Privacy policy.** App Store requires a publicly accessible privacy policy URL for
+1. **Restore MapTiler tiles.** `lib/core/constants/map_config.dart` currently points at
+   free public OSM/Esri demo servers as a stopgap after the MapTiler free-tier quota was
+   exhausted (resets 2026-07-21). Those demo servers aren't licensed for sustained use by a
+   distributed app. Once the quota resets, delete the "OpenStreetMap / Esri (testing)"
+   block and uncomment the MapTiler block above it.
+2. **Privacy policy.** App Store requires a publicly accessible privacy policy URL for
    any app using Firebase Auth or collecting user data. Not yet published.
-2. **Store assets.** Screenshots (all required sizes), app description, age rating,
+3. **Store assets.** Screenshots (all required sizes), app description, age rating,
    support URL.
-3. **Verify Sign-In with Apple end-to-end.** The `com.apple.developer.applesignin`
+4. **Verify Sign-In with Apple end-to-end.** The `com.apple.developer.applesignin`
    entitlement is present in `Runner.entitlements`, but do a full manual test of the
    Apple sign-in flow before submitting — entitlement presence alone doesn't confirm the
    provisioning profile / Apple Developer account state is fully correct.
-4. **Resolve the iOS 26 + Xcode debug crash** (see [Current State](Current-State)) if it
+5. **Resolve the iOS 26 + Xcode debug crash** (see [Current State](Current-State)) if it
    still blocks Xcode-based Instruments profiling or archiving — `flutter run` from the
    terminal is unaffected.
 

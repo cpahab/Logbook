@@ -11,6 +11,11 @@ import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/gps_consent_service.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// Live, step-by-step SOLAS/IMO MAYDAY radio-call script: DSC alert, MAYDAY
+/// signal, vessel identification, GPS position, nature of distress, crew
+/// count, and sign-off — read aloud verbatim over VHF channel 16 in an
+/// emergency. Deliberately the one screen in the app styled "loud" (solid
+/// red app bar, pulsing step borders); see wiki/design.md §7.11.
 class MaydayScreen extends StatefulWidget {
   const MaydayScreen({super.key});
 
@@ -20,8 +25,12 @@ class MaydayScreen extends StatefulWidget {
 
 class _MaydayScreenState extends State<MaydayScreen>
     with SingleTickerProviderStateMixin {
+  // Pulsing border/shadow animation on the DSC, signal, and distress step
+  // cards — a subtle "still live" cue during a high-stress reading.
   late final AnimationController _pulseCtrl;
   late final Animation<double> _pulseAnim;
+
+  // Index into _distressOptions for Step 5's selected "nature of distress".
   int _selectedDistress = 0;
 
   String? _positionText;  // null = still acquiring
@@ -44,6 +53,8 @@ class _MaydayScreenState extends State<MaydayScreen>
     });
   }
 
+  /// Requests a single high-accuracy GPS fix (15s timeout) for Step 4's
+  /// position readout, formatting it as nautical degrees-minutes on success.
   Future<void> _acquirePosition() async {
     try {
       final permission = await Geolocator.checkPermission();
@@ -126,32 +137,38 @@ class _MaydayScreenState extends State<MaydayScreen>
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: [
-          // Procedure header
+          // -- Procedure header ("read this script aloud, in order") --
           _ProcedureHeader(),
           const SizedBox(height: 16),
+          // -- end procedure header --
 
-          // Steps
+          // -- The 7-step MAYDAY script, in speaking order --
+          // Step 1: DSC distress alert (radio button + channel 16 tune).
           AnimatedBuilder(
             animation: _pulseAnim,
             builder: (context, _) => _StepDsc(pulseValue: _pulseAnim.value),
           ),
           const SizedBox(height: 12),
+          // Step 2: spoken "MAYDAY, MAYDAY, MAYDAY" signal.
           AnimatedBuilder(
             animation: _pulseAnim,
             builder: (context, _) => _StepSignal(pulseValue: _pulseAnim.value),
           ),
           const SizedBox(height: 12),
+          // Step 3: vessel name / callsign / MMSI, each spoken 3x per protocol.
           _StepIdentification(
             vesselName: vesselName,
             callSign: callSign,
             mmsi: mmsi,
           ),
           const SizedBox(height: 12),
+          // Step 4: live GPS position (or an acquiring/error state).
           _StepPosition(
             positionText: _positionText,
             positionError: _positionError,
           ),
           const SizedBox(height: 12),
+          // Step 5: nature of distress — tap an alternative to switch it.
           AnimatedBuilder(
             animation: _pulseAnim,
             builder: (context, _) => _StepDistress(
@@ -162,12 +179,15 @@ class _MaydayScreenState extends State<MaydayScreen>
             ),
           ),
           const SizedBox(height: 12),
+          // Step 6: number of persons on board.
           _StepCrew(crewCount: crewCount),
           const SizedBox(height: 12),
+          // Step 7: sign-off ("OVER").
           const _StepClosing(),
           const SizedBox(height: 20),
+          // -- end 7-step script --
 
-          // Tips
+          // -- Critical-tips reference card (stay calm, enunciate, listen) --
           const _TipsSection(),
         ],
       ),
@@ -176,7 +196,8 @@ class _MaydayScreenState extends State<MaydayScreen>
 }
 
 // ─── Procedure Header ─────────────────────────────────────────────────────────
-
+/// One-line instruction above Step 1 telling the reader to follow the script
+/// below verbatim, in order.
 class _ProcedureHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -198,7 +219,10 @@ class _ProcedureHeader extends StatelessWidget {
 }
 
 // ─── Step helpers ─────────────────────────────────────────────────────────────
-
+/// Step 1 (DSC distress alert): its own bespoke card (not [_StepCard], since
+/// this step has two numbered sub-actions plus a "wait for ack" notice
+/// instead of one simple script line) with a pulsing red border driven by
+/// [pulseValue].
 class _StepDsc extends StatelessWidget {
   final double pulseValue;
   const _StepDsc({required this.pulseValue});
@@ -301,6 +325,8 @@ class _StepDsc extends StatelessWidget {
   }
 }
 
+/// One numbered sub-action within Step 1 (e.g. "1. Press and hold the
+/// distress button").
 class _DscAction extends StatelessWidget {
   final String number;
   final String text;
@@ -339,6 +365,8 @@ class _DscAction extends StatelessWidget {
   }
 }
 
+/// Step 2 (MAYDAY signal): its own bespoke card, matching [_StepDsc]'s
+/// pulsing-border treatment, showing the literal "MAYDAY, MAYDAY, MAYDAY" line.
 class _StepSignal extends StatelessWidget {
   final double pulseValue;
   const _StepSignal({required this.pulseValue});
@@ -412,6 +440,9 @@ class _StepSignal extends StatelessWidget {
   }
 }
 
+/// Step 3 (identification): vessel name spoken 3x, then callsign, MMSI, and
+/// a final "MAYDAY [vessel name]" line, each fill-in value styled via
+/// [_spokenValueSpan].
 class _StepIdentification extends StatelessWidget {
   final String vesselName;
   final String callSign;
@@ -511,6 +542,9 @@ TextSpan _spokenValueSpan(String text, ColorScheme cs) => TextSpan(
       ),
     );
 
+/// Step 4 (position): shows the live GPS fix (from [_MaydayScreenState._acquirePosition]),
+/// a spinner while still acquiring, or a "position unavailable" notice if
+/// location permission was denied/failed.
 class _StepPosition extends StatelessWidget {
   final String? positionText;
   final bool positionError;
@@ -601,6 +635,9 @@ class _StepPosition extends StatelessWidget {
   }
 }
 
+/// Step 5 (nature of distress): shows the currently selected option as the
+/// spoken script line, with the other options offered as small tappable
+/// "(bracketed)" alternatives to switch the selection.
 class _StepDistress extends StatelessWidget {
   final double pulseValue;
   final int selectedIndex;
@@ -702,6 +739,8 @@ class _StepDistress extends StatelessWidget {
   }
 }
 
+/// Step 6 (crew status): number of persons on board, from today's crew list
+/// (falling back to the last-used crew list if today has none logged yet).
 class _StepCrew extends StatelessWidget {
   final int crewCount;
   const _StepCrew({required this.crewCount});
@@ -733,6 +772,7 @@ class _StepCrew extends StatelessWidget {
   }
 }
 
+/// Step 7 (closing): the final "OVER" sign-off, ending the transmission.
 class _StepClosing extends StatelessWidget {
   const _StepClosing();
 
@@ -755,7 +795,10 @@ class _StepClosing extends StatelessWidget {
 }
 
 // ─── Reusable step card ───────────────────────────────────────────────────────
-
+/// Shared card shell for steps 3, 4, 6, and 7 (steps 1/2/5 use their own
+/// bespoke layouts): a left accent border, "STEP N: LABEL" eyebrow, an icon
+/// tile, an optional faint background watermark icon, and a [child] slot
+/// for the step's actual content.
 class _StepCard extends StatelessWidget {
   final int step;
   final String label;
@@ -842,7 +885,9 @@ class _StepCard extends StatelessWidget {
 }
 
 // ─── Tips section ─────────────────────────────────────────────────────────────
-
+/// Closing reference card with 3 short reminders (stay calm, enunciate,
+/// listen for acknowledgment) — gold-accented, distinct from the red script
+/// cards above it since it's advice rather than script.
 class _TipsSection extends StatelessWidget {
   const _TipsSection();
 
@@ -894,6 +939,7 @@ class _TipsSection extends StatelessWidget {
   }
 }
 
+/// One bulleted reminder within [_TipsSection] (bold title + explanatory body).
 class _Tip extends StatelessWidget {
   final String title;
   final String body;

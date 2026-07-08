@@ -85,12 +85,16 @@ class CrewPickerSheet extends StatelessWidget {
   }
 }
 
+/// One existing roster member's row: tap to select them, or use the edit/delete
+/// icon buttons to manage the roster entry itself.
 class _RosterTile extends StatelessWidget {
   final CrewMember member;
   final HomeRepository repo;
 
   const _RosterTile({required this.member, required this.repo});
 
+  /// Opens the edit dialog and saves changes back to the roster, preserving
+  /// the member's existing id.
   Future<void> _edit(BuildContext context) async {
     final updated = await showDialog<CrewMember>(
       context: context,
@@ -101,6 +105,7 @@ class _RosterTile extends StatelessWidget {
     repo.saveEditedRosterMember(updated);
   }
 
+  /// Confirms, then permanently removes this person from the roster.
   Future<void> _delete(BuildContext context) async {
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
@@ -129,6 +134,7 @@ class _RosterTile extends StatelessWidget {
     repo.deleteRosterMember(member.id!);
   }
 
+  /// Blood type + allergies preview line, joined with " · " (empty if neither is set).
   String _subtitle(BuildContext context) {
     final parts = <String>[];
     if (member.bloodType != null) parts.add('${context.l10n.crewFieldBloodGroup} ${member.bloodType}');
@@ -195,6 +201,8 @@ class _RosterTile extends StatelessWidget {
   }
 }
 
+/// Row at the bottom of the sheet for adding a brand-new person: opens the
+/// add-crew-member dialog, saves them to the roster, then selects them.
 class _NewPersonTile extends StatelessWidget {
   final HomeRepository repo;
 

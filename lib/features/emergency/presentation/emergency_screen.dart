@@ -6,6 +6,10 @@ import '../../../app/theme/theme_extensions.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// Static reference guide for non-radio distress signals (pyrotechnics, hand
+/// signals, flag "NC", sound signals, EPIRB/SART), ending with a card
+/// linking into the live MAYDAY radio-protocol checklist. Purely
+/// informational — no user data is read or written on this screen.
 class EmergencyScreen extends StatelessWidget {
   const EmergencyScreen({super.key});
 
@@ -42,6 +46,8 @@ class EmergencyScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.fieldHintCompact.copyWith(height: 1.6, color: cs.onSurfaceVariant),
           ),
           const SizedBox(height: 20),
+
+          // -- Visual signals section: pyrotechnic + hand-signal cards, flag NC --
           _SectionHeader(title: l10n.emergencyVisualSignals),
           const SizedBox(height: 12),
           const IntrinsicHeight(
@@ -57,6 +63,9 @@ class EmergencyScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const _FlagSignalCard(),
           const SizedBox(height: 20),
+          // -- end visual signals section --
+
+          // -- Sound signals section: gunshot + foghorn cards --
           _SectionHeader(title: l10n.emergencySoundSignals),
           const SizedBox(height: 12),
           Row(
@@ -82,6 +91,9 @@ class EmergencyScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+          // -- end sound signals section --
+
+          // -- Electronic signals section: EPIRB + SART items --
           _SectionHeader(title: l10n.emergencyElectronicSignals),
           const SizedBox(height: 12),
           Column(
@@ -104,6 +116,9 @@ class EmergencyScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
+          // -- end electronic signals section --
+
+          // -- MAYDAY radio-protocol CTA card --
           const _MaydayCard(),
         ],
       ),
@@ -111,6 +126,7 @@ class EmergencyScreen extends StatelessWidget {
   }
 }
 
+/// Small-caps eyebrow label used above each signal-type section on this screen.
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -127,6 +143,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// Flares/rocket-signal reference card (left half of the visual-signals row).
 class _PyrotechnicCard extends StatelessWidget {
   const _PyrotechnicCard();
 
@@ -173,6 +190,8 @@ class _PyrotechnicCard extends StatelessWidget {
   }
 }
 
+/// Arms-raised distress hand-signal reference card (right half of the
+/// visual-signals row).
 class _HandSignalCard extends StatelessWidget {
   const _HandSignalCard();
 
@@ -199,6 +218,9 @@ class _HandSignalCard extends StatelessWidget {
   }
 }
 
+/// Shared card shell for [_PyrotechnicCard]/[_HandSignalCard]: a colored
+/// left stripe, icon + optional badge header row, title/subtitle, then a
+/// slot for an illustration ([child]).
 class _SignalCard extends StatelessWidget {
   final Color stripeColor;
   final IconData icon;
@@ -296,6 +318,7 @@ class _SignalCard extends StatelessWidget {
   }
 }
 
+/// Flag "NC" (International Code of Signals distress flag) reference card.
 class _FlagSignalCard extends StatelessWidget {
   const _FlagSignalCard();
 
@@ -385,6 +408,8 @@ class _FlagSignalCard extends StatelessWidget {
 }
 
 
+/// Compact card for one sound-signal method (gunshot / foghorn), with a
+/// faint oversized watermark icon in the background corner.
 class _SoundCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -437,6 +462,8 @@ class _SoundCard extends StatelessWidget {
   }
 }
 
+/// Row-style list item for one electronic distress device (EPIRB / SART):
+/// a colored icon tile plus title/subtitle.
 class _ElectronicItem extends StatelessWidget {
   final IconData icon;
   final Color iconBg;
@@ -506,6 +533,8 @@ class _ElectronicItem extends StatelessWidget {
   }
 }
 
+/// Prominent closing card that hands off from this static reference guide
+/// into the live, step-by-step MAYDAY radio-protocol screen.
 class _MaydayCard extends StatelessWidget {
   const _MaydayCard();
 

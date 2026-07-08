@@ -14,7 +14,15 @@ import '../utils/gpx_date_resolver.dart';
 import '../utils/gpx_parser.dart';
 import 'gpx_import_sheet.dart';
 
+/// Entry point for a GPX file shared into the app via the OS "Open with
+/// Logbook" mechanism (see GpxShareService). Parses the file and, unless the
+/// target day is completely unambiguous with no existing track, shows the
+/// lighter-weight [showGpxImportSheet] bottom sheet to confirm/resolve the
+/// day before importing — the fuller [GpxImportScreen] is used instead when
+/// the import is reached via routing rather than this direct-share path.
 class GpxShareHandler {
+  /// Runs the full parse → resolve → (maybe ask) → import flow for a shared
+  /// GPX file at [filePath].
   static Future<void> handle({
     required BuildContext context,
     required String filePath,
@@ -115,6 +123,8 @@ class GpxShareHandler {
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
+  /// Merges [incoming] points into [date]'s existing track, then finishes the
+  /// import flow.
   static Future<void> _doMerge(
     BuildContext context,
     DateTime date,
@@ -130,6 +140,7 @@ class GpxShareHandler {
     _navigateAndSnack(context, date);
   }
 
+  /// Combines and de-duplicates two point lists, sorted by time.
   static List<TrackPoint> _mergePoints(
       List<TrackPoint> existing, List<TrackPoint> incoming) {
     final merged = [...existing, ...incoming];
@@ -148,6 +159,7 @@ class GpxShareHandler {
     return unique;
   }
 
+  /// Shows the import sheet in its error-only mode (no valid content to import).
   static void _showErrorSheet(BuildContext context, GpxParseResult parseResult) {
     showGpxImportSheet(
       context: context,
@@ -164,6 +176,7 @@ class GpxShareHandler {
     );
   }
 
+  /// Shows a confirmation snackbar and navigates to the imported day's detail screen.
   static void _navigateAndSnack(BuildContext context, DateTime date) {
     final locale = context.read<ThemeProvider>().localeString;
     final dateStr = DateFormat('d MMM', locale).format(date);

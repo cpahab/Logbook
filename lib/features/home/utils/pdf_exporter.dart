@@ -19,14 +19,16 @@ import '../domain/track_point.dart';
 import 'compute_daily_stats.dart';
 import 'sail_state_utils.dart';
 
-// Returns true for codepoints that NotoSans can't render but NotoEmoji can.
+/// Returns true for codepoints that NotoSans can't render but NotoEmoji can
+/// — used to split free-text (which may contain emoji) into runs so each
+/// chunk gets the font that actually has glyphs for it.
 bool _isEmojiRune(int r) =>
     (r >= 0x2600  && r <= 0x27BF)  ||  // misc symbols + dingbats
     (r >= 0xFE00  && r <= 0xFE0F)  ||  // variation selectors
      r == 0x200D                   ||  // zero-width joiner
     (r >= 0x1F000 && r <= 0x1FFFF);    // supplementary emoji blocks
 
-// Splits [s] into (chunk, isEmoji) pairs for mixed-font rendering.
+/// Splits [s] into (chunk, isEmoji) pairs for mixed-font rendering by [_richText].
 List<(String, bool)> _splitRuns(String s) {
   final out = <(String, bool)>[];
   final buf = StringBuffer();
@@ -41,7 +43,9 @@ List<(String, bool)> _splitRuns(String s) {
   return out;
 }
 
-// Renders text with [base] font, switching to [emoji] for emoji codepoints.
+/// Renders [text] with [base] font, switching to [emoji] for any emoji
+/// codepoints within it — user-entered notes/remarks may contain emoji that
+/// NotoSans has no glyphs for, which would otherwise render as tofu boxes.
 pw.Widget _richText(
   String text, {
   required pw.Font base,
@@ -643,11 +647,15 @@ pw.Widget _buildTrackMap(Uint8List imageBytes, pw.Font bold, pw.Font regular, Pd
 }
 
 // ── Tile-map rendering ────────────────────────────────────────────────────────
+// Renders a static track-map image for the PDF by manually fetching and
+// compositing map tiles onto a canvas (there's no live flutter_map widget
+// available in a headless PDF-generation context).
 
-// Web Mercator pixel coordinates (origin = top-left of world at zoom z)
+/// Web Mercator pixel X coordinate (origin = top-left of world at zoom [z]).
 double _mercX(double lon, int z) =>
     (lon + 180) / 360 * math.pow(2, z) * 256;
 
+/// Web Mercator pixel Y coordinate (origin = top-left of world at zoom [z]).
 double _mercY(double lat, int z) {
   final r = lat * math.pi / 180;
   return (1 - math.log(math.tan(r) + 1 / math.cos(r)) / math.pi) /
@@ -656,6 +664,7 @@ double _mercY(double lat, int z) {
       256;
 }
 
+/// The (x, y) tile-grid indices containing (lon, lat) at zoom [z].
 (int, int) _tile(double lon, double lat, int z) {
   final n = math.pow(2, z).toInt();
   return (
@@ -664,8 +673,9 @@ double _mercY(double lat, int z) {
   );
 }
 
-// Highest zoom where the bounding box (+ 1-tile padding each side) fits
-// within 5 × 4 tiles.
+/// Highest zoom where the track's bounding box (+ 1-tile padding each side)
+/// still fits within a 5 × 4 tile grid — keeps the rendered image a fixed,
+/// bounded size regardless of how long the day's track is.
 int _chooseZoom(double minLat, double maxLat, double minLon, double maxLon) {
   for (int z = 17; z >= 1; z--) {
     final (x0, y0) = _tile(minLon, maxLat, z); // NW
@@ -675,6 +685,7 @@ int _chooseZoom(double minLat, double maxLat, double minLon, double maxLon) {
   return 1;
 }
 
+/// Decodes raw image bytes (a downloaded/cached tile) into a drawable [ui.Image].
 Future<ui.Image?> _decodeBytes(Uint8List bytes) async {
   final codec = await ui.instantiateImageCodec(bytes);
   return (await codec.getNextFrame()).image;
@@ -770,6 +781,9 @@ Future<ui.Image?> _fetchTile(int z, int tx, int ty, String base) async {
   }
 }
 
+/// Renders [points] onto a composited basemap-tile image (with start/end
+/// markers and a north indicator) and returns it as PNG bytes, or null if
+/// there are too few points to draw a track.
 Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
   if (points.length < 2) return null;
 
@@ -865,6 +879,8 @@ Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
   return byteData?.buffer.asUint8List();
 }
 
+/// Draws a filled, white-ringed dot at (x, y) — used for the track's start
+/// (green) and end (red) markers.
 void _drawMarker(ui.Canvas canvas, double x, double y, ui.Color color) {
   canvas.drawCircle(ui.Offset(x, y), 7, ui.Paint()..color = color);
   canvas.drawCircle(ui.Offset(x, y), 7,
@@ -874,6 +890,7 @@ void _drawMarker(ui.Canvas canvas, double x, double y, ui.Color color) {
       ..strokeWidth = 2);
 }
 
+/// Draws a small "N" compass badge in the map image's top-right corner.
 void _drawNorthIndicator(ui.Canvas canvas, double cx, double cy) {
   const r = 16.0;
   canvas.drawCircle(ui.Offset(cx, cy), r,

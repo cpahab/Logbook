@@ -55,4 +55,5 @@ String buildGpxExport({
   return GpxWriter().asString(gpx, pretty: true);
 }
 
+/// Converts a [TrackPoint] to the `gpx` package's waypoint type.
 Wpt _toWpt(TrackPoint p) => Wpt(lat: p.lat, lon: p.lon, time: p.time);

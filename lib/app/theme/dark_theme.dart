@@ -20,6 +20,8 @@ const _outline = Color(0xFF4E5D74); // muted navy-grey (was pure neutral, no blu
 const _container = Color(0xFF0E192A); // surfaceContainer (base tier)
 const _onSurfaceVariant = Color(0xFFC3C6CF);
 
+/// DM Sans text theme for dark mode — same weight overrides as light_theme.dart's
+/// `_buildTextTheme()`, kept in its own copy since [TextTheme] doesn't carry color.
 TextTheme _buildDarkTextTheme() {
   final base = GoogleFonts.dmSansTextTheme();
   return base.copyWith(
@@ -103,11 +105,13 @@ final ThemeData darkTheme = ThemeData(
     onTertiaryFixedVariant: const Color(0xFF38485A),
   ),
   textTheme: _buildDarkTextTheme(),
+  // Full-screen dialogs: dark surfaceContainer card, 16px corners.
   dialogTheme: const DialogThemeData(
     backgroundColor: _container,
     surfaceTintColor: Colors.transparent,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
   ),
+  // Top app bar: flush with the surface, left-aligned title.
   appBarTheme: AppBarTheme(
     backgroundColor: _surface,
     foregroundColor: _lightBlue,
@@ -120,6 +124,8 @@ final ThemeData darkTheme = ThemeData(
     iconTheme:        const IconThemeData(color: _lightBlue),
     actionsIconTheme: const IconThemeData(color: _lightBlue),
   ),
+  // Section/data cards: slight elevation (dark mode needs it for card/background
+  // separation, unlike light mode's flat cards) — 16px corners.
   cardTheme: const CardThemeData(
     elevation: 2.0,
     margin: EdgeInsets.zero,
@@ -127,6 +133,7 @@ final ThemeData darkTheme = ThemeData(
       borderRadius: BorderRadius.all(Radius.circular(16)),
     ),
   ),
+  // Filter/selection pills: stadium shape, no checkmark.
   chipTheme: ChipThemeData(
     shape: const StadiumBorder(),
     showCheckmark: false,
@@ -142,6 +149,7 @@ final ThemeData darkTheme = ThemeData(
     foregroundColor: const Color(0xFFFFFFFF),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
   ),
+  // Date-range filter picker on the home/tracks screens.
   datePickerTheme: DatePickerThemeData(
     backgroundColor: _container,                        // surfaceContainer
     headerBackgroundColor: const Color(0xFF09101B),     // surfaceContainerLow

@@ -29,6 +29,9 @@ import 'app/route_names.dart';
 import 'app/router.dart';
 import 'app.dart';
 
+/// Re-checks for a pending "open with Logbook" GPX file whenever the app
+/// returns to the foreground, since iOS/Android can deliver the file while
+/// the app was backgrounded and [GpxShareService] only queues it.
 class _GpxResumeObserver extends WidgetsBindingObserver {
   final GpxShareService _service;
   _GpxResumeObserver(this._service);
@@ -39,6 +42,10 @@ class _GpxResumeObserver extends WidgetsBindingObserver {
   }
 }
 
+/// Attaches the signed-in [user]'s Firestore/Storage backends to every repo
+/// that needs cloud sync, resolving (or creating) their active logbook first.
+/// Called on app start (if already signed in), on sign-in, and again on
+/// reconnect if the earlier attempt never completed.
 Future<void> _initFirestore(
     User user,
     ThemeProvider themeProvider,
@@ -87,8 +94,13 @@ Future<void> _initFirestore(
   }
 }
 
+/// App entry point. Bootstraps, in order: date formatting locales, the map
+/// tile cache, local Hive storage + adapters, the in-memory repositories,
+/// Firebase (best-effort — the app must still run fully offline if this
+/// fails), the router, and finally the widget tree itself.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Needed before any DateFormat/NumberFormat call using these locales.
   await initializeDateFormatting('de_CH');
   await initializeDateFormatting('en_GB');
 
@@ -105,6 +117,7 @@ void main() async {
     // Tile caching unavailable — tiles will still load, just uncached.
   }
 
+  // --- Local storage: open Hive and register every model's typed adapter ---
   await Hive.initFlutter();
 
   Hive.registerAdapter(DayEntryAdapter());
@@ -115,6 +128,7 @@ void main() async {
   Hive.registerAdapter(CrewMemberAdapter());
   Hive.registerAdapter(EmergencyContactAdapter());
 
+  // --- Repositories and providers: local-only until Firebase attaches below ---
   final repo = HomeRepository();
   await repo.init();
 
@@ -132,6 +146,9 @@ void main() async {
 
   final logbookIdNotifier = ValueNotifier<String?>(null);
 
+  // --- Firebase: best-effort. Any failure here leaves the app in offline
+  // (Hive-only) mode rather than crashing, per the "must work with unstable
+  // marine connectivity" requirement. ---
   try {
     await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform);
@@ -169,6 +186,7 @@ void main() async {
     // Firebase unavailable — continue offline.
   }
 
+  // --- Router and root widget ---
   final router = buildRouter(themeProvider.lastRouteToday, authService);
 
   // Navigate to the import screen from anywhere in the app — using the router
@@ -211,4 +229,7 @@ void main() async {
   });
 }
 
+/// Explicitly discards a fire-and-forget [Future], swallowing errors so an
+/// unhandled-rejection warning doesn't fire for calls we intentionally don't
+/// await (background init/retry tasks kicked off from `main()`).
 void unawaited(Future<void> future) => future.catchError((_) {});

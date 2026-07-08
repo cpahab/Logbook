@@ -14,6 +14,7 @@ class AddTimelineEntryResult {
   const AddTimelineEntryResult(this.entry, {this.amendmentReason});
 }
 
+/// Rejects keystrokes that would make the course field exceed 359 (degrees).
 class _CourseFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -25,6 +26,11 @@ class _CourseFormatter extends TextInputFormatter {
   }
 }
 
+/// Fullscreen dialog for adding a new timeline log entry or editing an
+/// existing one: time, course/speed, wind/sea/weather, sail/motor/keel
+/// state, and free-text remarks. When [isAmendment] is true (editing a past
+/// day's entry) it also collects an amendment reason and returns it
+/// alongside the entry via [AddTimelineEntryResult].
 class AddTimelineEntryDialog extends StatefulWidget {
   final DateTime day;
   final TimelineEntry? initialEntry;
@@ -90,7 +96,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     }
   }
 
-  // Parse "SW 12 kn" → dir="SW", strength="12"
+  /// Parses "SW 12 kn" into [_windDir] ("SW") and [windStrengthCtrl] ("12"),
+  /// tolerating German "NO"/"SO" direction abbreviations.
   void _parseWind(String? wind) {
     if (wind == null || wind.isEmpty) return;
     final parts = wind.trim().split(RegExp(r'\s+'));
@@ -119,6 +126,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     super.dispose();
   }
 
+  /// Builds a [TimelineEntry] from the form fields and pops the dialog with
+  /// the result (plus an amendment reason, if this is an amendment and one
+  /// was entered).
   void _submit() {
     final dt = DateTime(widget.day.year, widget.day.month, widget.day.day,
         selectedTime.hour, selectedTime.minute);
@@ -157,6 +167,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
+  /// Parses [s] as a double, accepting a comma as the decimal separator
+  /// (German locale input); returns null for empty/unparseable input.
   double? _parseDouble(String s) {
     if (s.trim().isEmpty) return null;
     return double.tryParse(s.replaceAll(',', '.'));
@@ -227,6 +239,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     cs: cs,
                   ),
 
+                  // ── end 1. Chronometrie ──
+
                   const SizedBox(height: 16),
                   // ── 2. Navigation ────────────────────────────────────
                   _sectionHeader(Icons.explore, l10n.entryDialogSectionNav, cs),
@@ -266,6 +280,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       ),
                     ],
                   ),
+
+                  // ── end 2. Navigation ──
 
                   const SizedBox(height: 16),
                   // ── 3. Umgebung ──────────────────────────────────────
@@ -400,6 +416,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     ],
                   ),
 
+                  // ── end 3. Umgebung ──
+
                   const SizedBox(height: 16),
                   // ── 4. Segel & Motor ─────────────────────────────────
                   _sectionHeader(Icons.sailing, l10n.entryDialogSectionSails, cs),
@@ -471,6 +489,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     ),
                   ),
 
+                  // ── end 4. Segel & Motor ──
+
                   const SizedBox(height: 16),
                   // ── 5. Bemerkungen ───────────────────────────────────
                   _sectionHeader(Icons.edit_note, l10n.entryDialogSectionRemarks, cs),
@@ -499,6 +519,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     ),
                     cs: cs,
                   ),
+                  // ── end 5. Bemerkungen ──
 
                   // ── Amendment reason (past entries only) ─────────────
                   if (widget.isAmendment) ...[
@@ -527,6 +548,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       ),
                     ),
                   ],
+                  // ── end Amendment reason ──
 
                   const SizedBox(height: 20),
                   // ── Actions ──────────────────────────────────────────
@@ -585,6 +607,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       ),
                     ),
                   ],
+                  // ── end Actions ──
                 ],
               ),
             ),
@@ -594,7 +617,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Section header ────────────────────────────────────────────────
+  /// Small-caps eyebrow label with a leading icon, above each form section.
   Widget _sectionHeader(IconData icon, String label, ColorScheme cs) {
     return Row(
       children: [
@@ -610,7 +633,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Plain card ────────────────────────────────────────────────────
+  /// Bordered card shell wrapping one field (or group of fields).
   Widget _plainCard({required Widget child, required ColorScheme cs}) {
     return Container(
       width: double.infinity,
@@ -631,7 +654,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Nav card (plain card with headline-sm number input) ──────────
+  /// A [_plainCard] specialized for one numeric field (course/speed): label,
+  /// bare number input, and a trailing unit suffix on one baseline.
   Widget _navCard({
     required String label,
     required String unit,
@@ -698,7 +722,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Bare text field (no border, inside a card) ────────────────────
+  /// Borderless text input styled to sit flush inside a [_plainCard].
   Widget _bareTextField(
       TextEditingController ctrl, String hint, ColorScheme cs) {
     return TextField(
@@ -715,7 +739,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Sail state chip row ───────────────────────────────────────────
+  /// Localized display label for a `sail:` sentinel value.
   String _sailLabel(String sentinel) {
     final l10n = context.l10n;
     return switch (sentinel) {
@@ -728,6 +752,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     };
   }
 
+  /// Row of tappable sail-state chips (one of [sentinels] can be selected at
+  /// a time; tapping the already-selected one clears it).
   Widget _sailChips({
     required List<String> sentinels,
     required String Function(String) labelFor,
@@ -749,7 +775,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Single selectable chip ────────────────────────────────────────
+  /// A single toggleable pill chip, used for sail state, motor on/off, and
+  /// keel up/down.
   Widget _stateChip(
       String label, bool isSelected, VoidCallback onTap, ColorScheme cs) {
     return GestureDetector(
@@ -774,7 +801,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  // ── Label sm ──────────────────────────────────────────────────────
+  /// Small muted field label above a form field.
   Widget _labelSm(String text, ColorScheme cs) {
     return Text(
       text,

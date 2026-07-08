@@ -6,8 +6,12 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// The 4 destinations reachable from the bottom nav bar.
 enum NavTab { journal, map, settings, safety }
 
+/// App-wide bottom navigation bar: 4 tabs plus an optional raised centre FAB
+/// (shown only on the journal/day-detail screens) and an offline indicator
+/// that appears automatically when connectivity drops.
 class AppBottomNav extends StatefulWidget {
   final NavTab active;
   final VoidCallback? onFabTap;
@@ -25,6 +29,8 @@ class AppBottomNav extends StatefulWidget {
   static const double _navHeight = 64;
   static const double _fabRise = 24;
 
+  /// The full height this nav bar occupies (nav strip + FAB rise + safe-area
+  /// inset) — use to size a `Scaffold` body's bottom padding.
   static double totalHeight(BuildContext context) =>
       _navHeight + _fabRise + MediaQuery.viewPaddingOf(context).bottom;
 
@@ -53,6 +59,9 @@ class _AppBottomNavState extends State<AppBottomNav> {
     super.dispose();
   }
 
+  /// True only when every reported connectivity type is "none" — a device
+  /// can report multiple simultaneous interfaces, so any single active one
+  /// means online.
   static bool _allNone(List<ConnectivityResult> r) =>
       r.every((c) => c == ConnectivityResult.none);
 
@@ -137,6 +146,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
               ),
             ),
           ),
+          // ── end nav bar ──
 
           // ── Raised centre FAB (journal & day-detail only) ─────────
           if (widget.showFab)
@@ -171,11 +181,14 @@ class _AppBottomNavState extends State<AppBottomNav> {
                 ),
               ),
             ),
+          // ── end raised centre FAB ──
         ],
       ),
     );
   }
 
+  /// One tab's icon + label, active state shown purely via gold coloring
+  /// (no background pill).
   Widget _tab(BuildContext context, ColorScheme cs, NavTab tab,
       IconData icon, String label) {
     final isActive = widget.active == tab;

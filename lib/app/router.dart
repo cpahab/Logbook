@@ -17,10 +17,15 @@ import '../features/home/screens/crew_roster_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/tracks/presentation/tracks_screen.dart';
 
+/// Builds the app's single [GoRouter], restoring [initialLocation] (the last
+/// route the user was on) and re-running [redirect] whenever [authService]'s
+/// sign-in state changes (`refreshListenable`), so a sign-out/sign-in event
+/// immediately bounces the user to/from the auth flow without a manual nav call.
 GoRouter buildRouter(String initialLocation, AuthService authService) {
   return GoRouter(
     initialLocation: initialLocation,
     refreshListenable: authService,
+    // Auth + (optional) email-verification gate, evaluated on every navigation.
     redirect: (context, state) {
       // iOS passes the share-intent file:// URI to Flutter as a navigation
       // route on cold start. Redirect it to home; the GPX import flow runs
@@ -77,6 +82,8 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
       GoRoute(
         path: '/gpx-import',
         name: AppRoute.gpxImport,
+        // No file path (e.g. a stale/duplicate deep link) — bounce home
+        // instead of showing an import screen with nothing to import.
         redirect: (context, state) => state.extra == null ? '/' : null,
         builder: (context, state) =>
             GpxImportScreen(filePath: state.extra! as String),
@@ -85,6 +92,8 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
         path: '/day/:year/:month/:day',
         name: AppRoute.dayDetail,
         builder: (context, state) {
+          // Path segments, not query params, so the date is part of the
+          // route identity (shareable/bookmarkable, restorable on relaunch).
           final year = int.parse(state.pathParameters['year']!);
           final month = int.parse(state.pathParameters['month']!);
           final day = int.parse(state.pathParameters['day']!);

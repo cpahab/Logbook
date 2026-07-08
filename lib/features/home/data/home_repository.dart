@@ -15,6 +15,14 @@ import '../utils/gpx_parser.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 
+/// Local (Hive) + cloud (Firestore/Storage) store for day entries, GPS
+/// tracks, and the crew roster — the app's central data repository. Local
+/// writes are always immediate and authoritative; Firestore pushes are
+/// debounced and merge only the fields that changed, so two devices editing
+/// the same day around the same time can't silently clobber each other's
+/// unrelated edits (see [saveEntry] and [attachFirestore] for the full
+/// sync strategy, including the per-entry `updatedAt` staleness comparison
+/// that replaced an earlier global-timestamp comparison bug).
 class HomeRepository extends ChangeNotifier {
   // ── Hive boxes ─────────────────────────────────────────────────────────────
   late Box<DayEntry> _dayBox;
@@ -49,9 +57,13 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Public getters ─────────────────────────────────────────────────────────
 
+  /// Every day entry, oldest first.
   List<DayEntry> get entries =>
       _entries.values.toList()..sort((a, b) => a.date.compareTo(b.date));
 
+  /// The most recently logged oil/fuel level and keel position, each
+  /// resolved independently (so if one field was never set on the latest
+  /// entries, it falls back further back in time than the others).
   ({int? oilLevel, int? fuelLevel, bool? keelDown}) get lastVesselStatus {
     int? oil;
     int? fuel;
@@ -65,6 +77,8 @@ class HomeRepository extends ChangeNotifier {
     return (oilLevel: oil, fuelLevel: fuel, keelDown: keel);
   }
 
+  /// The persistent crew roster (features/home/screens/crew_roster_screen.dart),
+  /// sorted alphabetically by name — distinct from any single day's crew list.
   List<CrewMember> get roster {
     final members = _rosterBox.values.toList();
     members.sort((a, b) => a.name.compareTo(b.name));
@@ -83,6 +97,8 @@ class HomeRepository extends ChangeNotifier {
     return null;
   }
 
+  /// The crew list from the most recent day entry that logged one, copied
+  /// fresh (not aliased) — used to prefill a new day's crew.
   List<CrewMember> get lastCrew {
     for (final e in entries.reversed) {
       if (e.crew.isNotEmpty) {
@@ -133,6 +149,8 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Initialization ─────────────────────────────────────────────────────────
 
+  /// Opens every Hive box this repository owns and loads their contents
+  /// into the in-memory caches. Must complete before any other method is called.
   Future<void> init() async {
     _dayBox       = await Hive.openBox<DayEntry>('daily_entries');
     _trackBox     = await Hive.openBox<DailyTrack>('daily_tracks');
@@ -280,6 +298,9 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Storage attachment ─────────────────────────────────────────────────────
 
+  /// Attaches Firebase Storage and syncs GPX tracks: on [initialSync] uploads
+  /// every local track, then always downloads any track present in the cloud
+  /// but missing locally (e.g. imported on another device).
   Future<void> attachStorage(StorageService service,
       {bool initialSync = false}) async {
     _storage = service;
@@ -305,6 +326,7 @@ class HomeRepository extends ChangeNotifier {
     }
   }
 
+  /// Serializes [track]'s points back into GPX file bytes for upload.
   static Uint8List _trackToGpxBytes(DailyTrack track) {
     final gpx = Gpx();
     gpx.trks = [
@@ -321,6 +343,9 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Day entry management ───────────────────────────────────────────────────
 
+  /// Creates a new (empty) day entry for [date], carrying forward the crew
+  /// and vessel status (oil/fuel/keel) from the most recent prior day.
+  /// No-ops if an entry for that date already exists.
   void addEntry(DateTime date) {
     final normalized = DateTime(date.year, date.month, date.day);
     if (_entries.containsKey(normalized)) return;
@@ -354,11 +379,14 @@ class HomeRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Returns the entry for [date], or null if none exists yet.
   DayEntry? getEntry(DateTime date) {
     final normalized = DateTime(date.year, date.month, date.day);
     return _entries[normalized];
   }
 
+  /// Moves an entry (and its GPX track, if any) from [oldDate] to [newDate].
+  /// Returns false without changing anything if [newDate] is already taken.
   Future<bool> changeEntryDate(DateTime oldDate, DateTime newDate) async {
     final oldNorm = DateTime(oldDate.year, oldDate.month, oldDate.day);
     final newNorm = DateTime(newDate.year, newDate.month, newDate.day);
@@ -400,6 +428,8 @@ class HomeRepository extends ChangeNotifier {
     return true;
   }
 
+  /// Deletes the entry for [date] (and its GPX track, if any) locally and on
+  /// Firestore.
   Future<void> removeEntry(DateTime date) async {
     final normalized = DateTime(date.year, date.month, date.day);
 
@@ -451,6 +481,10 @@ class HomeRepository extends ChangeNotifier {
     }
   }
 
+  /// Adds [entry] to [day]'s timeline (auto-inserting a crew/vessel-status
+  /// snapshot line first, if this is the day's first real timeline entry),
+  /// keeps the timeline sorted by time, and re-derives the day's keel
+  /// position from the updated timeline.
   void addTimelineEntry(DateTime day, TimelineEntry entry) {
     final normalized = DateTime(day.year, day.month, day.day);
     final d = _entries[normalized];
@@ -497,6 +531,7 @@ class HomeRepository extends ChangeNotifier {
 
   // ── GPX import ─────────────────────────────────────────────────────────────
 
+  /// Parses a GPX [file] from disk and saves its track for [day].
   Future<void> importGpx(DateTime day, File file) async {
     final normalized = DateTime(day.year, day.month, day.day);
     final bytes = await file.readAsBytes();
@@ -506,6 +541,8 @@ class HomeRepository extends ChangeNotifier {
     _storage?.uploadTrack(normalized, bytes).catchError((_) {});
   }
 
+  /// Parses raw GPX [bytes] (e.g. from a share-sheet import) and saves the
+  /// track for [day].
   Future<void> importGpxFromBytes(
       DateTime day, Uint8List bytes, String fileName) async {
     final normalized = DateTime(day.year, day.month, day.day);
@@ -526,6 +563,7 @@ class HomeRepository extends ChangeNotifier {
     }
   }
 
+  /// Writes [points] as [day]'s track to Hive and the in-memory cache.
   Future<void> _saveTrack(
       DateTime normalized, String fileName, List<TrackPoint> points) async {
     final track = DailyTrack(day: normalized, fileName: fileName, points: points);
@@ -534,6 +572,7 @@ class HomeRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Deletes [day]'s GPX track locally and in Storage.
   Future<void> removeGpx(DateTime day) async {
     final normalized = DateTime(day.year, day.month, day.day);
 
@@ -555,6 +594,8 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Cross-correlation ──────────────────────────────────────────────────────
 
+  /// Finds the GPS point on [day]'s track closest in time to [time] — used
+  /// to correlate a timeline entry with its GPS position.
   TrackPoint? findClosestPoint(DateTime day, DateTime time) {
     final normalized = DateTime(day.year, day.month, day.day);
     final track = dailyTracks[normalized];
@@ -700,6 +741,8 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Crew roster CRUD ───────────────────────────────────────────────────────
 
+  /// Adds or updates [m] in the roster (assigning a new id if it doesn't
+  /// have one yet) and pushes the roster to Firestore.
   void saveRosterMember(CrewMember m) {
     m.id ??= _newId();
     _rosterBox.put(m.id!, m);
@@ -724,12 +767,14 @@ class HomeRepository extends ChangeNotifier {
     saveRosterMember(m);
   }
 
+  /// Removes the roster member with [id] and pushes the roster to Firestore.
   void deleteRosterMember(String id) {
     _rosterBox.delete(id);
     _syncRosterToFirestore();
     notifyListeners();
   }
 
+  /// Replaces the entire local roster with [members] (from a Firestore pull).
   Future<void> _applyRemoteRoster(List<CrewMember> members) async {
     await _rosterBox.clear();
     for (final m in members) {
@@ -738,10 +783,12 @@ class HomeRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Pushes the full current roster to Firestore (best-effort).
   void _syncRosterToFirestore() {
     _firestore?.saveRoster(_rosterBox.values.toList()).catchError((_) {});
   }
 
+  /// Generates a random 32-hex-char id for a new roster member.
   static String _newId() {
     final r = Random.secure();
     return List.generate(16, (_) => r.nextInt(256))
@@ -749,6 +796,9 @@ class HomeRepository extends ChangeNotifier {
         .join();
   }
 
+  /// Builds the sentinel string auto-logged as a timeline entry's
+  /// `vesselStatusNote` the first time a day gets a real timeline entry,
+  /// recording who was aboard (first name flagged as skipper via `role=0:`).
   static String buildCrewNote(List<CrewMember> crew) {
     final parts = crew.asMap().entries.map((e) =>
         e.key == 0 ? 'role=0:${e.value.name}' : e.value.name).toList();

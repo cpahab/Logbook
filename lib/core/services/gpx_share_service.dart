@@ -2,6 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
 
+/// Bridges the native "Open with Logbook" GPX file association (registered
+/// on iOS/Android for `.gpx` files) into a Dart stream, so the app can react
+/// to a shared file the same way whether it arrived at cold start, while
+/// backgrounded, or while already running in the foreground.
 class GpxShareService {
   static const _channel = MethodChannel('com.ziegler.logbook/gpx_share');
 

@@ -9,6 +9,9 @@ import '../../../l10n/app_localizations.dart';
 import '../../../l10n/l10n_extension.dart';
 import 'auth_widgets.dart';
 
+/// Password-reset request screen: collects an email, sends a reset link via
+/// Firebase, then swaps to a confirmation view. Reachable from the login
+/// screen's "forgot password?" link.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
 
@@ -28,6 +31,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
+  /// Validates the form and sends the reset email; on success shows the
+  /// confirmation view instead of the form.
   Future<void> _send() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
@@ -71,6 +76,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
+  /// The email-entry form, shown before a reset email has been sent.
   Widget _buildForm(ColorScheme cs, AppLocalizations l10n) {
     return Form(
       key: _formKey,
@@ -127,6 +133,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     );
   }
 
+  /// "Check your email" view, shown after the reset email is sent.
   Widget _buildConfirmation(ColorScheme cs, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

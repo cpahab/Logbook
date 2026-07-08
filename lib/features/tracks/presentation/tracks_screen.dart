@@ -25,7 +25,7 @@ import '../../../l10n/l10n_extension.dart';
 import '../../../core/constants/map_config.dart';
 import '../utils/track_computation_cache.dart';
 
-// Bearing (radians, clockwise from north) between two LatLng points.
+/// Bearing (radians, clockwise from north) between two LatLng points.
 double _trackBearing(LatLng from, LatLng to) {
   final lat1 = from.latitude * pi / 180;
   final lat2 = to.latitude * pi / 180;
@@ -35,7 +35,7 @@ double _trackBearing(LatLng from, LatLng to) {
   return atan2(y, x);
 }
 
-// Haversine distance in metres between two LatLng points.
+/// Haversine distance in metres between two LatLng points.
 double _distanceM(LatLng a, LatLng b) {
   const r = 6371000.0;
   final lat1 = a.latitude * pi / 180;
@@ -47,8 +47,8 @@ double _distanceM(LatLng a, LatLng b) {
   return r * 2 * atan2(sqrt(s), sqrt(1 - s));
 }
 
-// Bearing for the departure arrow: bearing from start toward the point that
-// is ≥ 500 m cumulative along track. Falls back to start→furthest for short tracks.
+/// Bearing for the departure arrow: bearing from start toward the point that
+/// is ≥ 500 m cumulative along track. Falls back to start→furthest for short tracks.
 double _departureBearing(List<LatLng> pts) {
   if (pts.length < 2) return 0;
   const targetM = 500.0;
@@ -69,8 +69,13 @@ double _departureBearing(List<LatLng> pts) {
   return _trackBearing(pts[0], pts[farIdx]);
 }
 
+/// Date-range filter presets for the tracks overview map/list.
 enum _FilterPreset { year1, month1, week1, custom }
 
+/// Multi-day tracks overview: an aggregate map showing every day's GPS track
+/// in the selected date range (each in its own distinct hue), a scrollable
+/// list of per-day stat cards, and a fullscreen map mode. Reachable from the
+/// bottom nav's map tab.
 class TracksScreen extends StatefulWidget {
   const TracksScreen({super.key});
 
@@ -106,6 +111,8 @@ class _TracksScreenState extends State<TracksScreen> {
     return HSLColor.fromAHSL(1.0, hue, 0.75, 0.48).toColor();
   }
 
+  /// The concrete date range for the current filter preset (or the
+  /// user-picked range, for [_FilterPreset.custom]).
   DateTimeRange? get _effectiveRange {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -130,6 +137,8 @@ class _TracksScreenState extends State<TracksScreen> {
     super.dispose();
   }
 
+  /// The bounding box containing every finite coordinate in [pts], or null
+  /// if there are none.
   LatLngBounds? _boundsFor(List<LatLng> pts) {
     final finite = pts.where((p) => p.latitude.isFinite && p.longitude.isFinite).toList();
     if (finite.isEmpty) return null;
@@ -144,6 +153,8 @@ class _TracksScreenState extends State<TracksScreen> {
     return LatLngBounds(LatLng(minLat, minLng), LatLng(maxLat, maxLng));
   }
 
+  /// Fits the map camera to [pts] — used when a single day's track is
+  /// selected from the list.
   void _focusTrack(List<LatLng> pts) {
     final bounds = _boundsFor(pts);
     if (bounds == null) return;
@@ -151,6 +162,8 @@ class _TracksScreenState extends State<TracksScreen> {
         CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(40)));
   }
 
+  /// Fits the map camera to every track point within the current filter
+  /// range — used after changing the date-range filter.
   void _refitToDisplayed() {
     final repo      = context.read<HomeRepository>();
     final settings  = context.read<ThemeProvider>().filterSettings;
@@ -170,6 +183,8 @@ class _TracksScreenState extends State<TracksScreen> {
         CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(24)));
   }
 
+  /// Switches the active date-range filter and refits the map to the newly
+  /// displayed tracks.
   void _applyPreset(_FilterPreset preset, {DateTimeRange? custom}) {
     setState(() {
       _preset = preset;
@@ -179,6 +194,8 @@ class _TracksScreenState extends State<TracksScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _refitToDisplayed());
   }
 
+  /// Shows the system date-range picker and applies the result as the
+  /// custom filter preset.
   Future<void> _pickDateRange() async {
     final now = DateTime.now();
     final initial = _effectiveRange ??
@@ -198,6 +215,7 @@ class _TracksScreenState extends State<TracksScreen> {
     if (range != null) _applyPreset(_FilterPreset.custom, custom: range);
   }
 
+  /// Shared bottom nav bar (no FAB) for both the normal and fullscreen map views.
   Widget _bottomNav(BuildContext context) => AppBottomNav(
         active: NavTab.map,
         showFab: false,
@@ -208,6 +226,10 @@ class _TracksScreenState extends State<TracksScreen> {
         },
       );
 
+  /// Scaffold: filter-preset strip, aggregate map, and per-day list —
+  /// recomputing each displayed day's [DisplayModel]/[DailyStats] via
+  /// [TrackComputationCache] so revisiting this screen doesn't redo
+  /// expensive track processing that's already cached.
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -372,6 +394,7 @@ class _TracksScreenState extends State<TracksScreen> {
   }
 
   // ── Filter strip ──────────────────────────────────────────────────
+  /// Horizontally scrollable row of date-range filter chips (1yr/1mo/1wk/custom).
   Widget _buildFilterStrip(ColorScheme cs, List<_DayTrackData> displayed) {
     final fmt = DateFormat('d.M.yy');
     final customLabel =
@@ -401,6 +424,8 @@ class _TracksScreenState extends State<TracksScreen> {
     );
   }
 
+  /// One filter-preset pill; the custom chip opens the date-range picker
+  /// instead of just activating.
   Widget _chip(String label, _FilterPreset preset, ColorScheme cs,
       {bool isCustom = false}) {
     final isActive = _preset == preset;
@@ -424,6 +449,9 @@ class _TracksScreenState extends State<TracksScreen> {
   }
 
   // ── Map section ────────────────────────────────────────────────────
+  /// The aggregate map: every displayed day's track polyline (in its own
+  /// color), stop-halo circles and uncertainty bands (harbour zoom only),
+  /// departure-arrow markers, and zoom/recenter/fullscreen/satellite controls.
   Widget _buildMapSection(
     List<_DayTrackData> displayed,
     List<Polyline> polylines,
@@ -606,6 +634,7 @@ class _TracksScreenState extends State<TracksScreen> {
     );
   }
 
+  /// Small floating action button for the map's zoom/recenter/fullscreen/satellite controls.
   Widget _mapButton({
     required IconData icon,
     required Color bgColor,
@@ -638,6 +667,8 @@ class _TracksScreenState extends State<TracksScreen> {
   }
 
   // ── List section ──────────────────────────────────────────────────
+  /// Aggregate distance/sailing-days summary row, then the per-day list
+  /// (newest first).
   Widget _buildListSection(List<_DayTrackData> displayed, ColorScheme cs) {
     // Only count legs and distance where actual movement was detected —
     // mirrors the dashboard's gate so both screens report consistent numbers.
@@ -677,6 +708,7 @@ class _TracksScreenState extends State<TracksScreen> {
     );
   }
 
+  /// One icon + label + value/unit summary card above the day list.
   Widget _statSummaryBox(String value, String label, IconData icon, ColorScheme cs, {String unit = ''}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -745,6 +777,9 @@ class _TracksScreenState extends State<TracksScreen> {
     );
   }
 
+  /// One day's card in the tracks list: date, route/day title, notes
+  /// excerpt, wind/speed/distance stats — tapping selects it and focuses
+  /// the map on its track.
   Widget _buildListItem(
       int index, _DayTrackData d, int total, ColorScheme cs) {
     const cardHeight = 110.0;
@@ -931,6 +966,7 @@ class _TracksScreenState extends State<TracksScreen> {
     );
   }
 
+  /// Placeholder shown when the logbook has no GPS tracks at all yet.
   Widget _buildEmpty(ColorScheme cs) {
     return Center(
       child: Column(
@@ -945,6 +981,8 @@ class _TracksScreenState extends State<TracksScreen> {
     );
   }
 
+  /// Placeholder shown when tracks exist but none fall within the current
+  /// date-range filter.
   Widget _buildEmptyFilter(ColorScheme cs) {
     return Center(
       child: Column(
@@ -965,6 +1003,9 @@ class _TracksScreenState extends State<TracksScreen> {
   }
 }
 
+/// One day's processed track data, cached per-render for the tracks screen:
+/// its computed [DisplayModel]/[DailyStats], assigned [color], and the
+/// [DayEntry] it correlates to (if any).
 class _DayTrackData {
   final DateTime day;
   final DisplayModel display;
@@ -987,6 +1028,8 @@ class _DayTrackData {
 
 // ── Full-screen overview map ───────────────────────────────────────────────────
 
+/// Navigation payload for the `/tracks/fullscreen` route — passes along the
+/// already-computed track data so the fullscreen map doesn't recompute it.
 class _TracksFullScreenArgs {
   final List<_DayTrackData> displayed;
   final LatLngBounds? initialBounds;
@@ -1013,6 +1056,9 @@ Widget tracksFullScreenRouteBuilder(BuildContext context, GoRouterState state) {
   );
 }
 
+/// Full-screen version of the tracks overview map (opened via the map
+/// section's fullscreen button), reusing the already-computed
+/// [_DayTrackData] list so it renders instantly.
 class _TracksMapFullScreen extends StatefulWidget {
   final List<_DayTrackData> displayed;
   final LatLngBounds? initialBounds;
@@ -1046,6 +1092,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
     super.dispose();
   }
 
+  /// Small floating action button for this screen's close/satellite controls.
   Widget _mapButton({
     required IconData icon,
     required Color bgColor,
@@ -1068,6 +1115,9 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
     ),
   );
 
+  /// Renders every displayed day's track (the selected one, if any, drawn
+  /// last/brightest so it sits on top), plus stop halos, uncertainty bands,
+  /// and departure-direction arrow markers, filling the whole screen.
   @override
   Widget build(BuildContext context) {
     final cs           = Theme.of(context).colorScheme;
@@ -1153,6 +1203,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
         .expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon)))
         .toList();
 
+    /// Fits the map camera to every displayed day's track.
     void refitAll() {
       if (allPts.isEmpty) return;
       double minLat = allPts.first.latitude,  maxLat = allPts.first.latitude;

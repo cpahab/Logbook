@@ -5,6 +5,9 @@ part 'timeline_amendment.g.dart';
 // MIGRATION INVARIANT: Never change an existing @HiveField index or typeId.
 // Retired indices must stay as tombstone comments so they are never reused.
 // New fields must get the next unused index and be nullable.
+/// A snapshot of a timeline entry's prior state, recorded whenever a past
+/// day's log entry is edited — the audit trail shown on that entry, not a
+/// live editable record itself.
 @HiveType(typeId: 14)
 class TimelineAmendment extends HiveObject {
   /// When the amendment was recorded.
@@ -65,7 +68,8 @@ class TimelineAmendment extends HiveObject {
     this.keelDown,
   });
 
-  /// Creates a snapshot from an existing [TimelineEntry]-like set of fields.
+  /// Creates a snapshot from an existing TimelineEntry's field values,
+  /// taken just before those values are overwritten by an edit.
   factory TimelineAmendment.fromSnapshot({
     required DateTime amendedAt,
     String? reason,

@@ -4,8 +4,13 @@ import 'dart:io';
 import 'package:gpx/gpx.dart';
 import '../domain/track_point.dart';
 
+/// Why a GPX file could not be turned into usable track points.
 enum GpxParseError { invalidEncoding, invalidXml, noSupportedContent }
 
+/// Outcome of parsing one GPX file: either usable [points], or one of
+/// several "nothing to import" edge cases (routes-only, waypoints-only,
+/// points with no timestamps) that the import UI reports separately from a
+/// hard [error].
 class GpxParseResult {
   final List<TrackPoint> points;
   final GpxParseError? error;
@@ -25,8 +30,11 @@ class GpxParseResult {
   });
 }
 
+/// Parses a GPX file's track points, tolerating encoding quirks (UTF-16
+/// BOMs, HH:mm-only timestamps) and real-world exporter oddities seen in
+/// the wild (Null Island sentinel fixes, duplicate points across segments).
 class GpxParser {
-  // Native platforms: read from File
+  /// Reads and parses [file] from disk (native platforms only).
   Future<GpxParseResult> parse(File file) async {
     try {
       final bytes = await file.readAsBytes();
@@ -37,7 +45,8 @@ class GpxParser {
     }
   }
 
-  // Web / share-intent: receive raw bytes
+  /// Parses raw GPX file [bytes] directly (web, or a share-intent import
+  /// that never touches the filesystem).
   GpxParseResult parseBytes(Uint8List bytes) {
     final String xml;
     try {
@@ -49,6 +58,8 @@ class GpxParser {
     return _parseXml(xml);
   }
 
+  /// Decodes GPX file bytes to a string, detecting UTF-16 BOMs before
+  /// falling back to UTF-8 then Latin-1.
   String _decodeBytes(Uint8List bytes) {
     if (bytes.length >= 2) {
       // UTF-16 LE BOM
@@ -77,6 +88,10 @@ class GpxParser {
     }
   }
 
+  /// Parses the (already-decoded) GPX XML into a [GpxParseResult]:
+  /// extracts, sorts, and de-duplicates track points, classifying content
+  /// that has no usable points (routes-only, waypoints-only, missing
+  /// timestamps) instead of just failing.
   GpxParseResult _parseXml(String xml) {
     // Fix HH:mm timestamps (no seconds) emitted by some Navionics exports.
     final fixed = xml.replaceAllMapped(

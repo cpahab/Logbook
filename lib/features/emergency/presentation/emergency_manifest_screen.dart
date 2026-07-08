@@ -13,6 +13,12 @@ import '../../../app/theme/theme_extensions.dart';
 import '../data/emergency_repository.dart';
 import '../domain/emergency_contact.dart';
 
+/// Emergency Manifest: the crew's single-page safety reference — quick links
+/// into the MAYDAY protocol and visual-signals guide, emergency contacts,
+/// vessel safety equipment info, coast guard VHF channels, and a live
+/// crew-medical summary sourced from today's (or the most recent) crew list.
+/// An edit-mode toggle in the app bar switches contacts/vessel-info/
+/// frequency cards between read view and inline-editable fields.
 class EmergencyManifestScreen extends StatefulWidget {
   const EmergencyManifestScreen({super.key});
 
@@ -23,6 +29,7 @@ class EmergencyManifestScreen extends StatefulWidget {
 class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
   bool _editMode = false;
 
+  /// Shows the add-contact dialog and, if confirmed, saves the new contact.
   void _showAddContactDialog() {
     final repo = context.read<EmergencyRepository>();
     showDialog<EmergencyContact>(
@@ -33,6 +40,8 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
     });
   }
 
+  /// Shows the add-frequency dialog for the next free VHF slot (there are
+  /// exactly 4) and saves the entry if confirmed. No-ops if all 4 are full.
   void _showAddFrequencyDialog() {
     final vessel = context.read<ThemeProvider>();
     final labels = [vessel.vhf1Label, vessel.vhf2Label, vessel.vhf3Label, vessel.vhf4Label];
@@ -130,6 +139,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
             ),
           ),
           const SizedBox(height: 20),
+          // ── end Quick Actions ──
 
           // ── Emergency Contacts ──────────────────────────────────────────────
           Row(
@@ -143,12 +153,14 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           const SizedBox(height: 8),
           _ContactsCard(contacts: emergency.contacts, editMode: _editMode),
           const SizedBox(height: 20),
+          // ── end Emergency Contacts ──
 
           // ── Vessel Safety Info ──────────────────────────────────────────────
           _SectionHeader(icon: Icons.directions_boat, label: l10n.emergencyVesselSafetySection),
           const SizedBox(height: 8),
           _VesselSafetyCard(vessel: vessel, editMode: _editMode),
           const SizedBox(height: 20),
+          // ── end Vessel Safety Info ──
 
           // ── Coast Guard Frequencies ─────────────────────────────────────────
           Row(
@@ -162,6 +174,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
           const SizedBox(height: 8),
           _FrequenciesCard(vessel: vessel, editMode: _editMode),
           const SizedBox(height: 20),
+          // ── end Coast Guard Frequencies ──
 
           // ── Crew Medical Overview ───────────────────────────────────────────
           Row(
@@ -188,6 +201,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
                       ))
                   .toList(),
             ),
+          // ── end Crew Medical Overview ──
         ],
       ),
     );
@@ -195,6 +209,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
 }
 
 // ─── Quick Action Card ────────────────────────────────────────────────────────
+/// One of the two top shortcut tiles (→ MAYDAY protocol, → visual signals guide).
 
 class _QuickActionCard extends StatelessWidget {
   final String label;
@@ -279,7 +294,7 @@ class _QuickActionCard extends StatelessWidget {
 }
 
 // ─── Section Header ───────────────────────────────────────────────────────────
-
+/// Small-caps eyebrow label with a leading icon, used above every card on this screen.
 class _SectionHeader extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -303,6 +318,7 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// Small circular "+" button shown next to a section header while in edit mode.
 class _AddIconButton extends StatelessWidget {
   final VoidCallback onTap;
   const _AddIconButton({required this.onTap});
@@ -328,6 +344,8 @@ class _AddIconButton extends StatelessWidget {
   }
 }
 
+/// Small "EDIT" text+icon button shown on a row while in edit mode (contacts,
+/// frequencies).
 class _EditButton extends StatelessWidget {
   final VoidCallback onTap;
   const _EditButton({required this.onTap});
@@ -356,12 +374,13 @@ class _EditButton extends StatelessWidget {
 }
 
 // ─── Emergency Contacts Card ──────────────────────────────────────────────────
-
+/// Card listing every saved emergency contact as tappable-to-call rows.
 class _ContactsCard extends StatelessWidget {
   final List<EmergencyContact> contacts;
   final bool editMode;
   const _ContactsCard({required this.contacts, required this.editMode});
 
+  /// Strips non-digit/non-`+` characters and launches the phone dialer.
   Future<void> _call(String phone) async {
     final digits = phone.replaceAll(RegExp(r'[^\d+]'), '');
     final uri = Uri.parse('tel:$digits');
@@ -401,6 +420,7 @@ class _ContactsCard extends StatelessWidget {
     );
   }
 
+  /// Shows the edit-contact dialog and saves/deletes the contact per the result.
   void _showEditContactDialog(BuildContext context, EmergencyContact contact) {
     final repo = context.read<EmergencyRepository>();
     showDialog<EmergencyContact>(
@@ -415,6 +435,8 @@ class _ContactsCard extends StatelessWidget {
   }
 }
 
+/// One contact's name/role/phone with a tappable call button (and edit
+/// button, in edit mode).
 class _ContactRow extends StatelessWidget {
   final EmergencyContact contact;
   final bool editMode;
@@ -489,7 +511,7 @@ class _ContactRow extends StatelessWidget {
 }
 
 // ─── Add Contact Dialog ───────────────────────────────────────────────────────
-
+/// Dialog for creating a new emergency contact (name/role/phone).
 class _AddContactDialog extends StatefulWidget {
   const _AddContactDialog();
 
@@ -569,7 +591,7 @@ class _AddContactDialogState extends State<_AddContactDialog> {
 }
 
 // ─── Edit Contact Dialog ──────────────────────────────────────────────────────
-
+/// Dialog for editing (or deleting) an existing emergency contact.
 class _EditContactDialog extends StatefulWidget {
   final EmergencyContact contact;
   final VoidCallback onDelete;
@@ -680,7 +702,9 @@ class _EditContactDialogState extends State<_EditContactDialog> {
 }
 
 // ─── Vessel Safety Info Card ──────────────────────────────────────────────────
-
+/// MMSI/call sign/life raft/EPIRB/fire suppression info, either as a read-only
+/// summary or (in edit mode) inline text fields writing straight through to
+/// [ThemeProvider].
 class _VesselSafetyCard extends StatefulWidget {
   final ThemeProvider vessel;
   final bool editMode;
@@ -742,6 +766,8 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
     );
   }
 
+  /// Inline-editable field layout (MMSI/call sign row, then one field per
+  /// remaining safety item), each writing straight through on every keystroke.
   Widget _buildEditView(ColorScheme cs) {
     final l10n = context.l10n;
     return Column(
@@ -788,6 +814,8 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
     );
   }
 
+  /// Read-only summary: identity fields (MMSI/call sign) side-by-side on wide
+  /// layouts or stacked on narrow ones, then a list of populated safety items.
   Widget _buildReadView(ColorScheme cs) {
     final em = cs;
     final l10n = context.l10n;
@@ -875,6 +903,7 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
   }
 }
 
+/// Small labeled text field used in [_VesselSafetyCard]'s edit view.
 class _VesselEditField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
@@ -924,6 +953,8 @@ class _VesselEditField extends StatelessWidget {
   }
 }
 
+/// Read-only label/value pair used for MMSI/call sign in [_VesselSafetyCard]'s
+/// read view ([mono] gives MMSI its tracked-monospace-style digit spacing).
 class _InfoField extends StatelessWidget {
   final String label;
   final String value;
@@ -950,6 +981,8 @@ class _InfoField extends StatelessWidget {
   }
 }
 
+/// Icon + title/detail row for one populated safety item (life raft, EPIRB,
+/// fire suppression) in [_VesselSafetyCard]'s read view.
 class _SafetyItem extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -988,7 +1021,8 @@ class _SafetyItem extends StatelessWidget {
 }
 
 // ─── Coast Guard Frequencies Card ─────────────────────────────────────────────
-
+/// Lists the vessel's up-to-4 saved VHF channel presets (empty slots hidden),
+/// with slot 1 always styled as the "urgent" channel.
 class _FrequenciesCard extends StatelessWidget {
   final ThemeProvider vessel;
   final bool editMode;
@@ -1039,6 +1073,8 @@ class _FrequenciesCard extends StatelessWidget {
     );
   }
 
+  /// Shows the edit dialog for the VHF preset in [slot] (1-4) and saves the
+  /// result.
   void _showEditDialog(BuildContext context, int slot) {
     final v = context.read<ThemeProvider>();
     final labels = [v.vhf1Label, v.vhf2Label, v.vhf3Label, v.vhf4Label];
@@ -1056,6 +1092,8 @@ class _FrequenciesCard extends StatelessWidget {
     });
   }
 
+  /// Removes the preset in [slot], shifting later slots down so there's no
+  /// gap (there's no per-slot "empty" concept beyond an empty label string).
   void _deleteFrequency(ThemeProvider v, int slot) {
     final labels = [v.vhf1Label, v.vhf2Label, v.vhf3Label, v.vhf4Label];
     final descs = [v.vhf1Desc, v.vhf2Desc, v.vhf3Desc, v.vhf4Desc];
@@ -1069,6 +1107,7 @@ class _FrequenciesCard extends StatelessWidget {
   }
 }
 
+/// One VHF channel preset row; styled as an "urgent" (red) card for slot 1.
 class _FrequencyRow extends StatelessWidget {
   final String label;
   final String desc;
@@ -1122,7 +1161,7 @@ class _FrequencyRow extends StatelessWidget {
 }
 
 // ─── Add Frequency Dialog ─────────────────────────────────────────────────────
-
+/// Dialog for adding a new VHF channel preset (channel label + description).
 class _AddFrequencyDialog extends StatefulWidget {
   const _AddFrequencyDialog();
 
@@ -1187,7 +1226,7 @@ class _AddFrequencyDialogState extends State<_AddFrequencyDialog> {
 }
 
 // ─── Edit Frequency Dialog ────────────────────────────────────────────────────
-
+/// Dialog for editing (or deleting) an existing VHF channel preset.
 class _EditFrequencyDialog extends StatefulWidget {
   final String initialLabel;
   final String initialDesc;
@@ -1288,7 +1327,9 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
 }
 
 // ─── Crew Medical Overview Card ───────────────────────────────────────────────
-
+/// Tappable summary card for one crew member: name, blood-type badge, and
+/// personal EPIRB note if set. Tapping opens [_CrewDetailSheet] with the
+/// full medical record (allergies, conditions, remarks).
 class _CrewMedicalCard extends StatelessWidget {
   final CrewMember member;
   const _CrewMedicalCard({required this.member});
@@ -1392,6 +1433,7 @@ class _CrewMedicalCard extends StatelessWidget {
   }
 }
 
+/// Opens the full-medical-record bottom sheet for [member].
 void _showCrewDetail(BuildContext context, CrewMember member) {
   showModalBottomSheet(
     context: context,
@@ -1403,6 +1445,8 @@ void _showCrewDetail(BuildContext context, CrewMember member) {
   );
 }
 
+/// Bottom sheet listing every populated medical/personal field for one crew
+/// member (blood group, allergies, conditions, personal EPIRB, remarks).
 class _CrewDetailSheet extends StatelessWidget {
   final CrewMember member;
   const _CrewDetailSheet({required this.member});
@@ -1506,6 +1550,7 @@ class _CrewDetailSheet extends StatelessWidget {
   }
 }
 
+/// Icon + text row used for the personal-EPIRB line in [_CrewMedicalCard].
 class _MedicalRow extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -1534,6 +1579,8 @@ class _MedicalRow extends StatelessWidget {
   }
 }
 
+/// Placeholder shown when no crew is logged for today or the most recent
+/// entry, with a shortcut to open that day's log if one exists.
 class _EmptyCrewHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

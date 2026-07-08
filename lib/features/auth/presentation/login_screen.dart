@@ -10,6 +10,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../l10n/l10n_extension.dart';
 import 'auth_widgets.dart';
 
+/// Email/password + Google/Apple sign-in screen. The router's redirect logic
+/// (app/router.dart) sends unauthenticated users here first.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -31,6 +33,8 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  /// Maps a Firebase Auth exception to a localized message via
+  /// [AuthService.codeToKey].
   String _localizedError(FirebaseAuthException e) {
     final l10n = context.l10n;
     return switch (AuthService.codeToKey(e.code)) {
@@ -42,12 +46,14 @@ class _LoginScreenState extends State<LoginScreen> {
     };
   }
 
+  /// Shows [message] in a snackbar, guarding against a disposed widget.
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Validates the form, then signs in with the entered email/password.
   Future<void> _signIn() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
@@ -62,6 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Runs the Google sign-in flow and reports any failure via a snackbar.
   Future<void> _signInGoogle() async {
     setState(() => _loading = true);
     final auth = context.read<AuthService>();
@@ -78,6 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Runs the Apple sign-in flow and reports any failure via a snackbar.
   Future<void> _signInApple() async {
     setState(() => _loading = true);
     final auth = context.read<AuthService>();
@@ -115,6 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // -- Anchor icon + title/subtitle header --
                 Icon(Icons.anchor, size: 40, color: cs.primary),
                 const SizedBox(height: 20),
                 Text(
@@ -131,7 +140,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 32),
+                // -- end header --
 
+                // -- Email field --
                 AuthField(
                   controller: _emailCtrl,
                   label: l10n.authEmailLabel,
@@ -146,7 +157,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
+                // -- end email field --
 
+                // -- Password field (with visibility toggle) --
                 AuthField(
                   controller: _passwordCtrl,
                   label: l10n.authPasswordLabel,
@@ -164,7 +177,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () => setState(() => _obscure = !_obscure),
                   ),
                 ),
+                // -- end password field --
 
+                // -- Forgot-password link --
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -175,6 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
 
+                // -- Sign-in button (shows a spinner while _loading) --
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -194,7 +210,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // -- end sign-in button --
 
+                // -- Social sign-in (Google/Apple, platform-gated) --
                 if (showGoogle || showApple) ...[
                   AuthOrDivider(label: l10n.authOrDivider),
                   const SizedBox(height: 16),
@@ -217,9 +235,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 10),
                 ],
+                // -- end social sign-in --
 
                 const SizedBox(height: 22),
 
+                // -- "No account? Register" row --
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

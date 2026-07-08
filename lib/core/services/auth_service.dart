@@ -3,6 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
+/// Thin wrapper around Firebase Auth (email/password, Google, Apple),
+/// notifying listeners on every state change so `go_router`'s
+/// `refreshListenable` can re-run its redirect logic (see app/router.dart).
 class AuthService extends ChangeNotifier {
   static final _auth = FirebaseAuth.instance;
 
@@ -12,6 +15,8 @@ class AuthService extends ChangeNotifier {
 
   // ── Email / Password ───────────────────────────────────────────────
 
+  /// Signs in with email/password. Rethrows [FirebaseAuthException] for the
+  /// caller to map to a localized message via [codeToKey].
   Future<void> signInWithEmail(String email, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -22,6 +27,8 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Creates a new email/password account and fires off (but doesn't await)
+  /// the verification email.
   Future<void> registerWithEmail(String email, String password) async {
     try {
       await _auth.createUserWithEmailAndPassword(
@@ -35,6 +42,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Sends a "reset your password" email via Firebase.
   Future<void> sendPasswordReset(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email.trim());
@@ -45,6 +53,8 @@ class AuthService extends ChangeNotifier {
 
   // ── Google ─────────────────────────────────────────────────────────
 
+  /// Runs the native Google sign-in flow, then exchanges its token for a
+  /// Firebase credential. No-ops if the user cancels the picker.
   Future<void> signInWithGoogle() async {
     try {
       final googleUser = await GoogleSignIn().signIn();
@@ -63,6 +73,8 @@ class AuthService extends ChangeNotifier {
 
   // ── Apple ──────────────────────────────────────────────────────────
 
+  /// Runs Sign In with Apple, then exchanges its identity token for a
+  /// Firebase credential.
   Future<void> signInWithApple() async {
     try {
       final appleCredential = await SignInWithApple.getAppleIDCredential(
@@ -96,12 +108,16 @@ class AuthService extends ChangeNotifier {
 
   // ── Sign out / Delete ──────────────────────────────────────────────
 
+  /// Signs out of both Google (if used) and Firebase.
   Future<void> signOut() async {
     await GoogleSignIn().signOut();
     await _auth.signOut();
     notifyListeners();
   }
 
+  /// Deletes the Firebase Auth account itself. Callers are responsible for
+  /// deleting the user's Firestore/Storage data first — see
+  /// `LogbookService.deleteUserAndAllLogbooks`.
   Future<void> deleteAccount() async {
     try {
       await _auth.currentUser?.delete();
@@ -113,6 +129,8 @@ class AuthService extends ChangeNotifier {
 
   // ── Error mapping ──────────────────────────────────────────────────
 
+  /// Maps a Firebase Auth error [code] to a localization key, so screens can
+  /// show a translated message instead of Firebase's raw English string.
   static String codeToKey(String code) {
     switch (code) {
       case 'invalid-email':

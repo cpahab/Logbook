@@ -17,6 +17,7 @@ import '../domain/track_point.dart';
 import 'filter_settings.dart';
 import 'trim_track.dart';
 
+/// Computed trip statistics for one day's GPS track (see [computeDailyStats]).
 class DailyStats {
   final double distanceNm;
 
@@ -58,6 +59,9 @@ class DailyStats {
   });
 }
 
+/// Computes distance/duration/speed statistics from a day's raw GPS
+/// [rawPoints], first running them through [trimTrackWithAnchors] to strip
+/// stationary anchor periods and GPS noise before measuring anything.
 DailyStats computeDailyStats(
   List<TrackPoint> rawPoints, {
   FilterSettings settings = const FilterSettings(),
@@ -154,6 +158,7 @@ DailyStats computeDailyStats(
   );
 }
 
+/// Great-circle distance in metres between two lat/lon points.
 double _haversineM(double lat1, double lon1, double lat2, double lon2) {
   const r   = 6371000.0;
   final dLat = (lat2 - lat1) * pi / 180;

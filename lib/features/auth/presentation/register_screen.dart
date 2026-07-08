@@ -10,6 +10,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../l10n/l10n_extension.dart';
 import 'auth_widgets.dart';
 
+/// Email/password account-creation screen, with optional Google sign-in as
+/// a shortcut. Reachable from the login screen's "no account? register" link.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -34,12 +36,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  /// Shows [message] in a snackbar, guarding against a disposed widget.
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
+  /// Maps a Firebase Auth exception to a localized message.
   String _localizedError(FirebaseAuthException e) {
     final l10n = context.l10n;
     return switch (AuthService.codeToKey(e.code)) {
@@ -51,6 +55,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     };
   }
 
+  /// Validates the form, creates the account, then navigates to home.
   Future<void> _register() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
@@ -66,6 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  /// Registers/signs in via Google and navigates to home on success.
   Future<void> _signInGoogle() async {
     setState(() => _loading = true);
     final auth = context.read<AuthService>();
@@ -104,6 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // -- Title/subtitle header --
                 Text(
                   l10n.authRegisterTitle,
                   style: Theme.of(context).textTheme.headlineMedium!.copyWith(
@@ -117,7 +124,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 32),
+                // -- end header --
 
+                // -- Email field --
                 AuthField(
                   controller: _emailCtrl,
                   label: l10n.authEmailLabel,
@@ -132,7 +141,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
+                // -- end email field --
 
+                // -- Password field --
                 AuthField(
                   controller: _passwordCtrl,
                   label: l10n.authPasswordLabel,
@@ -150,7 +161,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                // -- end password field --
 
+                // -- Confirm-password field --
                 AuthField(
                   controller: _confirmCtrl,
                   label: l10n.authConfirmPasswordLabel,
@@ -169,7 +182,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+                // -- end confirm-password field --
 
+                // -- Create-account button --
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -189,7 +204,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // -- end create-account button --
 
+                // -- Google sign-in shortcut (iOS/Android/macOS only) --
                 if (showGoogle) ...[
                   AuthOrDivider(label: l10n.authOrDivider),
                   const SizedBox(height: 16),
@@ -200,7 +217,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 24),
                 ],
+                // -- end Google sign-in shortcut --
 
+                // -- "Already have an account? Sign in" row --
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

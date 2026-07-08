@@ -14,6 +14,12 @@ import '../domain/track_point.dart';
 import '../utils/gpx_date_resolver.dart';
 import '../utils/gpx_parser.dart';
 
+/// Full-screen GPX import flow, reached via a deep link (main.dart routes
+/// `gpxShareService.gpxFilePaths` here). Parses the file, lets the user
+/// confirm/adjust which day it belongs to, and — if that day already has a
+/// track — offers to replace or merge it. A lighter-weight bottom-sheet
+/// variant of this same decision exists in gpx_import_sheet.dart for the
+/// share-handler flow.
 class GpxImportScreen extends StatefulWidget {
   final String filePath;
   const GpxImportScreen({super.key, required this.filePath});
@@ -38,6 +44,8 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
     _parse();
   }
 
+  /// Reads and parses the GPX file, resolving its target day, and moves the
+  /// screen from [_Phase.loading] to [_Phase.ready] or [_Phase.error].
   Future<void> _parse() async {
     final Uint8List bytes;
     try {
@@ -73,6 +81,7 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
 
   String get _locale => context.read<ThemeProvider>().localeString;
 
+  /// Shows a date picker for the user to override the auto-resolved target day.
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -87,6 +96,7 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
     }
   }
 
+  /// Imports the parsed track as-is (no existing track conflict).
   Future<void> _doImport(HomeRepository repo) async {
     final date = _selectedDate;
     if (date == null || _bytes == null) return;
@@ -98,6 +108,8 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
     _finish(date);
   }
 
+  /// Discards the existing track for this day and imports the new one in
+  /// its place.
   Future<void> _doReplace(HomeRepository repo) async {
     final date = _selectedDate;
     if (date == null || _bytes == null) return;
@@ -110,6 +122,8 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
     _finish(date);
   }
 
+  /// Merges the new track's points into the existing one for this day
+  /// (de-duplicated, sorted by time).
   Future<void> _doMerge(HomeRepository repo) async {
     final date = _selectedDate;
     final result = _result;
@@ -123,6 +137,7 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
     _finish(date);
   }
 
+  /// Combines and de-duplicates two point lists, sorted by time.
   static List<TrackPoint> _mergePoints(
       List<TrackPoint> a, List<TrackPoint> b) {
     final all = [...a, ...b]..sort((x, y) => x.time.compareTo(y.time));
@@ -140,6 +155,7 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
     return unique;
   }
 
+  /// Shows a confirmation snackbar and navigates to the imported day's detail screen.
   void _finish(DateTime date) {
     final dateStr = DateFormat('d MMM', _locale).format(date);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -369,6 +385,8 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
 
 // ── Sub-widgets ──────────────────────────────────────────────────────────────
 
+/// File-name + point-count + date-range summary card at the top of the
+/// ready state.
 class _SummaryCard extends StatelessWidget {
   final String fileName;
   final GpxParseResult result;
@@ -442,6 +460,8 @@ class _SummaryCard extends StatelessWidget {
   }
 }
 
+/// Icon + text info/warning line (multi-day span, missing timestamps,
+/// new-entry notice, date-mismatch warning).
 class _Notice extends StatelessWidget {
   final IconData icon;
   final String text;
@@ -478,6 +498,8 @@ class _Notice extends StatelessWidget {
   }
 }
 
+/// Tappable row showing the currently assigned import date (red border/text
+/// if none is set yet).
 class _DateTile extends StatelessWidget {
   final DateTime? date;
   final String locale;
@@ -521,6 +543,8 @@ class _DateTile extends StatelessWidget {
   }
 }
 
+/// One row of the New-vs-Existing track comparison shown when a conflict
+/// needs Replace/Merge — point count and time range for one side.
 class _TrackInfoRow extends StatelessWidget {
   final String label;
   final List<TrackPoint> points;

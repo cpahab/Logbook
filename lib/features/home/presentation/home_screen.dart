@@ -16,6 +16,9 @@ import '../../settings/domain/theme_provider.dart';
 import '../../../core/services/gps_consent_service.dart';
 import '../../../l10n/l10n_extension.dart';
 
+/// The app's home/landing screen: a year-filterable timeline of day entries,
+/// an aggregate stats card (days at sea, total distance), and the FAB for
+/// creating a new day or a new timeline entry on the most recent day.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -43,6 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// Prompts for a date (excluding ones that already have an entry), creates
+  /// the entry, and navigates to its day-detail screen.
   Future<void> _createNewEntry() async {
     final repo = context.read<HomeRepository>();
     final now = DateTime.now();
@@ -75,6 +80,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  /// Navigates to the most recent day's detail screen with its add-entry
+  /// dialog open, or falls back to [_createNewEntry] if there are no entries yet.
   void _createTimelineEntry() {
     final entries = context.read<HomeRepository>().entries;
     if (entries.isEmpty) {
@@ -93,6 +100,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Shows the FAB's two-option popup ("new day" / "add entry") as a
+  /// custom slide-up dialog rather than a stock menu, to match the design
+  /// spec's pill-button styling.
   void _showAddMenu() {
     showGeneralDialog(
       context: context,
@@ -141,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// One rounded pill button in the FAB's add-menu popup.
   Widget _menuPill(
       ColorScheme cs, IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
@@ -177,9 +188,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Lookup key for [_dayKeys], identifying one day's timeline card.
   String _entryKey(DateTime date) =>
       '${date.year}-${date.month}-${date.day}';
 
+  /// Scrolls the just-created/navigated-to day into view, if one is pending
+  /// (set by [_createNewEntry]). Called on every frame via a post-frame
+  /// callback since the target day's GlobalKey isn't attached until its
+  /// widget has actually been laid out.
   void _scrollToSelectedDay() {
     final target = _pendingScrollDate;
     if (target == null) return;
@@ -192,6 +208,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _pendingScrollDate = null;
   }
 
+  /// Distinct weather icons to show on a day's timeline card, inferred by
+  /// keyword-matching each timeline entry's free-text weather field
+  /// (German and English keywords both supported).
   List<IconData> _weatherIcons(List<dynamic> timeline) {
     final seen = <IconData>{};
     for (final tl in timeline) {
@@ -413,6 +432,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── Year filter pills ─────────────────────────────────────────────
+  /// Horizontally scrollable row of year filter pills, plus an "ALL" pill,
+  /// centered when they all fit within the available width.
   Widget _buildYearPills(
       List<int> years, int? effectiveYear, ColorScheme cs) {
     final pillsRow = Row(
@@ -485,6 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── Stats bento grid ─────────────────────────────────────────────
+  /// Two-card row: sailing days and total distance for the current filter.
   Widget _buildStatsBento(
       double totalNm, int daysAtSea, ColorScheme cs) {
     final l10n = context.l10n;
@@ -521,6 +543,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// One icon + label + value/unit card within [_buildStatsBento].
   Widget _statCard({
     required IconData icon,
     required Color iconBg,
@@ -594,6 +617,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── Month group header ────────────────────────────────────────────
+  /// Collapsible section header for one month's group of day entries; shows
+  /// an entry-count badge only while collapsed.
   Widget _buildMonthHeader(String monthKey, bool isFirst,
       Map<String, List<DayEntry>> grouped, ColorScheme cs) {
     final parts = monthKey.split('-');
@@ -644,6 +669,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // ── Timeline entry ────────────────────────────────────────────────
+  /// One day's card on the home timeline: date/weather line, route (if
+  /// harbors are set), a one-line narrative, and moving-average-speed/
+  /// distance stats — plus the vertical "spine" connector dot linking it to
+  /// adjacent days.
   Widget _buildTimelineItem(
     DayEntry entry,
     HomeRepository repo,
@@ -802,6 +831,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+        // ── end card ──
         // ── Spine (Positioned overlay, fills card height) ────────
         Positioned(
           left: 0,
@@ -846,6 +876,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Placeholder shown when the logbook has no entries at all yet.
   Widget _buildEmpty(ColorScheme cs) {
     return Center(
       child: Column(

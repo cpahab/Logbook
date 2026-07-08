@@ -8,6 +8,10 @@ part 'day_entry.g.dart';
 // MIGRATION INVARIANT: Never change an existing @HiveField index or typeId.
 // Retired indices must stay as tombstone comments so they are never reused.
 // New fields must get the next unused index and be nullable so old objects deserialise safely.
+/// One calendar day's journal entry — the app's core data unit. Holds the
+/// day's timeline (see [TimelineEntry]), raw GPS track, crew aboard, and
+/// free-text notes. Synced to Firestore by FirestoreService (per-field merge
+/// writes; see saveEntry's doc comment there for the sync strategy).
 @HiveType(typeId: 11)
 class DayEntry extends HiveObject {
   @HiveField(0)

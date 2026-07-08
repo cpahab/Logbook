@@ -3,6 +3,10 @@ import 'timeline_amendment.dart';
 
 part 'timeline_entry.g.dart';
 
+/// One logged moment within a [DayEntry]'s timeline (e.g. departure,
+/// arrival, an in-transit update): course/speed/wind/sea/weather/sail state
+/// at that time, plus an ordered history of prior-state snapshots in
+/// [amendments] whenever a past entry is edited.
 @HiveType(typeId: 2)
 class TimelineEntry extends HiveObject {
   @HiveField(0)

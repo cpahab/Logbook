@@ -42,6 +42,11 @@ import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 
 
+/// Full detail view for one calendar day's log entry: crew list, reflection
+/// note, photos, GPS route map, timeline (course/speed/wind/sail entries,
+/// each correlatable to its GPS position), vessel status, and a free-text
+/// narrative. Also hosts the day-level actions menu (change date, import/
+/// export GPX, export PDF, delete track/day).
 class DayDetailScreen extends StatefulWidget {
   final int year;
   final int month;
@@ -75,8 +80,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return '$crewLabel: $body';
   }
 
-  // Maps a sail-state sentinel (grossState/fockState, e.g. 'sail:reef1') to
-  // its localised display string.
+  /// Maps a sail-state sentinel (grossState/fockState, e.g. 'sail:reef1') to
+  /// its localised display string.
   static String _sailStateDisplay(String s, AppLocalizations l10n) => switch (s) {
     'sail:full'    => l10n.sailFull,
     'sail:reef1'   => l10n.sailReef1,
@@ -86,6 +91,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     _              => s, // unreachable: grossState/fockState are always one of the sentinels above
   };
 
+  /// Renders a `vs:` vessel-status sentinel note into its localised display string.
   static String _vesselStatusDisplay(String note, AppLocalizations l10n) =>
       parseVesselStatus(
         note,
@@ -96,6 +102,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         keelFieldLabel: l10n.entryDialogKeelLabel,
       );
 
+  /// Whether this screen's date is the current calendar day — gates
+  /// same-day-only affordances like adding a live timeline entry without an
+  /// amendment reason.
   bool get _isToday {
     final now = DateTime.now();
     return widget.year == now.year &&
@@ -132,6 +141,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     _toHarborFocus.addListener(_onRouteFocusChange);
   }
 
+  /// Persists the in-progress route (from/to harbor) edit once focus leaves
+  /// both text fields — the save trigger for [_editingRoute] mode.
   void _onRouteFocusChange() {
     if (_fromHarborFocus.hasFocus || _toHarborFocus.hasFocus) return;
     if (!_editingRoute) return;
@@ -152,8 +163,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     super.dispose();
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────
   // ── Build ──────────────────────────────────────────────────────────
+  /// Scaffold: app bar (with the day-actions overflow menu), bottom nav
+  /// (FAB adds a new timeline entry), and the scrollable body — or a
+  /// "no entry" message if this date has none.
   @override
   Widget build(BuildContext context) {
     final repo = context.watch<HomeRepository>();
@@ -195,6 +208,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          // -- Day-actions overflow menu (change date, GPX/PDF import-export, delete) --
           if (entry != null)
             PopupMenuButton<String>(
               tooltip: l10n.dayMenuOptions,
@@ -265,6 +279,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 ),
               ],
             ),
+          // -- end overflow menu --
         ],
       ),
       bottomNavigationBar: AppBottomNav(
@@ -284,6 +299,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Body ──────────────────────────────────────────────────────────
+  /// Scrollable stack of every section card, in display order: crew, daily
+  /// reflection, photos, route map, timeline log, vessel status, free text.
+  /// Pre-computes the GPS-correlated position for each timeline entry once
+  /// here, shared by every entry card below.
   Widget _buildBody(DayEntry entry, DailyTrack? track, DailyStats? stats,
       FilterSettings filterSettings, ColorScheme cs) {
     final corrPoints = track != null
@@ -316,6 +335,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Free Text ─────────────────────────────────────────────────────
+  /// "Notes" section: a free-text field (distinct from the italic "Diary"
+  /// reflection) shown as a tappable card, or an add-button when empty.
   Widget _buildFreeText(DayEntry entry, ColorScheme cs) {
     final tl = cs;
     final hasText = entry.freeText?.isNotEmpty ?? false;
@@ -369,6 +390,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// Opens the free-text editor dialog and saves the result.
   void _editFreeText(DayEntry entry) async {
     final result = await showDialog<String>(
       context: context,
@@ -386,6 +408,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Daily Reflection ──────────────────────────────────────────────
+  /// "Diary" section: a personal, italicized reflection note shown as a
+  /// tappable quoted card, or an add-button when empty.
   Widget _buildReflection(DayEntry entry, ColorScheme cs) {
     final tl = cs;
     final hasNotes = entry.notes?.isNotEmpty ?? false;
@@ -437,6 +461,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Crew List ─────────────────────────────────────────────────────
+  /// "Crew" section: read-only list of today's crew, or (in [_crewEditing]
+  /// mode) a reorderable, editable list backed by [_pendingCrew] with its
+  /// own commit/cancel actions rather than saving on every change.
   Widget _buildCrewList(DayEntry entry, ColorScheme cs) {
     final tl = cs;
     final displayCrew =
@@ -500,6 +527,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ],
           ],
         ),
+        // ── end header ──
         const SizedBox(height: 8),
         // ── Crew body ────────────────────────────────────────────────
         if (displayCrew.isNotEmpty)
@@ -598,6 +626,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             () => _addCrewMember(entry),
             cs,
           ),
+        // ── end crew body ──
         // ── Edit mode commit / cancel ───────────────────────────────
         if (_crewEditing) ...[
           const SizedBox(height: 8),
@@ -641,6 +670,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// One crew member's row: avatar, name, skipper/crew role label — with a
+  /// drag handle and chevron in [editing] mode.
   Widget _buildCrewRow({
     required CrewMember member,
     required bool isFirst,
@@ -702,6 +733,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Route & Map ───────────────────────────────────────────────────
+  /// "Route" section: an inline-editable from/to harbor line, plus either
+  /// the GPS map + stats grid (if a track exists) or a prompt to import one.
   Widget _buildRouteMap(
       DayEntry entry, DailyTrack? track, DailyStats? stats, ColorScheme cs) {
     final tl = cs;
@@ -885,6 +918,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// 2×2 (or 2×1) stat grid under the map: distance, average speed, and
+  /// (when meaningfully different) moving-average and max speed.
   Widget _buildStatsGrid(DailyStats stats, ColorScheme cs) {
     final tl = cs;
     final div = BorderSide(color: tl.dividerColor);
@@ -940,6 +975,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// One label/value pair within [_buildStatsGrid].
   Widget _statCell(String label, String value, ColorScheme cs) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -958,6 +994,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Log Section ───────────────────────────────────────────────────
+  /// "Log Entries" section: the day's timeline as a vertical spine of cards,
+  /// each correlated to a GPS position when [correlatedMap] has one.
   Widget _buildLogSection(DayEntry entry,
       Map<TimelineEntry, TrackPoint> correlatedMap, ColorScheme cs) {
     return Column(
@@ -1014,6 +1052,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// Spine-dot + connector line for one timeline entry, wrapping its
+  /// [_buildLogEntryCard].
   Widget _buildLogEntryRow(DayEntry entry, TimelineEntry t, int index,
       int total, TrackPoint? trackedPoint, ColorScheme cs) {
     return IntrinsicHeight(
@@ -1060,6 +1100,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// One timeline entry's card: an auto-derived label (Departure/Arrival/
+  /// Progress, or Crew/Vessel-status for auto-generated notes), time, tap-to-
+  /// snap-map icon, course/speed/wind/sea/weather/sail/motor/keel fields,
+  /// remarks, and an amendment-history badge if this entry has been edited.
   Widget _buildLogEntryCard(DayEntry entry, TimelineEntry t, int index,
       int total, TrackPoint? trackedPoint, ColorScheme cs) {
     final tl = cs;
@@ -1220,6 +1264,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
 
 
+  /// Small "amended N times, last on ..." tappable line at the bottom of a
+  /// log entry card, opening the full [_showAmendmentHistory] sheet.
   Widget _buildAmendmentBadge(TimelineEntry t, ColorScheme cs) {
     final l10n = context.l10n;
     final count = t.amendments.length;
@@ -1248,6 +1294,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// Bottom sheet listing every prior snapshot of [t], newest first: the
+  /// current state, each amendment's snapshot (with its reason), and the
+  /// original entry at the bottom.
   void _showAmendmentHistory(TimelineEntry t, ColorScheme cs) {
     final l10n = context.l10n;
     final locale = context.read<ThemeProvider>().localeString;
@@ -1363,6 +1412,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// One row in the amendment-history sheet: label/date, time, and a
+  /// course/speed/wind/sea/weather summary line for that snapshot.
   Widget _amendmentSnapshotTile({
     required String label,
     required String dateStr,
@@ -1440,6 +1491,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Photo gallery ─────────────────────────────────────────────────
+  /// "Photos" section header + gallery (or an add-button/progress indicator
+  /// when empty or mid-upload). [_deletingPhotos] paths stay visible (with a
+  /// spinner overlay) until their delete actually completes.
   Widget _buildPhotoStrip(DayEntry entry, ColorScheme cs) {
     final hasPhotos = entry.photos.isNotEmpty || _deletingPhotos.isNotEmpty;
     final allPaths = [
@@ -1523,6 +1577,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// Single full-width photo (contain-fit), or a horizontally scrollable
+  /// strip of tiles for multiple photos.
   Widget _buildPhotoGallery(List<String> paths, DayEntry entry, ColorScheme cs) {
     const h = 200.0;
 
@@ -1552,6 +1608,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// One photo tile: fetches/decodes the local cache file, shows a spinner
+  /// while loading or being deleted, and a delete "×" button overlay.
   Widget _photoCell(
     DayEntry entry,
     String storagePath,
@@ -1642,6 +1700,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// Opens the system photo picker, uploads the selection, and appends the
+  /// resulting Storage paths to the entry.
   void _addPhotos(DayEntry entry) async {
     if (_importingPhotos) return;
     setState(() => _importingPhotos = true);
@@ -1665,6 +1725,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     }
   }
 
+  /// Confirms, then removes a photo from Storage and the entry's photo list.
   void _deletePhoto(DayEntry entry, String storagePath) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1698,6 +1759,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (mounted) setState(() => _deletingPhotos.remove(storagePath));
   }
 
+  /// Full-screen pinch-to-zoom viewer for one photo; tap to dismiss.
   void _viewPhoto(File file) {
     showDialog(
       context: context,
@@ -1715,6 +1777,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Vessel Status ─────────────────────────────────────────────────
+  /// "Vessel Status" card: oil/fuel level bars and keel position, on a
+  /// tertiary-colored background distinct from the other white/surface cards.
   Widget _buildVesselStatus(DayEntry entry, ColorScheme cs) {
     final isDark = cs.brightness == Brightness.dark;
     final cardBg = isDark ? cs.tertiaryContainer : cs.tertiary;
@@ -1836,6 +1900,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// One oil/fuel gauge within [_buildVesselStatus]: icon, percentage, and a
+  /// filled progress bar.
   Widget _vesselStatCell(
       String label, int? level, IconData icon, ColorScheme cs, Color onCard, {bool isFuel = false}) {
     return Column(
@@ -1891,6 +1957,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Empty state helper ────────────────────────────────────────────
+  /// Dashed-border "add X" prompt shown when a section has no content yet.
   Widget _emptyStateButton(
       IconData icon, String label, VoidCallback onTap, ColorScheme cs) {
     return GestureDetector(
@@ -1919,6 +1986,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Map ──────────────────────────────────────────────────────────
+  /// The inline preview map embedded in the Route card: track polyline(s),
+  /// stop halos, an uncertainty corridor (at close zoom), start/end/hourly
+  /// tap-to-inspect markers, and satellite/normal toggle support. Builds a
+  /// [DisplayModel] from the raw track fresh on every call rather than
+  /// caching it, since track/filter-settings can change between rebuilds.
   Widget _buildMap(DayEntry entry, DailyTrack? track) {
     if (track == null || track.points.isEmpty) return const SizedBox();
 
@@ -2370,11 +2442,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ],
           ),
         ),
+        // ── end map controls ──
       ],
     );
   }
 
   // ── Edit dialogs ──────────────────────────────────────────────────
+  /// Opens the diary/reflection editor dialog and saves the result.
   void _editNotes(DayEntry entry) async {
     final result = await showDialog<String>(
       context: context,
@@ -2391,6 +2465,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
   }
 
+  /// Moves this entry to a newly picked date, warning first if its GPX track
+  /// mostly belongs to a different day than the one being moved to.
   void _changeDate(DayEntry entry) async {
     final current = DateTime(widget.year, widget.month, widget.day);
     final picked = await showDatePicker(
@@ -2460,12 +2536,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
   }
 
+  /// Loads the current route into the text controllers and enters route-edit mode.
   void _startEditRoute(DayEntry entry) {
     _fromHarborCtrl.text = entry.fromHarbor ?? '';
     _toHarborCtrl.text = entry.toHarbor ?? '';
     setState(() => _editingRoute = true);
   }
 
+  /// Saves the edited from/to harbor fields and exits route-edit mode.
   void _saveRoute(DayEntry entry) {
     setState(() {
       entry.fromHarbor = _fromHarborCtrl.text.trim().isEmpty
@@ -2480,6 +2558,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
   }
 
+  /// Shows the oil/fuel-slider + keel-toggle dialog and saves the result.
   void _editVesselStatus(DayEntry entry) async {
     int oilVal = entry.oilLevel ?? 50;
     int fuelVal = entry.fuelLevel ?? 50;
@@ -2662,6 +2741,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
   }
 
+  /// Discards [_pendingCrew] and exits edit mode without saving.
   void _cancelCrewChanges() {
     setState(() {
       _crewEditing = false;
@@ -2669,6 +2749,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
   }
 
+  /// Saves [_pendingCrew] as the entry's crew list, auto-logging a crew-note
+  /// timeline entry if the day already has timeline entries, then exits edit mode.
   void _commitCrewChanges(DayEntry entry) {
     if (_pendingCrew == null) return;
     final repo = context.read<HomeRepository>();
@@ -2725,6 +2807,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     setState(() => _pendingCrew!.add(member!));
   }
 
+  /// Edits the pending-crew member at [index] and saves the change to their
+  /// roster record.
   void _editPendingMember(int index) async {
     if (_pendingCrew == null || index >= _pendingCrew!.length) return;
     final member = _pendingCrew![index];
@@ -2747,11 +2831,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
   }
 
+  /// Removes [member] from [_pendingCrew]; always succeeds (no confirmation
+  /// needed since edit mode itself is cancelable).
   Future<bool> _removePendingMember(CrewMember member) async {
     setState(() => _pendingCrew?.remove(member));
     return true;
   }
 
+  /// Reorders [_pendingCrew] (drag-and-drop in the crew edit list).
   void _reorderPending(int oldIndex, int newIndex) {
     setState(() {
       if (_pendingCrew == null) return;
@@ -2761,6 +2848,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Timeline mutations ────────────────────────────────────────────
+  /// Shows the add-timeline-entry dialog and saves the result.
   void _addTimelineEntry(BuildContext context) async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
@@ -2772,6 +2860,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     repo.addTimelineEntry(day, result.entry);
   }
 
+  /// Removes [t] from the timeline, offering an "undo" snackbar action that
+  /// re-inserts it at its original index.
   void _deleteTimelineEntry(DayEntry entry, TimelineEntry t) {
     final index = entry.timeline.indexOf(t);
     setState(() {
@@ -2798,6 +2888,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     ));
   }
 
+  /// Opens the edit dialog for [t]; if this is a past day (not today), the
+  /// dialog collects an amendment reason and the prior state is snapshotted
+  /// into [t.amendments] before being overwritten.
   void _editTimelineEntry(DayEntry entry, TimelineEntry t) async {
     final day = DateTime(widget.year, widget.month, widget.day);
     final isAmendment = !_isToday;
@@ -2848,6 +2941,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── GPX ───────────────────────────────────────────────────────────
+  /// Picks a GPX file, previews it to determine its dominant date, warns if
+  /// that date doesn't match this screen's day, and imports it.
   void _importGpx() async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
@@ -2936,6 +3031,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             DateFormat('d. MMMM yyyy', context.read<ThemeProvider>().localeString).format(day)))));
   }
 
+  /// Builds a GPX file from [track] (filtered + raw segments) and opens the
+  /// system save-file dialog.
   void _exportGpx(DailyTrack track, DateTime day) async {
     final filterSettings = context.read<ThemeProvider>().filterSettings;
     final vesselName    = context.read<ThemeProvider>().vesselName;
@@ -2964,6 +3061,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     }
   }
 
+  /// Builds the single-day voyage-log PDF (fetching photo bytes first) and
+  /// opens the system share sheet.
   void _exportPdf(DayEntry entry, DailyStats? stats, DailyTrack? track) async {
     final p = context.read<ThemeProvider>();
     final l10n = context.l10n;
@@ -3017,6 +3116,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     await Printing.sharePdf(bytes: bytes, filename: fileName);
   }
 
+  /// Confirms, then deletes this day's GPX track (the day entry itself is kept).
   void _removeGpx() async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
@@ -3052,6 +3152,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         SnackBar(content: Text(context.l10n.dayGpxRemoved)));
   }
 
+  /// Confirms, then permanently deletes the entire day entry (and its GPX
+  /// track) and navigates back to home.
   void _deleteDay() async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
@@ -3088,6 +3190,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   }
 
   // ── Map helpers ───────────────────────────────────────────────────
+  /// Shows a tap-to-inspect marker at [pos] with [label], auto-dismissing
+  /// after 5 seconds (or immediately if tapped again).
   void _dropMarker(LatLng pos, String label) {
     _markerDismissTimer?.cancel();
     setState(() {
@@ -3104,6 +3208,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
   }
 
+  /// The track point closest to a map tap, by planar (not great-circle)
+  /// distance — sufficient at the zoom levels this map is used at.
   TrackPoint? _findNearestTrackPoint(
       LatLng latLng, List<TrackPoint> points) {
     if (points.isEmpty) return null;
@@ -3121,6 +3227,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return nearest;
   }
 
+  /// Upload icon with a small "GPX" badge, used for the import-GPX menu item.
   Widget _gpxUploadIcon() {
     return SizedBox(
       width: 26,
@@ -3155,6 +3262,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// Small floating action button used for the desktop-only zoom/recenter map controls.
   Widget _smallMapBtn(IconData icon, VoidCallback onTap) {
     final cs = Theme.of(context).colorScheme;
     return FloatingActionButton.small(
@@ -3169,6 +3277,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Map marker helpers ────────────────────────────────────────────
 
+  /// Small circular directional-arrow (or fallback icon) badge for the
+  /// departure/arrival map markers.
   Widget _trackArrow(Color color, {IconData icon = Icons.arrow_upward}) => Container(
         width: 15,
         height: 15,
@@ -3181,6 +3291,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         child: Icon(icon, color: Colors.white, size: 8),
       );
 
+  /// Small pill label (departure/arrival time, dropped-marker timestamp) next
+  /// to a map marker.
   Widget _trackLabel(String text, ColorScheme cs) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
         decoration: BoxDecoration(
@@ -3197,6 +3309,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
 // ── File-level geometry helpers (used by both day-detail and fullscreen) ──────
 
+/// Initial compass bearing (radians) from [from] to [to], for rotating the
+/// departure/arrival direction-arrow markers.
 double _trackBearing(LatLng from, LatLng to) {
   final lat1 = from.latitude  * pi / 180;
   final lat2 = to.latitude    * pi / 180;
@@ -3206,6 +3320,7 @@ double _trackBearing(LatLng from, LatLng to) {
   return atan2(y, x);
 }
 
+/// Great-circle distance in metres between two map coordinates.
 double _distM(LatLng a, LatLng b) {
   const r   = 6371000.0;
   final lat1 = a.latitude  * pi / 180;
@@ -3217,6 +3332,9 @@ double _distM(LatLng a, LatLng b) {
   return r * 2 * atan2(sqrt(s), sqrt(1 - s));
 }
 
+/// Direction the boat headed away from [origin]: bearing toward the point
+/// ~500m along the track (or the single farthest point, if the whole track
+/// is shorter than that), so a short initial wobble doesn't skew the arrow.
 double _dayDetailDepartureBearing(List<LatLng> pts, LatLng origin) {
   if (pts.length < 2) return 0;
   const targetM = 500.0;
@@ -3233,6 +3351,8 @@ double _dayDetailDepartureBearing(List<LatLng> pts, LatLng origin) {
   return _trackBearing(origin, pts[farIdx]);
 }
 
+/// Direction the boat was heading into [destination]: bearing from the point
+/// ~500m before it along the track (mirrors [_dayDetailDepartureBearing]).
 double _dayDetailArrivalBearing(List<LatLng> pts, LatLng destination) {
   if (pts.length < 2) return 0;
   const targetM = 500.0;
@@ -3250,7 +3370,10 @@ double _dayDetailArrivalBearing(List<LatLng> pts, LatLng destination) {
 }
 
 // ── Full-screen map for a single day ──────────────────────────────────────────
-
+/// Full-screen version of [_DayDetailScreenState._buildMap] (opened from its
+/// fullscreen button): same rendering, plus its own satellite toggle and
+/// dropped-marker state, so it works standalone without the day-detail
+/// screen's state.
 class _DayMapFullScreen extends StatefulWidget {
   final DayEntry entry;
   final DailyTrack track;
@@ -3290,6 +3413,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     super.dispose();
   }
 
+  /// Shows a tap-to-inspect marker at [pos] with [label], auto-dismissing
+  /// after 5 seconds.
   void _dropMarker(LatLng pos, String label) {
     _markerDismissTimer?.cancel();
     setState(() {
@@ -3301,6 +3426,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     });
   }
 
+  /// The track point closest to a map tap, by planar distance.
   TrackPoint? _findNearest(LatLng tap, List<TrackPoint> points) {
     if (points.isEmpty) return null;
     TrackPoint? best;
@@ -3333,6 +3459,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     child: Text(text, style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, letterSpacing: 0, color: Colors.white)),
   );
 
+  /// Small floating action button for this screen's zoom/recenter/satellite/close controls.
   Widget _mapBtn(IconData icon, VoidCallback onTap, ColorScheme cs) =>
     FloatingActionButton.small(
       heroTag: 'fs_${icon.codePoint}',
@@ -3343,6 +3470,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       child: Icon(icon, size: 18),
     );
 
+  /// Renders the same map layers as [_DayDetailScreenState._buildMap], sized
+  /// to fill the whole screen, with its own zoom/recenter/satellite/close controls.
   @override
   Widget build(BuildContext context) {
     final cs    = Theme.of(context).colorScheme;
@@ -3757,6 +3886,7 @@ List<TrackPoint> _sampleHourlyPoints(List<TrackPoint> pts) {
   return result;
 }
 
+/// Formats a stop duration as "1h 30m" or "45m", for a mid-stop marker tooltip.
 String _fmtDur(double minutes) {
   final m = minutes.round();
   return m >= 60 ? '${m ~/ 60}h ${m % 60}m' : '${m}m';

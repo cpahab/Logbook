@@ -1,3 +1,7 @@
+// Tile server URLs/attribution used by every map view in the app (day
+// detail, tracks screen, PDF export). Exactly one of the two blocks below
+// is active at a time — see each block's own comment.
+
 // ===== MapTiler (production) =====
 // Temporarily disabled for testing: switched to free public OSM/Esri
 // servers below because the earlier tiles/openstreetmap 404 (fixed in
