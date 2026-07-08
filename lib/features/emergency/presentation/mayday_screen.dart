@@ -241,10 +241,10 @@ class _StepDsc extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: em.criticalColor,
+                      color: em.errorContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.crisis_alert, color: cs.onError, size: 22),
+                    child: Icon(Icons.crisis_alert, color: em.onErrorContainer, size: 22),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -271,18 +271,18 @@ class _StepDsc extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 8),
                           decoration: BoxDecoration(
-                            color: cs.secondaryContainer.withValues(alpha: 0.6),
+                            color: em.errorContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Row(
                             children: [
                               Icon(Icons.arrow_forward,
-                                  size: 14, color: cs.secondary),
+                                  size: 14, color: em.onErrorContainer),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   l10n.emergencyDscWait,
-                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: cs.onSecondaryContainer),
+                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontSize: 13, fontWeight: FontWeight.w500, color: em.onErrorContainer),
                                 ),
                               ),
                             ],
@@ -379,10 +379,10 @@ class _StepSignal extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: em.criticalColor,
+                      color: em.errorContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.radio, color: cs.onError, size: 22),
+                    child: Icon(Icons.radio, color: em.onErrorContainer, size: 22),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -431,9 +431,9 @@ class _StepIdentification extends StatelessWidget {
       // "IDENTIFICATION" is a protocol step label — kept in English per SOLAS/IMO standard
       label: 'IDENTIFICATION',
       icon: Icons.sailing,
-      iconBg: cs.secondaryContainer,
-      iconColor: cs.onSecondaryContainer,
-      borderColor: cs.secondary,
+      iconBg: cs.errorContainer,
+      iconColor: cs.onErrorContainer,
+      borderColor: cs.error,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -447,11 +447,11 @@ class _StepIdentification extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
               children: [
                 const TextSpan(text: 'THIS IS YACHT '),
-                _underlinedSpan(vesselName, cs),
+                _spokenValueSpan(vesselName, cs),
                 const TextSpan(text: ' '),
-                _underlinedSpan(vesselName, cs),
+                _spokenValueSpan(vesselName, cs),
                 const TextSpan(text: ' '),
-                _underlinedSpan(vesselName, cs),
+                _spokenValueSpan(vesselName, cs),
               ],
             ),
           ),
@@ -466,7 +466,7 @@ class _StepIdentification extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
               children: [
                 const TextSpan(text: 'CALLSIGN '),
-                _underlinedSpan(callSign, cs),
+                _spokenValueSpan(callSign, cs),
               ],
             ),
           ),
@@ -476,7 +476,7 @@ class _StepIdentification extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
               children: [
                 const TextSpan(text: 'MMSI '),
-                _underlinedSpan(mmsi, cs),
+                _spokenValueSpan(mmsi, cs),
               ],
             ),
           ),
@@ -486,7 +486,7 @@ class _StepIdentification extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
               children: [
                 const TextSpan(text: 'MAYDAY '),
-                _underlinedSpan(vesselName, cs),
+                _spokenValueSpan(vesselName, cs),
               ],
             ),
           ),
@@ -494,17 +494,22 @@ class _StepIdentification extends StatelessWidget {
       ),
     );
   }
-
-  TextSpan _underlinedSpan(String text, ColorScheme cs) => TextSpan(
-        text: text,
-        style: TextStyle(
-          color: cs.primary,
-          decoration: TextDecoration.underline,
-          decorationColor: cs.primary.withValues(alpha: 0.4),
-          decorationThickness: 2,
-        ),
-      );
 }
+
+/// Style for a "must be spoken" fill-in value (vessel name, callsign, MMSI,
+/// position, crew count, nature of distress) — always red + underlined,
+/// distinct from the plain/white fixed script phrases around it, so every
+/// piece of the radio script that varies per-boat/per-situation reads
+/// consistently regardless of which step it's in.
+TextSpan _spokenValueSpan(String text, ColorScheme cs) => TextSpan(
+      text: text,
+      style: TextStyle(
+        color: cs.error,
+        decoration: TextDecoration.underline,
+        decorationColor: cs.error.withValues(alpha: 0.4),
+        decorationThickness: 2,
+      ),
+    );
 
 class _StepPosition extends StatelessWidget {
   final String? positionText;
@@ -554,12 +559,20 @@ class _StepPosition extends StatelessWidget {
     } else {
       positionWidget = Row(
         children: [
-          Icon(Icons.gps_fixed, size: 16, color: cs.primary),
+          Icon(Icons.gps_fixed, size: 16, color: cs.error),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               positionText!,
-              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: 0.5, color: cs.onSurface),
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                color: cs.error,
+                decoration: TextDecoration.underline,
+                decorationColor: cs.error.withValues(alpha: 0.4),
+                decorationThickness: 2,
+              ),
             ),
           ),
         ],
@@ -570,33 +583,18 @@ class _StepPosition extends StatelessWidget {
       step: 4,
       label: 'POSITION',
       icon: Icons.location_on,
-      iconBg: cs.secondaryContainer,
-      iconColor: cs.onSecondaryContainer,
-      borderColor: cs.secondary,
+      iconBg: cs.errorContainer,
+      iconColor: cs.onErrorContainer,
+      borderColor: cs.error,
       watermarkIcon: Icons.explore,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            'POSITION:',
+            'POSITION: ',
             style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onSurface),
           ),
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: positionText != null
-                  ? cs.primaryContainer.withValues(alpha: 0.4)
-                  : cs.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: positionText != null
-                    ? cs.primary.withValues(alpha: 0.3)
-                    : cs.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            child: positionWidget,
-          ),
+          Expanded(child: positionWidget),
         ],
       ),
     );
@@ -654,10 +652,10 @@ class _StepDistress extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: em.criticalColor,
+                      color: em.errorContainer,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.local_fire_department, color: cs.onError, size: 22),
+                    child: Icon(Icons.local_fire_department, color: em.onErrorContainer, size: 22),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -669,32 +667,27 @@ class _StepDistress extends StatelessWidget {
                           style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 2, color: em.criticalColor),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          'NATURE OF DISTRESS:',
-                          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onSurface),
+                        Text.rich(
+                          TextSpan(
+                            style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700),
+                            children: [_spokenValueSpan(options[selectedIndex], cs)],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 8,
-                          runSpacing: 8,
-                          children: List.generate(options.length, (i) {
-                            final selected = i == selectedIndex;
-                            return GestureDetector(
-                              onTap: () => onSelect(i),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: selected ? em.criticalColor : cs.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(99),
+                          runSpacing: 4,
+                          children: [
+                            for (var i = 0; i < options.length; i++)
+                              if (i != selectedIndex)
+                                GestureDetector(
+                                  onTap: () => onSelect(i),
+                                  child: Text(
+                                    '(${options[i]})',
+                                    style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.onSurfaceVariant),
+                                  ),
                                 ),
-                                child: Text(
-                                  options[i],
-                                  style: Theme.of(context).textTheme.chipLabel.copyWith(color: selected ? cs.onError : cs.onSurfaceVariant),
-                                ),
-                              ),
-                            );
-                          }),
+                          ],
                         ),
                       ],
                     ),
@@ -721,24 +714,17 @@ class _StepCrew extends StatelessWidget {
       // IMO GMDSS protocol term — kept in English per SOLAS/IMO standard.
       label: 'CREW STATUS',
       icon: Icons.groups,
-      iconBg: cs.secondaryContainer,
-      iconColor: cs.onSecondaryContainer,
-      borderColor: cs.secondary,
+      iconBg: cs.errorContainer,
+      iconColor: cs.onErrorContainer,
+      borderColor: cs.error,
       child: Text.rich(
         TextSpan(
           style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface),
           children: [
             const TextSpan(text: 'NUMBER OF PERSONS ON BOARD: '),
-            TextSpan(
-              text: crewCount > 0
-                  ? crewCount.toString().padLeft(2, '0')
-                  : '—',
-              style: TextStyle(
-                color: cs.primary,
-                decoration: TextDecoration.underline,
-                decorationColor: cs.primary.withValues(alpha: 0.4),
-                decorationThickness: 2,
-              ),
+            _spokenValueSpan(
+              crewCount > 0 ? crewCount.toString().padLeft(2, '0') : '—',
+              cs,
             ),
           ],
         ),
@@ -753,48 +739,16 @@ class _StepClosing extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.primary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: cs.onPrimaryContainer, width: 6),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: cs.primary.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: cs.onPrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.mic, color: cs.onPrimary, size: 22),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'STEP 7: CLOSING',
-                style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 2, color: cs.onPrimaryContainer),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'OVER',
-                style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w700, color: cs.onPrimary),
-              ),
-            ],
-          ),
-        ],
+    return _StepCard(
+      step: 7,
+      label: 'CLOSING',
+      icon: Icons.mic,
+      iconBg: cs.errorContainer,
+      iconColor: cs.onErrorContainer,
+      borderColor: cs.error,
+      child: Text(
+        'OVER',
+        style: Theme.of(context).textTheme.titleLarge!.copyWith(fontWeight: FontWeight.w700, color: cs.onSurface),
       ),
     );
   }

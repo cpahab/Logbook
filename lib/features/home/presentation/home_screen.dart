@@ -510,9 +510,8 @@ class _HomeScreenState extends State<HomeScreen> {
               iconBg: cs.primaryContainer,
               iconColor: cs.onPrimaryContainer,
               label: l10n.statDistance,
-              value: totalNm >= 1000
-                  ? '${(totalNm / 1000).toStringAsFixed(1)}k'
-                  : totalNm.toStringAsFixed(0),
+              //value: totalNm.toStringAsFixed(0),
+              value: NumberFormat.decimalPattern(context.read<ThemeProvider>().localeString).format(totalNm.round()),
               unit: 'nm',
               cs: cs,
             ),
