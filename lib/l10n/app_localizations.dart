@@ -923,7 +923,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsEquipmentSection.
   ///
   /// In de, this message translates to:
-  /// **'Ausrüstung'**
+  /// **'Schiffskonfiguration'**
   String get settingsEquipmentSection;
 
   /// No description provided for @settingsEquipmentSlotLabel.
@@ -944,17 +944,23 @@ abstract class AppLocalizations {
   /// **'Hinzufügen'**
   String get settingsEquipmentAddState;
 
-  /// No description provided for @settingsEquipmentClearSlot.
+  /// No description provided for @settingsEquipmentTypeSail.
   ///
   /// In de, this message translates to:
-  /// **'Slot leeren'**
-  String get settingsEquipmentClearSlot;
+  /// **'Segel'**
+  String get settingsEquipmentTypeSail;
 
-  /// No description provided for @settingsEquipmentSlotPlaceholder.
+  /// No description provided for @settingsEquipmentAddType.
   ///
   /// In de, this message translates to:
-  /// **'Slot {n}'**
-  String settingsEquipmentSlotPlaceholder(int n);
+  /// **'{type} hinzufügen'**
+  String settingsEquipmentAddType(String type);
+
+  /// No description provided for @settingsEquipmentDeleteType.
+  ///
+  /// In de, this message translates to:
+  /// **'{type} löschen'**
+  String settingsEquipmentDeleteType(String type);
 
   /// No description provided for @settingsAppearanceSection.
   ///

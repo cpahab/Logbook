@@ -1031,12 +1031,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   // ── Segel (slots 1–10) ───────────────────────────────
-                  Text(l10n.entryDialogSectionSails.toUpperCase(),
+                  Text(l10n.settingsEquipmentTypeSail.toUpperCase(),
                       style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
                   const SizedBox(height: 4),
                   for (int i = 0; i < 10; i++)
                     _EquipmentSlotEditor(
                       slot: config.slots[i],
+                      typeLabel: l10n.settingsEquipmentTypeSail,
                       onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
                     ),
                   const SizedBox(height: 12),
@@ -1046,6 +1047,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 4),
                   _EquipmentSlotEditor(
                     slot: config.slots[10],
+                    typeLabel: l10n.entryDialogMotorLabel,
                     onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
                   ),
                   const SizedBox(height: 12),
@@ -1055,6 +1057,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 4),
                   _EquipmentSlotEditor(
                     slot: config.slots[11],
+                    typeLabel: l10n.entryDialogKeelLabel,
                     onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
                   ),
                 ],
@@ -2338,8 +2341,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 /// dominate the screen before the captain has named any of them.
 class _EquipmentSlotEditor extends StatefulWidget {
   final EquipmentSlot slot;
+  /// The equipment type this slot represents (e.g. "Segel"/"Motor"/"Kiel"),
+  /// used to phrase the add/delete affordances by what they actually do
+  /// ("Segel hinzufügen") instead of a generic "Slot 3".
+  final String typeLabel;
   final ValueChanged<EquipmentSlot> onChanged;
-  const _EquipmentSlotEditor({required this.slot, required this.onChanged});
+  const _EquipmentSlotEditor({required this.slot, required this.typeLabel, required this.onChanged});
 
   @override
   State<_EquipmentSlotEditor> createState() => _EquipmentSlotEditorState();
@@ -2428,10 +2435,10 @@ class _EquipmentSlotEditorState extends State<_EquipmentSlotEditor> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final slotNumber = int.parse(widget.slot.key.substring('slot'.length));
     final isEmpty = widget.slot.label.trim().isEmpty && _states.isEmpty;
-    final headerLabel =
-        widget.slot.label.trim().isEmpty ? l10n.settingsEquipmentSlotPlaceholder(slotNumber) : widget.slot.label;
+    final headerLabel = widget.slot.label.trim().isEmpty
+        ? l10n.settingsEquipmentAddType(widget.typeLabel)
+        : widget.slot.label;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -2522,7 +2529,7 @@ class _EquipmentSlotEditorState extends State<_EquipmentSlotEditor> {
                           minimumSize: const Size(0, 32),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
-                        child: Text(l10n.settingsEquipmentClearSlot),
+                        child: Text(l10n.settingsEquipmentDeleteType(widget.typeLabel)),
                       ),
                     ),
                   ],

@@ -155,14 +155,18 @@
   "settingsFieldLifeRaftHint": "e.g. Cockpit locker, 6-person",
   "settingsFieldEpirbHint": "e.g. Nav station",
   "settingsFieldFireSuppHint": "e.g. Galley, engine room",
-  "settingsEquipmentSection": "Equipment",
+  "settingsEquipmentSection": "Vessel configuration",
   "settingsEquipmentSlotLabel": "Name (e.g. Mainsail)",
   "settingsEquipmentStateLabel": "Add state (e.g. 1st reef)",
   "settingsEquipmentAddState": "Add",
-  "settingsEquipmentClearSlot": "Clear slot",
-  "settingsEquipmentSlotPlaceholder": "Slot {n}",
-  "@settingsEquipmentSlotPlaceholder": {
-    "placeholders": { "n": { "type": "int" } }
+  "settingsEquipmentTypeSail": "Sail",
+  "settingsEquipmentAddType": "Add {type}",
+  "@settingsEquipmentAddType": {
+    "placeholders": { "type": { "type": "String" } }
+  },
+  "settingsEquipmentDeleteType": "Delete {type}",
+  "@settingsEquipmentDeleteType": {
+    "placeholders": { "type": { "type": "String" } }
   },
   "settingsAppearanceSection": "Appearance",
   "settingsThemeLabel": "App theme",

@@ -155,14 +155,18 @@
   "settingsFieldLifeRaftHint": "z.B. Cockpitfach, 6 Personen",
   "settingsFieldEpirbHint": "z.B. Navigationstisch",
   "settingsFieldFireSuppHint": "z.B. Kombüse, Motorraum",
-  "settingsEquipmentSection": "Ausrüstung",
+  "settingsEquipmentSection": "Schiffskonfiguration",
   "settingsEquipmentSlotLabel": "Bezeichnung (z.B. Grosssegel)",
   "settingsEquipmentStateLabel": "Zustand hinzufügen (z.B. 1. Reff)",
   "settingsEquipmentAddState": "Hinzufügen",
-  "settingsEquipmentClearSlot": "Slot leeren",
-  "settingsEquipmentSlotPlaceholder": "Slot {n}",
-  "@settingsEquipmentSlotPlaceholder": {
-    "placeholders": { "n": { "type": "int" } }
+  "settingsEquipmentTypeSail": "Segel",
+  "settingsEquipmentAddType": "{type} hinzufügen",
+  "@settingsEquipmentAddType": {
+    "placeholders": { "type": { "type": "String" } }
+  },
+  "settingsEquipmentDeleteType": "{type} löschen",
+  "@settingsEquipmentDeleteType": {
+    "placeholders": { "type": { "type": "String" } }
   },
   "settingsAppearanceSection": "Darstellung",
   "settingsThemeLabel": "App-Design",

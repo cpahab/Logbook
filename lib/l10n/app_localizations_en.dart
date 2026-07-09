@@ -424,7 +424,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsFieldFireSuppHint => 'e.g. Galley, engine room';
 
   @override
-  String get settingsEquipmentSection => 'Equipment';
+  String get settingsEquipmentSection => 'Vessel configuration';
 
   @override
   String get settingsEquipmentSlotLabel => 'Name (e.g. Mainsail)';
@@ -436,11 +436,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEquipmentAddState => 'Add';
 
   @override
-  String get settingsEquipmentClearSlot => 'Clear slot';
+  String get settingsEquipmentTypeSail => 'Sail';
 
   @override
-  String settingsEquipmentSlotPlaceholder(int n) {
-    return 'Slot $n';
+  String settingsEquipmentAddType(String type) {
+    return 'Add $type';
+  }
+
+  @override
+  String settingsEquipmentDeleteType(String type) {
+    return 'Delete $type';
   }
 
   @override

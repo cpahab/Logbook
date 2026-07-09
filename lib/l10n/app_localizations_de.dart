@@ -424,7 +424,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsFieldFireSuppHint => 'z.B. Kombüse, Motorraum';
 
   @override
-  String get settingsEquipmentSection => 'Ausrüstung';
+  String get settingsEquipmentSection => 'Schiffskonfiguration';
 
   @override
   String get settingsEquipmentSlotLabel => 'Bezeichnung (z.B. Grosssegel)';
@@ -436,11 +436,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsEquipmentAddState => 'Hinzufügen';
 
   @override
-  String get settingsEquipmentClearSlot => 'Slot leeren';
+  String get settingsEquipmentTypeSail => 'Segel';
 
   @override
-  String settingsEquipmentSlotPlaceholder(int n) {
-    return 'Slot $n';
+  String settingsEquipmentAddType(String type) {
+    return '$type hinzufügen';
+  }
+
+  @override
+  String settingsEquipmentDeleteType(String type) {
+    return '$type löschen';
   }
 
   @override
