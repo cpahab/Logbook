@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +18,7 @@ import '../../../core/services/storage_service.dart';
 import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/domain/vessel_equipment.dart';
+import '../../home/utils/equipment_migration.dart';
 import '../../home/utils/filter_settings.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../../app/theme/theme_extensions.dart';
@@ -811,6 +813,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildEquipmentSection(p, cs),
             const SizedBox(height: 16),
 
+            // ── DEBUG: one-time legacy equipment migration ─────────────
+            // Temporary — delete this block together with
+            // equipment_migration.dart once every device has run it and the
+            // migrated entries have been confirmed correct.
+            if (kDebugMode) ...[
+              _buildLegacyMigrationButton(cs),
+              const SizedBox(height: 16),
+            ],
+
             // ── Track Filter ──────────────────────────────────────────
             _buildTrackFilterSection(p, cs),
             const SizedBox(height: 16),
@@ -1066,6 +1077,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  // ── DEBUG: one-time legacy equipment migration ──────────────────────
+  /// Temporary — delete together with [migrateLegacyEquipmentFields] and its
+  /// call site above once every device has run this and the migrated
+  /// entries have been confirmed correct.
+  Widget _buildLegacyMigrationButton(ColorScheme cs) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _runLegacyEquipmentMigration(context),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: cs.error,
+          side: BorderSide(color: cs.error.withValues(alpha: 0.4)),
+        ),
+        icon: const Icon(Icons.build_outlined, size: 18),
+        label: const Text('DEBUG: Migrate legacy equipment fields'),
+      ),
+    );
+  }
+
+  /// Runs [migrateLegacyEquipmentFields] and reports how many timeline
+  /// entries it touched. Idempotent — safe to tap more than once.
+  void _runLegacyEquipmentMigration(BuildContext context) {
+    final repo = context.read<HomeRepository>();
+    final l10n = context.l10n;
+    final count = migrateLegacyEquipmentFields(repo, l10n);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Migrated $count timeline entries.')),
     );
   }
 
