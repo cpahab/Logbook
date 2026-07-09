@@ -2907,15 +2907,36 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     repo.addTimelineEntry(day, result.entry);
   }
 
+  /// Finds [t]'s position within [timeline] by reference (the common,
+  /// cheap case), falling back to matching `createdAt` (stable across
+  /// edits, unlike list position) if a Firestore sync round-trip has
+  /// already replaced the object graph with freshly deserialized instances.
+  /// Returns -1 if [t] genuinely isn't present.
+  int _indexOfTimelineEntry(List<TimelineEntry> timeline, TimelineEntry t) {
+    final byReference = timeline.indexOf(t);
+    if (byReference != -1) return byReference;
+    if (t.createdAt == null) return -1;
+    return timeline.indexWhere((e) => e.createdAt == t.createdAt);
+  }
+
   /// Removes [t] from the timeline, offering an "undo" snackbar action that
   /// re-inserts it at its original index.
   void _deleteTimelineEntry(DayEntry entry, TimelineEntry t) {
-    final index = entry.timeline.indexOf(t);
+    final repo = context.read<HomeRepository>();
+    final date = entry.date;
+    // Re-fetch rather than trust the passed-in `entry`: the debounced
+    // Firestore sync (~2s after any edit) always echoes back a freshly
+    // deserialized DayEntry that replaces this one in the repository. Saving
+    // a stale reference throws HiveError ("This object is currently not in a
+    // box"); matching `t` by identity against a fresh object graph also
+    // silently fails, hence _indexOfTimelineEntry's createdAt fallback.
+    final current = repo.getEntry(date) ?? entry;
+    final index = _indexOfTimelineEntry(current.timeline, t);
+    if (index == -1) return;
     setState(() {
-      entry.timeline.remove(t);
-      final repo = context.read<HomeRepository>();
-      repo.syncKeelFromTimeline(entry);
-      repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
+      current.timeline.removeAt(index);
+      repo.syncKeelFromTimeline(current);
+      repo.saveEntry(current, changedFields: {'timeline', 'keelDown'});
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(context.l10n.dayEntryDeleted),
@@ -2932,12 +2953,17 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         label: context.l10n.dayUndo,
         onPressed: () {
           if (!mounted) return;
+          final repo = context.read<HomeRepository>();
+          // Same staleness risk as above, now certain: the 10s snackbar
+          // window is always longer than the 2s debounce, so the echo has
+          // essentially always already landed by the time this fires.
+          final current = repo.getEntry(date);
+          if (current == null) return;
           setState(() {
-            entry.timeline.insert(index.clamp(0, entry.timeline.length), t);
-            entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-            final repo = context.read<HomeRepository>();
-            repo.syncKeelFromTimeline(entry);
-            repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
+            current.timeline.insert(index.clamp(0, current.timeline.length), t);
+            current.timeline.sort((a, b) => a.time.compareTo(b.time));
+            repo.syncKeelFromTimeline(current);
+            repo.saveEntry(current, changedFields: {'timeline', 'keelDown'});
           });
         },
       ),
@@ -2995,13 +3021,19 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         ..add(snapshot);
     }
     setState(() {
-      final index = entry.timeline.indexOf(t);
+      final repo = context.read<HomeRepository>();
+      // Re-fetch rather than trust the captured `entry`: the dialog above
+      // was just awaited for as long as the user took to fill it in, plenty
+      // of time for the debounced Firestore sync to have echoed back a
+      // fresh DayEntry and replaced this one — see _deleteTimelineEntry for
+      // the full explanation of why saving a stale reference throws.
+      final current = repo.getEntry(entry.date) ?? entry;
+      final index = _indexOfTimelineEntry(current.timeline, t);
       if (index != -1) {
-        entry.timeline[index] = updated;
-        entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-        final repo = context.read<HomeRepository>();
-        repo.syncKeelFromTimeline(entry);
-        repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
+        current.timeline[index] = updated;
+        current.timeline.sort((a, b) => a.time.compareTo(b.time));
+        repo.syncKeelFromTimeline(current);
+        repo.saveEntry(current, changedFields: {'timeline', 'keelDown'});
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
