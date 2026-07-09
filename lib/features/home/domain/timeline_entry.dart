@@ -69,6 +69,25 @@ class TimelineEntry extends HiveObject {
   @HiveField(20)
   List<TimelineAmendment> amendments;
 
+  // Slots 1–10: sails (user-defined names and states).
+  // Stores the user-defined state label chosen at entry time; null if not recorded.
+  @HiveField(21) String? slot1State;   // typically main sail
+  @HiveField(22) String? slot2State;   // typically jib / foresail
+  @HiveField(23) String? slot3State;
+  @HiveField(24) String? slot4State;
+  @HiveField(25) String? slot5State;
+  @HiveField(26) String? slot6State;
+  @HiveField(27) String? slot7State;
+  @HiveField(28) String? slot8State;
+  @HiveField(29) String? slot9State;
+  @HiveField(30) String? slot10State;
+
+  // Slot 11: motor / engine.
+  @HiveField(31) String? slot11State;
+
+  // Slot 12: keel.
+  @HiveField(32) String? slot12State;
+
   TimelineEntry({
     required this.time,
     this.course,
@@ -85,5 +104,17 @@ class TimelineEntry extends HiveObject {
     this.createdAt,
     this.updatedAt,
     List<TimelineAmendment>? amendments,
+    this.slot1State,
+    this.slot2State,
+    this.slot3State,
+    this.slot4State,
+    this.slot5State,
+    this.slot6State,
+    this.slot7State,
+    this.slot8State,
+    this.slot9State,
+    this.slot10State,
+    this.slot11State,
+    this.slot12State,
   }) : amendments = amendments ?? [];
 }
