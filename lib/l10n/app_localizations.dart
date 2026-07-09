@@ -584,11 +584,11 @@ abstract class AppLocalizations {
   /// **'Umgebung'**
   String get entryDialogSectionEnv;
 
-  /// No description provided for @entryDialogSectionSails.
+  /// No description provided for @entryDialogSectionVessel.
   ///
   /// In de, this message translates to:
-  /// **'Segel & Motor'**
-  String get entryDialogSectionSails;
+  /// **'Schiff'**
+  String get entryDialogSectionVessel;
 
   /// No description provided for @entryDialogSectionRemarks.
   ///

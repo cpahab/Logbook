@@ -252,7 +252,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get entryDialogSectionEnv => 'Umgebung';
 
   @override
-  String get entryDialogSectionSails => 'Segel & Motor';
+  String get entryDialogSectionVessel => 'Schiff';
 
   @override
   String get entryDialogSectionRemarks => 'Bemerkungen';

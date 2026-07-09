@@ -6,7 +6,6 @@ import '../../settings/domain/theme_provider.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/vessel_equipment.dart';
 import '../utils/sail_state_utils.dart';
-import '../../../l10n/app_localizations.dart';
 import '../../../l10n/l10n_extension.dart';
 
 /// Return value from [AddTimelineEntryDialog].
@@ -506,7 +505,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                   if (activeSlots.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     // ── 4. Ausrüstung ────────────────────────────────────
-                    _sectionHeader(Icons.sailing, _equipmentSectionTitle(activeSlots, l10n), cs),
+                    _sectionHeader(Icons.directions_boat_outlined, l10n.entryDialogSectionVessel, cs),
                     const SizedBox(height: 8),
                     // Sails, motor, and keel are visually distinct kinds of
                     // equipment, so each gets its own card instead of one
@@ -795,18 +794,6 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
 
   EquipmentSlot? _keelSlot(List<EquipmentSlot> activeSlots) =>
       activeSlots.where((s) => s.key == 'slot12').firstOrNull;
-
-  /// Section header text, built from whichever of sails/motor/keel are
-  /// actually configured — e.g. "Segel & Motor & Kiel" on a full sloop, just
-  /// "Kiel" on a motorboat with a lifting keel and no other equipment named.
-  String _equipmentSectionTitle(List<EquipmentSlot> activeSlots, AppLocalizations l10n) {
-    final parts = <String>[
-      if (_sailSlots(activeSlots).isNotEmpty) l10n.pdfSailsCol,
-      if (_motorSlot(activeSlots) != null) l10n.entryDialogMotorLabel,
-      if (_keelSlot(activeSlots) != null) l10n.entryDialogKeelLabel,
-    ];
-    return parts.join(' & ');
-  }
 
   /// A card holding one or more equipment [slots] (sails, or the single
   /// motor/keel slot), each rendered via [_equipmentSlotRow]. [activeSlots]

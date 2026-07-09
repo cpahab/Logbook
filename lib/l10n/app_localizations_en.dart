@@ -252,7 +252,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get entryDialogSectionEnv => 'Environment';
 
   @override
-  String get entryDialogSectionSails => 'Sails & Engine';
+  String get entryDialogSectionVessel => 'Vessel';
 
   @override
   String get entryDialogSectionRemarks => 'Remarks';

@@ -90,7 +90,7 @@
   "entryDialogSectionTime": "Chronometry",
   "entryDialogSectionNav": "Navigation",
   "entryDialogSectionEnv": "Environment",
-  "entryDialogSectionSails": "Sails & Engine",
+  "entryDialogSectionVessel": "Vessel",
   "entryDialogSectionRemarks": "Remarks",
   "entryDialogTimeLabel": "Time",
   "entryDialogCourseLabel": "Course (°)",
