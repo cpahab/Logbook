@@ -70,18 +70,31 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   final Map<String, String?> _slotState = {};
 
   // How many active equipment slots (in configured order — typically main
-  // sail, jib) get their full chip row shown at all times. Any further slots
-  // are collapsed to a one-line summary that expands on tap, so a vessel
-  // with many named sails doesn't turn this dialog into a long scroll.
+  // sail, jib) get their full chip row shown at all times; any further sail
+  // slots collapse to a one-line summary that expands on tap, so a vessel
+  // with many named sails doesn't turn this dialog into a long scroll. Motor
+  // and keel (slot11/slot12) are always shown expanded, independent of this
+  // count — they're not "sails" and every boat has at most one of each, so
+  // there's no scaling problem to solve for them.
   //
   // To revert to "always show every slot expanded": set this to a very high
   // number (e.g. 99) — no other changes needed, _collapsibleSlotRow simply
   // never gets used. To remove the feature entirely, delete this constant,
   // _expandedSlotKeys, and _collapsibleSlotRow, and go back to rendering
-  // every entry in activeSlots the way the first _alwaysExpandedSlotCount
-  // ones are rendered below.
-  static const _alwaysExpandedSlotCount = 2;
+  // every entry in activeSlots the way the always-expanded ones are
+  // rendered below.
+  static const _alwaysExpandedSailCount = 2;
   final Set<String> _expandedSlotKeys = {};
+
+  /// True for [slot]s that always get a full expanded chip row, regardless
+  /// of [_expandedSlotKeys] — motor/keel, plus the first
+  /// [_alwaysExpandedSailCount] sail slots in [activeSlots] order.
+  bool _isAlwaysExpanded(EquipmentSlot slot, List<EquipmentSlot> activeSlots) {
+    if (slot.key == 'slot11' || slot.key == 'slot12') return true;
+    final sailIndex =
+        activeSlots.where((s) => s.key != 'slot11' && s.key != 'slot12').toList().indexOf(slot);
+    return sailIndex < _alwaysExpandedSailCount;
+  }
 
   static const _windDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
@@ -502,7 +515,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         children: [
                           for (int i = 0; i < activeSlots.length; i++) ...[
                             if (i > 0) const SizedBox(height: 10),
-                            if (i < _alwaysExpandedSlotCount) ...[
+                            if (_isAlwaysExpanded(activeSlots[i], activeSlots)) ...[
                               _labelSm(activeSlots[i].label, cs),
                               const SizedBox(height: 6),
                               _equipmentChips(
@@ -806,7 +819,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   }
 
   /// Space-saving alternative to the always-expanded label+chips block above,
-  /// used for equipment slots beyond [_alwaysExpandedSlotCount]. Collapsed,
+  /// used for any slot where [_isAlwaysExpanded] is false. Collapsed,
   /// it's a single tappable line showing the slot's name and current
   /// selection (or a muted dash); tapping it reveals the full [_equipmentChips]
   /// row, which collapses itself again as soon as a state is picked.
