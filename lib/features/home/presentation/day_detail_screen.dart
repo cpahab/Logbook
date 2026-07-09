@@ -2923,6 +2923,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       // it needs enough time to notice, read, and react — still well within
       // Material's own guidance of 4-10s for actionable snackbars.
       duration: const Duration(seconds: 10),
+      // SnackBar defaults `persist` to true whenever `action` is set (see
+      // its own doc comment), which makes it ignore `duration` entirely and
+      // stay open until manually dismissed. Without this, the 10s above is
+      // a no-op — the snackbar just... never times out.
+      persist: false,
       action: SnackBarAction(
         label: context.l10n.dayUndo,
         onPressed: () {
