@@ -424,6 +424,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsFieldFireSuppHint => 'e.g. Galley, engine room';
 
   @override
+  String get settingsEquipmentSection => 'Equipment';
+
+  @override
+  String get settingsEquipmentSlotLabel => 'Name (e.g. Mainsail)';
+
+  @override
+  String get settingsEquipmentStateLabel => 'Add state (e.g. 1st reef)';
+
+  @override
+  String get settingsEquipmentAddState => 'Add';
+
+  @override
+  String get settingsEquipmentClearSlot => 'Clear slot';
+
+  @override
+  String settingsEquipmentSlotPlaceholder(int n) {
+    return 'Slot $n';
+  }
+
+  @override
   String get settingsAppearanceSection => 'Appearance';
 
   @override

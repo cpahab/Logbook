@@ -155,6 +155,15 @@
   "settingsFieldLifeRaftHint": "z.B. Cockpitfach, 6 Personen",
   "settingsFieldEpirbHint": "z.B. Navigationstisch",
   "settingsFieldFireSuppHint": "z.B. Kombüse, Motorraum",
+  "settingsEquipmentSection": "Ausrüstung",
+  "settingsEquipmentSlotLabel": "Bezeichnung (z.B. Grosssegel)",
+  "settingsEquipmentStateLabel": "Zustand hinzufügen (z.B. 1. Reff)",
+  "settingsEquipmentAddState": "Hinzufügen",
+  "settingsEquipmentClearSlot": "Slot leeren",
+  "settingsEquipmentSlotPlaceholder": "Slot {n}",
+  "@settingsEquipmentSlotPlaceholder": {
+    "placeholders": { "n": { "type": "int" } }
+  },
   "settingsAppearanceSection": "Darstellung",
   "settingsThemeLabel": "App-Design",
   "settingsThemeSystem": "System",

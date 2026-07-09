@@ -424,6 +424,26 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsFieldFireSuppHint => 'z.B. Kombüse, Motorraum';
 
   @override
+  String get settingsEquipmentSection => 'Ausrüstung';
+
+  @override
+  String get settingsEquipmentSlotLabel => 'Bezeichnung (z.B. Grosssegel)';
+
+  @override
+  String get settingsEquipmentStateLabel => 'Zustand hinzufügen (z.B. 1. Reff)';
+
+  @override
+  String get settingsEquipmentAddState => 'Hinzufügen';
+
+  @override
+  String get settingsEquipmentClearSlot => 'Slot leeren';
+
+  @override
+  String settingsEquipmentSlotPlaceholder(int n) {
+    return 'Slot $n';
+  }
+
+  @override
   String get settingsAppearanceSection => 'Darstellung';
 
   @override

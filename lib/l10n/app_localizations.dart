@@ -920,6 +920,42 @@ abstract class AppLocalizations {
   /// **'z.B. Kombüse, Motorraum'**
   String get settingsFieldFireSuppHint;
 
+  /// No description provided for @settingsEquipmentSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Ausrüstung'**
+  String get settingsEquipmentSection;
+
+  /// No description provided for @settingsEquipmentSlotLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Bezeichnung (z.B. Grosssegel)'**
+  String get settingsEquipmentSlotLabel;
+
+  /// No description provided for @settingsEquipmentStateLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Zustand hinzufügen (z.B. 1. Reff)'**
+  String get settingsEquipmentStateLabel;
+
+  /// No description provided for @settingsEquipmentAddState.
+  ///
+  /// In de, this message translates to:
+  /// **'Hinzufügen'**
+  String get settingsEquipmentAddState;
+
+  /// No description provided for @settingsEquipmentClearSlot.
+  ///
+  /// In de, this message translates to:
+  /// **'Slot leeren'**
+  String get settingsEquipmentClearSlot;
+
+  /// No description provided for @settingsEquipmentSlotPlaceholder.
+  ///
+  /// In de, this message translates to:
+  /// **'Slot {n}'**
+  String settingsEquipmentSlotPlaceholder(int n);
+
   /// No description provided for @settingsAppearanceSection.
   ///
   /// In de, this message translates to:
