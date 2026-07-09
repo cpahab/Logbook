@@ -20,6 +20,7 @@ import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import '../domain/crew_member.dart';
 import '../domain/timeline_amendment.dart';
+import '../domain/vessel_equipment.dart';
 import '../widgets/add_timeline_entry_dialog.dart';
 import '../widgets/add_crew_member_dialog.dart';
 import '../widgets/crew_picker_sheet.dart';
@@ -90,6 +91,52 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     'sail:furled'  => l10n.sailFurled,
     _              => s, // unreachable: grossState/fockState are always one of the sentinels above
   };
+
+  /// Looks up the recorded state for one configurable equipment [slot] on
+  /// [t] by its fixed storage key ('slot1' … 'slot12').
+  static String? _slotValue(TimelineEntry t, String key) => switch (key) {
+    'slot1'  => t.slot1State,
+    'slot2'  => t.slot2State,
+    'slot3'  => t.slot3State,
+    'slot4'  => t.slot4State,
+    'slot5'  => t.slot5State,
+    'slot6'  => t.slot6State,
+    'slot7'  => t.slot7State,
+    'slot8'  => t.slot8State,
+    'slot9'  => t.slot9State,
+    'slot10' => t.slot10State,
+    'slot11' => t.slot11State,
+    'slot12' => t.slot12State,
+    _        => null,
+  };
+
+  /// Builds one display line per active equipment [slot] with a recorded
+  /// state on [t] ("Label: state"). Falls back to the legacy grossState/
+  /// fockState/motorOn fields when none of the new slot fields are set, so
+  /// entries created before this feature still show their sail/motor state.
+  static List<String> _equipmentStatusLines(
+      TimelineEntry t, List<EquipmentSlot> activeSlots, AppLocalizations l10n) {
+    final lines = <String>[];
+    for (final slot in activeSlots) {
+      final val = _slotValue(t, slot.key);
+      if (val != null) lines.add('${slot.label}: $val');
+    }
+    if (lines.isEmpty) {
+      if (t.grossState != null) {
+        lines.add('${l10n.dataMainSail}: ${_sailStateDisplay(t.grossState!, l10n)}');
+      }
+      if (t.fockState != null) {
+        lines.add('${l10n.dataJibSail}: ${_sailStateDisplay(t.fockState!, l10n)}');
+      }
+      if (t.motorOn != null) {
+        lines.add('${l10n.dataMotor}: ${t.motorOn! ? l10n.on : l10n.off}');
+      }
+      if (t.keelDown != null) {
+        lines.add('${l10n.entryDialogKeelLabel}: ${t.keelDown! ? l10n.vesselKeelDown : l10n.vesselKeelUp}');
+      }
+    }
+    return lines;
+  }
 
   /// Renders a `vs:` vessel-status sentinel note into its localised display string.
   static String _vesselStatusDisplay(String note, AppLocalizations l10n) =>
@@ -1228,7 +1275,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 t.weather != null ||
                 t.grossState != null ||
                 t.fockState != null ||
-                t.motorOn != null) ...[
+                t.motorOn != null ||
+                VesselEquipmentConfig.slotKeys.any((k) => _slotValue(t, k) != null)) ...[
               const SizedBox(height: 8),
               Text(
                 [
@@ -1239,10 +1287,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   if (t.wind != null) '${context.l10n.dataWind}: ${t.wind!}',
                   if (t.sea != null) '${context.l10n.dataSea}: ${t.sea!}',
                   if (t.weather != null) '${context.l10n.dataWeather}: ${t.weather!}',
-                  if (t.grossState != null) '${context.l10n.dataMainSail}: ${_sailStateDisplay(t.grossState!, context.l10n)}',
-                  if (t.fockState != null) '${context.l10n.dataJibSail}: ${_sailStateDisplay(t.fockState!, context.l10n)}',
-                  if (t.motorOn != null)
-                    '${context.l10n.dataMotor}: ${t.motorOn! ? context.l10n.on : context.l10n.off}',
+                  ..._equipmentStatusLines(
+                      t, context.read<ThemeProvider>().vesselEquipment.activeSlots, context.l10n),
                 ].join(' · '),
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: cs.onSurfaceVariant,
@@ -2123,7 +2169,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           behavior: HitTestBehavior.opaque,
           onTap: () => _dropMarker(
             LatLng(p.lat, p.lon),
-            _buildEntryTooltip(t, context.l10n),
+            _buildEntryTooltip(t, context.l10n,
+                context.read<ThemeProvider>().vesselEquipment.activeSlots),
           ),
           child: Center(
             child: Container(
@@ -3569,7 +3616,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
           behavior: HitTestBehavior.opaque,
           onTap: () => _dropMarker(
             LatLng(p.lat, p.lon),
-            _buildEntryTooltip(t, context.l10n),
+            _buildEntryTooltip(t, context.l10n,
+                context.read<ThemeProvider>().vesselEquipment.activeSlots),
           ),
           child: Center(child: Container(
             width: 11, height: 11,
@@ -3825,7 +3873,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
 // ── Shared map helpers ────────────────────────────────────────────────────────
 
 /// Full timeline entry as a multi-line tooltip string.
-String _buildEntryTooltip(TimelineEntry t, AppLocalizations l10n) {
+String _buildEntryTooltip(
+    TimelineEntry t, AppLocalizations l10n, List<EquipmentSlot> activeSlots) {
   final buf = StringBuffer(DateFormat('HH:mm').format(t.time.toLocal()));
 
   final nav = <String>[];
@@ -3842,11 +3891,7 @@ String _buildEntryTooltip(TimelineEntry t, AppLocalizations l10n) {
   if (t.weather?.isNotEmpty == true) cond.add('${l10n.entryDialogWeatherLabel}: ${t.weather!}');
   if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
 
-  final sails = <String>[];
-  if (t.grossState?.isNotEmpty == true) sails.add('${l10n.dataMainSail}: ${_DayDetailScreenState._sailStateDisplay(t.grossState!, l10n)}');
-  if (t.fockState?.isNotEmpty  == true) sails.add('${l10n.dataJibSail}: ${_DayDetailScreenState._sailStateDisplay(t.fockState!, l10n)}');
-  if (t.motorOn  != null) sails.add('${l10n.entryDialogMotorLabel}: ${t.motorOn! ? l10n.on : l10n.off}');
-  if (t.keelDown != null) sails.add('${l10n.entryDialogKeelLabel}: ${t.keelDown! ? l10n.vesselKeelDown : l10n.vesselKeelUp}');
+  final sails = _DayDetailScreenState._equipmentStatusLines(t, activeSlots, l10n);
   if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
 
   if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');
