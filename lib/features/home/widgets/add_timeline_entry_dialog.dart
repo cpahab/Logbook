@@ -69,6 +69,20 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   String  _windDir  = 'N';
   final Map<String, String?> _slotState = {};
 
+  // How many active equipment slots (in configured order — typically main
+  // sail, jib) get their full chip row shown at all times. Any further slots
+  // are collapsed to a one-line summary that expands on tap, so a vessel
+  // with many named sails doesn't turn this dialog into a long scroll.
+  //
+  // To revert to "always show every slot expanded": set this to a very high
+  // number (e.g. 99) — no other changes needed, _collapsibleSlotRow simply
+  // never gets used. To remove the feature entirely, delete this constant,
+  // _expandedSlotKeys, and _collapsibleSlotRow, and go back to rendering
+  // every entry in activeSlots the way the first _alwaysExpandedSlotCount
+  // ones are rendered below.
+  static const _alwaysExpandedSlotCount = 2;
+  final Set<String> _expandedSlotKeys = {};
+
   static const _windDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
   @override
@@ -469,15 +483,18 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                         children: [
                           for (int i = 0; i < activeSlots.length; i++) ...[
                             if (i > 0) const SizedBox(height: 10),
-                            _labelSm(activeSlots[i].label, cs),
-                            const SizedBox(height: 6),
-                            _equipmentChips(
-                              slot: activeSlots[i],
-                              selected: _slotState[activeSlots[i].key],
-                              onSelect: (v) =>
-                                  setState(() => _slotState[activeSlots[i].key] = v),
-                              cs: cs,
-                            ),
+                            if (i < _alwaysExpandedSlotCount) ...[
+                              _labelSm(activeSlots[i].label, cs),
+                              const SizedBox(height: 6),
+                              _equipmentChips(
+                                slot: activeSlots[i],
+                                selected: _slotState[activeSlots[i].key],
+                                onSelect: (v) =>
+                                    setState(() => _slotState[activeSlots[i].key] = v),
+                                cs: cs,
+                              ),
+                            ] else
+                              _collapsibleSlotRow(slot: activeSlots[i], cs: cs),
                           ],
                         ],
                       ),
@@ -766,6 +783,68 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                 cs,
               ))
           .toList(),
+    );
+  }
+
+  /// Space-saving alternative to the always-expanded label+chips block above,
+  /// used for equipment slots beyond [_alwaysExpandedSlotCount]. Collapsed,
+  /// it's a single tappable line showing the slot's name and current
+  /// selection (or a muted dash); tapping it reveals the full [_equipmentChips]
+  /// row, which collapses itself again as soon as a state is picked.
+  Widget _collapsibleSlotRow({required EquipmentSlot slot, required ColorScheme cs}) {
+    final expanded = _expandedSlotKeys.contains(slot.key);
+    final selected = _slotState[slot.key];
+
+    if (!expanded) {
+      return GestureDetector(
+        onTap: () => setState(() => _expandedSlotKeys.add(slot.key)),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                    text: '${slot.label}: ',
+                    style: Theme.of(context).textTheme.microLabel.copyWith(color: cs.mutedLabel),
+                  ),
+                  TextSpan(
+                    text: selected ?? '—',
+                    style: Theme.of(context).textTheme.chipLabel.copyWith(
+                      color: selected == null ? cs.outline : cs.onSurface,
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+            Icon(Icons.expand_more, size: 18, color: cs.outlineVariant),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _expandedSlotKeys.remove(slot.key)),
+          child: Row(
+            children: [
+              Expanded(child: _labelSm(slot.label, cs)),
+              Icon(Icons.expand_less, size: 18, color: cs.outlineVariant),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        _equipmentChips(
+          slot: slot,
+          selected: selected,
+          onSelect: (v) => setState(() {
+            _slotState[slot.key] = v;
+            _expandedSlotKeys.remove(slot.key);
+          }),
+          cs: cs,
+        ),
+      ],
     );
   }
 
