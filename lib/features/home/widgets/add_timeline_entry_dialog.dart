@@ -69,32 +69,31 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   String  _windDir  = 'N';
   final Map<String, String?> _slotState = {};
 
-  // How many active equipment slots (in configured order — typically main
-  // sail, jib) get their full chip row shown at all times; any further sail
-  // slots collapse to a one-line summary that expands on tap, so a vessel
-  // with many named sails doesn't turn this dialog into a long scroll. Motor
-  // and keel (slot11/slot12) are always shown expanded, independent of this
-  // count — they're not "sails" and every boat has at most one of each, so
-  // there's no scaling problem to solve for them.
+  // How many active equipment slots (in configured order) get their full
+  // chip row shown at all times; every slot beyond that — sails, motor,
+  // keel alike — collapses to a one-line summary that expands on tap, so
+  // the dialog stays short regardless of how much equipment is configured.
+  // 0 means every slot folds; the current value shown when opening an entry
+  // (main/jib's last picked state, motor on/off, keel up/down) is still
+  // visible at a glance on the collapsed summary line, so nothing is hidden
+  // — folding only costs a tap when you're about to *change* a value.
   //
-  // To revert to "always show every slot expanded": set this to a very high
-  // number (e.g. 99) — no other changes needed, _collapsibleSlotRow simply
-  // never gets used. To remove the feature entirely, delete this constant,
-  // _expandedSlotKeys, and _collapsibleSlotRow, and go back to rendering
-  // every entry in activeSlots the way the always-expanded ones are
-  // rendered below.
-  static const _alwaysExpandedSailCount = 2;
+  // To revert to "always show the first N slots expanded": set this back to
+  // that N — no other changes needed. To remove the feature entirely,
+  // delete this constant, _expandedSlotKeys, and _collapsibleSlotRow, and go
+  // back to rendering every entry in activeSlots the way the always-expanded
+  // ones are rendered below.
+  static const _alwaysExpandedSlotCount = 0;
   final Set<String> _expandedSlotKeys = {};
 
   /// True for [slot]s that always get a full expanded chip row, regardless
-  /// of [_expandedSlotKeys] — motor/keel, plus the first
-  /// [_alwaysExpandedSailCount] sail slots in [activeSlots] order.
-  bool _isAlwaysExpanded(EquipmentSlot slot, List<EquipmentSlot> activeSlots) {
-    if (slot.key == 'slot11' || slot.key == 'slot12') return true;
-    final sailIndex =
-        activeSlots.where((s) => s.key != 'slot11' && s.key != 'slot12').toList().indexOf(slot);
-    return sailIndex < _alwaysExpandedSailCount;
-  }
+  /// of [_expandedSlotKeys] — the first [_alwaysExpandedSlotCount] slots in
+  /// [activeSlots] order.
+  // indexOf's *position* is compared against a threshold that's currently 0
+  // but meant to be raised again later; a literal contains() check would
+  // only work for this one value.
+  bool _isAlwaysExpanded(EquipmentSlot slot, List<EquipmentSlot> activeSlots) =>
+      activeSlots.indexOf(slot) < _alwaysExpandedSlotCount; // ignore: prefer_contains
 
   static const _windDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 
