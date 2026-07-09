@@ -156,6 +156,7 @@
   "settingsFieldEpirbHint": "e.g. Nav station",
   "settingsFieldFireSuppHint": "e.g. Galley, engine room",
   "settingsEquipmentSection": "Vessel configuration",
+  "settingsEquipmentInfo": "Configure which sail, motor, and keel states can be used for logbook entries.",
   "settingsEquipmentSlotLabel": "Name (e.g. Mainsail)",
   "settingsEquipmentStateLabel": "Add state (e.g. 1st reef)",
   "settingsEquipmentAddState": "Add",

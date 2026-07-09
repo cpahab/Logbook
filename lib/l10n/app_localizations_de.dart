@@ -427,6 +427,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsEquipmentSection => 'Schiffskonfiguration';
 
   @override
+  String get settingsEquipmentInfo =>
+      'Lege fest, welche Segel-, Motor- und Kielzustände für Logbucheinträge verwendet werden können.';
+
+  @override
   String get settingsEquipmentSlotLabel => 'Bezeichnung (z.B. Grosssegel)';
 
   @override

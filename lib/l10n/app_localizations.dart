@@ -926,6 +926,12 @@ abstract class AppLocalizations {
   /// **'Schiffskonfiguration'**
   String get settingsEquipmentSection;
 
+  /// No description provided for @settingsEquipmentInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege fest, welche Segel-, Motor- und Kielzustände für Logbucheinträge verwendet werden können.'**
+  String get settingsEquipmentInfo;
+
   /// No description provided for @settingsEquipmentSlotLabel.
   ///
   /// In de, this message translates to:

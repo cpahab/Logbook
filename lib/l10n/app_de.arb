@@ -156,6 +156,7 @@
   "settingsFieldEpirbHint": "z.B. Navigationstisch",
   "settingsFieldFireSuppHint": "z.B. Kombüse, Motorraum",
   "settingsEquipmentSection": "Schiffskonfiguration",
+  "settingsEquipmentInfo": "Lege fest, welche Segel-, Motor- und Kielzustände für Logbucheinträge verwendet werden können.",
   "settingsEquipmentSlotLabel": "Bezeichnung (z.B. Grosssegel)",
   "settingsEquipmentStateLabel": "Zustand hinzufügen (z.B. 1. Reff)",
   "settingsEquipmentAddState": "Hinzufügen",

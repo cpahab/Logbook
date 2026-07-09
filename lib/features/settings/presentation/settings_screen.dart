@@ -49,6 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _fireSuppCtrl;
   bool _syncing = false;
   bool _trackFilterExpanded = false;
+  bool _equipmentExpanded = false;
   List<Map<String, dynamic>> _logbooks = [];
   bool _loadingLogbooks = false;
   bool _guestsExpanded = false;
@@ -1006,7 +1007,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // ── Vessel Equipment ────────────────────────────────────────────────
   /// Configures the up-to-12 equipment slots (10 sails + motor + keel) shown
   /// as chip rows in the timeline entry dialog. Each edit writes straight
-  /// through to [ThemeProvider.setVesselEquipment].
+  /// through to [ThemeProvider.setVesselEquipment]. Collapsed by default —
+  /// this is a rarely-touched, one-time setup step, not something that
+  /// needs to occupy space on every visit to Settings.
   Widget _buildEquipmentSection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
     final config = p.vesselEquipment;
@@ -1023,56 +1026,101 @@ class _SettingsScreenState extends State<SettingsScreen> {
               left: 0, top: 0, bottom: 0,
               child: Container(width: 4, color: cs.primary.withValues(alpha: 0.4)),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        l10n.settingsEquipmentSection.toUpperCase(),
-                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                          color: cs.secondary,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header (always visible, tap to expand) ────────────
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _equipmentExpanded = !_equipmentExpanded),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              l10n.settingsEquipmentSection.toUpperCase(),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                                color: cs.secondary,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Icon(Icons.settings_outlined, size: 20, color: cs.outlineVariant),
+                                const SizedBox(width: 4),
+                                AnimatedRotation(
+                                  turns: _equipmentExpanded ? 0.5 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Icon(Icons.expand_more,
+                                      size: 20, color: cs.outlineVariant),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      ),
-                      Icon(Icons.settings_outlined, size: 20, color: cs.outlineVariant),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // ── Segel (slots 1–10) ───────────────────────────────
-                  Text(l10n.settingsEquipmentTypeSail.toUpperCase(),
-                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
-                  const SizedBox(height: 4),
-                  for (int i = 0; i < 10; i++)
-                    _EquipmentSlotEditor(
-                      slot: config.slots[i],
-                      typeLabel: l10n.settingsEquipmentTypeSail,
-                      onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.settingsEquipmentInfo,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
-                  const SizedBox(height: 12),
-                  // ── Motor (slot 11) ──────────────────────────────────
-                  Text(l10n.entryDialogMotorLabel.toUpperCase(),
-                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
-                  const SizedBox(height: 4),
-                  _EquipmentSlotEditor(
-                    slot: config.slots[10],
-                    typeLabel: l10n.entryDialogMotorLabel,
-                    onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
                   ),
-                  const SizedBox(height: 12),
-                  // ── Kiel (slot 12) ───────────────────────────────────
-                  Text(l10n.entryDialogKeelLabel.toUpperCase(),
-                      style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
-                  const SizedBox(height: 4),
-                  _EquipmentSlotEditor(
-                    slot: config.slots[11],
-                    typeLabel: l10n.entryDialogKeelLabel,
-                    onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
+                ),
+                // ── Expandable content ────────────────────────────────
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 220),
+                  crossFadeState: _equipmentExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  firstChild: const SizedBox(width: double.infinity),
+                  secondChild: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Divider(color: cs.surfaceContainerHigh, height: 1, thickness: 1),
+                        const SizedBox(height: 12),
+                        // ── Segel (slots 1–10) ───────────────────────
+                        Text(l10n.settingsEquipmentTypeSail.toUpperCase(),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
+                        const SizedBox(height: 4),
+                        for (int i = 0; i < 10; i++)
+                          _EquipmentSlotEditor(
+                            slot: config.slots[i],
+                            typeLabel: l10n.settingsEquipmentTypeSail,
+                            onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
+                          ),
+                        const SizedBox(height: 12),
+                        // ── Motor (slot 11) ──────────────────────────
+                        Text(l10n.entryDialogMotorLabel.toUpperCase(),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
+                        const SizedBox(height: 4),
+                        _EquipmentSlotEditor(
+                          slot: config.slots[10],
+                          typeLabel: l10n.entryDialogMotorLabel,
+                          onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
+                        ),
+                        const SizedBox(height: 12),
+                        // ── Kiel (slot 12) ───────────────────────────
+                        Text(l10n.entryDialogKeelLabel.toUpperCase(),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
+                        const SizedBox(height: 4),
+                        _EquipmentSlotEditor(
+                          slot: config.slots[11],
+                          typeLabel: l10n.entryDialogKeelLabel,
+                          onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),

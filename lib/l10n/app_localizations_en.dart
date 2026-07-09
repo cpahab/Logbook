@@ -427,6 +427,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEquipmentSection => 'Vessel configuration';
 
   @override
+  String get settingsEquipmentInfo =>
+      'Configure which sail, motor, and keel states can be used for logbook entries.';
+
+  @override
   String get settingsEquipmentSlotLabel => 'Name (e.g. Mainsail)';
 
   @override
