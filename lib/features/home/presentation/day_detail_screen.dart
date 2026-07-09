@@ -2919,6 +2919,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(context.l10n.dayEntryDeleted),
+      // Longer than the default 4s: this snackbar carries an undo action, so
+      // it needs enough time to notice, read, and react — still well within
+      // Material's own guidance of 4-10s for actionable snackbars.
+      duration: const Duration(seconds: 10),
       action: SnackBarAction(
         label: context.l10n.dayUndo,
         onPressed: () {
