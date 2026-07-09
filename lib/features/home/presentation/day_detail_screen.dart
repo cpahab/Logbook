@@ -2968,6 +2968,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         fockState: t.fockState,
         motorOn: t.motorOn,
         keelDown: t.keelDown,
+        slot1State: t.slot1State,
+        slot2State: t.slot2State,
+        slot3State: t.slot3State,
+        slot4State: t.slot4State,
+        slot5State: t.slot5State,
+        slot6State: t.slot6State,
+        slot7State: t.slot7State,
+        slot8State: t.slot8State,
+        slot9State: t.slot9State,
+        slot10State: t.slot10State,
+        slot11State: t.slot11State,
+        slot12State: t.slot12State,
       );
       updated.amendments
         ..addAll(t.amendments) // carry forward prior amendments
