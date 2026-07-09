@@ -507,29 +507,19 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                     // ── 4. Ausrüstung ────────────────────────────────────
                     _sectionHeader(Icons.sailing, l10n.entryDialogSectionSails, cs),
                     const SizedBox(height: 8),
-                    _plainCard(
-                      cs: cs,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (int i = 0; i < activeSlots.length; i++) ...[
-                            if (i > 0) const SizedBox(height: 10),
-                            if (_isAlwaysExpanded(activeSlots[i], activeSlots)) ...[
-                              _labelSm(activeSlots[i].label, cs),
-                              const SizedBox(height: 6),
-                              _equipmentChips(
-                                slot: activeSlots[i],
-                                selected: _slotState[activeSlots[i].key],
-                                onSelect: (v) =>
-                                    setState(() => _slotState[activeSlots[i].key] = v),
-                                cs: cs,
-                              ),
-                            ] else
-                              _collapsibleSlotRow(slot: activeSlots[i], cs: cs),
-                          ],
-                        ],
-                      ),
-                    ),
+                    // Sails, motor, and keel are visually distinct kinds of
+                    // equipment, so each gets its own card instead of one
+                    // long shared block.
+                    if (_sailSlots(activeSlots).isNotEmpty) ...[
+                      _equipmentCard(_sailSlots(activeSlots), activeSlots, cs),
+                      const SizedBox(height: 10),
+                    ],
+                    if (_motorSlot(activeSlots) != null) ...[
+                      _equipmentCard([_motorSlot(activeSlots)!], activeSlots, cs),
+                      const SizedBox(height: 10),
+                    ],
+                    if (_keelSlot(activeSlots) != null)
+                      _equipmentCard([_keelSlot(activeSlots)!], activeSlots, cs),
                     // ── end 4. Ausrüstung ──
                   ],
 
@@ -792,6 +782,59 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       'sail:furled'  => l10n.sailFurled,
       _              => sentinel,
     };
+  }
+
+  /// Active slots that are neither motor (slot11) nor keel (slot12) — i.e.
+  /// every configured sail, in slot order.
+  List<EquipmentSlot> _sailSlots(List<EquipmentSlot> activeSlots) =>
+      activeSlots.where((s) => s.key != 'slot11' && s.key != 'slot12').toList();
+
+  EquipmentSlot? _motorSlot(List<EquipmentSlot> activeSlots) =>
+      activeSlots.where((s) => s.key == 'slot11').firstOrNull;
+
+  EquipmentSlot? _keelSlot(List<EquipmentSlot> activeSlots) =>
+      activeSlots.where((s) => s.key == 'slot12').firstOrNull;
+
+  /// A card holding one or more equipment [slots] (sails, or the single
+  /// motor/keel slot), each rendered via [_equipmentSlotRow]. [activeSlots]
+  /// is the full list — passed through so [_isAlwaysExpanded]'s position
+  /// check stays correct regardless of which slots end up in this card.
+  Widget _equipmentCard(
+      List<EquipmentSlot> slots, List<EquipmentSlot> activeSlots, ColorScheme cs) {
+    return _plainCard(
+      cs: cs,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < slots.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            _equipmentSlotRow(slots[i], activeSlots, cs),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// One equipment slot's row: the full label+chips block if
+  /// [_isAlwaysExpanded], otherwise the folded [_collapsibleSlotRow].
+  Widget _equipmentSlotRow(
+      EquipmentSlot slot, List<EquipmentSlot> activeSlots, ColorScheme cs) {
+    if (!_isAlwaysExpanded(slot, activeSlots)) {
+      return _collapsibleSlotRow(slot: slot, cs: cs);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _labelSm(slot.label, cs),
+        const SizedBox(height: 6),
+        _equipmentChips(
+          slot: slot,
+          selected: _slotState[slot.key],
+          onSelect: (v) => setState(() => _slotState[slot.key] = v),
+          cs: cs,
+        ),
+      ],
+    );
   }
 
   /// Row of tappable state chips for one configurable equipment [slot] (one
