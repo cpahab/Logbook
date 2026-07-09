@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../../app/theme/theme_extensions.dart';
+import '../../settings/domain/theme_provider.dart';
 import '../domain/timeline_entry.dart';
+import '../domain/vessel_equipment.dart';
 import '../utils/sail_state_utils.dart';
 import '../../../l10n/l10n_extension.dart';
 
@@ -64,16 +67,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   final amendmentReasonCtrl = TextEditingController();
 
   String  _windDir  = 'N';
-  String? _grossState;
-  String? _fockState;
-  bool?   _motorOn;
-  bool?   _keelDown;
+  final Map<String, String?> _slotState = {};
 
   static const _windDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-
-  static const _grossSentinels = ['sail:full', 'sail:reef1', 'sail:reef2', 'sail:lowered'];
-  static const _fockSentinels  = ['sail:full', 'sail:reef1', 'sail:reef2', 'sail:furled'];
-
 
   @override
   void initState() {
@@ -87,10 +83,38 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       seaCtrl.text     = e.sea ?? '';
       weatherCtrl.text = e.weather ?? '';
       remarksCtrl.text = e.remarks ?? '';
-      _grossState = normalizeSailState(e.grossState);
-      _fockState  = normalizeSailState(e.fockState);
-      _motorOn    = e.motorOn;
-      _keelDown   = e.keelDown;
+
+      // New fields (null on entries created before this feature).
+      _slotState['slot1']  = e.slot1State;
+      _slotState['slot2']  = e.slot2State;
+      _slotState['slot3']  = e.slot3State;
+      _slotState['slot4']  = e.slot4State;
+      _slotState['slot5']  = e.slot5State;
+      _slotState['slot6']  = e.slot6State;
+      _slotState['slot7']  = e.slot7State;
+      _slotState['slot8']  = e.slot8State;
+      _slotState['slot9']  = e.slot9State;
+      _slotState['slot10'] = e.slot10State;
+      _slotState['slot11'] = e.slot11State;
+      _slotState['slot12'] = e.slot12State;
+
+      // Legacy fallback: if the new sail slots are null, derive from old
+      // sentinel/bool fields so pre-migration entries don't look empty.
+      final legacyGross = normalizeSailState(e.grossState);
+      final legacyFock  = normalizeSailState(e.fockState);
+      if (_slotState['slot1'] == null && legacyGross != null) {
+        _slotState['slot1'] = _sailLabel(legacyGross);
+      }
+      if (_slotState['slot2'] == null && legacyFock != null) {
+        _slotState['slot2'] = _sailLabel(legacyFock);
+      }
+      if (_slotState['slot11'] == null && e.motorOn != null) {
+        _slotState['slot11'] = e.motorOn! ? context.l10n.on : context.l10n.off;
+      }
+      if (_slotState['slot12'] == null && e.keelDown != null) {
+        _slotState['slot12'] =
+            e.keelDown! ? context.l10n.vesselKeelDown : context.l10n.vesselKeelUp;
+      }
     } else {
       selectedTime = TimeOfDay.now();
     }
@@ -149,10 +173,24 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       sea:        seaCtrl.text.isEmpty     ? null : seaCtrl.text,
       weather:    weatherCtrl.text.isEmpty ? null : weatherCtrl.text,
       remarks:    remarksCtrl.text.isEmpty ? null : remarksCtrl.text,
-      grossState: _grossState,
-      fockState:  _fockState,
-      motorOn:    _motorOn,
-      keelDown:   _keelDown,
+      slot1State:  _slotState['slot1'],
+      slot2State:  _slotState['slot2'],
+      slot3State:  _slotState['slot3'],
+      slot4State:  _slotState['slot4'],
+      slot5State:  _slotState['slot5'],
+      slot6State:  _slotState['slot6'],
+      slot7State:  _slotState['slot7'],
+      slot8State:  _slotState['slot8'],
+      slot9State:  _slotState['slot9'],
+      slot10State: _slotState['slot10'],
+      slot11State: _slotState['slot11'],
+      slot12State: _slotState['slot12'],
+      // Legacy fields: preserve on edits of old entries so their data isn't
+      // erased; new entries leave these null.
+      grossState: widget.initialEntry?.grossState,
+      fockState:  widget.initialEntry?.fockState,
+      motorOn:    widget.initialEntry?.motorOn,
+      keelDown:   widget.initialEntry?.keelDown,
       // Preserve original createdAt on edits; set it now for new entries.
       createdAt:  widget.initialEntry?.createdAt ?? now,
       updatedAt:  widget.initialEntry != null ? now : null,
@@ -179,6 +217,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     final cs     = Theme.of(context).colorScheme;
     final l10n   = context.l10n;
     final isEdit = widget.initialEntry != null;
+    final activeSlots = context.read<ThemeProvider>().vesselEquipment.activeSlots;
 
     return Dialog.fullscreen(
       child: Scaffold(
@@ -418,78 +457,33 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
 
                   // ── end 3. Umgebung ──
 
-                  const SizedBox(height: 16),
-                  // ── 4. Segel & Motor ─────────────────────────────────
-                  _sectionHeader(Icons.sailing, l10n.entryDialogSectionSails, cs),
-                  const SizedBox(height: 8),
-                  _plainCard(
-                    cs: cs,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _labelSm(l10n.entryDialogMainSailLabel, cs),
-                        const SizedBox(height: 6),
-                        _sailChips(
-                          sentinels: _grossSentinels,
-                          labelFor: _sailLabel,
-                          selected: _grossState,
-                          onSelect: (v) => setState(() => _grossState = v),
-                          cs: cs,
-                        ),
-                        const SizedBox(height: 10),
-                        _labelSm(l10n.entryDialogJibSailLabel, cs),
-                        const SizedBox(height: 6),
-                        _sailChips(
-                          sentinels: _fockSentinels,
-                          labelFor: _sailLabel,
-                          selected: _fockState,
-                          onSelect: (v) => setState(() => _fockState = v),
-                          cs: cs,
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _labelSm(l10n.entryDialogMotorLabel, cs),
-                                  const SizedBox(height: 6),
-                                  Row(children: [
-                                    _stateChip(l10n.on,  _motorOn == true,
-                                        () => setState(() => _motorOn = _motorOn == true  ? null : true),  cs),
-                                    const SizedBox(width: 8),
-                                    _stateChip(l10n.off, _motorOn == false,
-                                        () => setState(() => _motorOn = _motorOn == false ? null : false), cs),
-                                  ]),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _labelSm(l10n.entryDialogKeelLabel, cs),
-                                  const SizedBox(height: 6),
-                                  Row(children: [
-                                    _stateChip(l10n.vesselKeelDown, _keelDown == true,
-                                        () => setState(() => _keelDown = _keelDown == true  ? null : true),  cs),
-                                    const SizedBox(width: 8),
-                                    _stateChip(l10n.vesselKeelUp, _keelDown == false,
-                                        () => setState(() => _keelDown = _keelDown == false ? null : false), cs),
-                                  ]),
-                                ],
-                              ),
+                  if (activeSlots.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    // ── 4. Ausrüstung ────────────────────────────────────
+                    _sectionHeader(Icons.sailing, l10n.entryDialogSectionSails, cs),
+                    const SizedBox(height: 8),
+                    _plainCard(
+                      cs: cs,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (int i = 0; i < activeSlots.length; i++) ...[
+                            if (i > 0) const SizedBox(height: 10),
+                            _labelSm(activeSlots[i].label, cs),
+                            const SizedBox(height: 6),
+                            _equipmentChips(
+                              slot: activeSlots[i],
+                              selected: _slotState[activeSlots[i].key],
+                              onSelect: (v) =>
+                                  setState(() => _slotState[activeSlots[i].key] = v),
+                              cs: cs,
                             ),
                           ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-
-                  // ── end 4. Segel & Motor ──
+                    // ── end 4. Ausrüstung ──
+                  ],
 
                   const SizedBox(height: 16),
                   // ── 5. Bemerkungen ───────────────────────────────────
@@ -752,11 +746,11 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     };
   }
 
-  /// Row of tappable sail-state chips (one of [sentinels] can be selected at
-  /// a time; tapping the already-selected one clears it).
-  Widget _sailChips({
-    required List<String> sentinels,
-    required String Function(String) labelFor,
+  /// Row of tappable state chips for one configurable equipment [slot] (one
+  /// state can be selected at a time; tapping the already-selected one
+  /// clears it).
+  Widget _equipmentChips({
+    required EquipmentSlot slot,
     required String? selected,
     required ValueChanged<String?> onSelect,
     required ColorScheme cs,
@@ -764,11 +758,11 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: sentinels
-          .map((s) => _stateChip(
-                labelFor(s),
-                selected == s,
-                () => onSelect(selected == s ? null : s),
+      children: slot.states
+          .map((state) => _stateChip(
+                state,
+                selected == state,
+                () => onSelect(selected == state ? null : state),
                 cs,
               ))
           .toList(),
