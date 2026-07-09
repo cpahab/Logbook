@@ -111,26 +111,45 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       _slotState['slot10'] = e.slot10State;
       _slotState['slot11'] = e.slot11State;
       _slotState['slot12'] = e.slot12State;
-
-      // Legacy fallback: if the new sail slots are null, derive from old
-      // sentinel/bool fields so pre-migration entries don't look empty.
-      final legacyGross = normalizeSailState(e.grossState);
-      final legacyFock  = normalizeSailState(e.fockState);
-      if (_slotState['slot1'] == null && legacyGross != null) {
-        _slotState['slot1'] = _sailLabel(legacyGross);
-      }
-      if (_slotState['slot2'] == null && legacyFock != null) {
-        _slotState['slot2'] = _sailLabel(legacyFock);
-      }
-      if (_slotState['slot11'] == null && e.motorOn != null) {
-        _slotState['slot11'] = e.motorOn! ? context.l10n.on : context.l10n.off;
-      }
-      if (_slotState['slot12'] == null && e.keelDown != null) {
-        _slotState['slot12'] =
-            e.keelDown! ? context.l10n.vesselKeelDown : context.l10n.vesselKeelUp;
-      }
     } else {
       selectedTime = TimeOfDay.now();
+    }
+  }
+
+  bool _legacyFallbackApplied = false;
+
+  /// Applies the legacy sentinel/bool → text fallback for pre-migration
+  /// entries. This needs `context.l10n` (an InheritedWidget lookup), which
+  /// Flutter forbids resolving before initState() completes — so it lives
+  /// here instead, per Flutter's own guidance: "initialization based on
+  /// inherited widgets can be placed in the didChangeDependencies method".
+  /// Guarded to run once, since didChangeDependencies can fire again later
+  /// (e.g. a locale switch while the dialog is open) and must not clobber
+  /// edits the user has since made.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_legacyFallbackApplied) return;
+    _legacyFallbackApplied = true;
+    final e = widget.initialEntry;
+    if (e == null) return;
+
+    // Legacy fallback: if the new sail slots are null, derive from old
+    // sentinel/bool fields so pre-migration entries don't look empty.
+    final legacyGross = normalizeSailState(e.grossState);
+    final legacyFock  = normalizeSailState(e.fockState);
+    if (_slotState['slot1'] == null && legacyGross != null) {
+      _slotState['slot1'] = _sailLabel(legacyGross);
+    }
+    if (_slotState['slot2'] == null && legacyFock != null) {
+      _slotState['slot2'] = _sailLabel(legacyFock);
+    }
+    if (_slotState['slot11'] == null && e.motorOn != null) {
+      _slotState['slot11'] = e.motorOn! ? context.l10n.on : context.l10n.off;
+    }
+    if (_slotState['slot12'] == null && e.keelDown != null) {
+      _slotState['slot12'] =
+          e.keelDown! ? context.l10n.vesselKeelDown : context.l10n.vesselKeelUp;
     }
   }
 
