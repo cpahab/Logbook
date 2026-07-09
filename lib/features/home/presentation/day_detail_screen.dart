@@ -3155,6 +3155,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       stats:       stats,
       vesselName:  p.vesselName,
       strings:     pdfStrings,
+      equipment:   p.vesselEquipment,
       trackPoints: filteredPoints,
       photoBytes:  photoBytes,
     );
