@@ -933,20 +933,22 @@ class _TracksScreenState extends State<TracksScreen> {
                                   if (wind != null)
                                     statInline(context, Icons.air, wind, cs),
                                   if ((d.stats?.avgMakingWayKn ?? 0) > 0)
-                                    statInline(context, 
+                                    statInline(context,
                                       Icons.speed,
                                       // Moving average, not distance/total-elapsed-time —
                                       // avgSpeed (avgOverGroundKn) would be diluted by any
                                       // stop in the middle of the track.
-                                      '${d.stats!.avgMakingWayKn.toStringAsFixed(1)} kn',
+                                      d.stats!.avgMakingWayKn.toStringAsFixed(1),
                                       cs,
+                                      unit: 'kn',
                                     ),
                                   if (d.stats != null &&
                                       d.stats!.distanceNm > 0)
-                                    statInline(context, 
+                                    statInline(context,
                                       Icons.straighten,
-                                      '${d.stats!.distanceNm.toStringAsFixed(1)} nm',
+                                      d.stats!.distanceNm.toStringAsFixed(1),
                                       cs,
+                                      unit: 'nm',
                                     ),
                                 ],
                               ),

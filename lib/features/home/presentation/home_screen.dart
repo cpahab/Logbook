@@ -808,19 +808,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             runSpacing: 2,
                             children: [
                               if (stats.avgMakingWayKn > 0)
-                                statInline(context, 
+                                statInline(context,
                                   Icons.speed,
                                   // Moving average, not distance/total-elapsed-time —
                                   // avgSpeed (avgOverGroundKn) would be diluted by any
                                   // stop in the middle of the track.
-                                  '${stats.avgMakingWayKn.toStringAsFixed(1)} kn',
+                                  stats.avgMakingWayKn.toStringAsFixed(1),
                                   cs,
+                                  unit: 'kn',
                                 ),
                               if (stats.distanceNm > 0)
-                                statInline(context, 
+                                statInline(context,
                                   Icons.straighten,
-                                  '${stats.distanceNm.toStringAsFixed(1)} nm',
+                                  stats.distanceNm.toStringAsFixed(1),
                                   cs,
+                                  unit: 'nm',
                                 ),
                             ],
                           ),
