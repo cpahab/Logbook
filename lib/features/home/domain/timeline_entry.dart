@@ -36,25 +36,16 @@ class TimelineEntry extends HiveObject {
   // @HiveField(10) reff1Gross  — retired
   // @HiveField(11) reff2Fock   — retired
   // @HiveField(12) reff2Gross  — retired
-
-  @HiveField(13)
-  bool? motorOn; // true = an, false = aus
-
-  @HiveField(14)
-  String? grossState;
-
-  @HiveField(15)
-  String? fockState;
+  // @HiveField(13) motorOn     — retired (replaced by slot11State)
+  // @HiveField(14) grossState  — retired (replaced by slot1State)
+  // @HiveField(15) fockState   — retired (replaced by slot2State)
 
   /// Auto-populated when a system event (e.g. vessel status change) generates
   /// this entry. Shown as clear text below the regular remarks.
   @HiveField(16)
   String? vesselStatusNote;
 
-  /// Keel position at the time of this log entry.
-  /// true = keel down (sailing), false = keel up (shoal), null = not recorded.
-  @HiveField(17)
-  bool? keelDown;
+  // @HiveField(17) keelDown    — retired (replaced by slot12State)
 
   /// Set once when the entry is first created. Never overwritten.
   @HiveField(18)
@@ -96,11 +87,7 @@ class TimelineEntry extends HiveObject {
     this.sea,
     this.weather,
     this.remarks,
-    this.motorOn,
-    this.grossState,
-    this.fockState,
     this.vesselStatusNote,
-    this.keelDown,
     this.createdAt,
     this.updatedAt,
     List<TimelineAmendment>? amendments,

@@ -81,17 +81,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return '$crewLabel: $body';
   }
 
-  /// Maps a sail-state sentinel (grossState/fockState, e.g. 'sail:reef1') to
-  /// its localised display string.
-  static String _sailStateDisplay(String s, AppLocalizations l10n) => switch (s) {
-    'sail:full'    => l10n.sailFull,
-    'sail:reef1'   => l10n.sailReef1,
-    'sail:reef2'   => l10n.sailReef2,
-    'sail:lowered' => l10n.sailLowered,
-    'sail:furled'  => l10n.sailFurled,
-    _              => s, // unreachable: grossState/fockState are always one of the sentinels above
-  };
-
   /// Looks up the recorded state for one configurable equipment [slot] on
   /// [t] by its fixed storage key ('slot1' … 'slot12').
   static String? _slotValue(TimelineEntry t, String key) => switch (key) {
@@ -111,29 +100,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   };
 
   /// Builds one display line per active equipment [slot] with a recorded
-  /// state on [t] ("Label: state"). Falls back to the legacy grossState/
-  /// fockState/motorOn fields when none of the new slot fields are set, so
-  /// entries created before this feature still show their sail/motor state.
+  /// state on [t] ("Label: state").
   static List<String> _equipmentStatusLines(
-      TimelineEntry t, List<EquipmentSlot> activeSlots, AppLocalizations l10n) {
+      TimelineEntry t, List<EquipmentSlot> activeSlots) {
     final lines = <String>[];
     for (final slot in activeSlots) {
       final val = _slotValue(t, slot.key);
       if (val != null) lines.add('${slot.label}: $val');
-    }
-    if (lines.isEmpty) {
-      if (t.grossState != null) {
-        lines.add('${l10n.dataMainSail}: ${_sailStateDisplay(t.grossState!, l10n)}');
-      }
-      if (t.fockState != null) {
-        lines.add('${l10n.dataJibSail}: ${_sailStateDisplay(t.fockState!, l10n)}');
-      }
-      if (t.motorOn != null) {
-        lines.add('${l10n.dataMotor}: ${t.motorOn! ? l10n.on : l10n.off}');
-      }
-      if (t.keelDown != null) {
-        lines.add('${l10n.entryDialogKeelLabel}: ${t.keelDown! ? l10n.vesselKeelDown : l10n.vesselKeelUp}');
-      }
     }
     return lines;
   }
@@ -1273,9 +1246,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 t.wind != null ||
                 t.sea != null ||
                 t.weather != null ||
-                t.grossState != null ||
-                t.fockState != null ||
-                t.motorOn != null ||
                 VesselEquipmentConfig.slotKeys.any((k) => _slotValue(t, k) != null)) ...[
               const SizedBox(height: 8),
               Text(
@@ -1288,7 +1258,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   if (t.sea != null) '${context.l10n.dataSea}: ${t.sea!}',
                   if (t.weather != null) '${context.l10n.dataWeather}: ${t.weather!}',
                   ..._equipmentStatusLines(
-                      t, context.read<ThemeProvider>().vesselEquipment.activeSlots, context.l10n),
+                      t, context.read<ThemeProvider>().vesselEquipment.activeSlots),
                 ].join(' · '),
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: cs.onSurfaceVariant,
@@ -2935,8 +2905,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (index == -1) return;
     setState(() {
       current.timeline.removeAt(index);
-      repo.syncKeelFromTimeline(current);
-      repo.saveEntry(current, changedFields: {'timeline', 'keelDown'});
+      repo.saveEntry(current, changedFields: {'timeline'});
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(context.l10n.dayEntryDeleted),
@@ -2962,8 +2931,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           setState(() {
             current.timeline.insert(index.clamp(0, current.timeline.length), t);
             current.timeline.sort((a, b) => a.time.compareTo(b.time));
-            repo.syncKeelFromTimeline(current);
-            repo.saveEntry(current, changedFields: {'timeline', 'keelDown'});
+            repo.saveEntry(current, changedFields: {'timeline'});
           });
         },
       ),
@@ -2999,10 +2967,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         sea: t.sea,
         weather: t.weather,
         remarks: t.remarks,
-        grossState: t.grossState,
-        fockState: t.fockState,
-        motorOn: t.motorOn,
-        keelDown: t.keelDown,
         slot1State: t.slot1State,
         slot2State: t.slot2State,
         slot3State: t.slot3State,
@@ -3032,8 +2996,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (index != -1) {
         current.timeline[index] = updated;
         current.timeline.sort((a, b) => a.time.compareTo(b.time));
-        repo.syncKeelFromTimeline(current);
-        repo.saveEntry(current, changedFields: {'timeline', 'keelDown'});
+        repo.saveEntry(current, changedFields: {'timeline'});
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -3192,11 +3155,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       courseCol:     l10n.pdfCourseCol,
       windCol:       l10n.pdfWindCol,
       seaCol:        l10n.pdfSeaCol,
-      motorCol:      l10n.pdfMotorCol,
-      sailsCol:      l10n.pdfSailsCol,
       remarksCol:    l10n.pdfRemarksCol,
-      motorOn:       l10n.pdfMotorOn,
-      motorOff:      l10n.pdfMotorOff,
       trackMap:      l10n.pdfTrackMap,
       locale:        l10n.pdfLocale,
       passageTo:     l10n.pdfPassageTo,
@@ -3945,7 +3904,7 @@ String _buildEntryTooltip(
   if (t.weather?.isNotEmpty == true) cond.add('${l10n.entryDialogWeatherLabel}: ${t.weather!}');
   if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
 
-  final sails = _DayDetailScreenState._equipmentStatusLines(t, activeSlots, l10n);
+  final sails = _DayDetailScreenState._equipmentStatusLines(t, activeSlots);
   if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
 
   if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');

@@ -54,12 +54,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get later => 'Later';
 
   @override
-  String get on => 'On';
-
-  @override
-  String get off => 'Off';
-
-  @override
   String get statSailingDays => 'Days';
 
   @override
@@ -228,15 +222,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dataWeather => 'Weather';
 
   @override
-  String get dataMainSail => 'Main';
-
-  @override
-  String get dataJibSail => 'Jib';
-
-  @override
-  String get dataMotor => 'Engine';
-
-  @override
   String get entryDialogTitleNew => 'New Entry';
 
   @override
@@ -280,12 +265,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get entryDialogWeatherHint => 'e.g. Sunny';
-
-  @override
-  String get entryDialogMainSailLabel => 'Main';
-
-  @override
-  String get entryDialogJibSailLabel => 'Jib';
 
   @override
   String get entryDialogMotorLabel => 'Engine';
@@ -1320,21 +1299,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get crewBloodGroupPrefix => 'BG';
 
   @override
-  String get sailFull => 'Full sail';
-
-  @override
-  String get sailReef1 => '1st reef';
-
-  @override
-  String get sailReef2 => '2nd reef';
-
-  @override
-  String get sailLowered => 'Lowered';
-
-  @override
-  String get sailFurled => 'Furled';
-
-  @override
   String get pdfVoyageLog => 'VOYAGE LOG';
 
   @override
@@ -1386,19 +1350,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pdfSeaCol => 'Sea';
 
   @override
-  String get pdfMotorCol => 'Engine';
-
-  @override
-  String get pdfSailsCol => 'Sails';
-
-  @override
   String get pdfRemarksCol => 'Remarks';
-
-  @override
-  String get pdfMotorOn => 'ON';
-
-  @override
-  String get pdfMotorOff => 'OFF';
 
   @override
   String get pdfTrackMap => 'COURSE & TRACK';

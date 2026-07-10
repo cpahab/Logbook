@@ -17,8 +17,6 @@
   "change": "Ändern",
   "update": "Aktualisieren",
   "later": "Später",
-  "on": "An",
-  "off": "Aus",
 
   "statSailingDays": "Tage",
   "statDistance": "Distanz",
@@ -81,9 +79,6 @@
   "dataWind": "Wind",
   "dataSea": "See",
   "dataWeather": "Wetter",
-  "dataMainSail": "Gross",
-  "dataJibSail": "Fock",
-  "dataMotor": "Motor",
 
   "entryDialogTitleNew": "Neuer Eintrag",
   "entryDialogTitleEdit": "Eintrag bearbeiten",
@@ -100,8 +95,6 @@
   "entryDialogSeaHint": "z.B. Leicht",
   "entryDialogWeatherLabel": "Wetter",
   "entryDialogWeatherHint": "z.B. Sonnig",
-  "entryDialogMainSailLabel": "Gross",
-  "entryDialogJibSailLabel": "Fock",
   "entryDialogMotorLabel": "Motor",
   "entryDialogKeelLabel": "Kiel",
   "entryDialogRemarksHint": "z.B. Beobachtung, Erlebnis…",
@@ -487,12 +480,6 @@
   "offlineLabel": "Offline",
   "crewBloodGroupPrefix": "BG",
 
-  "sailFull": "Voll gesetzt",
-  "sailReef1": "1. Reff",
-  "sailReef2": "2. Reff",
-  "sailLowered": "Niedergeholt",
-  "sailFurled": "Eingerollt",
-
   "pdfVoyageLog": "TAGEBUCH",
   "pdfNotes": "NOTIZEN",
   "pdfDate": "DATUM",
@@ -510,11 +497,7 @@
   "pdfCourseCol": "Kurs",
   "pdfWindCol": "Wind",
   "pdfSeaCol": "See",
-  "pdfMotorCol": "Motor",
-  "pdfSailsCol": "Segel",
   "pdfRemarksCol": "Bemerkungen",
-  "pdfMotorOn": "AN",
-  "pdfMotorOff": "AUS",
   "pdfTrackMap": "KURS & TRACK",
   "pdfPassageTo": "Passage nach {destination}",
   "@pdfPassageTo": {

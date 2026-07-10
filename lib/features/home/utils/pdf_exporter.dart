@@ -18,7 +18,6 @@ import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import '../domain/vessel_equipment.dart';
 import 'compute_daily_stats.dart';
-import 'sail_state_utils.dart';
 
 /// Returns true for codepoints that NotoSans can't render but NotoEmoji can
 /// — used to split free-text (which may contain emoji) into runs so each
@@ -104,11 +103,7 @@ class PdfStrings {
   final String courseCol;
   final String windCol;
   final String seaCol;
-  final String motorCol;
-  final String sailsCol;
   final String remarksCol;
-  final String motorOn;
-  final String motorOff;
   final String trackMap;
   final String locale;
   final String Function(String destination) passageTo;
@@ -133,11 +128,7 @@ class PdfStrings {
     required this.courseCol,
     required this.windCol,
     required this.seaCol,
-    required this.motorCol,
-    required this.sailsCol,
     required this.remarksCol,
-    required this.motorOn,
-    required this.motorOff,
     required this.trackMap,
     required this.locale,
     required this.passageTo,
@@ -486,11 +477,10 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
     children: cols.map((c) => cell(c.header, isHeader: true)).toList(),
   );
 
-  /// The recorded value for one slot on [e]: the new slot field if set,
-  /// else a legacy fallback abbreviation for entries predating this feature.
+  /// The recorded value for one slot on [e].
   String? slotValue(TimelineEntry e, String key) => switch (key) {
-    'slot1'  => e.slot1State  ?? (e.grossState != null ? sailStateAbbr(e.grossState) : null),
-    'slot2'  => e.slot2State  ?? (e.fockState  != null ? sailStateAbbr(e.fockState)  : null),
+    'slot1'  => e.slot1State,
+    'slot2'  => e.slot2State,
     'slot3'  => e.slot3State,
     'slot4'  => e.slot4State,
     'slot5'  => e.slot5State,
@@ -499,8 +489,7 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
     'slot8'  => e.slot8State,
     'slot9'  => e.slot9State,
     'slot10' => e.slot10State,
-    'slot11' => e.slot11State ??
-        (e.motorOn != null ? (e.motorOn! ? strings.motorOn : strings.motorOff) : null),
+    'slot11' => e.slot11State,
     'slot12' => e.slot12State,
     _        => null,
   };

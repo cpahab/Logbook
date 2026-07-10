@@ -40,17 +40,10 @@ class TimelineAmendment extends HiveObject {
   @HiveField(8)
   String? remarks;
 
-  @HiveField(9)
-  String? grossState;
-
-  @HiveField(10)
-  String? fockState;
-
-  @HiveField(11)
-  bool? motorOn;
-
-  @HiveField(12)
-  bool? keelDown;
+  // @HiveField(9)  grossState — retired (replaced by slot1State)
+  // @HiveField(10) fockState  — retired (replaced by slot2State)
+  // @HiveField(11) motorOn    — retired (replaced by slot11State)
+  // @HiveField(12) keelDown   — retired (replaced by slot12State)
 
   // Slots 1–10: sails; slot 11: motor; slot 12: keel. Mirrors
   // TimelineEntry.slot1State..slot12State — see that class for details.
@@ -77,10 +70,6 @@ class TimelineAmendment extends HiveObject {
     this.sea,
     this.weather,
     this.remarks,
-    this.grossState,
-    this.fockState,
-    this.motorOn,
-    this.keelDown,
     this.slot1State,
     this.slot2State,
     this.slot3State,
@@ -107,10 +96,6 @@ class TimelineAmendment extends HiveObject {
     String? sea,
     String? weather,
     String? remarks,
-    String? grossState,
-    String? fockState,
-    bool? motorOn,
-    bool? keelDown,
     String? slot1State,
     String? slot2State,
     String? slot3State,
@@ -134,10 +119,6 @@ class TimelineAmendment extends HiveObject {
         sea: sea,
         weather: weather,
         remarks: remarks,
-        grossState: grossState,
-        fockState: fockState,
-        motorOn: motorOn,
-        keelDown: keelDown,
         slot1State: slot1State,
         slot2State: slot2State,
         slot3State: slot3State,

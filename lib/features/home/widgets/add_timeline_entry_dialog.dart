@@ -5,7 +5,6 @@ import '../../../app/theme/theme_extensions.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/vessel_equipment.dart';
-import '../utils/sail_state_utils.dart';
 import '../../../l10n/l10n_extension.dart';
 
 /// Return value from [AddTimelineEntryDialog].
@@ -128,43 +127,6 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     }
   }
 
-  bool _legacyFallbackApplied = false;
-
-  /// Applies the legacy sentinel/bool → text fallback for pre-migration
-  /// entries. This needs `context.l10n` (an InheritedWidget lookup), which
-  /// Flutter forbids resolving before initState() completes — so it lives
-  /// here instead, per Flutter's own guidance: "initialization based on
-  /// inherited widgets can be placed in the didChangeDependencies method".
-  /// Guarded to run once, since didChangeDependencies can fire again later
-  /// (e.g. a locale switch while the dialog is open) and must not clobber
-  /// edits the user has since made.
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_legacyFallbackApplied) return;
-    _legacyFallbackApplied = true;
-    final e = widget.initialEntry;
-    if (e == null) return;
-
-    // Legacy fallback: if the new sail slots are null, derive from old
-    // sentinel/bool fields so pre-migration entries don't look empty.
-    final legacyGross = normalizeSailState(e.grossState);
-    final legacyFock  = normalizeSailState(e.fockState);
-    if (_slotState['slot1'] == null && legacyGross != null) {
-      _slotState['slot1'] = _sailLabel(legacyGross);
-    }
-    if (_slotState['slot2'] == null && legacyFock != null) {
-      _slotState['slot2'] = _sailLabel(legacyFock);
-    }
-    if (_slotState['slot11'] == null && e.motorOn != null) {
-      _slotState['slot11'] = e.motorOn! ? context.l10n.on : context.l10n.off;
-    }
-    if (_slotState['slot12'] == null && e.keelDown != null) {
-      _slotState['slot12'] =
-          e.keelDown! ? context.l10n.vesselKeelDown : context.l10n.vesselKeelUp;
-    }
-  }
-
   /// Parses "SW 12 kn" into [_windDir] ("SW") and [windStrengthCtrl] ("12"),
   /// tolerating German "NO"/"SO" direction abbreviations.
   void _parseWind(String? wind) {
@@ -230,12 +192,6 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       slot10State: _slotState['slot10'],
       slot11State: _slotState['slot11'],
       slot12State: _slotState['slot12'],
-      // Legacy fields: preserve on edits of old entries so their data isn't
-      // erased; new entries leave these null.
-      grossState: widget.initialEntry?.grossState,
-      fockState:  widget.initialEntry?.fockState,
-      motorOn:    widget.initialEntry?.motorOn,
-      keelDown:   widget.initialEntry?.keelDown,
       // Preserve original createdAt on edits; set it now for new entries.
       createdAt:  widget.initialEntry?.createdAt ?? now,
       updatedAt:  widget.initialEntry != null ? now : null,
@@ -769,19 +725,6 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       ),
       textInputAction: TextInputAction.next,
     );
-  }
-
-  /// Localized display label for a `sail:` sentinel value.
-  String _sailLabel(String sentinel) {
-    final l10n = context.l10n;
-    return switch (sentinel) {
-      'sail:full'    => l10n.sailFull,
-      'sail:reef1'   => l10n.sailReef1,
-      'sail:reef2'   => l10n.sailReef2,
-      'sail:lowered' => l10n.sailLowered,
-      'sail:furled'  => l10n.sailFurled,
-      _              => sentinel,
-    };
   }
 
   /// Active slots that are neither motor (slot11) nor keel (slot12) — i.e.

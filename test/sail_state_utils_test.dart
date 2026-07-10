@@ -3,52 +3,6 @@ import 'package:logbook/features/home/utils/pdf_exporter.dart';
 import 'package:logbook/features/home/utils/sail_state_utils.dart';
 
 void main() {
-  // ── normalizeSailState ────────────────────────────────────────────────────
-
-  group('normalizeSailState', () {
-    test('returns null for null input', () {
-      expect(normalizeSailState(null), isNull);
-    });
-
-    test('passes existing sentinels through unchanged', () {
-      for (final s in [
-        'sail:full',
-        'sail:reef1',
-        'sail:reef2',
-        'sail:lowered',
-        'sail:furled',
-      ]) {
-        expect(normalizeSailState(s), s, reason: '$s should pass through');
-      }
-    });
-
-    test('returns null for unrecognised string', () {
-      expect(normalizeSailState('something random'), isNull);
-      expect(normalizeSailState(''),                  isNull);
-    });
-  });
-
-  // ── sailStateAbbr ─────────────────────────────────────────────────────────
-
-  group('sailStateAbbr', () {
-    test('returns em-dash for null and empty', () {
-      expect(sailStateAbbr(null), '—');
-      expect(sailStateAbbr(''),   '—');
-    });
-
-    test('maps sentinels to 2-letter abbreviations', () {
-      expect(sailStateAbbr('sail:full'),    'VG');
-      expect(sailStateAbbr('sail:reef1'),   'R1');
-      expect(sailStateAbbr('sail:reef2'),   'R2');
-      expect(sailStateAbbr('sail:lowered'), 'NR');
-      expect(sailStateAbbr('sail:furled'),  'ER');
-    });
-
-    test('returns em-dash for unrecognised input', () {
-      expect(sailStateAbbr('unknown'), '—');
-    });
-  });
-
   // ── parseVesselStatus ─────────────────────────────────────────────────────
 
   group('parseVesselStatus', () {
@@ -142,11 +96,7 @@ void main() {
           courseCol:     'Hdg',
           windCol:       'Wind',
           seaCol:        'Sea',
-          motorCol:      'Engine',
-          sailsCol:      'Sails',
           remarksCol:    'Remarks',
-          motorOn:       'ON',
-          motorOff:      'OFF',
           trackMap:      'COURSE & TRACK',
           locale:        'en_US',
           passageTo:     (dest) => 'Passage to $dest',
@@ -159,8 +109,6 @@ void main() {
       expect(s.voyageLog,  'VOYAGE LOG');
       expect(s.notes,      'NOTES');
       expect(s.skipper,    'SKIPPER');
-      expect(s.motorOn,    'ON');
-      expect(s.motorOff,   'OFF');
       expect(s.locale,     'en_US');
     });
 

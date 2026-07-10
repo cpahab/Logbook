@@ -17,8 +17,6 @@
   "change": "Change",
   "update": "Update",
   "later": "Later",
-  "on": "On",
-  "off": "Off",
 
   "statSailingDays": "Days",
   "statDistance": "Distance",
@@ -81,9 +79,6 @@
   "dataWind": "Wind",
   "dataSea": "Sea",
   "dataWeather": "Weather",
-  "dataMainSail": "Main",
-  "dataJibSail": "Jib",
-  "dataMotor": "Engine",
 
   "entryDialogTitleNew": "New Entry",
   "entryDialogTitleEdit": "Edit Entry",
@@ -100,8 +95,6 @@
   "entryDialogSeaHint": "e.g. Slight",
   "entryDialogWeatherLabel": "Weather",
   "entryDialogWeatherHint": "e.g. Sunny",
-  "entryDialogMainSailLabel": "Main",
-  "entryDialogJibSailLabel": "Jib",
   "entryDialogMotorLabel": "Engine",
   "entryDialogKeelLabel": "Keel",
   "entryDialogRemarksHint": "e.g. Observation, experience…",
@@ -487,12 +480,6 @@
   "offlineLabel": "Offline",
   "crewBloodGroupPrefix": "BG",
 
-  "sailFull": "Full sail",
-  "sailReef1": "1st reef",
-  "sailReef2": "2nd reef",
-  "sailLowered": "Lowered",
-  "sailFurled": "Furled",
-
   "pdfVoyageLog": "VOYAGE LOG",
   "pdfNotes": "NOTES",
   "pdfDate": "DATE",
@@ -510,11 +497,7 @@
   "pdfCourseCol": "Hdg",
   "pdfWindCol": "Wind",
   "pdfSeaCol": "Sea",
-  "pdfMotorCol": "Engine",
-  "pdfSailsCol": "Sails",
   "pdfRemarksCol": "Remarks",
-  "pdfMotorOn": "ON",
-  "pdfMotorOff": "OFF",
   "pdfTrackMap": "COURSE & TRACK",
   "pdfPassageTo": "Passage to {destination}",
   "@pdfPassageTo": {

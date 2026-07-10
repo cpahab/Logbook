@@ -24,11 +24,7 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       sea: fields[4] as String?,
       weather: fields[5] as String?,
       remarks: fields[6] as String?,
-      motorOn: fields[13] as bool?,
-      grossState: fields[14] as String?,
-      fockState: fields[15] as String?,
       vesselStatusNote: fields[16] as String?,
-      keelDown: fields[17] as bool?,
       createdAt: fields[18] as DateTime?,
       updatedAt: fields[19] as DateTime?,
       amendments: (fields[20] as List?)?.cast<TimelineAmendment>(),
@@ -50,7 +46,7 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
   @override
   void write(BinaryWriter writer, TimelineEntry obj) {
     writer
-      ..writeByte(27)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.time)
       ..writeByte(1)
@@ -65,16 +61,8 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       ..write(obj.weather)
       ..writeByte(6)
       ..write(obj.remarks)
-      ..writeByte(13)
-      ..write(obj.motorOn)
-      ..writeByte(14)
-      ..write(obj.grossState)
-      ..writeByte(15)
-      ..write(obj.fockState)
       ..writeByte(16)
       ..write(obj.vesselStatusNote)
-      ..writeByte(17)
-      ..write(obj.keelDown)
       ..writeByte(18)
       ..write(obj.createdAt)
       ..writeByte(19)

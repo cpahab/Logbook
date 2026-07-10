@@ -188,18 +188,6 @@ abstract class AppLocalizations {
   /// **'Später'**
   String get later;
 
-  /// No description provided for @on.
-  ///
-  /// In de, this message translates to:
-  /// **'An'**
-  String get on;
-
-  /// No description provided for @off.
-  ///
-  /// In de, this message translates to:
-  /// **'Aus'**
-  String get off;
-
   /// No description provided for @statSailingDays.
   ///
   /// In de, this message translates to:
@@ -536,24 +524,6 @@ abstract class AppLocalizations {
   /// **'Wetter'**
   String get dataWeather;
 
-  /// No description provided for @dataMainSail.
-  ///
-  /// In de, this message translates to:
-  /// **'Gross'**
-  String get dataMainSail;
-
-  /// No description provided for @dataJibSail.
-  ///
-  /// In de, this message translates to:
-  /// **'Fock'**
-  String get dataJibSail;
-
-  /// No description provided for @dataMotor.
-  ///
-  /// In de, this message translates to:
-  /// **'Motor'**
-  String get dataMotor;
-
   /// No description provided for @entryDialogTitleNew.
   ///
   /// In de, this message translates to:
@@ -643,18 +613,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'z.B. Sonnig'**
   String get entryDialogWeatherHint;
-
-  /// No description provided for @entryDialogMainSailLabel.
-  ///
-  /// In de, this message translates to:
-  /// **'Gross'**
-  String get entryDialogMainSailLabel;
-
-  /// No description provided for @entryDialogJibSailLabel.
-  ///
-  /// In de, this message translates to:
-  /// **'Fock'**
-  String get entryDialogJibSailLabel;
 
   /// No description provided for @entryDialogMotorLabel.
   ///
@@ -2546,36 +2504,6 @@ abstract class AppLocalizations {
   /// **'BG'**
   String get crewBloodGroupPrefix;
 
-  /// No description provided for @sailFull.
-  ///
-  /// In de, this message translates to:
-  /// **'Voll gesetzt'**
-  String get sailFull;
-
-  /// No description provided for @sailReef1.
-  ///
-  /// In de, this message translates to:
-  /// **'1. Reff'**
-  String get sailReef1;
-
-  /// No description provided for @sailReef2.
-  ///
-  /// In de, this message translates to:
-  /// **'2. Reff'**
-  String get sailReef2;
-
-  /// No description provided for @sailLowered.
-  ///
-  /// In de, this message translates to:
-  /// **'Niedergeholt'**
-  String get sailLowered;
-
-  /// No description provided for @sailFurled.
-  ///
-  /// In de, this message translates to:
-  /// **'Eingerollt'**
-  String get sailFurled;
-
   /// No description provided for @pdfVoyageLog.
   ///
   /// In de, this message translates to:
@@ -2678,35 +2606,11 @@ abstract class AppLocalizations {
   /// **'See'**
   String get pdfSeaCol;
 
-  /// No description provided for @pdfMotorCol.
-  ///
-  /// In de, this message translates to:
-  /// **'Motor'**
-  String get pdfMotorCol;
-
-  /// No description provided for @pdfSailsCol.
-  ///
-  /// In de, this message translates to:
-  /// **'Segel'**
-  String get pdfSailsCol;
-
   /// No description provided for @pdfRemarksCol.
   ///
   /// In de, this message translates to:
   /// **'Bemerkungen'**
   String get pdfRemarksCol;
-
-  /// No description provided for @pdfMotorOn.
-  ///
-  /// In de, this message translates to:
-  /// **'AN'**
-  String get pdfMotorOn;
-
-  /// No description provided for @pdfMotorOff.
-  ///
-  /// In de, this message translates to:
-  /// **'AUS'**
-  String get pdfMotorOff;
 
   /// No description provided for @pdfTrackMap.
   ///
