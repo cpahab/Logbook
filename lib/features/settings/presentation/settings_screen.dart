@@ -478,7 +478,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-    ctrl.dispose();
+    // Deferred to after this frame: the bottom sheet's exit animation may
+    // still be tearing down its TextField (and thus still touching ctrl)
+    // for a moment after this Future resolves — disposing synchronously
+    // here races that teardown and throws "used after being disposed".
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
     if (name == null || name.isEmpty || !mounted) return;
 
     setState(() => _syncing = true);
@@ -554,7 +558,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-    ctrl.dispose();
+    // See _showNewLogbookDialog for why this is deferred rather than
+    // disposed immediately.
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
     if (newName == null || newName == currentName || !mounted) return;
 
     try {
