@@ -1887,30 +1887,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: cs.secondary,
                         ),
                       ),
-                      Row(
-                        children: [
-                          Tooltip(
-                            message: l10n.settingsNewLogbook,
-                            child: GestureDetector(
-                              onTap: _syncing ? null : () => _showNewLogbookDialog(uid),
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: cs.surfaceContainer,
-                                ),
-                                child: Icon(Icons.add, size: 18, color: cs.secondary),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          AnimatedRotation(
-                            turns: _logbooksExpanded ? 0.5 : 0,
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(Icons.expand_more,
-                                size: 20, color: cs.outlineVariant),
-                          ),
-                        ],
+                      AnimatedRotation(
+                        turns: _logbooksExpanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(Icons.expand_more,
+                            size: 20, color: cs.outlineVariant),
                       ),
                     ],
                   ),
@@ -1936,6 +1917,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _syncing ? null : () => _showNewLogbookDialog(uid),
+                      style: TextButton.styleFrom(
+                        foregroundColor: cs.secondary,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(l10n.settingsNewLogbook),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   if (_loadingLogbooks)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8),
