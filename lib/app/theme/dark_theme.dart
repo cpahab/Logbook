@@ -45,13 +45,12 @@ final ThemeData darkTheme = ThemeData(
     onPrimaryContainer: _ink,
     inversePrimary: Color(0xFF002B6A),
     // ── Secondary — Captain's Gold ───────────────────────────────────
-    // secondaryContainer/onSecondaryContainer were still the pre-redesign
-    // cyan (left over from when secondary itself was cyan) — a rich
-    // goldenrod fill with a dark ink "on" color, matching how
-    // primaryContainer/onPrimaryContainer relate to primary here.
+    // One gold everywhere: secondary/secondaryContainer/secondaryFixed/
+    // secondaryFixedDim all share the same brightest value (_secondary)
+    // instead of stepping through darker goldenrod/dimmed variants.
     secondary: _secondary,
     onSecondary: _ink,
-    secondaryContainer: Color(0xFFB8860B),
+    secondaryContainer: _secondary,
     onSecondaryContainer: Color(0xFF3A2E00),
     // ── Tertiary — Seafoam (lighter than light theme) ────────────────
     tertiary: Color(0xFFB7C8DE),
@@ -92,10 +91,11 @@ final ThemeData darkTheme = ThemeData(
     onPrimaryFixedVariant: const Color(0xFF2A486B),
     // ── Secondary fixed (gold) ──────────────────────────────────────
     // "Fixed" roles are meant to stay the same across brightness (that's
-    // the point) — these were still the pre-redesign cyan. Match light
-    // theme's values exactly instead of inventing a separate dark-mode set.
-    secondaryFixed: const Color(0xFFFFE088),
-    secondaryFixedDim: const Color(0xFFE1C46F),
+    // the point). secondaryFixedDim used to be a dimmed step down from
+    // secondaryFixed — now the same brightest gold as every other gold
+    // role in this theme.
+    secondaryFixed: _secondary,
+    secondaryFixedDim: _secondary,
     onSecondaryFixed: const Color(0xFF241A00),
     onSecondaryFixedVariant: const Color(0xFF574500),
     // ── Tertiary fixed (dark navy) ──────────────────────────────────

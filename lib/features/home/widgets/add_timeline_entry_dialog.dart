@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../../app/theme/theme_extensions.dart';
+import '../../settings/domain/theme_provider.dart';
 import '../domain/timeline_entry.dart';
-import '../utils/sail_state_utils.dart';
+import '../domain/vessel_equipment.dart';
 import '../../../l10n/l10n_extension.dart';
 
 /// Return value from [AddTimelineEntryDialog].
@@ -60,20 +62,45 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   final windStrengthCtrl = TextEditingController();
   final seaCtrl          = TextEditingController();
   final weatherCtrl      = TextEditingController();
+  final temperatureCtrl  = TextEditingController();
+  final pressureCtrl     = TextEditingController();
   final remarksCtrl      = TextEditingController();
   final amendmentReasonCtrl = TextEditingController();
 
   String  _windDir  = 'N';
-  String? _grossState;
-  String? _fockState;
-  bool?   _motorOn;
-  bool?   _keelDown;
+  final Map<String, String?> _slotState = {};
+  // Temperature/pressure aren't filled in on every entry, so they start
+  // folded — except when editing an entry that already has one of them,
+  // so existing data is visible without an extra tap.
+  bool _envExtraExpanded = false;
+
+  // How many active equipment slots (in configured order) get their full
+  // chip row shown at all times; every slot beyond that — sails, motor,
+  // keel alike — collapses to a one-line summary that expands on tap, so
+  // the dialog stays short regardless of how much equipment is configured.
+  // 0 means every slot folds; the current value shown when opening an entry
+  // (main/jib's last picked state, motor on/off, keel up/down) is still
+  // visible at a glance on the collapsed summary line, so nothing is hidden
+  // — folding only costs a tap when you're about to *change* a value.
+  //
+  // To revert to "always show the first N slots expanded": set this back to
+  // that N — no other changes needed. To remove the feature entirely,
+  // delete this constant, _expandedSlotKeys, and _collapsibleSlotRow, and go
+  // back to rendering every entry in activeSlots the way the always-expanded
+  // ones are rendered below.
+  static const _alwaysExpandedSlotCount = 0;
+  final Set<String> _expandedSlotKeys = {};
+
+  /// True for [slot]s that always get a full expanded chip row, regardless
+  /// of [_expandedSlotKeys] — the first [_alwaysExpandedSlotCount] slots in
+  /// [activeSlots] order.
+  // indexOf's *position* is compared against a threshold that's currently 0
+  // but meant to be raised again later; a literal contains() check would
+  // only work for this one value.
+  bool _isAlwaysExpanded(EquipmentSlot slot, List<EquipmentSlot> activeSlots) =>
+      activeSlots.indexOf(slot) < _alwaysExpandedSlotCount; // ignore: prefer_contains
 
   static const _windDirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-
-  static const _grossSentinels = ['sail:full', 'sail:reef1', 'sail:reef2', 'sail:lowered'];
-  static const _fockSentinels  = ['sail:full', 'sail:reef1', 'sail:reef2', 'sail:furled'];
-
 
   @override
   void initState() {
@@ -86,11 +113,24 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       _parseWind(e.wind);
       seaCtrl.text     = e.sea ?? '';
       weatherCtrl.text = e.weather ?? '';
+      temperatureCtrl.text = e.temperature?.toString() ?? '';
+      pressureCtrl.text    = e.pressure?.toString() ?? '';
+      _envExtraExpanded = e.temperature != null || e.pressure != null;
       remarksCtrl.text = e.remarks ?? '';
-      _grossState = normalizeSailState(e.grossState);
-      _fockState  = normalizeSailState(e.fockState);
-      _motorOn    = e.motorOn;
-      _keelDown   = e.keelDown;
+
+      // New fields (null on entries created before this feature).
+      _slotState['slot1']  = e.slot1State;
+      _slotState['slot2']  = e.slot2State;
+      _slotState['slot3']  = e.slot3State;
+      _slotState['slot4']  = e.slot4State;
+      _slotState['slot5']  = e.slot5State;
+      _slotState['slot6']  = e.slot6State;
+      _slotState['slot7']  = e.slot7State;
+      _slotState['slot8']  = e.slot8State;
+      _slotState['slot9']  = e.slot9State;
+      _slotState['slot10'] = e.slot10State;
+      _slotState['slot11'] = e.slot11State;
+      _slotState['slot12'] = e.slot12State;
     } else {
       selectedTime = TimeOfDay.now();
     }
@@ -122,6 +162,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     amendmentReasonCtrl.dispose();
     seaCtrl.dispose();
     weatherCtrl.dispose();
+    temperatureCtrl.dispose();
+    pressureCtrl.dispose();
     remarksCtrl.dispose();
     super.dispose();
   }
@@ -148,11 +190,21 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       wind:       wind,
       sea:        seaCtrl.text.isEmpty     ? null : seaCtrl.text,
       weather:    weatherCtrl.text.isEmpty ? null : weatherCtrl.text,
+      temperature: _parseDouble(temperatureCtrl.text),
+      pressure:    _parseDouble(pressureCtrl.text),
       remarks:    remarksCtrl.text.isEmpty ? null : remarksCtrl.text,
-      grossState: _grossState,
-      fockState:  _fockState,
-      motorOn:    _motorOn,
-      keelDown:   _keelDown,
+      slot1State:  _slotState['slot1'],
+      slot2State:  _slotState['slot2'],
+      slot3State:  _slotState['slot3'],
+      slot4State:  _slotState['slot4'],
+      slot5State:  _slotState['slot5'],
+      slot6State:  _slotState['slot6'],
+      slot7State:  _slotState['slot7'],
+      slot8State:  _slotState['slot8'],
+      slot9State:  _slotState['slot9'],
+      slot10State: _slotState['slot10'],
+      slot11State: _slotState['slot11'],
+      slot12State: _slotState['slot12'],
       // Preserve original createdAt on edits; set it now for new entries.
       createdAt:  widget.initialEntry?.createdAt ?? now,
       updatedAt:  widget.initialEntry != null ? now : null,
@@ -179,6 +231,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     final cs     = Theme.of(context).colorScheme;
     final l10n   = context.l10n;
     final isEdit = widget.initialEntry != null;
+    final activeSlots = context.read<ThemeProvider>().vesselEquipment.activeSlots;
 
     return Dialog.fullscreen(
       child: Scaffold(
@@ -415,81 +468,31 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  _envExtraRow(cs),
 
                   // ── end 3. Umgebung ──
 
-                  const SizedBox(height: 16),
-                  // ── 4. Segel & Motor ─────────────────────────────────
-                  _sectionHeader(Icons.sailing, l10n.entryDialogSectionSails, cs),
-                  const SizedBox(height: 8),
-                  _plainCard(
-                    cs: cs,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _labelSm(l10n.entryDialogMainSailLabel, cs),
-                        const SizedBox(height: 6),
-                        _sailChips(
-                          sentinels: _grossSentinels,
-                          labelFor: _sailLabel,
-                          selected: _grossState,
-                          onSelect: (v) => setState(() => _grossState = v),
-                          cs: cs,
-                        ),
-                        const SizedBox(height: 10),
-                        _labelSm(l10n.entryDialogJibSailLabel, cs),
-                        const SizedBox(height: 6),
-                        _sailChips(
-                          sentinels: _fockSentinels,
-                          labelFor: _sailLabel,
-                          selected: _fockState,
-                          onSelect: (v) => setState(() => _fockState = v),
-                          cs: cs,
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _labelSm(l10n.entryDialogMotorLabel, cs),
-                                  const SizedBox(height: 6),
-                                  Row(children: [
-                                    _stateChip(l10n.on,  _motorOn == true,
-                                        () => setState(() => _motorOn = _motorOn == true  ? null : true),  cs),
-                                    const SizedBox(width: 8),
-                                    _stateChip(l10n.off, _motorOn == false,
-                                        () => setState(() => _motorOn = _motorOn == false ? null : false), cs),
-                                  ]),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _labelSm(l10n.entryDialogKeelLabel, cs),
-                                  const SizedBox(height: 6),
-                                  Row(children: [
-                                    _stateChip(l10n.vesselKeelDown, _keelDown == true,
-                                        () => setState(() => _keelDown = _keelDown == true  ? null : true),  cs),
-                                    const SizedBox(width: 8),
-                                    _stateChip(l10n.vesselKeelUp, _keelDown == false,
-                                        () => setState(() => _keelDown = _keelDown == false ? null : false), cs),
-                                  ]),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ── end 4. Segel & Motor ──
+                  if (activeSlots.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    // ── 4. Ausrüstung ────────────────────────────────────
+                    _sectionHeader(Icons.directions_boat_outlined, l10n.entryDialogSectionVessel, cs),
+                    const SizedBox(height: 8),
+                    // Sails, motor, and keel are visually distinct kinds of
+                    // equipment, so each gets its own card instead of one
+                    // long shared block.
+                    if (_sailSlots(activeSlots).isNotEmpty) ...[
+                      _equipmentCard(_sailSlots(activeSlots), activeSlots, cs),
+                      const SizedBox(height: 10),
+                    ],
+                    if (_motorSlot(activeSlots) != null) ...[
+                      _equipmentCard([_motorSlot(activeSlots)!], activeSlots, cs),
+                      const SizedBox(height: 10),
+                    ],
+                    if (_keelSlot(activeSlots) != null)
+                      _equipmentCard([_keelSlot(activeSlots)!], activeSlots, cs),
+                    // ── end 4. Ausrüstung ──
+                  ],
 
                   const SizedBox(height: 16),
                   // ── 5. Bemerkungen ───────────────────────────────────
@@ -644,7 +647,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.shadow.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -673,7 +676,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.shadow.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -739,24 +742,64 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     );
   }
 
-  /// Localized display label for a `sail:` sentinel value.
-  String _sailLabel(String sentinel) {
-    final l10n = context.l10n;
-    return switch (sentinel) {
-      'sail:full'    => l10n.sailFull,
-      'sail:reef1'   => l10n.sailReef1,
-      'sail:reef2'   => l10n.sailReef2,
-      'sail:lowered' => l10n.sailLowered,
-      'sail:furled'  => l10n.sailFurled,
-      _              => sentinel,
-    };
+  /// Active slots that are neither motor (slot11) nor keel (slot12) — i.e.
+  /// every configured sail, in slot order.
+  List<EquipmentSlot> _sailSlots(List<EquipmentSlot> activeSlots) =>
+      activeSlots.where((s) => s.key != 'slot11' && s.key != 'slot12').toList();
+
+  EquipmentSlot? _motorSlot(List<EquipmentSlot> activeSlots) =>
+      activeSlots.where((s) => s.key == 'slot11').firstOrNull;
+
+  EquipmentSlot? _keelSlot(List<EquipmentSlot> activeSlots) =>
+      activeSlots.where((s) => s.key == 'slot12').firstOrNull;
+
+  /// A card holding one or more equipment [slots] (sails, or the single
+  /// motor/keel slot), each rendered via [_equipmentSlotRow]. [activeSlots]
+  /// is the full list — passed through so [_isAlwaysExpanded]'s position
+  /// check stays correct regardless of which slots end up in this card.
+  Widget _equipmentCard(
+      List<EquipmentSlot> slots, List<EquipmentSlot> activeSlots, ColorScheme cs) {
+    return _plainCard(
+      cs: cs,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (int i = 0; i < slots.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            _equipmentSlotRow(slots[i], activeSlots, cs),
+          ],
+        ],
+      ),
+    );
   }
 
-  /// Row of tappable sail-state chips (one of [sentinels] can be selected at
-  /// a time; tapping the already-selected one clears it).
-  Widget _sailChips({
-    required List<String> sentinels,
-    required String Function(String) labelFor,
+  /// One equipment slot's row: the full label+chips block if
+  /// [_isAlwaysExpanded], otherwise the folded [_collapsibleSlotRow].
+  Widget _equipmentSlotRow(
+      EquipmentSlot slot, List<EquipmentSlot> activeSlots, ColorScheme cs) {
+    if (!_isAlwaysExpanded(slot, activeSlots)) {
+      return _collapsibleSlotRow(slot: slot, cs: cs);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _labelSm(slot.label, cs),
+        const SizedBox(height: 6),
+        _equipmentChips(
+          slot: slot,
+          selected: _slotState[slot.key],
+          onSelect: (v) => setState(() => _slotState[slot.key] = v),
+          cs: cs,
+        ),
+      ],
+    );
+  }
+
+  /// Row of tappable state chips for one configurable equipment [slot] (one
+  /// state can be selected at a time; tapping the already-selected one
+  /// clears it).
+  Widget _equipmentChips({
+    required EquipmentSlot slot,
     required String? selected,
     required ValueChanged<String?> onSelect,
     required ColorScheme cs,
@@ -764,14 +807,162 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: sentinels
-          .map((s) => _stateChip(
-                labelFor(s),
-                selected == s,
-                () => onSelect(selected == s ? null : s),
+      children: slot.states
+          .map((state) => _stateChip(
+                state,
+                selected == state,
+                () => onSelect(selected == state ? null : state),
                 cs,
               ))
           .toList(),
+    );
+  }
+
+  /// Fold-out row for temperature (°C, always — this app's only locales,
+  /// de-CH and en-GB, are both metric) and barometric pressure (mBar).
+  /// Neither is filled in on every entry, so this starts collapsed to a
+  /// one-line summary (or an "add" prompt) and expands into two number
+  /// fields on tap, mirroring [_collapsibleSlotRow]'s interaction.
+  Widget _envExtraRow(ColorScheme cs) {
+    final l10n = context.l10n;
+    final hasValues = temperatureCtrl.text.isNotEmpty || pressureCtrl.text.isNotEmpty;
+
+    if (!_envExtraExpanded) {
+      return GestureDetector(
+        onTap: () => setState(() => _envExtraExpanded = true),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                hasValues
+                    ? [
+                        if (temperatureCtrl.text.isNotEmpty) '${temperatureCtrl.text}°C',
+                        if (pressureCtrl.text.isNotEmpty) '${pressureCtrl.text} mBar',
+                      ].join(' · ')
+                    : l10n.entryDialogAddTempPressure,
+                style: Theme.of(context).textTheme.chipLabel.copyWith(
+                  color: hasValues ? cs.onSurface : cs.outline,
+                ),
+              ),
+            ),
+            Icon(Icons.expand_more, size: 18, color: cs.outlineVariant),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _envExtraExpanded = false),
+          child: Row(
+            children: [
+              Expanded(
+                child: _labelSm(
+                    '${l10n.entryDialogTemperatureLabel} & ${l10n.entryDialogPressureLabel}',
+                    cs),
+              ),
+              Icon(Icons.expand_less, size: 18, color: cs.outlineVariant),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: _navCard(
+                label: l10n.entryDialogTemperatureLabel,
+                unit: '°C',
+                controller: temperatureCtrl,
+                placeholder: '18',
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true, signed: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]')),
+                ],
+                cs: cs,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _navCard(
+                label: l10n.entryDialogPressureLabel,
+                unit: 'mBar',
+                controller: pressureCtrl,
+                placeholder: '1013',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
+                cs: cs,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Space-saving alternative to the always-expanded label+chips block above,
+  /// used for any slot where [_isAlwaysExpanded] is false. Collapsed,
+  /// it's a single tappable line showing the slot's name and current
+  /// selection (or a muted dash); tapping it reveals the full [_equipmentChips]
+  /// row, which collapses itself again as soon as a state is picked.
+  Widget _collapsibleSlotRow({required EquipmentSlot slot, required ColorScheme cs}) {
+    final expanded = _expandedSlotKeys.contains(slot.key);
+    final selected = _slotState[slot.key];
+
+    if (!expanded) {
+      return GestureDetector(
+        onTap: () => setState(() => _expandedSlotKeys.add(slot.key)),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                    text: '${slot.label}: ',
+                    style: Theme.of(context).textTheme.microLabel.copyWith(color: cs.mutedLabel),
+                  ),
+                  TextSpan(
+                    text: selected ?? '—',
+                    style: Theme.of(context).textTheme.chipLabel.copyWith(
+                      color: selected == null ? cs.outline : cs.onSurface,
+                    ),
+                  ),
+                ]),
+              ),
+            ),
+            Icon(Icons.expand_more, size: 18, color: cs.outlineVariant),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _expandedSlotKeys.remove(slot.key)),
+          child: Row(
+            children: [
+              Expanded(child: _labelSm(slot.label, cs)),
+              Icon(Icons.expand_less, size: 18, color: cs.outlineVariant),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        _equipmentChips(
+          slot: slot,
+          selected: selected,
+          onSelect: (v) => setState(() {
+            _slotState[slot.key] = v;
+            _expandedSlotKeys.remove(slot.key);
+          }),
+          cs: cs,
+        ),
+      ],
     );
   }
 

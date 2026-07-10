@@ -36,25 +36,16 @@ class TimelineEntry extends HiveObject {
   // @HiveField(10) reff1Gross  — retired
   // @HiveField(11) reff2Fock   — retired
   // @HiveField(12) reff2Gross  — retired
-
-  @HiveField(13)
-  bool? motorOn; // true = an, false = aus
-
-  @HiveField(14)
-  String? grossState;
-
-  @HiveField(15)
-  String? fockState;
+  // @HiveField(13) motorOn     — retired (replaced by slot11State)
+  // @HiveField(14) grossState  — retired (replaced by slot1State)
+  // @HiveField(15) fockState   — retired (replaced by slot2State)
 
   /// Auto-populated when a system event (e.g. vessel status change) generates
   /// this entry. Shown as clear text below the regular remarks.
   @HiveField(16)
   String? vesselStatusNote;
 
-  /// Keel position at the time of this log entry.
-  /// true = keel down (sailing), false = keel up (shoal), null = not recorded.
-  @HiveField(17)
-  bool? keelDown;
+  // @HiveField(17) keelDown    — retired (replaced by slot12State)
 
   /// Set once when the entry is first created. Never overwritten.
   @HiveField(18)
@@ -69,6 +60,32 @@ class TimelineEntry extends HiveObject {
   @HiveField(20)
   List<TimelineAmendment> amendments;
 
+  // Slots 1–10: sails (user-defined names and states).
+  // Stores the user-defined state label chosen at entry time; null if not recorded.
+  @HiveField(21) String? slot1State;   // typically main sail
+  @HiveField(22) String? slot2State;   // typically jib / foresail
+  @HiveField(23) String? slot3State;
+  @HiveField(24) String? slot4State;
+  @HiveField(25) String? slot5State;
+  @HiveField(26) String? slot6State;
+  @HiveField(27) String? slot7State;
+  @HiveField(28) String? slot8State;
+  @HiveField(29) String? slot9State;
+  @HiveField(30) String? slot10State;
+
+  // Slot 11: motor / engine.
+  @HiveField(31) String? slot11State;
+
+  // Slot 12: keel.
+  @HiveField(32) String? slot12State;
+
+  /// Air temperature in degrees Celsius. Always °C regardless of locale —
+  /// this app's only locales (de-CH, en-GB) are both metric.
+  @HiveField(33) double? temperature;
+
+  /// Barometric pressure in millibar (mBar, numerically identical to hPa).
+  @HiveField(34) double? pressure;
+
   TimelineEntry({
     required this.time,
     this.course,
@@ -77,13 +94,23 @@ class TimelineEntry extends HiveObject {
     this.sea,
     this.weather,
     this.remarks,
-    this.motorOn,
-    this.grossState,
-    this.fockState,
     this.vesselStatusNote,
-    this.keelDown,
     this.createdAt,
     this.updatedAt,
     List<TimelineAmendment>? amendments,
+    this.slot1State,
+    this.slot2State,
+    this.slot3State,
+    this.slot4State,
+    this.slot5State,
+    this.slot6State,
+    this.slot7State,
+    this.slot8State,
+    this.slot9State,
+    this.slot10State,
+    this.slot11State,
+    this.slot12State,
+    this.temperature,
+    this.pressure,
   }) : amendments = amendments ?? [];
 }

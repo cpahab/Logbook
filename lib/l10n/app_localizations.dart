@@ -188,18 +188,6 @@ abstract class AppLocalizations {
   /// **'Später'**
   String get later;
 
-  /// No description provided for @on.
-  ///
-  /// In de, this message translates to:
-  /// **'An'**
-  String get on;
-
-  /// No description provided for @off.
-  ///
-  /// In de, this message translates to:
-  /// **'Aus'**
-  String get off;
-
   /// No description provided for @statSailingDays.
   ///
   /// In de, this message translates to:
@@ -536,23 +524,17 @@ abstract class AppLocalizations {
   /// **'Wetter'**
   String get dataWeather;
 
-  /// No description provided for @dataMainSail.
+  /// No description provided for @dataTemperature.
   ///
   /// In de, this message translates to:
-  /// **'Gross'**
-  String get dataMainSail;
+  /// **'Temp.'**
+  String get dataTemperature;
 
-  /// No description provided for @dataJibSail.
+  /// No description provided for @dataPressure.
   ///
   /// In de, this message translates to:
-  /// **'Fock'**
-  String get dataJibSail;
-
-  /// No description provided for @dataMotor.
-  ///
-  /// In de, this message translates to:
-  /// **'Motor'**
-  String get dataMotor;
+  /// **'Luftdruck'**
+  String get dataPressure;
 
   /// No description provided for @entryDialogTitleNew.
   ///
@@ -584,11 +566,11 @@ abstract class AppLocalizations {
   /// **'Umgebung'**
   String get entryDialogSectionEnv;
 
-  /// No description provided for @entryDialogSectionSails.
+  /// No description provided for @entryDialogSectionVessel.
   ///
   /// In de, this message translates to:
-  /// **'Segel & Motor'**
-  String get entryDialogSectionSails;
+  /// **'Schiff'**
+  String get entryDialogSectionVessel;
 
   /// No description provided for @entryDialogSectionRemarks.
   ///
@@ -644,17 +626,23 @@ abstract class AppLocalizations {
   /// **'z.B. Sonnig'**
   String get entryDialogWeatherHint;
 
-  /// No description provided for @entryDialogMainSailLabel.
+  /// No description provided for @entryDialogTemperatureLabel.
   ///
   /// In de, this message translates to:
-  /// **'Gross'**
-  String get entryDialogMainSailLabel;
+  /// **'Temperatur'**
+  String get entryDialogTemperatureLabel;
 
-  /// No description provided for @entryDialogJibSailLabel.
+  /// No description provided for @entryDialogPressureLabel.
   ///
   /// In de, this message translates to:
-  /// **'Fock'**
-  String get entryDialogJibSailLabel;
+  /// **'Luftdruck'**
+  String get entryDialogPressureLabel;
+
+  /// No description provided for @entryDialogAddTempPressure.
+  ///
+  /// In de, this message translates to:
+  /// **'Temperatur & Luftdruck hinzufügen'**
+  String get entryDialogAddTempPressure;
 
   /// No description provided for @entryDialogMotorLabel.
   ///
@@ -878,6 +866,12 @@ abstract class AppLocalizations {
   /// **'Schiff'**
   String get settingsVesselSection;
 
+  /// No description provided for @settingsVesselInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Schiffsdaten wie Name, MMSI und Rufzeichen sowie Notfallausrüstung erfassen.'**
+  String get settingsVesselInfo;
+
   /// No description provided for @settingsFieldName.
   ///
   /// In de, this message translates to:
@@ -920,11 +914,65 @@ abstract class AppLocalizations {
   /// **'z.B. Kombüse, Motorraum'**
   String get settingsFieldFireSuppHint;
 
+  /// No description provided for @settingsEquipmentSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Schiffskonfiguration'**
+  String get settingsEquipmentSection;
+
+  /// No description provided for @settingsEquipmentInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Lege fest, welche Segel-, Motor- und Kielzustände für Logbucheinträge verwendet werden können.'**
+  String get settingsEquipmentInfo;
+
+  /// No description provided for @settingsEquipmentSlotLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Bezeichnung (z.B. Grosssegel)'**
+  String get settingsEquipmentSlotLabel;
+
+  /// No description provided for @settingsEquipmentStateLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Zustand hinzufügen (z.B. 1. Reff)'**
+  String get settingsEquipmentStateLabel;
+
+  /// No description provided for @settingsEquipmentAddState.
+  ///
+  /// In de, this message translates to:
+  /// **'Hinzufügen'**
+  String get settingsEquipmentAddState;
+
+  /// No description provided for @settingsEquipmentTypeSail.
+  ///
+  /// In de, this message translates to:
+  /// **'Segel'**
+  String get settingsEquipmentTypeSail;
+
+  /// No description provided for @settingsEquipmentAddType.
+  ///
+  /// In de, this message translates to:
+  /// **'{type} hinzufügen'**
+  String settingsEquipmentAddType(String type);
+
+  /// No description provided for @settingsEquipmentDeleteType.
+  ///
+  /// In de, this message translates to:
+  /// **'{type} löschen'**
+  String settingsEquipmentDeleteType(String type);
+
   /// No description provided for @settingsAppearanceSection.
   ///
   /// In de, this message translates to:
   /// **'Darstellung'**
   String get settingsAppearanceSection;
+
+  /// No description provided for @settingsAppearanceInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Design und Sprache der App anpassen.'**
+  String get settingsAppearanceInfo;
 
   /// No description provided for @settingsThemeLabel.
   ///
@@ -1850,6 +1898,12 @@ abstract class AppLocalizations {
   /// **'Konto'**
   String get settingsAccountSection;
 
+  /// No description provided for @settingsAccountInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung und Konto verwalten.'**
+  String get settingsAccountInfo;
+
   /// No description provided for @settingsAccountSignedInAs.
   ///
   /// In de, this message translates to:
@@ -1897,6 +1951,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Logbücher'**
   String get settingsLogbooksSection;
+
+  /// No description provided for @settingsLogbooksInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbücher verwalten, wechseln oder mit anderen teilen.'**
+  String get settingsLogbooksInfo;
 
   /// No description provided for @settingsMyLogbooks.
   ///
@@ -2498,36 +2558,6 @@ abstract class AppLocalizations {
   /// **'BG'**
   String get crewBloodGroupPrefix;
 
-  /// No description provided for @sailFull.
-  ///
-  /// In de, this message translates to:
-  /// **'Voll gesetzt'**
-  String get sailFull;
-
-  /// No description provided for @sailReef1.
-  ///
-  /// In de, this message translates to:
-  /// **'1. Reff'**
-  String get sailReef1;
-
-  /// No description provided for @sailReef2.
-  ///
-  /// In de, this message translates to:
-  /// **'2. Reff'**
-  String get sailReef2;
-
-  /// No description provided for @sailLowered.
-  ///
-  /// In de, this message translates to:
-  /// **'Niedergeholt'**
-  String get sailLowered;
-
-  /// No description provided for @sailFurled.
-  ///
-  /// In de, this message translates to:
-  /// **'Eingerollt'**
-  String get sailFurled;
-
   /// No description provided for @pdfVoyageLog.
   ///
   /// In de, this message translates to:
@@ -2630,35 +2660,11 @@ abstract class AppLocalizations {
   /// **'See'**
   String get pdfSeaCol;
 
-  /// No description provided for @pdfMotorCol.
-  ///
-  /// In de, this message translates to:
-  /// **'Motor'**
-  String get pdfMotorCol;
-
-  /// No description provided for @pdfSailsCol.
-  ///
-  /// In de, this message translates to:
-  /// **'Segel'**
-  String get pdfSailsCol;
-
   /// No description provided for @pdfRemarksCol.
   ///
   /// In de, this message translates to:
   /// **'Bemerkungen'**
   String get pdfRemarksCol;
-
-  /// No description provided for @pdfMotorOn.
-  ///
-  /// In de, this message translates to:
-  /// **'AN'**
-  String get pdfMotorOn;
-
-  /// No description provided for @pdfMotorOff.
-  ///
-  /// In de, this message translates to:
-  /// **'AUS'**
-  String get pdfMotorOff;
 
   /// No description provided for @pdfTrackMap.
   ///

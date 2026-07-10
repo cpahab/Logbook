@@ -16,8 +16,8 @@ import '../domain/crew_member.dart';
 import '../domain/day_entry.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
+import '../domain/vessel_equipment.dart';
 import 'compute_daily_stats.dart';
-import 'sail_state_utils.dart';
 
 /// Returns true for codepoints that NotoSans can't render but NotoEmoji can
 /// — used to split free-text (which may contain emoji) into runs so each
@@ -103,11 +103,7 @@ class PdfStrings {
   final String courseCol;
   final String windCol;
   final String seaCol;
-  final String motorCol;
-  final String sailsCol;
   final String remarksCol;
-  final String motorOn;
-  final String motorOff;
   final String trackMap;
   final String locale;
   final String Function(String destination) passageTo;
@@ -132,11 +128,7 @@ class PdfStrings {
     required this.courseCol,
     required this.windCol,
     required this.seaCol,
-    required this.motorCol,
-    required this.sailsCol,
     required this.remarksCol,
-    required this.motorOn,
-    required this.motorOff,
     required this.trackMap,
     required this.locale,
     required this.passageTo,
@@ -154,6 +146,7 @@ Future<Uint8List> buildVoyagePdf({
   required DailyStats? stats,
   required String vesselName,
   required PdfStrings strings,
+  required VesselEquipmentConfig equipment,
   List<TrackPoint> trackPoints = const [],
   List<Uint8List> photoBytes = const [],
 }) async {
@@ -239,7 +232,7 @@ Future<Uint8List> buildVoyagePdf({
               pw.Expanded(
                 flex: 8,
                 child: entry.timeline.isNotEmpty
-                    ? _buildTimeline(entry.timeline, bold, regular, emojiFont, strings)
+                    ? _buildTimeline(entry.timeline, bold, regular, emojiFont, strings, equipment)
                     : pw.SizedBox(),
               ),
               pw.SizedBox(width: 20),
@@ -435,17 +428,27 @@ pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular, pw.Fo
 
 // ── Timeline table ────────────────────────────────────────────────────────────
 
-pw.Widget _buildTimeline(
-    List<TimelineEntry> entries, pw.Font bold, pw.Font regular, pw.Font emoji, PdfStrings strings) {
+/// Returns a 2-character uppercase PDF cell abbreviation for a state label.
+/// Falls back to '—' for null or empty.
+String _slotAbbr(String? state) {
+  if (state == null || state.trim().isEmpty) return '—';
+  final t = state.trim();
+  return t.substring(0, t.length.clamp(0, 2)).toUpperCase();
+}
+
+pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regular,
+    pw.Font emoji, PdfStrings strings, VesselEquipmentConfig equipment) {
   // Detect which optional columns are actually populated so we only render them.
   final hasCourse  = entries.any((e) => e.course  != null);
   final hasSpeed   = entries.any((e) => e.speed   != null);
   final hasWind    = entries.any((e) => e.wind?.isNotEmpty  == true);
   final hasSea     = entries.any((e) => e.sea?.isNotEmpty   == true);
-  final hasMotor   = entries.any((e) => e.motorOn != null);
-  final hasSail    = entries.any((e) => e.grossState != null || e.fockState != null);
+  final hasTemperature = entries.any((e) => e.temperature != null);
+  final hasPressure    = entries.any((e) => e.pressure != null);
   final hasRemarks = entries.any((e) =>
       e.remarks?.isNotEmpty == true || e.vesselStatusNote?.isNotEmpty == true);
+
+  final activeSlots = equipment.activeSlots;
 
   // Build ordered column list so flex widths stay aligned.
   final cols = <({String header, double flex})>[
@@ -454,8 +457,10 @@ pw.Widget _buildTimeline(
     if (hasSpeed)   (header: 'kn',              flex: 0.7),
     if (hasWind)    (header: strings.windCol,   flex: 1.1),
     if (hasSea)     (header: strings.seaCol,    flex: 0.8),
-    if (hasMotor)   (header: strings.motorCol,  flex: 0.7),
-    if (hasSail)    (header: strings.sailsCol,  flex: 1.0),
+    if (hasTemperature) (header: '°C',   flex: 0.6),
+    if (hasPressure)    (header: 'mBar', flex: 0.7),
+    for (final slot in activeSlots)
+      (header: slot.label.substring(0, slot.label.length.clamp(0, 6)), flex: 0.7),
     if (hasRemarks) (header: strings.remarksCol, flex: 2.6),
   ];
 
@@ -463,8 +468,6 @@ pw.Widget _buildTimeline(
     for (int i = 0; i < cols.length; i++)
       i: pw.FlexColumnWidth(cols[i].flex),
   };
-
-  final sailAbbr = sailStateAbbr;
 
   pw.Widget cell(String text, {bool isHeader = false}) => pw.Padding(
     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
@@ -478,9 +481,24 @@ pw.Widget _buildTimeline(
     children: cols.map((c) => cell(c.header, isHeader: true)).toList(),
   );
 
+  /// The recorded value for one slot on [e].
+  String? slotValue(TimelineEntry e, String key) => switch (key) {
+    'slot1'  => e.slot1State,
+    'slot2'  => e.slot2State,
+    'slot3'  => e.slot3State,
+    'slot4'  => e.slot4State,
+    'slot5'  => e.slot5State,
+    'slot6'  => e.slot6State,
+    'slot7'  => e.slot7State,
+    'slot8'  => e.slot8State,
+    'slot9'  => e.slot9State,
+    'slot10' => e.slot10State,
+    'slot11' => e.slot11State,
+    'slot12' => e.slot12State,
+    _        => null,
+  };
+
   pw.TableRow dataRow(TimelineEntry e, bool shade) {
-    final sailText =
-        '${sailAbbr(e.grossState)} / ${sailAbbr(e.fockState)}';
     final remarksText = [e.remarks, e.vesselStatusNote]
         .where((s) => s?.isNotEmpty == true)
         .join(' · ');
@@ -491,8 +509,9 @@ pw.Widget _buildTimeline(
       if (hasSpeed)   cell(e.speed   != null ? e.speed!.toStringAsFixed(1) : '—'),
       if (hasWind)    cell(e.wind    ?? '—'),
       if (hasSea)     cell(e.sea     ?? '—'),
-      if (hasMotor)   cell(e.motorOn == null ? '—' : (e.motorOn! ? strings.motorOn : strings.motorOff)),
-      if (hasSail)    cell(sailText),
+      if (hasTemperature) cell(e.temperature != null ? e.temperature!.toStringAsFixed(1) : '—'),
+      if (hasPressure)    cell(e.pressure    != null ? e.pressure!.toStringAsFixed(0)    : '—'),
+      for (final slot in activeSlots) cell(_slotAbbr(slotValue(e, slot.key))),
       if (hasRemarks) cell(remarksText.isEmpty ? '—' : remarksText),
     ];
 

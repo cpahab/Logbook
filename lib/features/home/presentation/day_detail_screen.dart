@@ -20,6 +20,7 @@ import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import '../domain/crew_member.dart';
 import '../domain/timeline_amendment.dart';
+import '../domain/vessel_equipment.dart';
 import '../widgets/add_timeline_entry_dialog.dart';
 import '../widgets/add_crew_member_dialog.dart';
 import '../widgets/crew_picker_sheet.dart';
@@ -80,16 +81,35 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return '$crewLabel: $body';
   }
 
-  /// Maps a sail-state sentinel (grossState/fockState, e.g. 'sail:reef1') to
-  /// its localised display string.
-  static String _sailStateDisplay(String s, AppLocalizations l10n) => switch (s) {
-    'sail:full'    => l10n.sailFull,
-    'sail:reef1'   => l10n.sailReef1,
-    'sail:reef2'   => l10n.sailReef2,
-    'sail:lowered' => l10n.sailLowered,
-    'sail:furled'  => l10n.sailFurled,
-    _              => s, // unreachable: grossState/fockState are always one of the sentinels above
+  /// Looks up the recorded state for one configurable equipment [slot] on
+  /// [t] by its fixed storage key ('slot1' … 'slot12').
+  static String? _slotValue(TimelineEntry t, String key) => switch (key) {
+    'slot1'  => t.slot1State,
+    'slot2'  => t.slot2State,
+    'slot3'  => t.slot3State,
+    'slot4'  => t.slot4State,
+    'slot5'  => t.slot5State,
+    'slot6'  => t.slot6State,
+    'slot7'  => t.slot7State,
+    'slot8'  => t.slot8State,
+    'slot9'  => t.slot9State,
+    'slot10' => t.slot10State,
+    'slot11' => t.slot11State,
+    'slot12' => t.slot12State,
+    _        => null,
   };
+
+  /// Builds one display line per active equipment [slot] with a recorded
+  /// state on [t] ("Label: state").
+  static List<String> _equipmentStatusLines(
+      TimelineEntry t, List<EquipmentSlot> activeSlots) {
+    final lines = <String>[];
+    for (final slot in activeSlots) {
+      final val = _slotValue(t, slot.key);
+      if (val != null) lines.add('${slot.label}: $val');
+    }
+    return lines;
+  }
 
   /// Renders a `vs:` vessel-status sentinel note into its localised display string.
   static String _vesselStatusDisplay(String note, AppLocalizations l10n) =>
@@ -935,7 +955,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   decoration: BoxDecoration(border: Border(right: div)),
                   padding: const EdgeInsets.all(12),
                   child: _statCell(
-                      context.l10n.statDistance.toUpperCase(), '${stats.distanceNm.toStringAsFixed(1)} NM', cs),
+                      context.l10n.statDistance.toUpperCase(), '${stats.distanceNm.toStringAsFixed(1)} nm', cs),
                 ),
               ),
               Expanded(
@@ -1226,9 +1246,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 t.wind != null ||
                 t.sea != null ||
                 t.weather != null ||
-                t.grossState != null ||
-                t.fockState != null ||
-                t.motorOn != null) ...[
+                t.temperature != null ||
+                t.pressure != null ||
+                VesselEquipmentConfig.slotKeys.any((k) => _slotValue(t, k) != null)) ...[
               const SizedBox(height: 8),
               Text(
                 [
@@ -1239,10 +1259,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   if (t.wind != null) '${context.l10n.dataWind}: ${t.wind!}',
                   if (t.sea != null) '${context.l10n.dataSea}: ${t.sea!}',
                   if (t.weather != null) '${context.l10n.dataWeather}: ${t.weather!}',
-                  if (t.grossState != null) '${context.l10n.dataMainSail}: ${_sailStateDisplay(t.grossState!, context.l10n)}',
-                  if (t.fockState != null) '${context.l10n.dataJibSail}: ${_sailStateDisplay(t.fockState!, context.l10n)}',
-                  if (t.motorOn != null)
-                    '${context.l10n.dataMotor}: ${t.motorOn! ? context.l10n.on : context.l10n.off}',
+                  if (t.temperature != null)
+                    '${context.l10n.dataTemperature}: ${t.temperature!.toStringAsFixed(1)}°C',
+                  if (t.pressure != null)
+                    '${context.l10n.dataPressure}: ${t.pressure!.toStringAsFixed(0)} mBar',
+                  ..._equipmentStatusLines(
+                      t, context.read<ThemeProvider>().vesselEquipment.activeSlots),
                 ].join(' · '),
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: cs.onSurfaceVariant,
@@ -2123,7 +2145,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           behavior: HitTestBehavior.opaque,
           onTap: () => _dropMarker(
             LatLng(p.lat, p.lon),
-            _buildEntryTooltip(t, context.l10n),
+            _buildEntryTooltip(t, context.l10n,
+                context.read<ThemeProvider>().vesselEquipment.activeSlots),
           ),
           child: Center(
             child: Container(
@@ -2860,28 +2883,61 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     repo.addTimelineEntry(day, result.entry);
   }
 
+  /// Finds [t]'s position within [timeline] by reference (the common,
+  /// cheap case), falling back to matching `createdAt` (stable across
+  /// edits, unlike list position) if a Firestore sync round-trip has
+  /// already replaced the object graph with freshly deserialized instances.
+  /// Returns -1 if [t] genuinely isn't present.
+  int _indexOfTimelineEntry(List<TimelineEntry> timeline, TimelineEntry t) {
+    final byReference = timeline.indexOf(t);
+    if (byReference != -1) return byReference;
+    if (t.createdAt == null) return -1;
+    return timeline.indexWhere((e) => e.createdAt == t.createdAt);
+  }
+
   /// Removes [t] from the timeline, offering an "undo" snackbar action that
   /// re-inserts it at its original index.
   void _deleteTimelineEntry(DayEntry entry, TimelineEntry t) {
-    final index = entry.timeline.indexOf(t);
+    final repo = context.read<HomeRepository>();
+    final date = entry.date;
+    // Re-fetch rather than trust the passed-in `entry`: the debounced
+    // Firestore sync (~2s after any edit) always echoes back a freshly
+    // deserialized DayEntry that replaces this one in the repository. Saving
+    // a stale reference throws HiveError ("This object is currently not in a
+    // box"); matching `t` by identity against a fresh object graph also
+    // silently fails, hence _indexOfTimelineEntry's createdAt fallback.
+    final current = repo.getEntry(date) ?? entry;
+    final index = _indexOfTimelineEntry(current.timeline, t);
+    if (index == -1) return;
     setState(() {
-      entry.timeline.remove(t);
-      final repo = context.read<HomeRepository>();
-      repo.syncKeelFromTimeline(entry);
-      repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
+      current.timeline.removeAt(index);
+      repo.saveEntry(current, changedFields: {'timeline'});
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(context.l10n.dayEntryDeleted),
+      // Longer than the default 4s: this snackbar carries an undo action, so
+      // it needs enough time to notice, read, and react — still well within
+      // Material's own guidance of 4-10s for actionable snackbars.
+      duration: const Duration(seconds: 10),
+      // SnackBar defaults `persist` to true whenever `action` is set (see
+      // its own doc comment), which makes it ignore `duration` entirely and
+      // stay open until manually dismissed. Without this, the 10s above is
+      // a no-op — the snackbar just... never times out.
+      persist: false,
       action: SnackBarAction(
         label: context.l10n.dayUndo,
         onPressed: () {
           if (!mounted) return;
+          final repo = context.read<HomeRepository>();
+          // Same staleness risk as above, now certain: the 10s snackbar
+          // window is always longer than the 2s debounce, so the echo has
+          // essentially always already landed by the time this fires.
+          final current = repo.getEntry(date);
+          if (current == null) return;
           setState(() {
-            entry.timeline.insert(index.clamp(0, entry.timeline.length), t);
-            entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-            final repo = context.read<HomeRepository>();
-            repo.syncKeelFromTimeline(entry);
-            repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
+            current.timeline.insert(index.clamp(0, current.timeline.length), t);
+            current.timeline.sort((a, b) => a.time.compareTo(b.time));
+            repo.saveEntry(current, changedFields: {'timeline'});
           });
         },
       ),
@@ -2917,23 +2973,38 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         sea: t.sea,
         weather: t.weather,
         remarks: t.remarks,
-        grossState: t.grossState,
-        fockState: t.fockState,
-        motorOn: t.motorOn,
-        keelDown: t.keelDown,
+        slot1State: t.slot1State,
+        slot2State: t.slot2State,
+        slot3State: t.slot3State,
+        slot4State: t.slot4State,
+        slot5State: t.slot5State,
+        slot6State: t.slot6State,
+        slot7State: t.slot7State,
+        slot8State: t.slot8State,
+        slot9State: t.slot9State,
+        slot10State: t.slot10State,
+        slot11State: t.slot11State,
+        slot12State: t.slot12State,
+        temperature: t.temperature,
+        pressure: t.pressure,
       );
       updated.amendments
         ..addAll(t.amendments) // carry forward prior amendments
         ..add(snapshot);
     }
     setState(() {
-      final index = entry.timeline.indexOf(t);
+      final repo = context.read<HomeRepository>();
+      // Re-fetch rather than trust the captured `entry`: the dialog above
+      // was just awaited for as long as the user took to fill it in, plenty
+      // of time for the debounced Firestore sync to have echoed back a
+      // fresh DayEntry and replaced this one — see _deleteTimelineEntry for
+      // the full explanation of why saving a stale reference throws.
+      final current = repo.getEntry(entry.date) ?? entry;
+      final index = _indexOfTimelineEntry(current.timeline, t);
       if (index != -1) {
-        entry.timeline[index] = updated;
-        entry.timeline.sort((a, b) => a.time.compareTo(b.time));
-        final repo = context.read<HomeRepository>();
-        repo.syncKeelFromTimeline(entry);
-        repo.saveEntry(entry, changedFields: {'timeline', 'keelDown'});
+        current.timeline[index] = updated;
+        current.timeline.sort((a, b) => a.time.compareTo(b.time));
+        repo.saveEntry(current, changedFields: {'timeline'});
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -3092,11 +3163,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       courseCol:     l10n.pdfCourseCol,
       windCol:       l10n.pdfWindCol,
       seaCol:        l10n.pdfSeaCol,
-      motorCol:      l10n.pdfMotorCol,
-      sailsCol:      l10n.pdfSailsCol,
       remarksCol:    l10n.pdfRemarksCol,
-      motorOn:       l10n.pdfMotorOn,
-      motorOff:      l10n.pdfMotorOff,
       trackMap:      l10n.pdfTrackMap,
       locale:        l10n.pdfLocale,
       passageTo:     l10n.pdfPassageTo,
@@ -3108,6 +3175,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       stats:       stats,
       vesselName:  p.vesselName,
       strings:     pdfStrings,
+      equipment:   p.vesselEquipment,
       trackPoints: filteredPoints,
       photoBytes:  photoBytes,
     );
@@ -3569,7 +3637,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
           behavior: HitTestBehavior.opaque,
           onTap: () => _dropMarker(
             LatLng(p.lat, p.lon),
-            _buildEntryTooltip(t, context.l10n),
+            _buildEntryTooltip(t, context.l10n,
+                context.read<ThemeProvider>().vesselEquipment.activeSlots),
           ),
           child: Center(child: Container(
             width: 11, height: 11,
@@ -3825,7 +3894,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
 // ── Shared map helpers ────────────────────────────────────────────────────────
 
 /// Full timeline entry as a multi-line tooltip string.
-String _buildEntryTooltip(TimelineEntry t, AppLocalizations l10n) {
+String _buildEntryTooltip(
+    TimelineEntry t, AppLocalizations l10n, List<EquipmentSlot> activeSlots) {
   final buf = StringBuffer(DateFormat('HH:mm').format(t.time.toLocal()));
 
   final nav = <String>[];
@@ -3840,13 +3910,11 @@ String _buildEntryTooltip(TimelineEntry t, AppLocalizations l10n) {
   if (t.wind?.isNotEmpty    == true) cond.add('${l10n.entryDialogWindLabel.split(' ').first}: ${t.wind!}');
   if (t.sea?.isNotEmpty     == true) cond.add('${l10n.entryDialogSeaLabel}: ${t.sea!}');
   if (t.weather?.isNotEmpty == true) cond.add('${l10n.entryDialogWeatherLabel}: ${t.weather!}');
+  if (t.temperature != null) cond.add('${t.temperature!.toStringAsFixed(1)}°C');
+  if (t.pressure != null) cond.add('${t.pressure!.toStringAsFixed(0)} mBar');
   if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
 
-  final sails = <String>[];
-  if (t.grossState?.isNotEmpty == true) sails.add('${l10n.dataMainSail}: ${_DayDetailScreenState._sailStateDisplay(t.grossState!, l10n)}');
-  if (t.fockState?.isNotEmpty  == true) sails.add('${l10n.dataJibSail}: ${_DayDetailScreenState._sailStateDisplay(t.fockState!, l10n)}');
-  if (t.motorOn  != null) sails.add('${l10n.entryDialogMotorLabel}: ${t.motorOn! ? l10n.on : l10n.off}');
-  if (t.keelDown != null) sails.add('${l10n.entryDialogKeelLabel}: ${t.keelDown! ? l10n.vesselKeelDown : l10n.vesselKeelUp}');
+  final sails = _DayDetailScreenState._equipmentStatusLines(t, activeSlots);
   if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
 
   if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');

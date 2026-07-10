@@ -16,6 +16,7 @@ import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
+import '../../home/domain/vessel_equipment.dart';
 import '../../home/utils/filter_settings.dart';
 import '../../home/widgets/nav_bar.dart';
 import '../../../app/theme/theme_extensions.dart';
@@ -45,7 +46,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _epirbCtrl;
   late TextEditingController _fireSuppCtrl;
   bool _syncing = false;
+  bool _accountExpanded = false;
+  bool _appearanceExpanded = false;
+  bool _logbooksExpanded = false;
+  bool _vesselExpanded = false;
   bool _trackFilterExpanded = false;
+  bool _equipmentExpanded = false;
   List<Map<String, dynamic>> _logbooks = [];
   bool _loadingLogbooks = false;
   bool _guestsExpanded = false;
@@ -472,7 +478,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-    ctrl.dispose();
+    // Deferred to after this frame: the bottom sheet's exit animation may
+    // still be tearing down its TextField (and thus still touching ctrl)
+    // for a moment after this Future resolves — disposing synchronously
+    // here races that teardown and throws "used after being disposed".
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
     if (name == null || name.isEmpty || !mounted) return;
 
     setState(() => _syncing = true);
@@ -548,7 +558,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
-    ctrl.dispose();
+    // See _showNewLogbookDialog for why this is deferred rather than
+    // disposed immediately.
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
     if (newName == null || newName == currentName || !mounted) return;
 
     try {
@@ -806,6 +818,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             _buildVesselSection(p, cs),
             const SizedBox(height: 16),
 
+            // ── Vessel Equipment ───────────────────────────────────────
+            _buildEquipmentSection(p, cs),
+            const SizedBox(height: 16),
+
             // ── Track Filter ──────────────────────────────────────────
             _buildTrackFilterSection(p, cs),
             const SizedBox(height: 16),
@@ -856,78 +872,119 @@ class _SettingsScreenState extends State<SettingsScreen> {
               left: 0, top: 0, bottom: 0,
               child: Container(width: 4, color: cs.onTertiaryFixedVariant),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        context.l10n.settingsVesselSection.toUpperCase(),
-                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                          color: cs.secondary,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _vesselExpanded = !_vesselExpanded),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              l10n.settingsVesselSection.toUpperCase(),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                                color: cs.secondary,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Icon(Icons.directions_boat_outlined,
+                                    size: 20, color: cs.outlineVariant),
+                                const SizedBox(width: 4),
+                                AnimatedRotation(
+                                  turns: _vesselExpanded ? 0.5 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Icon(Icons.expand_more,
+                                      size: 20, color: cs.outlineVariant),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                      ),
-                      Icon(Icons.directions_boat_outlined,
-                          size: 20, color: cs.outlineVariant),
-                    ],
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.settingsVesselInfo,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  _vesselRow(
-                    label: l10n.settingsFieldName,
-                    controller: _vesselNameCtrl,
-                    hint: l10n.settingsFieldNameHint,
-                    onChanged: p.setVesselName,
-                    cs: cs,
+                ),
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 220),
+                  crossFadeState: _vesselExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  firstChild: const SizedBox(width: double.infinity),
+                  secondChild: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _vesselRow(
+                          label: l10n.settingsFieldName,
+                          controller: _vesselNameCtrl,
+                          hint: l10n.settingsFieldNameHint,
+                          onChanged: p.setVesselName,
+                          cs: cs,
+                        ),
+                        _rowDivider(cs),
+                        _vesselRow(
+                          label: 'MMSI',
+                          controller: _vesselMmsiCtrl,
+                          hint: '123456789',
+                          onChanged: p.setVesselMmsi,
+                          keyboard: TextInputType.number,
+                          cs: cs,
+                        ),
+                        _rowDivider(cs),
+                        _vesselRow(
+                          label: l10n.settingsFieldCallSign,
+                          controller: _vesselCallSignCtrl,
+                          hint: l10n.settingsFieldCallSignHint,
+                          onChanged: p.setVesselCallSign,
+                          cs: cs,
+                        ),
+                        _rowDivider(cs),
+                        _vesselRow(
+                          label: l10n.emergencyLifeRaft,
+                          controller: _lifeRaftCtrl,
+                          hint: l10n.settingsFieldLifeRaftHint,
+                          onChanged: p.setLifeRaftInfo,
+                          cs: cs,
+                        ),
+                        _rowDivider(cs),
+                        _vesselRow(
+                          // EPIRB is an international maritime acronym — kept
+                          // in English, matching the emergency manifest screen.
+                          label: 'EPIRB',
+                          controller: _epirbCtrl,
+                          hint: l10n.settingsFieldEpirbHint,
+                          onChanged: p.setEpirbInfo,
+                          cs: cs,
+                        ),
+                        _rowDivider(cs),
+                        _vesselRow(
+                          label: l10n.emergencyFireSuppression,
+                          controller: _fireSuppCtrl,
+                          hint: l10n.settingsFieldFireSuppHint,
+                          onChanged: p.setFireSuppInfo,
+                          cs: cs,
+                          isLast: true,
+                        ),
+                      ],
+                    ),
                   ),
-                  _rowDivider(cs),
-                  _vesselRow(
-                    label: 'MMSI',
-                    controller: _vesselMmsiCtrl,
-                    hint: '123456789',
-                    onChanged: p.setVesselMmsi,
-                    keyboard: TextInputType.number,
-                    cs: cs,
-                  ),
-                  _rowDivider(cs),
-                  _vesselRow(
-                    label: l10n.settingsFieldCallSign,
-                    controller: _vesselCallSignCtrl,
-                    hint: l10n.settingsFieldCallSignHint,
-                    onChanged: p.setVesselCallSign,
-                    cs: cs,
-                  ),
-                  _rowDivider(cs),
-                  _vesselRow(
-                    label: l10n.emergencyLifeRaft,
-                    controller: _lifeRaftCtrl,
-                    hint: l10n.settingsFieldLifeRaftHint,
-                    onChanged: p.setLifeRaftInfo,
-                    cs: cs,
-                  ),
-                  _rowDivider(cs),
-                  _vesselRow(
-                    // EPIRB is an international maritime acronym — kept in
-                    // English, matching the emergency manifest screen.
-                    label: 'EPIRB',
-                    controller: _epirbCtrl,
-                    hint: l10n.settingsFieldEpirbHint,
-                    onChanged: p.setEpirbInfo,
-                    cs: cs,
-                  ),
-                  _rowDivider(cs),
-                  _vesselRow(
-                    label: l10n.emergencyFireSuppression,
-                    controller: _fireSuppCtrl,
-                    hint: l10n.settingsFieldFireSuppHint,
-                    onChanged: p.setFireSuppInfo,
-                    cs: cs,
-                    isLast: true,
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -987,6 +1044,130 @@ class _SettingsScreenState extends State<SettingsScreen> {
         thickness: 1,
       );
 
+  // ── Vessel Equipment ────────────────────────────────────────────────
+  /// Configures the up-to-12 equipment slots (10 sails + motor + keel) shown
+  /// as chip rows in the timeline entry dialog. Each edit writes straight
+  /// through to [ThemeProvider.setVesselEquipment]. Collapsed by default —
+  /// this is a rarely-touched, one-time setup step, not something that
+  /// needs to occupy space on every visit to Settings.
+  Widget _buildEquipmentSection(ThemeProvider p, ColorScheme cs) {
+    final l10n = context.l10n;
+    final config = p.vesselEquipment;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            Positioned(
+              left: 0, top: 0, bottom: 0,
+              child: Container(width: 4, color: cs.primary.withValues(alpha: 0.4)),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header (always visible, tap to expand) ────────────
+                InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => _equipmentExpanded = !_equipmentExpanded),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              l10n.settingsEquipmentSection.toUpperCase(),
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                                color: cs.secondary,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Icon(Icons.settings_outlined, size: 20, color: cs.outlineVariant),
+                                const SizedBox(width: 4),
+                                AnimatedRotation(
+                                  turns: _equipmentExpanded ? 0.5 : 0,
+                                  duration: const Duration(milliseconds: 200),
+                                  child: Icon(Icons.expand_more,
+                                      size: 20, color: cs.outlineVariant),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          l10n.settingsEquipmentInfo,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // ── Expandable content ────────────────────────────────
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 220),
+                  crossFadeState: _equipmentExpanded
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  firstChild: const SizedBox(width: double.infinity),
+                  secondChild: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Divider(color: cs.surfaceContainerHigh, height: 1, thickness: 1),
+                        const SizedBox(height: 12),
+                        // ── Segel (slots 1–10) ───────────────────────
+                        Text(l10n.settingsEquipmentTypeSail.toUpperCase(),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
+                        const SizedBox(height: 4),
+                        for (int i = 0; i < 10; i++)
+                          _EquipmentSlotEditor(
+                            slot: config.slots[i],
+                            typeLabel: l10n.settingsEquipmentTypeSail,
+                            onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
+                          ),
+                        const SizedBox(height: 12),
+                        // ── Motor (slot 11) ──────────────────────────
+                        Text(l10n.entryDialogMotorLabel.toUpperCase(),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
+                        const SizedBox(height: 4),
+                        _EquipmentSlotEditor(
+                          slot: config.slots[10],
+                          typeLabel: l10n.entryDialogMotorLabel,
+                          onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
+                        ),
+                        const SizedBox(height: 12),
+                        // ── Kiel (slot 12) ───────────────────────────
+                        Text(l10n.entryDialogKeelLabel.toUpperCase(),
+                            style: Theme.of(context).textTheme.labelSmall!.copyWith(color: cs.outline)),
+                        const SizedBox(height: 4),
+                        _EquipmentSlotEditor(
+                          slot: config.slots[11],
+                          typeLabel: l10n.entryDialogKeelLabel,
+                          onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Display & Appearance ────────────────────────────────────────────
   /// Theme mode (system/light/dark) and language (German/English) segmented
   /// pickers.
@@ -998,66 +1179,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.shadow.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.settingsAppearanceSection.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                  color: cs.secondary,
-                ),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _appearanceExpanded = !_appearanceExpanded),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.settingsAppearanceSection.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                          color: cs.secondary,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.palette_outlined,
+                              size: 20, color: cs.outlineVariant),
+                          const SizedBox(width: 4),
+                          AnimatedRotation(
+                            turns: _appearanceExpanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(Icons.expand_more,
+                                size: 20, color: cs.outlineVariant),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.settingsAppearanceInfo,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
-              Icon(Icons.palette_outlined,
-                  size: 20, color: cs.outlineVariant),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.settingsThemeLabel,
-            style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                _themeButton(l10n.settingsThemeSystem, ThemeMode.system, p, cs),
-                _themeButton(l10n.settingsThemeLight, ThemeMode.light, p, cs),
-                _themeButton(l10n.settingsThemeDark, ThemeMode.dark, p, cs),
-              ],
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.settingsLanguageLabel,
-            style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                _langButton(l10n.settingsLanguageDe, const Locale('de'), p, cs),
-                _langButton(l10n.settingsLanguageEn, const Locale('en'), p, cs),
-              ],
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _appearanceExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.settingsThemeLabel,
+                    style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        _themeButton(l10n.settingsThemeSystem, ThemeMode.system, p, cs),
+                        _themeButton(l10n.settingsThemeLight, ThemeMode.light, p, cs),
+                        _themeButton(l10n.settingsThemeDark, ThemeMode.dark, p, cs),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.settingsLanguageLabel,
+                    style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        _langButton(l10n.settingsLanguageDe, const Locale('de'), p, cs),
+                        _langButton(l10n.settingsLanguageEn, const Locale('en'), p, cs),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -1081,7 +1305,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: cs.shadow.withValues(alpha: 0.06),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
@@ -1114,7 +1338,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: cs.shadow.withValues(alpha: 0.06),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
@@ -1156,7 +1380,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.shadow.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -1191,16 +1415,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                   const Spacer(),
-                  if (!_trackFilterExpanded)
-                    Text(
-                      p.filterMode == StationaryMode.speed
-                          ? context.l10n.settingsFilterModeMooring
-                          : context.l10n.settingsFilterModeExact,
-                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  const SizedBox(width: 8),
+                  Icon(Icons.tune, size: 20, color: cs.outlineVariant),
+                  const SizedBox(width: 4),
                   AnimatedRotation(
                     turns: _trackFilterExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
@@ -1539,7 +1755,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.06),
+                      color: cs.shadow.withValues(alpha: 0.06),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
@@ -1643,64 +1859,123 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.shadow.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.settingsLogbooksSection.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                  color: cs.secondary,
-                ),
-              ),
-              Tooltip(
-                message: l10n.settingsNewLogbook,
-                child: GestureDetector(
-                  onTap: _syncing ? null : () => _showNewLogbookDialog(uid),
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: cs.surfaceContainer,
-                    ),
-                    child: Icon(Icons.add, size: 18, color: cs.secondary),
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _syncing
+                ? null
+                : () => setState(() => _logbooksExpanded = !_logbooksExpanded),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.settingsLogbooksSection.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                          color: cs.secondary,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.anchor, size: 20, color: cs.outlineVariant),
+                          const SizedBox(width: 4),
+                          // Visible feedback for delete/switch/rename/join —
+                          // those all set _syncing but (before this) never
+                          // showed anything while awaiting Firestore, which
+                          // read as the app being stuck for however long that
+                          // network call took.
+                          if (_syncing)
+                            SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: cs.secondary),
+                            )
+                          else
+                            AnimatedRotation(
+                              turns: _logbooksExpanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Icon(Icons.expand_more,
+                                  size: 20, color: cs.outlineVariant),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.settingsLogbooksInfo,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 12),
-          if (_loadingLogbooks)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Center(
-                  child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))),
-            )
-          else if (_logbooks.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(l10n.settingsNoLogbooks,
-                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: cs.onSurfaceVariant)),
-            )
-          else
-            ...(_logbooks.map((logbook) => _buildBoatRow(logbook, activeLogbookId, cs, uid))),
-          if (activeLogbookId != null && isActiveOwner && activeMeta.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _buildShareSection(activeMeta, cs, uid),
-          ],
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _logbooksExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _syncing ? null : () => _showNewLogbookDialog(uid),
+                      style: TextButton.styleFrom(
+                        foregroundColor: cs.secondary,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(l10n.settingsNewLogbook),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (_loadingLogbooks)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Center(
+                          child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2))),
+                    )
+                  else if (_logbooks.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(l10n.settingsNoLogbooks,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                              color: cs.onSurfaceVariant)),
+                    )
+                  else
+                    ...(_logbooks.map((logbook) => _buildBoatRow(logbook, activeLogbookId, cs, uid))),
+                  if (activeLogbookId != null && isActiveOwner && activeMeta.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _buildShareSection(activeMeta, cs, uid),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1760,9 +2035,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (isActive) Icon(Icons.check, size: 18, color: cs.primary),
             IconButton(
               icon: Icon(Icons.more_vert, size: 18, color: cs.outlineVariant),
-              onPressed: () => isOwner
-                  ? _showLogbookOptionsSheet(logbook, uid)
-                  : _showGuestOptionsSheet(logbook, uid),
+              onPressed: _syncing
+                  ? null
+                  : () => isOwner
+                      ? _showLogbookOptionsSheet(logbook, uid)
+                      : _showGuestOptionsSheet(logbook, uid),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               visualDensity: VisualDensity.compact,
@@ -2001,251 +2278,529 @@ class _SettingsScreenState extends State<SettingsScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.shadow.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                l10n.settingsAccountSection.toUpperCase(),
-                style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                  color: cs.secondary,
-                ),
-              ),
-              Icon(Icons.person_outline, size: 20, color: cs.outlineVariant),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (user != null) ...[
-            Text(
-              l10n.settingsAccountSignedInAs,
-              style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              user.email ?? user.displayName ?? '',
-              style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final results = await Connectivity().checkConnectivity();
-                  final isOffline = results.every(
-                      (r) => r == ConnectivityResult.none);
-                  if (!mounted) return;
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      backgroundColor: cs.surface,
-                      surfaceTintColor: Colors.transparent,
-                      titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-                      contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-                      title: Text(l10n.authSignOut),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _accountExpanded = !_accountExpanded),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.settingsAccountSection.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                          color: cs.secondary,
+                        ),
+                      ),
+                      Row(
                         children: [
-                          Text(l10n.authSignOutConfirmDesc),
-                          if (isOffline) ...[
-                            const SizedBox(height: 12),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.wifi_off, size: 14,
-                                    color: cs.error),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    l10n.authSignOutOfflineWarning,
-                                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                        color: cs.error, fontSize: 13),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                          Icon(Icons.person_outline, size: 20, color: cs.outlineVariant),
+                          const SizedBox(width: 4),
+                          AnimatedRotation(
+                            turns: _accountExpanded ? 0.5 : 0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(Icons.expand_more,
+                                size: 20, color: cs.outlineVariant),
+                          ),
                         ],
                       ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: Text(l10n.cancel),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: Text(l10n.authSignOut,
-                              style: TextStyle(color: cs.error)),
-                        ),
-                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.settingsAccountInfo,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: cs.onSurfaceVariant,
                     ),
-                  );
-                  if (confirmed == true && mounted) {
-                    await context.read<AuthService>().signOut();
-                  }
-                },
-                icon: Icon(Icons.logout, size: 18, color: cs.error),
-                label: Text(l10n.authSignOut,
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: cs.error)),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: cs.outlineVariant),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                style: TextButton.styleFrom(foregroundColor: cs.error),
-                onPressed: _syncing
-                    ? null
-                    : () async {
-                        final confirmed = await showDialog<bool>(
-                          context: context,
-                          builder: (ctx) {
-                            final dcs = Theme.of(ctx).colorScheme;
-                            return AlertDialog(
-                              backgroundColor: dcs.surface,
-                              surfaceTintColor: Colors.transparent,
-                              title: Text(l10n.authDeleteAccount,
-                                  style: TextStyle(color: dcs.onSurface)),
-                              content: Text(l10n.authDeleteAccountConfirm,
-                                  style: TextStyle(color: dcs.onSurfaceVariant)),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, false),
-                                  child: Text(l10n.cancel),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(ctx, true),
-                                  child: Text(l10n.authDeleteAccount,
-                                      style: TextStyle(color: dcs.error)),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _accountExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              if (user != null) ...[
+                Text(
+                  l10n.settingsAccountSignedInAs,
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  user.email ?? user.displayName ?? '',
+                  style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final results = await Connectivity().checkConnectivity();
+                      final isOffline = results.every(
+                          (r) => r == ConnectivityResult.none);
+                      if (!mounted) return;
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: cs.surface,
+                          surfaceTintColor: Colors.transparent,
+                          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+                          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
+                          title: Text(l10n.authSignOut),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(l10n.authSignOutConfirmDesc),
+                              if (isOffline) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.wifi_off, size: 14,
+                                        color: cs.error),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        l10n.authSignOutOfflineWarning,
+                                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                            color: cs.error, fontSize: 13),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
-                            );
-                          },
-                        );
-                        if (confirmed != true || !mounted) return;
-
-                        // Block deletion when offline — Firestore cleanup would
-                        // fail silently and the Auth account would still be deleted.
-                        final connResults = await Connectivity().checkConnectivity();
-                        if (!mounted) return;
-                        if (connResults.every((r) => r == ConnectivityResult.none)) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.authErrorNetworkFailed)),
-                          );
-                          return;
-                        }
-
-                        setState(() => _syncing = true);
-                        // Capture refs before any await.
-                        final repo = context.read<HomeRepository>();
-                        final emergencyRepo = context.read<EmergencyRepository>();
-                        final themeProvider = context.read<ThemeProvider>();
-                        final authService = context.read<AuthService>();
-                        final uid = user.uid;
-
-                        // 1. Delete all Firestore data. Abort if any cleanup fails —
-                        //    do NOT delete the Auth account and leave orphaned data.
-                        try {
-                          await LogbookService().deleteUserAndAllLogbooks(uid);
-                        } catch (_) {
-                          if (!mounted) return;
-                          setState(() => _syncing = false);
-                          await showDialog<void>(
-                            context: context,
-                            builder: (ctx) {
-                              final dcs = Theme.of(ctx).colorScheme;
-                              return AlertDialog(
-                                backgroundColor: dcs.surface,
-                                surfaceTintColor: Colors.transparent,
-                                icon: Icon(Icons.cloud_off_rounded,
-                                    color: dcs.error),
-                                title: Text(
-                                  l10n.authDeleteCleanupFailedTitle,
-                                  style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: dcs.onSurface),
-                                ),
-                                content: Text(
-                                  l10n.authDeleteCleanupFailedBody,
-                                  style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                    height: 1.5,
-                                    color: dcs.onSurfaceVariant,
-                                  ),
-                                ),
-                                actions: [
-                                  FilledButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: Text(l10n.done),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                          return;
-                        }
-
-                        // 2. Wipe all local caches.
-                        await repo.clearLocalData();
-                        await emergencyRepo.clearLocalData();
-                        await themeProvider.clearVesselSettings();
-                        themeProvider.resetInitialSync();
-
-                        // 3. Delete the Firebase Auth account only if Firestore
-                        //    cleanup succeeded. Router redirect to /auth/login
-                        //    happens automatically via authService.notifyListeners().
-                        try {
-                          await authService.deleteAccount();
-                        } on FirebaseAuthException catch (e) {
-                          if (!mounted) return;
-                          setState(() => _syncing = false);
-                          final msg = e.code == 'requires-recent-login'
-                              ? l10n.authErrorRequiresRecentLogin
-                              : (e.message ?? l10n.authErrorGeneric);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(msg)));
-                        } catch (_) {
-                          if (mounted) setState(() => _syncing = false);
-                        }
-                      },
-                child: Text(l10n.authDeleteAccount),
-              ),
-            ),
-          ] else ...[
-            Text(
-              l10n.settingsAccountNotSignedIn,
-              style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () => context.pushNamed(AppRoute.login),
-                style: FilledButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: Text(l10n.cancel),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: Text(l10n.authSignOut,
+                                  style: TextStyle(color: cs.error)),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true && mounted) {
+                        await context.read<AuthService>().signOut();
+                      }
+                    },
+                    icon: Icon(Icons.logout, size: 18, color: cs.error),
+                    label: Text(l10n.authSignOut,
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                            color: cs.error)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: cs.outlineVariant),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
                 ),
-                child: Text(l10n.settingsAccountManage,
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    style: TextButton.styleFrom(foregroundColor: cs.error),
+                    onPressed: _syncing
+                        ? null
+                        : () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (ctx) {
+                                final dcs = Theme.of(ctx).colorScheme;
+                                return AlertDialog(
+                                  backgroundColor: dcs.surface,
+                                  surfaceTintColor: Colors.transparent,
+                                  title: Text(l10n.authDeleteAccount,
+                                      style: TextStyle(color: dcs.onSurface)),
+                                  content: Text(l10n.authDeleteAccountConfirm,
+                                      style: TextStyle(color: dcs.onSurfaceVariant)),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: Text(l10n.cancel),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: Text(l10n.authDeleteAccount,
+                                          style: TextStyle(color: dcs.error)),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (confirmed != true || !mounted) return;
+    
+                            // Block deletion when offline — Firestore cleanup would
+                            // fail silently and the Auth account would still be deleted.
+                            final connResults = await Connectivity().checkConnectivity();
+                            if (!mounted) return;
+                            if (connResults.every((r) => r == ConnectivityResult.none)) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(l10n.authErrorNetworkFailed)),
+                              );
+                              return;
+                            }
+    
+                            setState(() => _syncing = true);
+                            // Capture refs before any await.
+                            final repo = context.read<HomeRepository>();
+                            final emergencyRepo = context.read<EmergencyRepository>();
+                            final themeProvider = context.read<ThemeProvider>();
+                            final authService = context.read<AuthService>();
+                            final uid = user.uid;
+    
+                            // 1. Delete all Firestore data. Abort if any cleanup fails —
+                            //    do NOT delete the Auth account and leave orphaned data.
+                            try {
+                              await LogbookService().deleteUserAndAllLogbooks(uid);
+                            } catch (_) {
+                              if (!mounted) return;
+                              setState(() => _syncing = false);
+                              await showDialog<void>(
+                                context: context,
+                                builder: (ctx) {
+                                  final dcs = Theme.of(ctx).colorScheme;
+                                  return AlertDialog(
+                                    backgroundColor: dcs.surface,
+                                    surfaceTintColor: Colors.transparent,
+                                    icon: Icon(Icons.cloud_off_rounded,
+                                        color: dcs.error),
+                                    title: Text(
+                                      l10n.authDeleteCleanupFailedTitle,
+                                      style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: dcs.onSurface),
+                                    ),
+                                    content: Text(
+                                      l10n.authDeleteCleanupFailedBody,
+                                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                        height: 1.5,
+                                        color: dcs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    actions: [
+                                      FilledButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child: Text(l10n.done),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                              return;
+                            }
+    
+                            // 2. Wipe all local caches.
+                            await repo.clearLocalData();
+                            await emergencyRepo.clearLocalData();
+                            await themeProvider.clearVesselSettings();
+                            themeProvider.resetInitialSync();
+    
+                            // 3. Delete the Firebase Auth account only if Firestore
+                            //    cleanup succeeded. Router redirect to /auth/login
+                            //    happens automatically via authService.notifyListeners().
+                            try {
+                              await authService.deleteAccount();
+                            } on FirebaseAuthException catch (e) {
+                              if (!mounted) return;
+                              setState(() => _syncing = false);
+                              final msg = e.code == 'requires-recent-login'
+                                  ? l10n.authErrorRequiresRecentLogin
+                                  : (e.message ?? l10n.authErrorGeneric);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(msg)));
+                            } catch (_) {
+                              if (mounted) setState(() => _syncing = false);
+                            }
+                          },
+                    child: Text(l10n.authDeleteAccount),
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  l10n.settingsAccountNotSignedIn,
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => context.pushNamed(AppRoute.login),
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(l10n.settingsAccountManage,
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+                ],
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Equipment slot editor ────────────────────────────────────────────────────
+/// Inline (no-dialog) editor for one [EquipmentSlot]: its name and up to
+/// [EquipmentSlot.maxStates] state labels. Collapsed to a single tappable
+/// row when the slot isn't already configured, so the 10 sail slots don't
+/// dominate the screen before the captain has named any of them.
+class _EquipmentSlotEditor extends StatefulWidget {
+  final EquipmentSlot slot;
+  /// The equipment type this slot represents (e.g. "Segel"/"Motor"/"Kiel"),
+  /// used to phrase the add/delete affordances by what they actually do
+  /// ("Segel hinzufügen") instead of a generic "Slot 3".
+  final String typeLabel;
+  final ValueChanged<EquipmentSlot> onChanged;
+  const _EquipmentSlotEditor({required this.slot, required this.typeLabel, required this.onChanged});
+
+  @override
+  State<_EquipmentSlotEditor> createState() => _EquipmentSlotEditorState();
+}
+
+class _EquipmentSlotEditorState extends State<_EquipmentSlotEditor> {
+  late TextEditingController _labelCtrl;
+  late List<String> _states;
+  final _addCtrl = TextEditingController();
+  late bool _expanded;
+
+  // What this editor itself last pushed via [_notify], so [didUpdateWidget]
+  // can tell "the provider echoing my own edit back" (ignore — the local
+  // text may still have an untrimmed trailing character mid-keystroke) apart
+  // from "another device changed this slot" (resync from the incoming value).
+  String? _lastPushedLabel;
+  List<String>? _lastPushedStates;
+
+  @override
+  void initState() {
+    super.initState();
+    _labelCtrl = TextEditingController(text: widget.slot.label);
+    _states = List.of(widget.slot.states);
+    _expanded = !widget.slot.isEmpty;
+  }
+
+  @override
+  void didUpdateWidget(covariant _EquipmentSlotEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final isEcho = widget.slot.label == _lastPushedLabel &&
+        _sameStates(widget.slot.states, _lastPushedStates ?? const []);
+    if (!isEcho) {
+      _labelCtrl.text = widget.slot.label;
+      _states = List.of(widget.slot.states);
+    }
+  }
+
+  bool _sameStates(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    _labelCtrl.dispose();
+    _addCtrl.dispose();
+    super.dispose();
+  }
+
+  void _notify() {
+    final label = _labelCtrl.text.trim();
+    final states = List.of(_states);
+    _lastPushedLabel = label;
+    _lastPushedStates = states;
+    widget.onChanged(widget.slot.copyWith(label: label, states: states));
+  }
+
+  void _addState() {
+    final v = _addCtrl.text.trim();
+    if (v.isEmpty || _states.length >= EquipmentSlot.maxStates) return;
+    setState(() {
+      _states.add(v);
+      _addCtrl.clear();
+    });
+    _notify();
+  }
+
+  void _removeState(int i) {
+    setState(() => _states.removeAt(i));
+    _notify();
+  }
+
+  void _clearSlot() {
+    setState(() {
+      _labelCtrl.clear();
+      _states = [];
+      _expanded = false;
+    });
+    _notify();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    final isEmpty = widget.slot.label.trim().isEmpty && _states.isEmpty;
+    final headerLabel = widget.slot.label.trim().isEmpty
+        ? l10n.settingsEquipmentAddType(widget.typeLabel)
+        : widget.slot.label;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Icon(Icons.edit_outlined, size: 16, color: cs.secondary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      headerLabel,
+                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isEmpty ? cs.outline : cs.onSurface,
+                      ),
+                    ),
+                  ),
+                  Icon(_expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 20, color: cs.outlineVariant),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            firstChild: const SizedBox(width: double.infinity, height: 0),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(left: 24, bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _labelCtrl,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: l10n.settingsEquipmentSlotLabel,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: (_) => _notify(),
+                  ),
+                  if (_states.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (int i = 0; i < _states.length; i++)
+                          _removableStateChip(_states[i], () => _removeState(i), cs),
+                      ],
+                    ),
+                  ],
+                  if (_states.length < EquipmentSlot.maxStates) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _addCtrl,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: l10n.settingsEquipmentStateLabel,
+                              border: const OutlineInputBorder(),
+                            ),
+                            onSubmitted: (_) => _addState(),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(onPressed: _addState, child: Text(l10n.settingsEquipmentAddState)),
+                      ],
+                    ),
+                  ],
+                  if (!isEmpty) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: _clearSlot,
+                        style: TextButton.styleFrom(
+                          foregroundColor: cs.error,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 32),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(l10n.settingsEquipmentDeleteType(widget.typeLabel)),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 200),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Small removable pill chip — same visual language as the dialog's state
+  /// chips, plus a trailing × so the captain sees exactly what a filled-in
+  /// slot will look like when logging an entry.
+  Widget _removableStateChip(String label, VoidCallback onRemove, ColorScheme cs) {
+    return Container(
+      padding: const EdgeInsets.only(left: 12, right: 6, top: 6, bottom: 6),
+      decoration: BoxDecoration(
+        color: cs.primary,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.onPrimary)),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRemove,
+            child: Icon(Icons.close, size: 14, color: cs.onPrimary),
+          ),
         ],
       ),
     );

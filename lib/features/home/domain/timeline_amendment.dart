@@ -40,17 +40,29 @@ class TimelineAmendment extends HiveObject {
   @HiveField(8)
   String? remarks;
 
-  @HiveField(9)
-  String? grossState;
+  // @HiveField(9)  grossState — retired (replaced by slot1State)
+  // @HiveField(10) fockState  — retired (replaced by slot2State)
+  // @HiveField(11) motorOn    — retired (replaced by slot11State)
+  // @HiveField(12) keelDown   — retired (replaced by slot12State)
 
-  @HiveField(10)
-  String? fockState;
+  // Slots 1–10: sails; slot 11: motor; slot 12: keel. Mirrors
+  // TimelineEntry.slot1State..slot12State — see that class for details.
+  @HiveField(13) String? slot1State;
+  @HiveField(14) String? slot2State;
+  @HiveField(15) String? slot3State;
+  @HiveField(16) String? slot4State;
+  @HiveField(17) String? slot5State;
+  @HiveField(18) String? slot6State;
+  @HiveField(19) String? slot7State;
+  @HiveField(20) String? slot8State;
+  @HiveField(21) String? slot9State;
+  @HiveField(22) String? slot10State;
+  @HiveField(23) String? slot11State;
+  @HiveField(24) String? slot12State;
 
-  @HiveField(11)
-  bool? motorOn;
-
-  @HiveField(12)
-  bool? keelDown;
+  /// Mirrors TimelineEntry.temperature/pressure — see that class for details.
+  @HiveField(25) double? temperature;
+  @HiveField(26) double? pressure;
 
   TimelineAmendment({
     required this.amendedAt,
@@ -62,10 +74,20 @@ class TimelineAmendment extends HiveObject {
     this.sea,
     this.weather,
     this.remarks,
-    this.grossState,
-    this.fockState,
-    this.motorOn,
-    this.keelDown,
+    this.slot1State,
+    this.slot2State,
+    this.slot3State,
+    this.slot4State,
+    this.slot5State,
+    this.slot6State,
+    this.slot7State,
+    this.slot8State,
+    this.slot9State,
+    this.slot10State,
+    this.slot11State,
+    this.slot12State,
+    this.temperature,
+    this.pressure,
   });
 
   /// Creates a snapshot from an existing TimelineEntry's field values,
@@ -80,10 +102,20 @@ class TimelineAmendment extends HiveObject {
     String? sea,
     String? weather,
     String? remarks,
-    String? grossState,
-    String? fockState,
-    bool? motorOn,
-    bool? keelDown,
+    String? slot1State,
+    String? slot2State,
+    String? slot3State,
+    String? slot4State,
+    String? slot5State,
+    String? slot6State,
+    String? slot7State,
+    String? slot8State,
+    String? slot9State,
+    String? slot10State,
+    String? slot11State,
+    String? slot12State,
+    double? temperature,
+    double? pressure,
   }) =>
       TimelineAmendment(
         amendedAt: amendedAt,
@@ -95,9 +127,19 @@ class TimelineAmendment extends HiveObject {
         sea: sea,
         weather: weather,
         remarks: remarks,
-        grossState: grossState,
-        fockState: fockState,
-        motorOn: motorOn,
-        keelDown: keelDown,
+        slot1State: slot1State,
+        slot2State: slot2State,
+        slot3State: slot3State,
+        slot4State: slot4State,
+        slot5State: slot5State,
+        slot6State: slot6State,
+        slot7State: slot7State,
+        slot8State: slot8State,
+        slot9State: slot9State,
+        slot10State: slot10State,
+        slot11State: slot11State,
+        slot12State: slot12State,
+        temperature: temperature,
+        pressure: pressure,
       );
 }

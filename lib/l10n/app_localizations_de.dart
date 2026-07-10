@@ -54,12 +54,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get later => 'Später';
 
   @override
-  String get on => 'An';
-
-  @override
-  String get off => 'Aus';
-
-  @override
   String get statSailingDays => 'Tage';
 
   @override
@@ -228,13 +222,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dataWeather => 'Wetter';
 
   @override
-  String get dataMainSail => 'Gross';
+  String get dataTemperature => 'Temp.';
 
   @override
-  String get dataJibSail => 'Fock';
-
-  @override
-  String get dataMotor => 'Motor';
+  String get dataPressure => 'Luftdruck';
 
   @override
   String get entryDialogTitleNew => 'Neuer Eintrag';
@@ -252,7 +243,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get entryDialogSectionEnv => 'Umgebung';
 
   @override
-  String get entryDialogSectionSails => 'Segel & Motor';
+  String get entryDialogSectionVessel => 'Schiff';
 
   @override
   String get entryDialogSectionRemarks => 'Bemerkungen';
@@ -282,10 +273,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get entryDialogWeatherHint => 'z.B. Sonnig';
 
   @override
-  String get entryDialogMainSailLabel => 'Gross';
+  String get entryDialogTemperatureLabel => 'Temperatur';
 
   @override
-  String get entryDialogJibSailLabel => 'Fock';
+  String get entryDialogPressureLabel => 'Luftdruck';
+
+  @override
+  String get entryDialogAddTempPressure => 'Temperatur & Luftdruck hinzufügen';
 
   @override
   String get entryDialogMotorLabel => 'Motor';
@@ -403,6 +397,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsVesselSection => 'Schiff';
 
   @override
+  String get settingsVesselInfo =>
+      'Schiffsdaten wie Name, MMSI und Rufzeichen sowie Notfallausrüstung erfassen.';
+
+  @override
   String get settingsFieldName => 'Name';
 
   @override
@@ -424,7 +422,39 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsFieldFireSuppHint => 'z.B. Kombüse, Motorraum';
 
   @override
+  String get settingsEquipmentSection => 'Schiffskonfiguration';
+
+  @override
+  String get settingsEquipmentInfo =>
+      'Lege fest, welche Segel-, Motor- und Kielzustände für Logbucheinträge verwendet werden können.';
+
+  @override
+  String get settingsEquipmentSlotLabel => 'Bezeichnung (z.B. Grosssegel)';
+
+  @override
+  String get settingsEquipmentStateLabel => 'Zustand hinzufügen (z.B. 1. Reff)';
+
+  @override
+  String get settingsEquipmentAddState => 'Hinzufügen';
+
+  @override
+  String get settingsEquipmentTypeSail => 'Segel';
+
+  @override
+  String settingsEquipmentAddType(String type) {
+    return '$type hinzufügen';
+  }
+
+  @override
+  String settingsEquipmentDeleteType(String type) {
+    return '$type löschen';
+  }
+
+  @override
   String get settingsAppearanceSection => 'Darstellung';
+
+  @override
+  String get settingsAppearanceInfo => 'Design und Sprache der App anpassen.';
 
   @override
   String get settingsThemeLabel => 'App-Design';
@@ -943,6 +973,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAccountSection => 'Konto';
 
   @override
+  String get settingsAccountInfo => 'Anmeldung und Konto verwalten.';
+
+  @override
   String get settingsAccountSignedInAs => 'Angemeldet als';
 
   @override
@@ -967,6 +1000,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsLogbooksSection => 'Logbücher';
+
+  @override
+  String get settingsLogbooksInfo =>
+      'Logbücher verwalten, wechseln oder mit anderen teilen.';
 
   @override
   String get settingsMyLogbooks => 'Meine Logbücher';
@@ -1298,21 +1335,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get crewBloodGroupPrefix => 'BG';
 
   @override
-  String get sailFull => 'Voll gesetzt';
-
-  @override
-  String get sailReef1 => '1. Reff';
-
-  @override
-  String get sailReef2 => '2. Reff';
-
-  @override
-  String get sailLowered => 'Niedergeholt';
-
-  @override
-  String get sailFurled => 'Eingerollt';
-
-  @override
   String get pdfVoyageLog => 'TAGEBUCH';
 
   @override
@@ -1364,19 +1386,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pdfSeaCol => 'See';
 
   @override
-  String get pdfMotorCol => 'Motor';
-
-  @override
-  String get pdfSailsCol => 'Segel';
-
-  @override
   String get pdfRemarksCol => 'Bemerkungen';
-
-  @override
-  String get pdfMotorOn => 'AN';
-
-  @override
-  String get pdfMotorOff => 'AUS';
 
   @override
   String get pdfTrackMap => 'KURS & TRACK';

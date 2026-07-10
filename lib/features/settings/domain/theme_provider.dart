@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 import '../../../core/services/firestore_service.dart';
+import '../../home/domain/vessel_equipment.dart';
 import '../../home/utils/filter_settings.dart';
 
 /// Despite the name, this is the app's general local-preferences +
@@ -24,6 +25,7 @@ class ThemeProvider extends ChangeNotifier {
   static const _vesselNameKey       = 'vessel_name';
   static const _vesselMmsiKey       = 'vessel_mmsi';
   static const _vesselCallSignKey   = 'vessel_call_sign';
+  static const _vesselEquipmentKey  = 'vessel_equipment';
   static const _lifeRaftKey         = 'life_raft_info';
   static const _epirbKey            = 'epirb_info';
   static const _fireSuppKey         = 'fire_supp_info';
@@ -77,6 +79,7 @@ class ThemeProvider extends ChangeNotifier {
   String _vesselName = '';
   String _vesselMmsi = '';
   String _vesselCallSign = '';
+  VesselEquipmentConfig _vesselEquipment = VesselEquipmentConfig.defaultForLocale('de');
   String _lifeRaftInfo = '';
   String _epirbInfo = '';
   String _fireSuppInfo = '';
@@ -122,6 +125,7 @@ class ThemeProvider extends ChangeNotifier {
   String get vesselName         => _vesselName;
   String get vesselMmsi         => _vesselMmsi;
   String get vesselCallSign     => _vesselCallSign;
+  VesselEquipmentConfig get vesselEquipment => _vesselEquipment;
   String get lifeRaftInfo       => _lifeRaftInfo;
   String get epirbInfo          => _epirbInfo;
   String get fireSuppInfo       => _fireSuppInfo;
@@ -195,6 +199,7 @@ class ThemeProvider extends ChangeNotifier {
     _uiSub = null;
 
     _vesselName = '';  _vesselMmsi = '';  _vesselCallSign = '';
+    _vesselEquipment = VesselEquipmentConfig.defaultForLocale(_locale.languageCode);
     _lifeRaftInfo = ''; _epirbInfo = ''; _fireSuppInfo = '';
     _vhf1Label = 'Channel 16'; _vhf1Desc  = 'Distress · 156.800 MHz';
     _vhf2Label = 'Channel 67'; _vhf2Desc  = 'Ship to Ship · 156.375 MHz';
@@ -202,7 +207,7 @@ class ThemeProvider extends ChangeNotifier {
     _vhf4Label = 'Channel 13'; _vhf4Desc  = 'Bridge to Bridge · 156.650 MHz';
 
     for (final k in [
-      _vesselNameKey, _vesselMmsiKey, _vesselCallSignKey,
+      _vesselNameKey, _vesselMmsiKey, _vesselCallSignKey, _vesselEquipmentKey,
       _lifeRaftKey, _epirbKey, _fireSuppKey,
       _vhf1LabelKey, _vhf1DescKey, _vhf2LabelKey, _vhf2DescKey,
       _vhf3LabelKey, _vhf3DescKey, _vhf4LabelKey, _vhf4DescKey,
@@ -270,6 +275,10 @@ class ThemeProvider extends ChangeNotifier {
     _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
     _vesselMmsi      = _box.get(_vesselMmsiKey,     defaultValue: '')!;
     _vesselCallSign  = _box.get(_vesselCallSignKey,  defaultValue: '')!;
+    final rawEquip = _box.get(_vesselEquipmentKey, defaultValue: '');
+    _vesselEquipment = rawEquip!.isEmpty
+        ? VesselEquipmentConfig.defaultForLocale(_locale.languageCode)
+        : VesselEquipmentConfig.fromJsonString(rawEquip, languageCode: _locale.languageCode);
     _lifeRaftInfo    = _box.get(_lifeRaftKey,        defaultValue: '')!;
     _epirbInfo       = _box.get(_epirbKey,           defaultValue: '')!;
     _fireSuppInfo    = _box.get(_fireSuppKey,         defaultValue: '')!;
@@ -450,6 +459,13 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setVesselEquipment(VesselEquipmentConfig config) {
+    _vesselEquipment = config;
+    _box.put(_vesselEquipmentKey, config.toJsonString());
+    _pushSettings();
+    notifyListeners();
+  }
+
   void setLifeRaftInfo(String v) {
     final t = v.trim();
     if (_lifeRaftInfo == t) return;
@@ -586,6 +602,7 @@ class ThemeProvider extends ChangeNotifier {
         _vesselNameKey:      _vesselName,
         _vesselMmsiKey:      _vesselMmsi,
         _vesselCallSignKey:  _vesselCallSign,
+        _vesselEquipmentKey: _vesselEquipment.toJsonString(),
         _lifeRaftKey:        _lifeRaftInfo,
         _epirbKey:           _epirbInfo,
         _fireSuppKey:        _fireSuppInfo,
@@ -636,6 +653,10 @@ class ThemeProvider extends ChangeNotifier {
     apply(_vesselNameKey,     _vesselName,     (v) { _vesselName = v;     _box.put(_vesselNameKey, v); });
     apply(_vesselMmsiKey,     _vesselMmsi,     (v) { _vesselMmsi = v;     _box.put(_vesselMmsiKey, v); });
     apply(_vesselCallSignKey, _vesselCallSign, (v) { _vesselCallSign = v;  _box.put(_vesselCallSignKey, v); });
+    apply(_vesselEquipmentKey, _vesselEquipment.toJsonString(), (v) {
+      _vesselEquipment = VesselEquipmentConfig.fromJsonString(v, languageCode: _locale.languageCode);
+      _box.put(_vesselEquipmentKey, v);
+    });
     apply(_lifeRaftKey,       _lifeRaftInfo,   (v) { _lifeRaftInfo = v;    _box.put(_lifeRaftKey, v); });
     apply(_epirbKey,          _epirbInfo,      (v) { _epirbInfo = v;       _box.put(_epirbKey, v); });
     apply(_fireSuppKey,       _fireSuppInfo,   (v) { _fireSuppInfo = v;    _box.put(_fireSuppKey, v); });

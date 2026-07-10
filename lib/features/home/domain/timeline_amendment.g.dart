@@ -26,17 +26,27 @@ class TimelineAmendmentAdapter extends TypeAdapter<TimelineAmendment> {
       sea: fields[6] as String?,
       weather: fields[7] as String?,
       remarks: fields[8] as String?,
-      grossState: fields[9] as String?,
-      fockState: fields[10] as String?,
-      motorOn: fields[11] as bool?,
-      keelDown: fields[12] as bool?,
+      slot1State: fields[13] as String?,
+      slot2State: fields[14] as String?,
+      slot3State: fields[15] as String?,
+      slot4State: fields[16] as String?,
+      slot5State: fields[17] as String?,
+      slot6State: fields[18] as String?,
+      slot7State: fields[19] as String?,
+      slot8State: fields[20] as String?,
+      slot9State: fields[21] as String?,
+      slot10State: fields[22] as String?,
+      slot11State: fields[23] as String?,
+      slot12State: fields[24] as String?,
+      temperature: fields[25] as double?,
+      pressure: fields[26] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TimelineAmendment obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.amendedAt)
       ..writeByte(1)
@@ -55,14 +65,34 @@ class TimelineAmendmentAdapter extends TypeAdapter<TimelineAmendment> {
       ..write(obj.weather)
       ..writeByte(8)
       ..write(obj.remarks)
-      ..writeByte(9)
-      ..write(obj.grossState)
-      ..writeByte(10)
-      ..write(obj.fockState)
-      ..writeByte(11)
-      ..write(obj.motorOn)
-      ..writeByte(12)
-      ..write(obj.keelDown);
+      ..writeByte(13)
+      ..write(obj.slot1State)
+      ..writeByte(14)
+      ..write(obj.slot2State)
+      ..writeByte(15)
+      ..write(obj.slot3State)
+      ..writeByte(16)
+      ..write(obj.slot4State)
+      ..writeByte(17)
+      ..write(obj.slot5State)
+      ..writeByte(18)
+      ..write(obj.slot6State)
+      ..writeByte(19)
+      ..write(obj.slot7State)
+      ..writeByte(20)
+      ..write(obj.slot8State)
+      ..writeByte(21)
+      ..write(obj.slot9State)
+      ..writeByte(22)
+      ..write(obj.slot10State)
+      ..writeByte(23)
+      ..write(obj.slot11State)
+      ..writeByte(24)
+      ..write(obj.slot12State)
+      ..writeByte(25)
+      ..write(obj.temperature)
+      ..writeByte(26)
+      ..write(obj.pressure);
   }
 
   @override

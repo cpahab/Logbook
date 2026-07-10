@@ -470,17 +470,6 @@ class HomeRepository extends ChangeNotifier {
 
   // ── Timeline management ────────────────────────────────────────────────────
 
-  /// Propagates the most recent keelDown value from [d]'s timeline entries
-  /// back to [d.keelDown]. Call after any timeline mutation.
-  void syncKeelFromTimeline(DayEntry d) {
-    for (final t in d.timeline.reversed) {
-      if (t.keelDown != null) {
-        d.keelDown = t.keelDown;
-        return;
-      }
-    }
-  }
-
   /// Adds [entry] to [day]'s timeline (auto-inserting a crew/vessel-status
   /// snapshot line first, if this is the day's first real timeline entry),
   /// keeps the timeline sorted by time, and re-derives the day's keel
@@ -522,10 +511,9 @@ class HomeRepository extends ChangeNotifier {
 
     d.timeline.add(entry);
     d.timeline.sort((a, b) => a.time.compareTo(b.time));
-    syncKeelFromTimeline(d);
     _dayBox.put(normalized.toIso8601String(), d);
     _recordLocalEdit(normalized);
-    _syncToFirestore(d, {'timeline', 'keelDown'});
+    _syncToFirestore(d, {'timeline'});
     notifyListeners();
   }
 
