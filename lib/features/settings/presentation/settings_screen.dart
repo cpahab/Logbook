@@ -1415,16 +1415,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                   const Spacer(),
-                  if (!_trackFilterExpanded)
-                    Text(
-                      p.filterMode == StationaryMode.speed
-                          ? context.l10n.settingsFilterModeMooring
-                          : context.l10n.settingsFilterModeExact,
-                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                  const SizedBox(width: 8),
+                  Icon(Icons.tune, size: 20, color: cs.outlineVariant),
+                  const SizedBox(width: 4),
                   AnimatedRotation(
                     turns: _trackFilterExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
@@ -1895,23 +1887,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: cs.secondary,
                         ),
                       ),
-                      // Visible feedback for delete/switch/rename/join — those
-                      // all set _syncing but (before this) never showed
-                      // anything while awaiting Firestore, which read as the
-                      // app being stuck for however long that network call took.
-                      if (_syncing)
-                        SizedBox(
-                          width: 16, height: 16,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: cs.secondary),
-                        )
-                      else
-                        AnimatedRotation(
-                          turns: _logbooksExpanded ? 0.5 : 0,
-                          duration: const Duration(milliseconds: 200),
-                          child: Icon(Icons.expand_more,
-                              size: 20, color: cs.outlineVariant),
-                        ),
+                      Row(
+                        children: [
+                          Icon(Icons.anchor, size: 20, color: cs.outlineVariant),
+                          const SizedBox(width: 4),
+                          // Visible feedback for delete/switch/rename/join —
+                          // those all set _syncing but (before this) never
+                          // showed anything while awaiting Firestore, which
+                          // read as the app being stuck for however long that
+                          // network call took.
+                          if (_syncing)
+                            SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: cs.secondary),
+                            )
+                          else
+                            AnimatedRotation(
+                              turns: _logbooksExpanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Icon(Icons.expand_more,
+                                  size: 20, color: cs.outlineVariant),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
