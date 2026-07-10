@@ -955,7 +955,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   decoration: BoxDecoration(border: Border(right: div)),
                   padding: const EdgeInsets.all(12),
                   child: _statCell(
-                      context.l10n.statDistance.toUpperCase(), '${stats.distanceNm.toStringAsFixed(1)} NM', cs),
+                      context.l10n.statDistance.toUpperCase(), '${stats.distanceNm.toStringAsFixed(1)} nm', cs),
                 ),
               ),
               Expanded(
