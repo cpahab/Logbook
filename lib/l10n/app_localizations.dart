@@ -836,6 +836,12 @@ abstract class AppLocalizations {
   /// **'Schiff'**
   String get settingsVesselSection;
 
+  /// No description provided for @settingsVesselInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Schiffsdaten wie Name, MMSI und Rufzeichen sowie Notfallausrüstung erfassen.'**
+  String get settingsVesselInfo;
+
   /// No description provided for @settingsFieldName.
   ///
   /// In de, this message translates to:
@@ -931,6 +937,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Darstellung'**
   String get settingsAppearanceSection;
+
+  /// No description provided for @settingsAppearanceInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Design und Sprache der App anpassen.'**
+  String get settingsAppearanceInfo;
 
   /// No description provided for @settingsThemeLabel.
   ///
@@ -1856,6 +1868,12 @@ abstract class AppLocalizations {
   /// **'Konto'**
   String get settingsAccountSection;
 
+  /// No description provided for @settingsAccountInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmeldung und Konto verwalten.'**
+  String get settingsAccountInfo;
+
   /// No description provided for @settingsAccountSignedInAs.
   ///
   /// In de, this message translates to:
@@ -1903,6 +1921,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Logbücher'**
   String get settingsLogbooksSection;
+
+  /// No description provided for @settingsLogbooksInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbücher verwalten, wechseln oder mit anderen teilen.'**
+  String get settingsLogbooksInfo;
 
   /// No description provided for @settingsMyLogbooks.
   ///

@@ -141,6 +141,7 @@
   "settingsTitle": "Settings",
   "settingsSubtitle": "Configure navigation environment",
   "settingsVesselSection": "Vessel",
+  "settingsVesselInfo": "Record vessel details like name, MMSI, and call sign, plus emergency equipment.",
   "settingsFieldName": "Name",
   "settingsFieldNameHint": "e.g. S/V Adventure",
   "settingsFieldCallSign": "Call sign",
@@ -163,6 +164,7 @@
     "placeholders": { "type": { "type": "String" } }
   },
   "settingsAppearanceSection": "Appearance",
+  "settingsAppearanceInfo": "Customize the app's theme and language.",
   "settingsThemeLabel": "App theme",
   "settingsThemeSystem": "System",
   "settingsThemeLight": "Light",
@@ -358,6 +360,7 @@
   "authVerifyEmailResend": "Resend verification email",
   "authVerifyEmailSent": "Verification email sent",
   "settingsAccountSection": "Account",
+  "settingsAccountInfo": "Manage your sign-in and account.",
   "settingsAccountSignedInAs": "Signed in as",
   "settingsAccountNotSignedIn": "Not signed in",
   "settingsAccountManage": "Manage account",
@@ -367,6 +370,7 @@
   "authDeleteCleanupFailedBody": "Some of your data could not be removed from the server. Your account has not been deleted.\n\nPlease try again with a stable internet connection. If the problem persists, contact support and we will manually remove your data.",
 
   "settingsLogbooksSection": "Logbooks",
+  "settingsLogbooksInfo": "Manage, switch, or share logbooks with others.",
   "settingsMyLogbooks": "My Logbooks",
   "settingsRoleOwner": "owner",
   "settingsRoleGuest": "contributor",

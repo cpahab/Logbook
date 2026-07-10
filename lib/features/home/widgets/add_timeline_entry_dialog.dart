@@ -632,7 +632,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.shadow.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -661,7 +661,7 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
         border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.shadow.withValues(alpha: 0.04),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

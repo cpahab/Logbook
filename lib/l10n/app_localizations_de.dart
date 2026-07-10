@@ -382,6 +382,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsVesselSection => 'Schiff';
 
   @override
+  String get settingsVesselInfo =>
+      'Schiffsdaten wie Name, MMSI und Rufzeichen sowie Notfallausrüstung erfassen.';
+
+  @override
   String get settingsFieldName => 'Name';
 
   @override
@@ -433,6 +437,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsAppearanceSection => 'Darstellung';
+
+  @override
+  String get settingsAppearanceInfo => 'Design und Sprache der App anpassen.';
 
   @override
   String get settingsThemeLabel => 'App-Design';
@@ -951,6 +958,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAccountSection => 'Konto';
 
   @override
+  String get settingsAccountInfo => 'Anmeldung und Konto verwalten.';
+
+  @override
   String get settingsAccountSignedInAs => 'Angemeldet als';
 
   @override
@@ -975,6 +985,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsLogbooksSection => 'Logbücher';
+
+  @override
+  String get settingsLogbooksInfo =>
+      'Logbücher verwalten, wechseln oder mit anderen teilen.';
 
   @override
   String get settingsMyLogbooks => 'Meine Logbücher';

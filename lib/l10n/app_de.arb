@@ -141,6 +141,7 @@
   "settingsTitle": "Einstellungen",
   "settingsSubtitle": "Navigationsumgebung konfigurieren",
   "settingsVesselSection": "Schiff",
+  "settingsVesselInfo": "Schiffsdaten wie Name, MMSI und Rufzeichen sowie Notfallausrüstung erfassen.",
   "settingsFieldName": "Name",
   "settingsFieldNameHint": "z.B. S.V. Adventure",
   "settingsFieldCallSign": "Rufzeichen",
@@ -163,6 +164,7 @@
     "placeholders": { "type": { "type": "String" } }
   },
   "settingsAppearanceSection": "Darstellung",
+  "settingsAppearanceInfo": "Design und Sprache der App anpassen.",
   "settingsThemeLabel": "App-Design",
   "settingsThemeSystem": "System",
   "settingsThemeLight": "Hell",
@@ -358,6 +360,7 @@
   "authVerifyEmailResend": "Bestätigungs-E-Mail erneut senden",
   "authVerifyEmailSent": "Bestätigungs-E-Mail gesendet",
   "settingsAccountSection": "Konto",
+  "settingsAccountInfo": "Anmeldung und Konto verwalten.",
   "settingsAccountSignedInAs": "Angemeldet als",
   "settingsAccountNotSignedIn": "Nicht angemeldet",
   "settingsAccountManage": "Konto verwalten",
@@ -367,6 +370,7 @@
   "authDeleteCleanupFailedBody": "Einige deiner Daten konnten nicht vom Server gelöscht werden. Dein Konto wurde nicht gelöscht.\n\nBitte versuche es erneut mit einer stabilen Internetverbindung. Falls das Problem weiterhin besteht, kontaktiere den Support – wir löschen deine Daten dann manuell.",
 
   "settingsLogbooksSection": "Logbücher",
+  "settingsLogbooksInfo": "Logbücher verwalten, wechseln oder mit anderen teilen.",
   "settingsMyLogbooks": "Meine Logbücher",
   "settingsRoleOwner": "Eigentümer",
   "settingsRoleGuest": "Beitragender",
