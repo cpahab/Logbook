@@ -1246,6 +1246,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 t.wind != null ||
                 t.sea != null ||
                 t.weather != null ||
+                t.temperature != null ||
+                t.pressure != null ||
                 VesselEquipmentConfig.slotKeys.any((k) => _slotValue(t, k) != null)) ...[
               const SizedBox(height: 8),
               Text(
@@ -1257,6 +1259,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   if (t.wind != null) '${context.l10n.dataWind}: ${t.wind!}',
                   if (t.sea != null) '${context.l10n.dataSea}: ${t.sea!}',
                   if (t.weather != null) '${context.l10n.dataWeather}: ${t.weather!}',
+                  if (t.temperature != null)
+                    '${context.l10n.dataTemperature}: ${t.temperature!.toStringAsFixed(1)}°C',
+                  if (t.pressure != null)
+                    '${context.l10n.dataPressure}: ${t.pressure!.toStringAsFixed(0)} mBar',
                   ..._equipmentStatusLines(
                       t, context.read<ThemeProvider>().vesselEquipment.activeSlots),
                 ].join(' · '),
@@ -2979,6 +2985,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         slot10State: t.slot10State,
         slot11State: t.slot11State,
         slot12State: t.slot12State,
+        temperature: t.temperature,
+        pressure: t.pressure,
       );
       updated.amendments
         ..addAll(t.amendments) // carry forward prior amendments
@@ -3902,6 +3910,8 @@ String _buildEntryTooltip(
   if (t.wind?.isNotEmpty    == true) cond.add('${l10n.entryDialogWindLabel.split(' ').first}: ${t.wind!}');
   if (t.sea?.isNotEmpty     == true) cond.add('${l10n.entryDialogSeaLabel}: ${t.sea!}');
   if (t.weather?.isNotEmpty == true) cond.add('${l10n.entryDialogWeatherLabel}: ${t.weather!}');
+  if (t.temperature != null) cond.add('${t.temperature!.toStringAsFixed(1)}°C');
+  if (t.pressure != null) cond.add('${t.pressure!.toStringAsFixed(0)} mBar');
   if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
 
   final sails = _DayDetailScreenState._equipmentStatusLines(t, activeSlots);

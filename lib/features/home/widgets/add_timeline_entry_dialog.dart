@@ -62,11 +62,17 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
   final windStrengthCtrl = TextEditingController();
   final seaCtrl          = TextEditingController();
   final weatherCtrl      = TextEditingController();
+  final temperatureCtrl  = TextEditingController();
+  final pressureCtrl     = TextEditingController();
   final remarksCtrl      = TextEditingController();
   final amendmentReasonCtrl = TextEditingController();
 
   String  _windDir  = 'N';
   final Map<String, String?> _slotState = {};
+  // Temperature/pressure aren't filled in on every entry, so they start
+  // folded — except when editing an entry that already has one of them,
+  // so existing data is visible without an extra tap.
+  bool _envExtraExpanded = false;
 
   // How many active equipment slots (in configured order) get their full
   // chip row shown at all times; every slot beyond that — sails, motor,
@@ -107,6 +113,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       _parseWind(e.wind);
       seaCtrl.text     = e.sea ?? '';
       weatherCtrl.text = e.weather ?? '';
+      temperatureCtrl.text = e.temperature?.toString() ?? '';
+      pressureCtrl.text    = e.pressure?.toString() ?? '';
+      _envExtraExpanded = e.temperature != null || e.pressure != null;
       remarksCtrl.text = e.remarks ?? '';
 
       // New fields (null on entries created before this feature).
@@ -153,6 +162,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
     amendmentReasonCtrl.dispose();
     seaCtrl.dispose();
     weatherCtrl.dispose();
+    temperatureCtrl.dispose();
+    pressureCtrl.dispose();
     remarksCtrl.dispose();
     super.dispose();
   }
@@ -179,6 +190,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
       wind:       wind,
       sea:        seaCtrl.text.isEmpty     ? null : seaCtrl.text,
       weather:    weatherCtrl.text.isEmpty ? null : weatherCtrl.text,
+      temperature: _parseDouble(temperatureCtrl.text),
+      pressure:    _parseDouble(pressureCtrl.text),
       remarks:    remarksCtrl.text.isEmpty ? null : remarksCtrl.text,
       slot1State:  _slotState['slot1'],
       slot2State:  _slotState['slot2'],
@@ -455,6 +468,8 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  _envExtraRow(cs),
 
                   // ── end 3. Umgebung ──
 
@@ -800,6 +815,92 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                 cs,
               ))
           .toList(),
+    );
+  }
+
+  /// Fold-out row for temperature (°C, always — this app's only locales,
+  /// de-CH and en-GB, are both metric) and barometric pressure (mBar).
+  /// Neither is filled in on every entry, so this starts collapsed to a
+  /// one-line summary (or an "add" prompt) and expands into two number
+  /// fields on tap, mirroring [_collapsibleSlotRow]'s interaction.
+  Widget _envExtraRow(ColorScheme cs) {
+    final l10n = context.l10n;
+    final hasValues = temperatureCtrl.text.isNotEmpty || pressureCtrl.text.isNotEmpty;
+
+    if (!_envExtraExpanded) {
+      return GestureDetector(
+        onTap: () => setState(() => _envExtraExpanded = true),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                hasValues
+                    ? [
+                        if (temperatureCtrl.text.isNotEmpty) '${temperatureCtrl.text}°C',
+                        if (pressureCtrl.text.isNotEmpty) '${pressureCtrl.text} mBar',
+                      ].join(' · ')
+                    : l10n.entryDialogAddTempPressure,
+                style: Theme.of(context).textTheme.chipLabel.copyWith(
+                  color: hasValues ? cs.onSurface : cs.outline,
+                ),
+              ),
+            ),
+            Icon(Icons.expand_more, size: 18, color: cs.outlineVariant),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _envExtraExpanded = false),
+          child: Row(
+            children: [
+              Expanded(
+                child: _labelSm(
+                    '${l10n.entryDialogTemperatureLabel} & ${l10n.entryDialogPressureLabel}',
+                    cs),
+              ),
+              Icon(Icons.expand_less, size: 18, color: cs.outlineVariant),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: _navCard(
+                label: l10n.entryDialogTemperatureLabel,
+                unit: '°C',
+                controller: temperatureCtrl,
+                placeholder: '18',
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true, signed: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]')),
+                ],
+                cs: cs,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _navCard(
+                label: l10n.entryDialogPressureLabel,
+                unit: 'mBar',
+                controller: pressureCtrl,
+                placeholder: '1013',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
+                cs: cs,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

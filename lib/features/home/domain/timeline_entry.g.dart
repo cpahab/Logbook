@@ -40,13 +40,15 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       slot10State: fields[30] as String?,
       slot11State: fields[31] as String?,
       slot12State: fields[32] as String?,
+      temperature: fields[33] as double?,
+      pressure: fields[34] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TimelineEntry obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(25)
       ..writeByte(0)
       ..write(obj.time)
       ..writeByte(1)
@@ -92,7 +94,11 @@ class TimelineEntryAdapter extends TypeAdapter<TimelineEntry> {
       ..writeByte(31)
       ..write(obj.slot11State)
       ..writeByte(32)
-      ..write(obj.slot12State);
+      ..write(obj.slot12State)
+      ..writeByte(33)
+      ..write(obj.temperature)
+      ..writeByte(34)
+      ..write(obj.pressure);
   }
 
   @override

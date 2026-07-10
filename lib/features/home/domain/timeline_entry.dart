@@ -79,6 +79,13 @@ class TimelineEntry extends HiveObject {
   // Slot 12: keel.
   @HiveField(32) String? slot12State;
 
+  /// Air temperature in degrees Celsius. Always °C regardless of locale —
+  /// this app's only locales (de-CH, en-GB) are both metric.
+  @HiveField(33) double? temperature;
+
+  /// Barometric pressure in millibar (mBar, numerically identical to hPa).
+  @HiveField(34) double? pressure;
+
   TimelineEntry({
     required this.time,
     this.course,
@@ -103,5 +110,7 @@ class TimelineEntry extends HiveObject {
     this.slot10State,
     this.slot11State,
     this.slot12State,
+    this.temperature,
+    this.pressure,
   }) : amendments = amendments ?? [];
 }

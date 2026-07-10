@@ -524,6 +524,18 @@ abstract class AppLocalizations {
   /// **'Wetter'**
   String get dataWeather;
 
+  /// No description provided for @dataTemperature.
+  ///
+  /// In de, this message translates to:
+  /// **'Temp.'**
+  String get dataTemperature;
+
+  /// No description provided for @dataPressure.
+  ///
+  /// In de, this message translates to:
+  /// **'Luftdruck'**
+  String get dataPressure;
+
   /// No description provided for @entryDialogTitleNew.
   ///
   /// In de, this message translates to:
@@ -613,6 +625,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'z.B. Sonnig'**
   String get entryDialogWeatherHint;
+
+  /// No description provided for @entryDialogTemperatureLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Temperatur'**
+  String get entryDialogTemperatureLabel;
+
+  /// No description provided for @entryDialogPressureLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Luftdruck'**
+  String get entryDialogPressureLabel;
+
+  /// No description provided for @entryDialogAddTempPressure.
+  ///
+  /// In de, this message translates to:
+  /// **'Temperatur & Luftdruck hinzufügen'**
+  String get entryDialogAddTempPressure;
 
   /// No description provided for @entryDialogMotorLabel.
   ///

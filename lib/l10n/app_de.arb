@@ -79,6 +79,8 @@
   "dataWind": "Wind",
   "dataSea": "See",
   "dataWeather": "Wetter",
+  "dataTemperature": "Temp.",
+  "dataPressure": "Luftdruck",
 
   "entryDialogTitleNew": "Neuer Eintrag",
   "entryDialogTitleEdit": "Eintrag bearbeiten",
@@ -95,6 +97,9 @@
   "entryDialogSeaHint": "z.B. Leicht",
   "entryDialogWeatherLabel": "Wetter",
   "entryDialogWeatherHint": "z.B. Sonnig",
+  "entryDialogTemperatureLabel": "Temperatur",
+  "entryDialogPressureLabel": "Luftdruck",
+  "entryDialogAddTempPressure": "Temperatur & Luftdruck hinzufügen",
   "entryDialogMotorLabel": "Motor",
   "entryDialogKeelLabel": "Kiel",
   "entryDialogRemarksHint": "z.B. Beobachtung, Erlebnis…",

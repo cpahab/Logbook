@@ -222,6 +222,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dataWeather => 'Wetter';
 
   @override
+  String get dataTemperature => 'Temp.';
+
+  @override
+  String get dataPressure => 'Luftdruck';
+
+  @override
   String get entryDialogTitleNew => 'Neuer Eintrag';
 
   @override
@@ -265,6 +271,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get entryDialogWeatherHint => 'z.B. Sonnig';
+
+  @override
+  String get entryDialogTemperatureLabel => 'Temperatur';
+
+  @override
+  String get entryDialogPressureLabel => 'Luftdruck';
+
+  @override
+  String get entryDialogAddTempPressure => 'Temperatur & Luftdruck hinzufügen';
 
   @override
   String get entryDialogMotorLabel => 'Motor';

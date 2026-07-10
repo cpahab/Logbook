@@ -79,6 +79,8 @@
   "dataWind": "Wind",
   "dataSea": "Sea",
   "dataWeather": "Weather",
+  "dataTemperature": "Temp.",
+  "dataPressure": "Pressure",
 
   "entryDialogTitleNew": "New Entry",
   "entryDialogTitleEdit": "Edit Entry",
@@ -95,6 +97,9 @@
   "entryDialogSeaHint": "e.g. Slight",
   "entryDialogWeatherLabel": "Weather",
   "entryDialogWeatherHint": "e.g. Sunny",
+  "entryDialogTemperatureLabel": "Temperature",
+  "entryDialogPressureLabel": "Pressure",
+  "entryDialogAddTempPressure": "Add temperature & pressure",
   "entryDialogMotorLabel": "Engine",
   "entryDialogKeelLabel": "Keel",
   "entryDialogRemarksHint": "e.g. Observation, experience…",

@@ -361,6 +361,8 @@ class FirestoreService {
         'slot10State': t.slot10State,
         'slot11State': t.slot11State,
         'slot12State': t.slot12State,
+        'temperature': t.temperature,
+        'pressure': t.pressure,
       };
 
   static Map<String, dynamic> _crewToMap(CrewMember c) => {
@@ -418,6 +420,8 @@ class FirestoreService {
         slot10State: d['slot10State'] as String?,
         slot11State: d['slot11State'] as String?,
         slot12State: d['slot12State'] as String?,
+        temperature: (d['temperature'] as num?)?.toDouble(),
+        pressure: (d['pressure'] as num?)?.toDouble(),
       );
 
   static Map<String, dynamic> _amendmentToMap(TimelineAmendment a) => {
@@ -442,6 +446,8 @@ class FirestoreService {
         'slot10State': a.slot10State,
         'slot11State': a.slot11State,
         'slot12State': a.slot12State,
+        'temperature': a.temperature,
+        'pressure': a.pressure,
       };
 
   static TimelineAmendment _amendmentFromMap(Map<String, dynamic> d) =>
@@ -467,6 +473,8 @@ class FirestoreService {
         slot10State: d['slot10State'] as String?,
         slot11State: d['slot11State'] as String?,
         slot12State: d['slot12State'] as String?,
+        temperature: (d['temperature'] as num?)?.toDouble(),
+        pressure: (d['pressure'] as num?)?.toDouble(),
       );
 
   static CrewMember _crewFromMap(Map<String, dynamic> d) => CrewMember(

@@ -443,6 +443,8 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
   final hasSpeed   = entries.any((e) => e.speed   != null);
   final hasWind    = entries.any((e) => e.wind?.isNotEmpty  == true);
   final hasSea     = entries.any((e) => e.sea?.isNotEmpty   == true);
+  final hasTemperature = entries.any((e) => e.temperature != null);
+  final hasPressure    = entries.any((e) => e.pressure != null);
   final hasRemarks = entries.any((e) =>
       e.remarks?.isNotEmpty == true || e.vesselStatusNote?.isNotEmpty == true);
 
@@ -455,6 +457,8 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
     if (hasSpeed)   (header: 'kn',              flex: 0.7),
     if (hasWind)    (header: strings.windCol,   flex: 1.1),
     if (hasSea)     (header: strings.seaCol,    flex: 0.8),
+    if (hasTemperature) (header: '°C',   flex: 0.6),
+    if (hasPressure)    (header: 'mBar', flex: 0.7),
     for (final slot in activeSlots)
       (header: slot.label.substring(0, slot.label.length.clamp(0, 6)), flex: 0.7),
     if (hasRemarks) (header: strings.remarksCol, flex: 2.6),
@@ -505,6 +509,8 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
       if (hasSpeed)   cell(e.speed   != null ? e.speed!.toStringAsFixed(1) : '—'),
       if (hasWind)    cell(e.wind    ?? '—'),
       if (hasSea)     cell(e.sea     ?? '—'),
+      if (hasTemperature) cell(e.temperature != null ? e.temperature!.toStringAsFixed(1) : '—'),
+      if (hasPressure)    cell(e.pressure    != null ? e.pressure!.toStringAsFixed(0)    : '—'),
       for (final slot in activeSlots) cell(_slotAbbr(slotValue(e, slot.key))),
       if (hasRemarks) cell(remarksText.isEmpty ? '—' : remarksText),
     ];

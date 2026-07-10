@@ -38,13 +38,15 @@ class TimelineAmendmentAdapter extends TypeAdapter<TimelineAmendment> {
       slot10State: fields[22] as String?,
       slot11State: fields[23] as String?,
       slot12State: fields[24] as String?,
+      temperature: fields[25] as double?,
+      pressure: fields[26] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TimelineAmendment obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.amendedAt)
       ..writeByte(1)
@@ -86,7 +88,11 @@ class TimelineAmendmentAdapter extends TypeAdapter<TimelineAmendment> {
       ..writeByte(23)
       ..write(obj.slot11State)
       ..writeByte(24)
-      ..write(obj.slot12State);
+      ..write(obj.slot12State)
+      ..writeByte(25)
+      ..write(obj.temperature)
+      ..writeByte(26)
+      ..write(obj.pressure);
   }
 
   @override

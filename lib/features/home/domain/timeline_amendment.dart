@@ -60,6 +60,10 @@ class TimelineAmendment extends HiveObject {
   @HiveField(23) String? slot11State;
   @HiveField(24) String? slot12State;
 
+  /// Mirrors TimelineEntry.temperature/pressure — see that class for details.
+  @HiveField(25) double? temperature;
+  @HiveField(26) double? pressure;
+
   TimelineAmendment({
     required this.amendedAt,
     this.reason,
@@ -82,6 +86,8 @@ class TimelineAmendment extends HiveObject {
     this.slot10State,
     this.slot11State,
     this.slot12State,
+    this.temperature,
+    this.pressure,
   });
 
   /// Creates a snapshot from an existing TimelineEntry's field values,
@@ -108,6 +114,8 @@ class TimelineAmendment extends HiveObject {
     String? slot10State,
     String? slot11State,
     String? slot12State,
+    double? temperature,
+    double? pressure,
   }) =>
       TimelineAmendment(
         amendedAt: amendedAt,
@@ -131,5 +139,7 @@ class TimelineAmendment extends HiveObject {
         slot10State: slot10State,
         slot11State: slot11State,
         slot12State: slot12State,
+        temperature: temperature,
+        pressure: pressure,
       );
 }
