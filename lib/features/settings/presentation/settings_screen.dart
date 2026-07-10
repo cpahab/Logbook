@@ -1878,7 +1878,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => setState(() => _logbooksExpanded = !_logbooksExpanded),
+            onTap: _syncing
+                ? null
+                : () => setState(() => _logbooksExpanded = !_logbooksExpanded),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -1893,12 +1895,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: cs.secondary,
                         ),
                       ),
-                      AnimatedRotation(
-                        turns: _logbooksExpanded ? 0.5 : 0,
-                        duration: const Duration(milliseconds: 200),
-                        child: Icon(Icons.expand_more,
-                            size: 20, color: cs.outlineVariant),
-                      ),
+                      // Visible feedback for delete/switch/rename/join — those
+                      // all set _syncing but (before this) never showed
+                      // anything while awaiting Firestore, which read as the
+                      // app being stuck for however long that network call took.
+                      if (_syncing)
+                        SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: cs.secondary),
+                        )
+                      else
+                        AnimatedRotation(
+                          turns: _logbooksExpanded ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(Icons.expand_more,
+                              size: 20, color: cs.outlineVariant),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -2023,9 +2036,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             if (isActive) Icon(Icons.check, size: 18, color: cs.primary),
             IconButton(
               icon: Icon(Icons.more_vert, size: 18, color: cs.outlineVariant),
-              onPressed: () => isOwner
-                  ? _showLogbookOptionsSheet(logbook, uid)
-                  : _showGuestOptionsSheet(logbook, uid),
+              onPressed: _syncing
+                  ? null
+                  : () => isOwner
+                      ? _showLogbookOptionsSheet(logbook, uid)
+                      : _showGuestOptionsSheet(logbook, uid),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               visualDensity: VisualDensity.compact,
