@@ -567,6 +567,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsCrewSection => 'Besatzungsliste';
 
   @override
+  String get settingsBackupSection => 'Backup & Wiederherstellung';
+
+  @override
+  String get settingsBackupSubtitle =>
+      'Daten dieses Logbuchs exportieren oder wiederherstellen';
+
+  @override
   String get settingsNoEntries => 'Noch keine Einträge';
 
   @override
@@ -1431,6 +1438,61 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get homeExportRangeError =>
       'PDF-Export fehlgeschlagen. Bitte erneut versuchen.';
+
+  @override
+  String get backupExportTitle => 'Alle Daten exportieren';
+
+  @override
+  String get backupExportDescription =>
+      'Sichert alle Tageseinträge, GPS-Tracks, die Besatzungsliste, Notfallkontakte und Fotos dieses Logbuchs in einer einzigen Datei.';
+
+  @override
+  String get backupExportButton => 'Alle Daten exportieren';
+
+  @override
+  String get backupExportInProgress => 'Backup wird vorbereitet…';
+
+  @override
+  String get backupExportSuccess => 'Backup bereit zum Teilen.';
+
+  @override
+  String get backupExportError =>
+      'Backup-Export fehlgeschlagen. Bitte erneut versuchen.';
+
+  @override
+  String get backupRestoreTitle => 'Aus Datei wiederherstellen';
+
+  @override
+  String get backupRestoreDescription =>
+      'Stellt ein zuvor exportiertes Backup wieder her. Dabei werden alle vorhandenen Daten in diesem Logbuch ersetzt, nicht zusammengeführt.';
+
+  @override
+  String get backupRestoreButton => 'Aus Datei wiederherstellen';
+
+  @override
+  String get backupRestoreConfirmTitle => 'Alle Daten ersetzen?';
+
+  @override
+  String get backupRestoreConfirmBody =>
+      'Beim Wiederherstellen dieses Backups werden alle Tageseinträge, Tracks, Besatzungsmitglieder und Notfallkontakte in diesem Logbuch dauerhaft ersetzt. Dies kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get backupRestoreInProgress => 'Backup wird wiederhergestellt…';
+
+  @override
+  String get backupRestoreSuccess => 'Backup wiederhergestellt.';
+
+  @override
+  String get backupRestoreInvalidFile =>
+      'Diese Datei ist kein gültiges Logbook-Backup.';
+
+  @override
+  String get backupRestoreSchemaTooNew =>
+      'Dieses Backup wurde mit einer neueren App-Version erstellt und kann hier nicht wiederhergestellt werden.';
+
+  @override
+  String get backupRestoreError =>
+      'Wiederherstellung fehlgeschlagen. Bitte erneut versuchen.';
 
   @override
   String get amendmentDialogTitle => 'Eintrag korrigieren';

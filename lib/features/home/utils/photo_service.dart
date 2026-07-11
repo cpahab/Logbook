@@ -78,6 +78,22 @@ class PhotoService {
     return uploaded;
   }
 
+  /// Writes [bytes] to the local cache for [storagePath] and re-uploads them
+  /// to Firebase Storage at that exact path — used when restoring a photo
+  /// from a backup archive, where both the cache and the remote blob need
+  /// to exist again after a wipe.
+  static Future<void> restorePhoto(String storagePath, List<int> bytes) async {
+    final cache = await _cacheDir();
+    final local = File('${cache.path}/${_cacheFilename(storagePath)}');
+    await local.writeAsBytes(bytes);
+    try {
+      await FirebaseStorage.instance.ref(storagePath).putFile(local);
+    } catch (_) {
+      // Best-effort: the local cache is restored either way, so the photo
+      // still displays even if the Storage re-upload fails (e.g. offline).
+    }
+  }
+
   /// Returns the locally cached [File] for [storagePath], downloading from
   /// Firebase Storage if not yet cached.  Returns null on failure.
   static Future<File?> localFile(String storagePath) async {

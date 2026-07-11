@@ -54,6 +54,7 @@ dependencies:
   flutter_image_compress: ^2.4.0
   pdf: ^3.11.1
   printing: ^5.14.2
+  archive: ^3.6.1
   qr_flutter: ^4.1.0
   mobile_scanner: ^7.0.0
   connectivity_plus: ^6.0.0

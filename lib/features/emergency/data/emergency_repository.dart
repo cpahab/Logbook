@@ -152,6 +152,16 @@ class EmergencyRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replaces all local contacts with [parsed] (from a parsed backup
+  /// archive) and pushes the restored list to Firestore. Caller must have
+  /// already validated the backup and called [clearLocalData] first.
+  Future<void> restoreContacts(List<EmergencyContact> parsed) async {
+    for (final c in parsed) { await _box.add(c); }
+    _markModified();
+    _syncToFirestore();
+    notifyListeners();
+  }
+
   /// Wipes all local Hive data without re-attaching.
   ///
   /// Call this before [attachFirestore] when a different user signs in.

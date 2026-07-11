@@ -568,6 +568,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCrewSection => 'Crew roster';
 
   @override
+  String get settingsBackupSection => 'Backup & restore';
+
+  @override
+  String get settingsBackupSubtitle => 'Export or restore this logbook\'s data';
+
+  @override
   String get settingsNoEntries => 'No entries yet';
 
   @override
@@ -1424,6 +1430,59 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeExportRangeError => 'PDF export failed. Please try again.';
+
+  @override
+  String get backupExportTitle => 'Export all data';
+
+  @override
+  String get backupExportDescription =>
+      'Save every day entry, GPS track, crew roster, emergency contact and photo in this logbook as a single file you control.';
+
+  @override
+  String get backupExportButton => 'Export all data';
+
+  @override
+  String get backupExportInProgress => 'Preparing backup…';
+
+  @override
+  String get backupExportSuccess => 'Backup ready to share.';
+
+  @override
+  String get backupExportError => 'Backup export failed. Please try again.';
+
+  @override
+  String get backupRestoreTitle => 'Restore from file';
+
+  @override
+  String get backupRestoreDescription =>
+      'Restore a previously exported backup. This replaces all data in this logbook — it does not merge with what\'s already there.';
+
+  @override
+  String get backupRestoreButton => 'Restore from file';
+
+  @override
+  String get backupRestoreConfirmTitle => 'Replace all data?';
+
+  @override
+  String get backupRestoreConfirmBody =>
+      'Restoring this backup will permanently replace every day entry, track, crew member and emergency contact currently in this logbook. This cannot be undone.';
+
+  @override
+  String get backupRestoreInProgress => 'Restoring backup…';
+
+  @override
+  String get backupRestoreSuccess => 'Backup restored.';
+
+  @override
+  String get backupRestoreInvalidFile =>
+      'This file isn\'t a valid Logbook backup.';
+
+  @override
+  String get backupRestoreSchemaTooNew =>
+      'This backup was created by a newer version of the app and can\'t be restored here.';
+
+  @override
+  String get backupRestoreError => 'Restore failed. Please try again.';
 
   @override
   String get amendmentDialogTitle => 'Amend entry';

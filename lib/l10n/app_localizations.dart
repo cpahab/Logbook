@@ -1172,6 +1172,18 @@ abstract class AppLocalizations {
   /// **'Besatzungsliste'**
   String get settingsCrewSection;
 
+  /// No description provided for @settingsBackupSection.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup & Wiederherstellung'**
+  String get settingsBackupSection;
+
+  /// No description provided for @settingsBackupSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Daten dieses Logbuchs exportieren oder wiederherstellen'**
+  String get settingsBackupSubtitle;
+
   /// No description provided for @settingsNoEntries.
   ///
   /// In de, this message translates to:
@@ -2737,6 +2749,102 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'PDF-Export fehlgeschlagen. Bitte erneut versuchen.'**
   String get homeExportRangeError;
+
+  /// No description provided for @backupExportTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Daten exportieren'**
+  String get backupExportTitle;
+
+  /// No description provided for @backupExportDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Sichert alle Tageseinträge, GPS-Tracks, die Besatzungsliste, Notfallkontakte und Fotos dieses Logbuchs in einer einzigen Datei.'**
+  String get backupExportDescription;
+
+  /// No description provided for @backupExportButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Daten exportieren'**
+  String get backupExportButton;
+
+  /// No description provided for @backupExportInProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup wird vorbereitet…'**
+  String get backupExportInProgress;
+
+  /// No description provided for @backupExportSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup bereit zum Teilen.'**
+  String get backupExportSuccess;
+
+  /// No description provided for @backupExportError.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup-Export fehlgeschlagen. Bitte erneut versuchen.'**
+  String get backupExportError;
+
+  /// No description provided for @backupRestoreTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus Datei wiederherstellen'**
+  String get backupRestoreTitle;
+
+  /// No description provided for @backupRestoreDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Stellt ein zuvor exportiertes Backup wieder her. Dabei werden alle vorhandenen Daten in diesem Logbuch ersetzt, nicht zusammengeführt.'**
+  String get backupRestoreDescription;
+
+  /// No description provided for @backupRestoreButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus Datei wiederherstellen'**
+  String get backupRestoreButton;
+
+  /// No description provided for @backupRestoreConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Daten ersetzen?'**
+  String get backupRestoreConfirmTitle;
+
+  /// No description provided for @backupRestoreConfirmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Beim Wiederherstellen dieses Backups werden alle Tageseinträge, Tracks, Besatzungsmitglieder und Notfallkontakte in diesem Logbuch dauerhaft ersetzt. Dies kann nicht rückgängig gemacht werden.'**
+  String get backupRestoreConfirmBody;
+
+  /// No description provided for @backupRestoreInProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup wird wiederhergestellt…'**
+  String get backupRestoreInProgress;
+
+  /// No description provided for @backupRestoreSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup wiederhergestellt.'**
+  String get backupRestoreSuccess;
+
+  /// No description provided for @backupRestoreInvalidFile.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Datei ist kein gültiges Logbook-Backup.'**
+  String get backupRestoreInvalidFile;
+
+  /// No description provided for @backupRestoreSchemaTooNew.
+  ///
+  /// In de, this message translates to:
+  /// **'Dieses Backup wurde mit einer neueren App-Version erstellt und kann hier nicht wiederhergestellt werden.'**
+  String get backupRestoreSchemaTooNew;
+
+  /// No description provided for @backupRestoreError.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiederherstellung fehlgeschlagen. Bitte erneut versuchen.'**
+  String get backupRestoreError;
 
   /// No description provided for @amendmentDialogTitle.
   ///

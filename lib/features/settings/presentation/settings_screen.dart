@@ -828,6 +828,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // ── Crew Roster ───────────────────────────────────────────
             _buildCrewRosterSection(cs),
+            const SizedBox(height: 16),
+
+            // ── Backup & Restore ──────────────────────────────────────
+            _buildBackupSection(cs),
             const SizedBox(height: 32),
 
             // ── App version ───────────────────────────────────────────
@@ -1789,6 +1793,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               Icon(Icons.people_outline, size: 20, color: cs.outlineVariant),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: cs.outlineVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Backup & Restore ───────────────────────────────────────────────────
+  /// Tappable shortcut card into [BackupScreen].
+  Widget _buildBackupSection(ColorScheme cs) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => context.pushNamed(AppRoute.backupRestore),
+      child: _cardShell(
+        cs,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.settingsBackupSection.toUpperCase(),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                        color: cs.secondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.l10n.settingsBackupSubtitle,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.archive_outlined, size: 20, color: cs.outlineVariant),
               const SizedBox(width: 4),
               Icon(Icons.chevron_right, color: cs.outlineVariant),
             ],

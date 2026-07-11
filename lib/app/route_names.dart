@@ -16,6 +16,7 @@ class AppRoute {
   static const dayDetail = 'dayDetail';
   static const settings = 'settings';
   static const crewRoster = 'crewRoster';
+  static const backupRestore = 'backupRestore';
   static const tracks = 'tracks';
   static const tracksFullscreen = 'tracksFullscreen';
   static const emergencyManifest = 'emergencyManifest';
