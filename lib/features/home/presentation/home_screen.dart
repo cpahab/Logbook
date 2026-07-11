@@ -222,14 +222,32 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  /// Builds a single PDF covering every logged day in [_customRange] (cover
-  /// page + one page per day) and opens the share sheet. Runs the whole
-  /// pipeline — photo loading, track-image rendering, PDF assembly — behind
-  /// a progress snackbar, since it can take real time for a range with many
-  /// days/photos.
-  Future<void> _exportRangePdf() async {
-    final range = _customRange;
-    if (range == null || _exportingRange) return;
+  /// The date range to export for the currently active filter — the custom
+  /// range if one is picked, the selected year's calendar bounds, or the
+  /// earliest-to-latest span of every logged day when "All" is active.
+  /// Null only when there are no entries at all.
+  DateTimeRange? _effectiveExportRange({
+    required DateTimeRange? customRange,
+    required int? effectiveYear,
+    required List<DayEntry> entries,
+  }) {
+    if (customRange != null) return customRange;
+    if (effectiveYear != null) {
+      return DateTimeRange(
+        start: DateTime(effectiveYear, 1, 1),
+        end: DateTime(effectiveYear, 12, 31),
+      );
+    }
+    if (entries.isEmpty) return null;
+    return DateTimeRange(start: entries.first.date, end: entries.last.date);
+  }
+
+  /// Builds a single PDF covering every logged day in [range] (cover page +
+  /// one page per day) and opens the share sheet. Runs the whole pipeline —
+  /// photo loading, track-image rendering, PDF assembly — behind a progress
+  /// snackbar, since it can take real time for a range with many days/photos.
+  Future<void> _exportRangePdf(DateTimeRange range) async {
+    if (_exportingRange) return;
 
     final repo = context.read<HomeRepository>();
     final rangeEntries = repo.entries.where((e) {
@@ -519,22 +537,34 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          if (customRange != null)
-            _exportingRange
-                ? const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.picture_as_pdf_outlined),
-                    tooltip: context.l10n.homeExportRangeTooltip,
-                    color: cs.primary,
-                    onPressed: _exportRangePdf,
+          _exportingRange
+              ? const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  tooltip: context.l10n.homeExportRangeTooltip,
+                  color: cs.primary,
+                  onPressed: () {
+                    final range = _effectiveExportRange(
+                      customRange: customRange,
+                      effectiveYear: effectiveYear,
+                      entries: entries,
+                    );
+                    if (range == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(context.l10n.homeExportRangeEmpty)),
+                      );
+                      return;
+                    }
+                    _exportRangePdf(range);
+                  },
+                ),
         ],
       ),
       // ── Bottom nav with raised centre FAB ──────────────────────
