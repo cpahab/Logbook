@@ -468,6 +468,38 @@ class HomeRepository extends ChangeNotifier {
     _debouncedSync(entry, changedFields);
   }
 
+  /// Replaces all local entries/roster with [entries]/[roster] (from a
+  /// parsed backup archive) and pushes the restored state to Firestore.
+  ///
+  /// Callers must have already validated the backup and called
+  /// [clearLocalData] — this only repopulates, it doesn't wipe first. GPS
+  /// tracks are restored separately via [replaceTrackPoints], since each
+  /// entry may or may not have one.
+  Future<void> restoreFromBackup({
+    required List<DayEntry> entries,
+    required List<CrewMember> roster,
+  }) async {
+    for (final e in entries) {
+      final normalized = DateTime(e.date.year, e.date.month, e.date.day);
+      _entries[normalized] = e;
+      await _dayBox.put(normalized.toIso8601String(), e);
+    }
+    for (final m in roster) {
+      m.id ??= _newId();
+      await _rosterBox.put(m.id!, m);
+    }
+    notifyListeners();
+
+    final fs = _firestore;
+    if (fs != null) {
+      for (final e in _entries.values) {
+        await fs.saveEntry(e);
+        _recordLocalEdit(e.date);
+      }
+    }
+    _syncRosterToFirestore();
+  }
+
   // ── Timeline management ────────────────────────────────────────────────────
 
   /// Adds [entry] to [day]'s timeline (auto-inserting a crew/vessel-status

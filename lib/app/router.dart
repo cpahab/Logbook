@@ -14,6 +14,7 @@ import '../features/home/presentation/day_detail_screen.dart';
 import '../features/home/presentation/gpx_import_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/screens/crew_roster_screen.dart';
+import '../features/settings/presentation/backup_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/tracks/presentation/tracks_screen.dart';
 
@@ -111,6 +112,11 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
         path: '/settings/crew-roster',
         name: AppRoute.crewRoster,
         builder: (context, state) => const CrewRosterScreen(),
+      ),
+      GoRoute(
+        path: '/settings/backup-restore',
+        name: AppRoute.backupRestore,
+        builder: (context, state) => const BackupScreen(),
       ),
       GoRoute(
         path: '/tracks',
