@@ -1344,6 +1344,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pdfAvgSpeed => 'AVG SPEED';
 
   @override
+  String get pdfAvgSpeedUnderway => 'AVG UNDERWAY';
+
+  @override
   String get pdfMax => 'MAX';
 
   @override

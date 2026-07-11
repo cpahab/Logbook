@@ -1350,6 +1350,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pdfAvgSpeed => 'Ø FAHRT';
 
   @override
+  String get pdfAvgSpeedUnderway => 'Ø IN FAHRT';
+
+  @override
   String get pdfMax => 'MAX';
 
   @override

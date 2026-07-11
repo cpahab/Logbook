@@ -494,6 +494,7 @@
   "pdfDate": "DATUM",
   "pdfDistance": "DISTANZ",
   "pdfAvgSpeed": "Ø FAHRT",
+  "pdfAvgSpeedUnderway": "Ø IN FAHRT",
   "pdfMax": "MAX",
   "pdfDuration": "FAHRZEIT",
   "pdfStops": "STOPPS",

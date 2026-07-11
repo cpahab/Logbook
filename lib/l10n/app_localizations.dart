@@ -2588,6 +2588,12 @@ abstract class AppLocalizations {
   /// **'Ø FAHRT'**
   String get pdfAvgSpeed;
 
+  /// No description provided for @pdfAvgSpeedUnderway.
+  ///
+  /// In de, this message translates to:
+  /// **'Ø IN FAHRT'**
+  String get pdfAvgSpeedUnderway;
+
   /// No description provided for @pdfMax.
   ///
   /// In de, this message translates to:

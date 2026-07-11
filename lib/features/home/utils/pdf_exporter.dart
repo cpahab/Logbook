@@ -91,6 +91,7 @@ class PdfStrings {
   final String date;
   final String distance;
   final String avgSpeed;
+  final String avgSpeedUnderway;
   final String max;
   final String duration;
   final String stops;
@@ -116,6 +117,7 @@ class PdfStrings {
     required this.date,
     required this.distance,
     required this.avgSpeed,
+    required this.avgSpeedUnderway,
     required this.max,
     required this.duration,
     required this.stops,
@@ -224,26 +226,18 @@ Future<Uint8List> buildVoyagePdf({
           sections.add(pw.SizedBox(height: 16));
         }
 
-        // ── Row 2: Timeline (left) | Crew (right) ─────────────────
-        if (entry.timeline.isNotEmpty || entry.crew.isNotEmpty) {
-          sections.add(pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Expanded(
-                flex: 8,
-                child: entry.timeline.isNotEmpty
-                    ? _buildTimeline(entry.timeline, bold, regular, emojiFont, strings, equipment)
-                    : pw.SizedBox(),
-              ),
-              pw.SizedBox(width: 20),
-              pw.Expanded(
-                flex: 5,
-                child: entry.crew.isNotEmpty
-                    ? _buildCrew(entry.crew, bold, regular, emojiFont, strings)
-                    : pw.SizedBox(),
-              ),
-            ],
-          ));
+        // ── Full-width: Timeline ───────────────────────────────────
+        // Its own top-level section (not nested in a Row) so the table can
+        // span across pages — a horizontal Row can't split across pages in
+        // the pdf package, so a long timeline nested in one would throw.
+        if (entry.timeline.isNotEmpty) {
+          sections.add(_buildTimeline(entry.timeline, bold, regular, emojiFont, strings, equipment));
+          sections.add(pw.SizedBox(height: 16));
+        }
+
+        // ── Full-width: Crew ────────────────────────────────────────
+        if (entry.crew.isNotEmpty) {
+          sections.add(_buildCrew(entry.crew, bold, regular, emojiFont, strings));
         }
 
 
@@ -320,24 +314,33 @@ pw.Widget _buildStats(DailyStats stats, pw.Font bold, pw.Font regular, PdfString
     return h > 0 ? '${h}h ${m}min' : '${m}min';
   }
 
-  final items = [
-    (label: strings.distance, value: '${stats.distanceNm.toStringAsFixed(1)} nm'),
-    (label: strings.avgSpeed, value: '${stats.avgOverGroundKn.toStringAsFixed(1)} kn'),
-    (label: strings.max,      value: '${stats.maxSpeedKn.toStringAsFixed(1)} kn'),
-    (label: strings.duration, value: dur(stats.movingDuration)),
-    if (stats.nStops > 0) (label: strings.stops, value: '${stats.nStops}'),
+  // Each row pairs two stat cards; the right slot is null for a lone card.
+  final rowPairs = [
+    (
+      (label: strings.distance, value: '${stats.distanceNm.toStringAsFixed(1)} nm'),
+      stats.nStops > 0 ? (label: strings.stops, value: '${stats.nStops}') : null,
+    ),
+    (
+      (label: strings.avgSpeed,          value: '${stats.avgOverGroundKn.toStringAsFixed(1)} kn'),
+      (label: strings.avgSpeedUnderway,  value: '${stats.avgMakingWayKn.toStringAsFixed(1)} kn'),
+    ),
+    (
+      (label: strings.max,      value: '${stats.maxSpeedKn.toStringAsFixed(1)} kn'),
+      (label: strings.duration, value: dur(stats.movingDuration)),
+    ),
   ];
 
   final rows = <pw.Widget>[];
-  for (int i = 0; i < items.length; i += 2) {
+  for (int i = 0; i < rowPairs.length; i++) {
     if (i > 0) rows.add(pw.SizedBox(height: 6));
+    final (left, right) = rowPairs[i];
     rows.add(pw.Row(
       children: [
-        pw.Expanded(child: _statCard(items[i].label, items[i].value, bold, regular)),
+        pw.Expanded(child: _statCard(left.label, left.value, bold, regular)),
         pw.SizedBox(width: 6),
         pw.Expanded(
-          child: i + 1 < items.length
-              ? _statCard(items[i + 1].label, items[i + 1].value, bold, regular)
+          child: right != null
+              ? _statCard(right.label, right.value, bold, regular)
               : pw.SizedBox(),
         ),
       ],
@@ -505,7 +508,7 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
 
     final cells = <pw.Widget>[
       cell(DateFormat('HH:mm').format(e.time.toLocal())),
-      if (hasCourse)  cell(e.course  != null ? '${e.course!.round()}°' : '—'),
+      if (hasCourse)  cell(e.course != null && e.course!.isFinite ? '${e.course!.round()}°' : '—'),
       if (hasSpeed)   cell(e.speed   != null ? e.speed!.toStringAsFixed(1) : '—'),
       if (hasWind)    cell(e.wind    ?? '—'),
       if (hasSea)     cell(e.sea     ?? '—'),
