@@ -529,6 +529,13 @@
     }
   },
   "pdfLocale": "de_CH",
+  "pdfGeneratedOn": "Erstellt am",
+
+  "homeExportRangeTooltip": "Zeitraum als PDF exportieren",
+  "homeExportRangeInProgress": "PDF-Export wird vorbereitet…",
+  "homeExportRangeEmpty": "Keine Logbucheinträge im gewählten Zeitraum.",
+  "homeExportRangeSuccess": "PDF-Export bereit zum Teilen.",
+  "homeExportRangeError": "PDF-Export fehlgeschlagen. Bitte erneut versuchen.",
 
   "amendmentDialogTitle": "Eintrag korrigieren",
   "amendmentReasonLabel": "Grund der Korrektur",

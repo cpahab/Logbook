@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:flutter_map/flutter_map.dart'
     show BuiltInMapCachingProvider, CachedMapTile, CachedMapTileMetadata;
 
@@ -107,6 +108,7 @@ class PdfStrings {
   final String remarksCol;
   final String trackMap;
   final String locale;
+  final String generatedOn;
   final String Function(String destination) passageTo;
   final String Function(String origin) departureFrom;
   final String Function(int page, int total) pageOf;
@@ -133,10 +135,124 @@ class PdfStrings {
     required this.remarksCol,
     required this.trackMap,
     required this.locale,
+    required this.generatedOn,
     required this.passageTo,
     required this.departureFrom,
     required this.pageOf,
   });
+}
+
+/// Builds the flat widget list for one day's voyage-report content (header,
+/// route, notes, photos, track map + stats, timeline, crew) — shared by both
+/// the single-day [buildVoyagePdf] and the multi-day [buildRangeVoyagePdf],
+/// which precompute fonts/track images once and loop this per day.
+///
+/// [showHeader] controls the vessel-name banner + rule at the top of the
+/// section: single-day export keeps it (it's the only page), while the
+/// multi-day export omits it per day since the cover page already states
+/// the vessel once for the whole document.
+List<pw.Widget> _buildDaySections({
+  required DayEntry entry,
+  required DailyStats? stats,
+  required String vesselName,
+  required PdfStrings strings,
+  required VesselEquipmentConfig equipment,
+  required pw.Font regular,
+  required pw.Font bold,
+  required pw.Font italic,
+  required pw.Font emojiFont,
+  Uint8List? trackImageBytes,
+  List<Uint8List> photoBytes = const [],
+  bool showHeader = true,
+}) {
+  final sections = <pw.Widget>[];
+
+  // ── Full-width: Vessel header ──────────────────────────────
+  if (showHeader) {
+    sections.add(_buildHeader(vesselName, bold, emojiFont));
+    sections.add(pw.SizedBox(height: 16));
+  }
+
+  // ── Full-width: Voyage title + date box ───────────────────
+  // Always rendered — the date must show even when there's no route
+  // (fromHarbor/toHarbor) to build a title from.
+  final from = entry.fromHarbor?.trim() ?? '';
+  final to   = entry.toHarbor?.trim()   ?? '';
+  sections.add(_buildRoute(from, to, entry.date, bold, regular, italic, emojiFont, strings));
+  sections.add(pw.SizedBox(height: 16));
+
+  final narrative = entry.notes?.trim()    ?? '';
+  final freeNote  = entry.freeText?.trim() ?? '';
+
+  // ── Full-width: Narrative (always, avoids overflowing the two-column row)
+  if (narrative.isNotEmpty) {
+    // Same orphan-header guard as the timeline/crew sections — without it
+    // the section label can end up alone at the bottom of a page while the
+    // note text flows to the next one.
+    sections.add(pw.NewPage(freeSpace: 100));
+    sections.add(_buildNotes(strings.voyageLog, narrative, bold, italic, emojiFont));
+    sections.add(pw.SizedBox(height: 14));
+  }
+
+  // ── Full-width: Photos ─────────────────────────────────────
+  if (photoBytes.isNotEmpty) {
+    sections.add(_buildPhotos(photoBytes, bold));
+    sections.add(pw.SizedBox(height: 14));
+  }
+
+  // ── Full-width: Free notes ─────────────────────────────────
+  if (freeNote.isNotEmpty) {
+    sections.add(pw.NewPage(freeSpace: 100));
+    sections.add(_buildNotes(strings.notes, freeNote, bold, italic, emojiFont));
+    sections.add(pw.SizedBox(height: 14));
+  }
+
+  // ── Row 1: Track map (left) | Stats (right) ──────────────
+  if (trackImageBytes != null || stats != null) {
+    sections.add(pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Expanded(
+          flex: 8,
+          child: trackImageBytes != null
+              ? _buildTrackMap(trackImageBytes, bold, regular, strings)
+              : pw.SizedBox(),
+        ),
+        pw.SizedBox(width: 20),
+        pw.Expanded(
+          flex: 5,
+          child: stats != null
+              ? _buildStats(stats, bold, regular, strings)
+              : pw.SizedBox(),
+        ),
+      ],
+    ));
+    sections.add(pw.SizedBox(height: 16));
+  }
+
+  // ── Full-width: Timeline ───────────────────────────────────
+  // Its own top-level section (not nested in a Row) so the table can
+  // span across pages — a horizontal Row can't split across pages in
+  // the pdf package, so a long timeline nested in one would throw.
+  if (entry.timeline.isNotEmpty) {
+    // Force a page break if less than ~120pt is left — otherwise the pdf
+    // package's Column/Table spanning can fit the "LOG ENTRIES" label
+    // alone at the bottom of a page while every row flows to the next one.
+    sections.add(pw.NewPage(freeSpace: 120));
+    sections.add(_buildTimeline(entry.timeline, bold, regular, emojiFont, strings, equipment));
+    sections.add(pw.SizedBox(height: 16));
+  }
+
+  // ── Full-width: Crew ────────────────────────────────────────
+  if (entry.crew.isNotEmpty) {
+    // Same orphan-header guard as the timeline section above — without it
+    // the "CREW" label can end up alone at the bottom of a page while the
+    // whole crew list flows to the next one.
+    sections.add(pw.NewPage(freeSpace: 100));
+    sections.add(_buildCrew(entry.crew, bold, regular, emojiFont, strings));
+  }
+
+  return sections;
 }
 
 /// Builds and returns the PDF bytes for a single-day voyage report.
@@ -167,86 +283,144 @@ Future<Uint8List> buildVoyagePdf({
       margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 44),
       theme: pw.ThemeData.withFont(base: regular, bold: bold, italic: italic),
       footer: (ctx) => _footer(ctx, regular, strings),
+      build: (ctx) => _buildDaySections(
+        entry:           entry,
+        stats:           stats,
+        vesselName:      vesselName,
+        strings:         strings,
+        equipment:       equipment,
+        regular:         regular,
+        bold:            bold,
+        italic:          italic,
+        emojiFont:       emojiFont,
+        trackImageBytes: trackImageBytes,
+        photoBytes:      photoBytes,
+      ),
+    ),
+  );
+
+  return doc.save();
+}
+
+/// One day's pre-loaded inputs for [buildRangeVoyagePdf] — mirrors the
+/// per-day parameters [buildVoyagePdf] takes, so the caller assembles these
+/// the same way it already does for a single-day export, just once per day
+/// in the range.
+class RangeDayInput {
+  final DayEntry entry;
+  final DailyStats? stats;
+  final List<TrackPoint> trackPoints;
+  final List<Uint8List> photoBytes;
+
+  const RangeDayInput({
+    required this.entry,
+    required this.stats,
+    this.trackPoints = const [],
+    this.photoBytes = const [],
+  });
+}
+
+/// Builds and returns the PDF bytes for a multi-day voyage report spanning
+/// [range]: a cover page (logbook name, vessel name, date range) followed by
+/// each of [days] starting on its own page, in one continuous document so
+/// page numbers ("Page X of Y") span the whole thing.
+///
+/// [days] must already be sorted ascending by date and pre-filtered to the
+/// picked range — this function does no filtering of its own.
+Future<Uint8List> buildRangeVoyagePdf({
+  required List<RangeDayInput> days,
+  required String logbookName,
+  required String vesselName,
+  required DateTimeRange range,
+  required PdfStrings strings,
+  required VesselEquipmentConfig equipment,
+}) async {
+  final regular   = await PdfGoogleFonts.notoSansRegular();
+  final bold      = await PdfGoogleFonts.notoSansBold();
+  final italic    = await PdfGoogleFonts.notoSansItalic();
+  final emojiFont = await PdfGoogleFonts.notoEmojiRegular();
+
+  // Render every day's track image in parallel — each is an independent
+  // network-bound tile fetch, so there's no benefit to doing them serially.
+  final trackImages = await Future.wait([
+    for (final d in days)
+      d.trackPoints.length >= 2 ? _renderTrackImage(d.trackPoints) : Future.value(null),
+  ]);
+
+  final doc = pw.Document();
+  doc.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 44),
+      theme: pw.ThemeData.withFont(base: regular, bold: bold, italic: italic),
+      footer: (ctx) => _footer(ctx, regular, strings),
       build: (ctx) {
-        final sections = <pw.Widget>[];
-
-        // ── Full-width: Vessel header ──────────────────────────────
-        sections.add(_buildHeader(vesselName, bold, emojiFont));
-        sections.add(pw.SizedBox(height: 16));
-
-        // ── Full-width: Voyage title + date box ───────────────────
-        final from = entry.fromHarbor?.trim() ?? '';
-        final to   = entry.toHarbor?.trim()   ?? '';
-        if (from.isNotEmpty || to.isNotEmpty) {
-          sections.add(_buildRoute(from, to, entry.date, bold, regular, italic, emojiFont, strings));
-          sections.add(pw.SizedBox(height: 16));
-        }
-
-        final narrative = entry.notes?.trim()    ?? '';
-        final freeNote  = entry.freeText?.trim() ?? '';
-
-        // ── Full-width: Narrative (always, avoids overflowing the two-column row)
-        if (narrative.isNotEmpty) {
-          sections.add(_buildNotes(strings.voyageLog, narrative, bold, italic, emojiFont));
-          sections.add(pw.SizedBox(height: 14));
-        }
-
-        // ── Full-width: Photos ─────────────────────────────────────
-        if (photoBytes.isNotEmpty) {
-          sections.add(_buildPhotos(photoBytes, bold));
-          sections.add(pw.SizedBox(height: 14));
-        }
-
-        // ── Full-width: Free notes ─────────────────────────────────
-        if (freeNote.isNotEmpty) {
-          sections.add(_buildNotes(strings.notes, freeNote, bold, italic, emojiFont));
-          sections.add(pw.SizedBox(height: 14));
-        }
-
-        // ── Row 1: Track map (left) | Stats (right) ──────────────
-        if (trackImageBytes != null || stats != null) {
-          sections.add(pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Expanded(
-                flex: 8,
-                child: trackImageBytes != null
-                    ? _buildTrackMap(trackImageBytes, bold, regular, strings)
-                    : pw.SizedBox(),
-              ),
-              pw.SizedBox(width: 20),
-              pw.Expanded(
-                flex: 5,
-                child: stats != null
-                    ? _buildStats(stats, bold, regular, strings)
-                    : pw.SizedBox(),
-              ),
-            ],
+        final widgets = <pw.Widget>[
+          _buildTitlePage(logbookName, vesselName, range, bold, regular, italic, emojiFont, strings),
+        ];
+        for (int i = 0; i < days.length; i++) {
+          widgets.add(pw.NewPage());
+          widgets.addAll(_buildDaySections(
+            entry:           days[i].entry,
+            stats:           days[i].stats,
+            vesselName:      vesselName,
+            strings:         strings,
+            equipment:       equipment,
+            regular:         regular,
+            bold:            bold,
+            italic:          italic,
+            emojiFont:       emojiFont,
+            trackImageBytes: trackImages[i],
+            photoBytes:      days[i].photoBytes,
+            showHeader:      false,
           ));
-          sections.add(pw.SizedBox(height: 16));
         }
-
-        // ── Full-width: Timeline ───────────────────────────────────
-        // Its own top-level section (not nested in a Row) so the table can
-        // span across pages — a horizontal Row can't split across pages in
-        // the pdf package, so a long timeline nested in one would throw.
-        if (entry.timeline.isNotEmpty) {
-          sections.add(_buildTimeline(entry.timeline, bold, regular, emojiFont, strings, equipment));
-          sections.add(pw.SizedBox(height: 16));
-        }
-
-        // ── Full-width: Crew ────────────────────────────────────────
-        if (entry.crew.isNotEmpty) {
-          sections.add(_buildCrew(entry.crew, bold, regular, emojiFont, strings));
-        }
-
-
-        return sections;
+        return widgets;
       },
     ),
   );
 
   return doc.save();
+}
+
+// ── Title page ────────────────────────────────────────────────────────────────
+
+/// A4 content height (page height minus the document's own top/bottom
+/// margin) — used to make the cover page fill exactly one page.
+/// Cover-page content, vertically nudged toward the middle of the page with
+/// generous fixed padding rather than a forced page-filling height — the
+/// exact usable height of a [pw.MultiPage] page varies with its footer, so
+/// a `Container(height: ...)` sized to the full page can end up taller than
+/// what's actually free and never fit, sending the pdf package's pagination
+/// into a runaway loop (only guarded by an `assert`, so it's silently
+/// unbounded in release builds).
+pw.Widget _buildTitlePage(String logbookName, String vesselName, DateTimeRange range,
+    pw.Font bold, pw.Font regular, pw.Font italic, pw.Font emoji, PdfStrings strings) {
+  final fmt = DateFormat('d. MMM yyyy', strings.locale);
+  final rangeStr = '${fmt.format(range.start)} – ${fmt.format(range.end)}';
+  final generatedStr =
+      '${strings.generatedOn} ${DateFormat('d. MMM yyyy, HH:mm', strings.locale).format(DateTime.now())}';
+
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.center,
+    children: [
+      pw.SizedBox(height: 220),
+      _richText(
+        logbookName.isNotEmpty ? logbookName.toUpperCase() : 'LOGBOOK',
+        base: bold, emoji: emoji, size: 34, color: _navy,
+      ),
+      if (vesselName.isNotEmpty) ...[
+        pw.SizedBox(height: 10),
+        _richText(vesselName, base: italic, emoji: emoji, size: 20, color: _navy),
+      ],
+      pw.SizedBox(height: 28),
+      pw.Container(width: 120, height: 1.5, color: _navy),
+      pw.SizedBox(height: 28),
+      pw.Text(rangeStr, style: pw.TextStyle(font: bold, fontSize: 16, color: _steel)),
+      pw.SizedBox(height: 60),
+      pw.Text(generatedStr, style: pw.TextStyle(font: regular, fontSize: 9, color: _rule)),
+    ],
+  );
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -267,11 +441,31 @@ pw.Widget _buildHeader(String vesselName, pw.Font bold, pw.Font emoji) {
 
 pw.Widget _buildRoute(String from, String to, DateTime date,
     pw.Font bold, pw.Font regular, pw.Font italic, pw.Font emoji, PdfStrings strings) {
-  final hasFrom = from.isNotEmpty;
-  final hasTo   = to.isNotEmpty;
+  final hasFrom  = from.isNotEmpty;
+  final hasTo    = to.isNotEmpty;
+  final hasRoute = hasFrom || hasTo;
 
-  final title   = hasTo ? strings.passageTo(to) : strings.departureFrom(from);
   final dateStr = DateFormat('d. MMM yyyy', strings.locale).format(date);
+
+  final dateColumn = pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.end,
+    children: [
+      pw.Text(strings.date,
+          style: pw.TextStyle(
+              font: bold, fontSize: 7, color: _steel, letterSpacing: 1.2)),
+      pw.SizedBox(height: 2),
+      pw.Text(dateStr,
+          style: pw.TextStyle(font: bold, fontSize: 13, color: _navy)),
+    ],
+  );
+
+  // No route (fromHarbor/toHarbor) recorded for this day — still show the
+  // date, just without a title to its left.
+  if (!hasRoute) {
+    return pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [dateColumn]);
+  }
+
+  final title = hasTo ? strings.passageTo(to) : strings.departureFrom(from);
 
   return pw.Row(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -290,17 +484,7 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
         ),
       ),
       pw.SizedBox(width: 12),
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
-        children: [
-          pw.Text(strings.date,
-              style: pw.TextStyle(
-                  font: bold, fontSize: 7, color: _steel, letterSpacing: 1.2)),
-          pw.SizedBox(height: 2),
-          pw.Text(dateStr,
-              style: pw.TextStyle(font: bold, fontSize: 13, color: _navy)),
-        ],
-      ),
+      dateColumn,
     ],
   );
 }

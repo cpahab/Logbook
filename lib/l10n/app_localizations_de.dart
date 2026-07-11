@@ -1413,6 +1413,26 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pdfLocale => 'de_CH';
 
   @override
+  String get pdfGeneratedOn => 'Erstellt am';
+
+  @override
+  String get homeExportRangeTooltip => 'Zeitraum als PDF exportieren';
+
+  @override
+  String get homeExportRangeInProgress => 'PDF-Export wird vorbereitet…';
+
+  @override
+  String get homeExportRangeEmpty =>
+      'Keine Logbucheinträge im gewählten Zeitraum.';
+
+  @override
+  String get homeExportRangeSuccess => 'PDF-Export bereit zum Teilen.';
+
+  @override
+  String get homeExportRangeError =>
+      'PDF-Export fehlgeschlagen. Bitte erneut versuchen.';
+
+  @override
   String get amendmentDialogTitle => 'Eintrag korrigieren';
 
   @override

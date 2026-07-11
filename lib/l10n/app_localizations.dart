@@ -2702,6 +2702,42 @@ abstract class AppLocalizations {
   /// **'de_CH'**
   String get pdfLocale;
 
+  /// No description provided for @pdfGeneratedOn.
+  ///
+  /// In de, this message translates to:
+  /// **'Erstellt am'**
+  String get pdfGeneratedOn;
+
+  /// No description provided for @homeExportRangeTooltip.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeitraum als PDF exportieren'**
+  String get homeExportRangeTooltip;
+
+  /// No description provided for @homeExportRangeInProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Export wird vorbereitet…'**
+  String get homeExportRangeInProgress;
+
+  /// No description provided for @homeExportRangeEmpty.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Logbucheinträge im gewählten Zeitraum.'**
+  String get homeExportRangeEmpty;
+
+  /// No description provided for @homeExportRangeSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Export bereit zum Teilen.'**
+  String get homeExportRangeSuccess;
+
+  /// No description provided for @homeExportRangeError.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Export fehlgeschlagen. Bitte erneut versuchen.'**
+  String get homeExportRangeError;
+
   /// No description provided for @amendmentDialogTitle.
   ///
   /// In de, this message translates to:

@@ -1,15 +1,21 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
+import '../domain/track_point.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
+import '../utils/pdf_exporter.dart';
+import '../utils/photo_service.dart';
+import '../utils/trim_track.dart';
 import '../widgets/nav_bar.dart';
 import '../widgets/stat_inline.dart';
 import '../../settings/domain/theme_provider.dart';
@@ -29,6 +35,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int? _selectedYear;
   bool _showAllYears = false;
+  DateTimeRange? _customRange;
+  bool _exportingRange = false;
   final ScrollController _scrollController = ScrollController();
   final Map<String, GlobalKey> _dayKeys = {};
   DateTime? _pendingScrollDate;
@@ -188,6 +196,162 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Shows the system date-range picker and switches the day list's filter
+  /// to the picked custom range, clearing the year-pill filter (mirrors
+  /// TracksScreen's `_pickDateRange`).
+  Future<void> _pickDateRange() async {
+    final now = DateTime.now();
+    final initial = _customRange ??
+        DateTimeRange(
+            start: DateTime(now.year, now.month - 1, now.day), end: now);
+    final range = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: now,
+      initialDateRange: initial,
+      locale: context.read<ThemeProvider>().materialLocale,
+      builder: (context, child) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.0,
+        child: child!,
+      ),
+    );
+    if (range == null) return;
+    setState(() {
+      _customRange = range;
+      _showAllYears = false;
+    });
+  }
+
+  /// Builds a single PDF covering every logged day in [_customRange] (cover
+  /// page + one page per day) and opens the share sheet. Runs the whole
+  /// pipeline — photo loading, track-image rendering, PDF assembly — behind
+  /// a progress snackbar, since it can take real time for a range with many
+  /// days/photos.
+  Future<void> _exportRangePdf() async {
+    final range = _customRange;
+    if (range == null || _exportingRange) return;
+
+    final repo = context.read<HomeRepository>();
+    final rangeEntries = repo.entries.where((e) {
+      final d = DateTime(e.date.year, e.date.month, e.date.day);
+      return !d.isBefore(range.start) && !d.isAfter(range.end);
+    }).toList(); // repo.entries is already sorted ascending by date
+
+    if (rangeEntries.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.l10n.homeExportRangeEmpty)),
+      );
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _exportingRange = true);
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(minutes: 2),
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 14),
+            Expanded(child: Text(context.l10n.homeExportRangeInProgress)),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final p = context.read<ThemeProvider>();
+      final l10n = context.l10n;
+      final filterSettings = p.filterSettings;
+
+      final days = <RangeDayInput>[];
+      for (final entry in rangeEntries) {
+        final day = DateTime(entry.date.year, entry.date.month, entry.date.day);
+        final track = repo.dailyTracks[day];
+        final trackPoints = track != null
+            ? buildDisplayModel(track.points, settings: filterSettings).allPoints()
+            : const <TrackPoint>[];
+        final stats = track != null && track.points.isNotEmpty
+            ? computeDailyStats(track.points, settings: filterSettings)
+            : null;
+        final photoBytes = <Uint8List>[];
+        for (final path in entry.photos) {
+          final file = await PhotoService.localFile(path);
+          if (file != null) photoBytes.add(await file.readAsBytes());
+        }
+        days.add(RangeDayInput(
+          entry: entry,
+          stats: stats,
+          trackPoints: trackPoints,
+          photoBytes: photoBytes,
+        ));
+      }
+
+      final pdfStrings = PdfStrings(
+        voyageLog:        l10n.pdfVoyageLog,
+        notes:            l10n.pdfNotes,
+        date:             l10n.pdfDate,
+        distance:         l10n.pdfDistance,
+        avgSpeed:         l10n.pdfAvgSpeed,
+        avgSpeedUnderway: l10n.pdfAvgSpeedUnderway,
+        max:              l10n.pdfMax,
+        duration:         l10n.pdfDuration,
+        stops:            l10n.pdfStops,
+        statistics:       l10n.pdfStatistics,
+        crew:             l10n.pdfCrew,
+        skipper:          l10n.pdfSkipper,
+        crewMember:       l10n.pdfCrewMember,
+        logEntries:       l10n.pdfLogEntries,
+        timeCol:          l10n.pdfTimeCol,
+        courseCol:        l10n.pdfCourseCol,
+        windCol:          l10n.pdfWindCol,
+        seaCol:           l10n.pdfSeaCol,
+        remarksCol:       l10n.pdfRemarksCol,
+        trackMap:         l10n.pdfTrackMap,
+        locale:           l10n.pdfLocale,
+        generatedOn:      l10n.pdfGeneratedOn,
+        passageTo:        l10n.pdfPassageTo,
+        departureFrom:    l10n.pdfDepartureFrom,
+        pageOf:           l10n.pdfPageOf,
+      );
+
+      final bytes = await buildRangeVoyagePdf(
+        days:        days,
+        logbookName: l10n.appTitle,
+        vesselName:  p.vesselName,
+        range:       range,
+        strings:     pdfStrings,
+        equipment:   p.vesselEquipment,
+      );
+
+      messenger.hideCurrentSnackBar();
+      if (!mounted) return;
+
+      final fmt = DateFormat('yyyy-MM-dd');
+      final fileName =
+          'logbuch_${fmt.format(range.start)}_${fmt.format(range.end)}.pdf';
+      await Printing.sharePdf(bytes: bytes, filename: fileName);
+
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.homeExportRangeSuccess)),
+      );
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('_exportRangePdf failed: $e\n$st');
+      messenger.hideCurrentSnackBar();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(context.l10n.homeExportRangeError)),
+      );
+    } finally {
+      if (mounted) setState(() => _exportingRange = false);
+    }
+  }
+
   /// Lookup key for [_dayKeys], identifying one day's timeline card.
   String _entryKey(DateTime date) =>
       '${date.year}-${date.month}-${date.day}';
@@ -264,9 +428,15 @@ class _HomeScreenState extends State<HomeScreen> {
         : (_selectedYear ?? (years.isNotEmpty ? years.first : null));
 
     // Newest first for the timeline
-    final filtered = ((effectiveYear == null)
-            ? [...entries]
-            : entries.where((e) => e.date.year == effectiveYear).toList())
+    final customRange = _customRange;
+    final filtered = ((customRange != null)
+            ? entries.where((e) {
+                final d = DateTime(e.date.year, e.date.month, e.date.day);
+                return !d.isBefore(customRange.start) && !d.isAfter(customRange.end);
+              }).toList()
+            : (effectiveYear == null)
+                ? [...entries]
+                : entries.where((e) => e.date.year == effectiveYear).toList())
         .reversed
         .toList();
 
@@ -348,6 +518,24 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
           ],
         ),
+        actions: [
+          if (customRange != null)
+            _exportingRange
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    tooltip: context.l10n.homeExportRangeTooltip,
+                    color: cs.primary,
+                    onPressed: _exportRangePdf,
+                  ),
+        ],
       ),
       // ── Bottom nav with raised centre FAB ──────────────────────
       bottomNavigationBar: AppBottomNav(
@@ -442,7 +630,10 @@ class _HomeScreenState extends State<HomeScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-              onTap: () => setState(() => _showAllYears = true),
+              onTap: () => setState(() {
+                _showAllYears = true;
+                _customRange  = null;
+              }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -463,11 +654,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           ...years.map((year) {
-          final active = !_showAllYears && year == effectiveYear;
+          final active = _customRange == null && !_showAllYears && year == effectiveYear;
           return Padding(
             padding: const EdgeInsets.only(right: 8),
             child: GestureDetector(
-              onTap: () => setState(() { _showAllYears = false; _selectedYear = year; }),
+              onTap: () => setState(() {
+                _showAllYears = false;
+                _selectedYear = year;
+                _customRange  = null;
+              }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.symmetric(
@@ -492,6 +687,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         }),
+        _buildCustomRangeChip(cs),
       ],
     );
     return LayoutBuilder(builder: (context, constraints) {
@@ -503,6 +699,45 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     });
+  }
+
+  /// Trailing pill that opens the date-range picker (mirrors TracksScreen's
+  /// "custom" filter chip); once a range is picked it becomes the active
+  /// filter and shows the picked dates instead of its default label.
+  Widget _buildCustomRangeChip(ColorScheme cs) {
+    final active = _customRange != null;
+    final fmt = DateFormat('d.M.yy');
+    final label = active
+        ? '${fmt.format(_customRange!.start)}–${fmt.format(_customRange!.end)}'
+        : context.l10n.tracksCustom.toUpperCase();
+    return GestureDetector(
+      onTap: _pickDateRange,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? cs.primary : cs.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active ? cs.primary : cs.outlineVariant,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.date_range,
+                size: 13, color: active ? cs.onPrimary : cs.onSurfaceVariant),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                color: active ? cs.onPrimary : cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // ── Stats bento grid ─────────────────────────────────────────────

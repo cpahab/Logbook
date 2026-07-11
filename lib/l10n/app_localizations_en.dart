@@ -1407,6 +1407,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pdfLocale => 'en_GB';
 
   @override
+  String get pdfGeneratedOn => 'Generated on';
+
+  @override
+  String get homeExportRangeTooltip => 'Export range as PDF';
+
+  @override
+  String get homeExportRangeInProgress => 'Preparing PDF export…';
+
+  @override
+  String get homeExportRangeEmpty =>
+      'No log entries in the selected date range.';
+
+  @override
+  String get homeExportRangeSuccess => 'PDF export ready to share.';
+
+  @override
+  String get homeExportRangeError => 'PDF export failed. Please try again.';
+
+  @override
   String get amendmentDialogTitle => 'Amend entry';
 
   @override

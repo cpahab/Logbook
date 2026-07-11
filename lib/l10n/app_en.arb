@@ -529,6 +529,13 @@
     }
   },
   "pdfLocale": "en_GB",
+  "pdfGeneratedOn": "Generated on",
+
+  "homeExportRangeTooltip": "Export range as PDF",
+  "homeExportRangeInProgress": "Preparing PDF export…",
+  "homeExportRangeEmpty": "No log entries in the selected date range.",
+  "homeExportRangeSuccess": "PDF export ready to share.",
+  "homeExportRangeError": "PDF export failed. Please try again.",
 
   "amendmentDialogTitle": "Amend entry",
   "amendmentReasonLabel": "Reason for amendment",

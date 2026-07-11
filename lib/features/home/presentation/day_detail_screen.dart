@@ -3167,6 +3167,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       remarksCol:    l10n.pdfRemarksCol,
       trackMap:      l10n.pdfTrackMap,
       locale:        l10n.pdfLocale,
+      generatedOn:   l10n.pdfGeneratedOn,
       passageTo:     l10n.pdfPassageTo,
       departureFrom: l10n.pdfDepartureFrom,
       pageOf:        l10n.pdfPageOf,
