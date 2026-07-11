@@ -854,11 +854,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Vessel Information ──────────────────────────────────────────────
-  /// Name/MMSI/call sign/life raft/EPIRB/fire suppression fields, each
-  /// writing straight through to [ThemeProvider] on every keystroke.
-  Widget _buildVesselSection(ThemeProvider p, ColorScheme cs) {
-    final l10n = context.l10n;
+  /// Shared card chrome for every settings section below — a rounded
+  /// surface with a [cs.primary] accent bar down the left edge, kept
+  /// identical across cards so the page reads as one consistent list.
+  Widget _cardShell(ColorScheme cs, Widget child) {
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerLowest,
@@ -870,9 +869,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Positioned(
               left: 0, top: 0, bottom: 0,
-              child: Container(width: 4, color: cs.onTertiaryFixedVariant),
+              child: Container(width: 4, color: cs.primary),
             ),
-            Column(
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Vessel Information ──────────────────────────────────────────────
+  /// Name/MMSI/call sign/life raft/EPIRB/fire suppression fields, each
+  /// writing straight through to [ThemeProvider] on every keystroke.
+  Widget _buildVesselSection(ThemeProvider p, ColorScheme cs) {
+    final l10n = context.l10n;
+    return _cardShell(
+      cs,
+      Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 InkWell(
@@ -986,9 +999,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1053,20 +1063,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildEquipmentSection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
     final config = p.vesselEquipment;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          children: [
-            Positioned(
-              left: 0, top: 0, bottom: 0,
-              child: Container(width: 4, color: cs.primary.withValues(alpha: 0.4)),
-            ),
-            Column(
+    return _cardShell(
+      cs,
+      Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Header (always visible, tap to expand) ────────────
@@ -1162,9 +1161,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1173,19 +1169,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// pickers.
   Widget _buildDisplaySection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return _cardShell(
+      cs,
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
@@ -1374,19 +1360,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// max anchor swing, cold-start trimming, underway threshold, max-speed
   /// percentile/ceiling, and a raw-track debug overlay toggle.
   Widget _buildTrackFilterSection(ThemeProvider p, ColorScheme cs) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return _cardShell(
+      cs,
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header (always visible, tap to expand) ────────────
@@ -1779,56 +1755,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => context.pushNamed(AppRoute.crewRoster),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerLowest,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
+      child: _cardShell(
+        cs,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+          child: Row(
             children: [
-              Positioned(
-                left: 0, top: 0, bottom: 0,
-                child: Container(width: 4, color: cs.tertiaryContainer),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
-                child: Row(
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.people_outline, size: 20, color: cs.tertiary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            context.l10n.settingsCrewSection.toUpperCase(),
-                            style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                              color: cs.secondary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Consumer<HomeRepository>(
-                            builder: (_, repo, _) {
-                              final count = repo.roster.length;
-                              return Text(
-                                count == 0
-                                    ? context.l10n.settingsNoEntries
-                                    : '$count ${context.l10n.settingsPersonCount(count)}',
-                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                    Text(
+                      context.l10n.settingsCrewSection.toUpperCase(),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                        color: cs.secondary,
                       ),
                     ),
-                    Icon(Icons.chevron_right, color: cs.outlineVariant),
+                    const SizedBox(height: 2),
+                    Consumer<HomeRepository>(
+                      builder: (_, repo, _) {
+                        final count = repo.roster.length;
+                        return Text(
+                          count == 0
+                              ? context.l10n.settingsNoEntries
+                              : '$count ${context.l10n.settingsPersonCount(count)}',
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
+              Icon(Icons.people_outline, size: 20, color: cs.outlineVariant),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: cs.outlineVariant),
             ],
           ),
         ),
@@ -1853,19 +1815,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     final isActiveOwner = activeMeta['role'] == 'owner';
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return _cardShell(
+      cs,
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
@@ -2272,19 +2224,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = context.l10n;
     final user = context.watch<AuthService>().currentUser;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: cs.shadow.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    return _cardShell(
+      cs,
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
