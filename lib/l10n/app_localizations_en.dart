@@ -1419,6 +1419,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeExportRangeTooltip => 'Export range as PDF';
 
   @override
+  String get homeExportRangeConfirmTitle => 'Export as PDF?';
+
+  @override
+  String homeExportRangeConfirmBody(String range) {
+    return 'This exports every logged day between $range as a single PDF.';
+  }
+
+  @override
+  String get homeExportRangeConfirmButton => 'Export';
+
+  @override
   String get homeExportRangeInProgress => 'Preparing PDF export…';
 
   @override

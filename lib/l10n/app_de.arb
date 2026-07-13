@@ -534,6 +534,14 @@
   "pdfGeneratedOn": "Erstellt am",
 
   "homeExportRangeTooltip": "Zeitraum als PDF exportieren",
+  "homeExportRangeConfirmTitle": "Als PDF exportieren?",
+  "homeExportRangeConfirmBody": "Dies exportiert jeden erfassten Tag zwischen {range} als ein einzelnes PDF.",
+  "@homeExportRangeConfirmBody": {
+    "placeholders": {
+      "range": { "type": "String" }
+    }
+  },
+  "homeExportRangeConfirmButton": "Exportieren",
   "homeExportRangeInProgress": "PDF-Export wird vorbereitet…",
   "homeExportRangeEmpty": "Keine Logbucheinträge im gewählten Zeitraum.",
   "homeExportRangeSuccess": "PDF-Export bereit zum Teilen.",

@@ -1426,6 +1426,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get homeExportRangeTooltip => 'Zeitraum als PDF exportieren';
 
   @override
+  String get homeExportRangeConfirmTitle => 'Als PDF exportieren?';
+
+  @override
+  String homeExportRangeConfirmBody(String range) {
+    return 'Dies exportiert jeden erfassten Tag zwischen $range als ein einzelnes PDF.';
+  }
+
+  @override
+  String get homeExportRangeConfirmButton => 'Exportieren';
+
+  @override
   String get homeExportRangeInProgress => 'PDF-Export wird vorbereitet…';
 
   @override

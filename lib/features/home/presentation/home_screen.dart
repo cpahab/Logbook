@@ -242,6 +242,40 @@ class _HomeScreenState extends State<HomeScreen> {
     return DateTimeRange(start: entries.first.date, end: entries.last.date);
   }
 
+  /// Shows a short confirmation dialog naming [range] before exporting,
+  /// returning true only if the user taps Export.
+  Future<bool> _confirmExportRange(DateTimeRange range) async {
+    final locale = context.read<ThemeProvider>().localeString;
+    final fmt = DateFormat('d. MMM yyyy', locale);
+    final rangeStr = '${fmt.format(range.start)} – ${fmt.format(range.end)}';
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          backgroundColor: cs.surface,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
+          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
+          title: Text(context.l10n.homeExportRangeConfirmTitle),
+          content: Text(context.l10n.homeExportRangeConfirmBody(rangeStr)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(context.l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(context.l10n.homeExportRangeConfirmButton),
+            ),
+          ],
+        );
+      },
+    );
+    return confirmed == true;
+  }
+
   /// Builds a single PDF covering every logged day in [range] (cover page +
   /// one page per day) and opens the share sheet. Runs the whole pipeline —
   /// photo loading, track-image rendering, PDF assembly — behind a progress
@@ -550,7 +584,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.picture_as_pdf_outlined),
                   tooltip: context.l10n.homeExportRangeTooltip,
                   color: cs.primary,
-                  onPressed: () {
+                  onPressed: () async {
                     final range = _effectiveExportRange(
                       customRange: customRange,
                       effectiveYear: effectiveYear,
@@ -562,6 +596,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                       return;
                     }
+                    if (!await _confirmExportRange(range)) return;
+                    if (!context.mounted) return;
                     _exportRangePdf(range);
                   },
                 ),

@@ -2726,6 +2726,24 @@ abstract class AppLocalizations {
   /// **'Zeitraum als PDF exportieren'**
   String get homeExportRangeTooltip;
 
+  /// No description provided for @homeExportRangeConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Als PDF exportieren?'**
+  String get homeExportRangeConfirmTitle;
+
+  /// No description provided for @homeExportRangeConfirmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Dies exportiert jeden erfassten Tag zwischen {range} als ein einzelnes PDF.'**
+  String homeExportRangeConfirmBody(String range);
+
+  /// No description provided for @homeExportRangeConfirmButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Exportieren'**
+  String get homeExportRangeConfirmButton;
+
   /// No description provided for @homeExportRangeInProgress.
   ///
   /// In de, this message translates to:

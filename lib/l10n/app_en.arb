@@ -534,6 +534,14 @@
   "pdfGeneratedOn": "Generated on",
 
   "homeExportRangeTooltip": "Export range as PDF",
+  "homeExportRangeConfirmTitle": "Export as PDF?",
+  "homeExportRangeConfirmBody": "This exports every logged day between {range} as a single PDF.",
+  "@homeExportRangeConfirmBody": {
+    "placeholders": {
+      "range": { "type": "String" }
+    }
+  },
+  "homeExportRangeConfirmButton": "Export",
   "homeExportRangeInProgress": "Preparing PDF export…",
   "homeExportRangeEmpty": "No log entries in the selected date range.",
   "homeExportRangeSuccess": "PDF export ready to share.",
