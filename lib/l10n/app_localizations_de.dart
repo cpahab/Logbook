@@ -667,6 +667,12 @@ class AppLocalizationsDe extends AppLocalizations {
       'Für den Logbuchwechsel ist eine Internetverbindung erforderlich.';
 
   @override
+  String get settingsSwitchLogbookInProgress => 'Logbuch wird gewechselt…';
+
+  @override
+  String get settingsSwitchLogbookComplete => 'Logbuch gewechselt.';
+
+  @override
   String get settingsScanQr => 'QR-Code scannen';
 
   @override

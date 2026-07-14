@@ -25,7 +25,8 @@ import '../widgets/add_timeline_entry_dialog.dart';
 import '../widgets/add_crew_member_dialog.dart';
 import '../widgets/crew_picker_sheet.dart';
 import '../widgets/keel_icon.dart';
-import '../widgets/nav_bar.dart';
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/nav_bar.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../utils/gpx_parser.dart';
@@ -1749,26 +1750,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   /// Confirms, then removes a photo from Storage and the entry's photo list.
   void _deletePhoto(DayEntry entry, String storagePath) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          backgroundColor: cs.surfaceContainerHigh,
-          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-          title: Text(ctx.l10n.dayDeletePhoto),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(ctx.l10n.cancel, style: TextStyle(color: cs.primary))),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(ctx.l10n.delete)),
-          ],
-        );
-      },
+    final confirmed = await showConfirmDialog(
+      context,
+      title: context.l10n.dayDeletePhoto,
+      confirmLabel: context.l10n.delete,
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
     setState(() => _deletingPhotos.add(storagePath));
     // Re-fetch: a Firestore sync or a prior concurrent delete may have replaced
     // the entry object in the Hive box while the dialog was open.
@@ -2515,32 +2503,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           counts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
       if (dominantDate != newDate) {
         final locStr = context.read<ThemeProvider>().localeString;
-        final proceed = await showDialog<bool>(
-          context: context,
-          builder: (ctx) {
-            final cs = Theme.of(ctx).colorScheme;
-            return AlertDialog(
-              backgroundColor: cs.surface,
-              surfaceTintColor: Colors.transparent,
-              titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-              contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-              title: Text(context.l10n.dayChangeDateTitle),
-              content: Text(context.l10n.dayChangeDateContent(
-                DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
-                DateFormat('d. MMMM yyyy', locStr).format(newDate),
-              )),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: Text(context.l10n.cancel)),
-                FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: Text(context.l10n.dayChangeDateConfirm)),
-              ],
-            );
-          },
+        final proceed = await showConfirmDialog(
+          context,
+          title: context.l10n.dayChangeDateTitle,
+          body: context.l10n.dayChangeDateContent(
+            DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
+            DateFormat('d. MMMM yyyy', locStr).format(newDate),
+          ),
+          confirmLabel: context.l10n.dayChangeDateConfirm,
         );
-        if (!mounted || proceed != true) return;
+        if (!mounted || !proceed) return;
       }
     }
 
@@ -3058,34 +3030,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
     if (dominantDate != targetDate) {
       final locStr = context.read<ThemeProvider>().localeString;
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (ctx) {
-          final cs = Theme.of(ctx).colorScheme;
-          return AlertDialog(
-            backgroundColor: cs.surface,
-            surfaceTintColor: Colors.transparent,
-            titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-            contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-            title: Text(context.l10n.dayChangeDateTitle),
-            content: Text(
-              context.l10n.dayGpxWrongDateContent(
-                DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
-                DateFormat('d. MMMM yyyy', locStr).format(targetDate),
-              ),
-            ),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: Text(context.l10n.cancel)),
-              FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: Text(context.l10n.dayGpxImportConfirm)),
-            ],
-          );
-        },
+      final proceed = await showConfirmDialog(
+        context,
+        title: context.l10n.dayChangeDateTitle,
+        body: context.l10n.dayGpxWrongDateContent(
+          DateFormat('d. MMMM yyyy', locStr).format(dominantDate),
+          DateFormat('d. MMMM yyyy', locStr).format(targetDate),
+        ),
+        confirmLabel: context.l10n.dayGpxImportConfirm,
       );
-      if (!mounted || proceed != true) return;
+      if (!mounted || !proceed) return;
     }
 
     if (kIsWeb) {
@@ -3190,32 +3144,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _removeGpx() async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          backgroundColor: cs.surface,
-          surfaceTintColor: Colors.transparent,
-          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-          title: Text(context.l10n.dayGpxDeleteTitle),
-          content: Text(context.l10n.dayGpxDeleteContent),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(context.l10n.cancel)),
-            FilledButton(
-                style: FilledButton.styleFrom(
-                    backgroundColor: cs.error,
-                    foregroundColor: cs.onError),
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(context.l10n.delete)),
-          ],
-        );
-      },
+    final shouldDelete = await showConfirmDialog(
+      context,
+      title: context.l10n.dayGpxDeleteTitle,
+      body: context.l10n.dayGpxDeleteContent,
+      confirmLabel: context.l10n.delete,
+      destructive: true,
     );
-    if (!mounted || shouldDelete != true) return;
+    if (!mounted || !shouldDelete) return;
     await repo.removeGpx(day);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -3229,31 +3165,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final day = DateTime(widget.year, widget.month, widget.day);
     final dateLabel =
         DateFormat('d. MMMM yyyy', context.read<ThemeProvider>().localeString).format(day);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          title: Text(context.l10n.dayDeleteTitle, style: TextStyle(color: cs.onSurface)),
-          content: Text(
-            context.l10n.dayDeleteContent(dateLabel),
-            style: TextStyle(color: cs.onSurface),
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(context.l10n.cancel)),
-            FilledButton(
-                style: FilledButton.styleFrom(
-                    backgroundColor: cs.error,
-                    foregroundColor: cs.onError),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(context.l10n.delete)),
-          ],
-        );
-      },
+    final confirmed = await showConfirmDialog(
+      context,
+      title: context.l10n.dayDeleteTitle,
+      body: context.l10n.dayDeleteContent(dateLabel),
+      confirmLabel: context.l10n.delete,
+      destructive: true,
     );
-    if (!mounted || confirmed != true) return;
+    if (!mounted || !confirmed) return;
     await repo.removeEntry(day);
     if (!mounted) return;
     context.goNamed(AppRoute.home);

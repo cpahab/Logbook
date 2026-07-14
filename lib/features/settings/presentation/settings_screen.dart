@@ -18,7 +18,10 @@ import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/domain/vessel_equipment.dart';
 import '../../home/utils/filter_settings.dart';
-import '../../home/widgets/nav_bar.dart';
+import '../../../core/widgets/card_shell.dart';
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/nav_bar.dart';
+import '../../../core/widgets/progress_snackbar.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../domain/theme_provider.dart';
 import '../../../app/route_names.dart';
@@ -45,6 +48,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _lifeRaftCtrl;
   late TextEditingController _epirbCtrl;
   late TextEditingController _fireSuppCtrl;
+  final _vesselNameFocus     = FocusNode();
+  final _vesselMmsiFocus     = FocusNode();
+  final _vesselCallSignFocus = FocusNode();
+  final _lifeRaftFocus       = FocusNode();
+  final _epirbFocus          = FocusNode();
+  final _fireSuppFocus       = FocusNode();
+  late ThemeProvider _themeProvider;
   bool _syncing = false;
   bool _accountExpanded = false;
   bool _appearanceExpanded = false;
@@ -65,12 +75,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     final p = context.read<ThemeProvider>();
+    _themeProvider = p;
     _vesselNameCtrl = TextEditingController(text: p.vesselName);
     _vesselMmsiCtrl = TextEditingController(text: p.vesselMmsi);
     _vesselCallSignCtrl = TextEditingController(text: p.vesselCallSign);
     _lifeRaftCtrl = TextEditingController(text: p.lifeRaftInfo);
     _epirbCtrl = TextEditingController(text: p.epirbInfo);
     _fireSuppCtrl = TextEditingController(text: p.fireSuppInfo);
+    // Vessel fields are also replaced wholesale by a backup restore or a
+    // logbook switch, both of which can happen while this screen stays
+    // mounted — resync from the provider whenever it changes, but only for
+    // fields the user isn't actively typing into.
+    _themeProvider.addListener(_syncVesselControllers);
     _logbookIdNotifier = context.read<ValueNotifier<String?>>();
     // Refresh list whenever the active boat changes (e.g. async init completes)
     _logbookIdNotifier.addListener(_refreshLogbooks);
@@ -88,13 +104,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _connectivitySub?.cancel();
     _logbookIdNotifier.removeListener(_refreshLogbooks);
+    _themeProvider.removeListener(_syncVesselControllers);
     _vesselNameCtrl.dispose();
     _vesselMmsiCtrl.dispose();
     _vesselCallSignCtrl.dispose();
     _lifeRaftCtrl.dispose();
     _epirbCtrl.dispose();
     _fireSuppCtrl.dispose();
+    _vesselNameFocus.dispose();
+    _vesselMmsiFocus.dispose();
+    _vesselCallSignFocus.dispose();
+    _lifeRaftFocus.dispose();
+    _epirbFocus.dispose();
+    _fireSuppFocus.dispose();
     super.dispose();
+  }
+
+  /// Resyncs each vessel-field controller from [_themeProvider] whenever it
+  /// changes externally (backup restore, logbook switch, remote sync) — but
+  /// only for fields that don't currently have focus, so this never fights
+  /// the user's own typing (which is what triggers these same notifications
+  /// on every keystroke, via the field's own onChanged → setVesselXxx call).
+  void _syncVesselControllers() {
+    void sync(TextEditingController ctrl, FocusNode focus, String value) {
+      if (!focus.hasFocus && ctrl.text != value) ctrl.text = value;
+    }
+    sync(_vesselNameCtrl, _vesselNameFocus, _themeProvider.vesselName);
+    sync(_vesselMmsiCtrl, _vesselMmsiFocus, _themeProvider.vesselMmsi);
+    sync(_vesselCallSignCtrl, _vesselCallSignFocus, _themeProvider.vesselCallSign);
+    sync(_lifeRaftCtrl, _lifeRaftFocus, _themeProvider.lifeRaftInfo);
+    sync(_epirbCtrl, _epirbFocus, _themeProvider.epirbInfo);
+    sync(_fireSuppCtrl, _fireSuppFocus, _themeProvider.fireSuppInfo);
   }
 
   /// Formats an 8-char share code as "XXXX-XXXX" for display.
@@ -122,9 +162,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   /// Switches every repository/provider over to [logbookId]'s Firestore
-  /// backend: clears local per-boat caches first (so the new boat's remote
-  /// data always wins), then re-attaches. Requires connectivity — the new
-  /// logbook's data must download before local state is replaced.
+  /// backend. Downloads the new boat's vessel/VHF settings and emergency
+  /// contacts *before* touching any local state, and aborts the whole switch
+  /// (leaving the current logbook's data untouched) if either download
+  /// fails — the same fetch-before-replace safety
+  /// [HomeRepository.reattachAndSync] already uses for day entries.
+  /// Requires connectivity for the same reason.
   Future<void> _reinitFirestore(String logbookId) async {
     // Cache context-dependent objects before any await.
     final repo          = context.read<HomeRepository>();
@@ -132,6 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final emergencyRepo = context.read<EmergencyRepository>();
     final notifier      = context.read<ValueNotifier<String?>>();
     final l10n          = context.l10n;
+    final messenger     = ScaffoldMessenger.of(context);
 
     // Switching logbooks requires a live connection — we must download the new
     // logbook's data before replacing local state.
@@ -139,24 +183,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isOffline = connectivity.every((r) => r == ConnectivityResult.none);
     if (isOffline) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)),
-        );
+        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    showProgressSnackBar(context, l10n.settingsSwitchLogbookInProgress);
+
+    final firestore = FirestoreService(logbookId: logbookId);
+    final storage = StorageService(logbookId: logbookId);
+
+    // Fetch the new logbook's vessel/VHF settings and emergency contacts
+    // before clearing anything — a fetch failure here aborts the switch
+    // instead of wiping local data with nothing confirmed to replace it.
+    final Map<String, String>? remoteSettings;
+    final List<Map<String, String>>? remoteContacts;
+    try {
+      final settingsResult = await firestore.fetchSettingsWithMeta();
+      remoteSettings = settingsResult.data;
+      final contactsResult = await firestore.fetchContactsWithMeta();
+      remoteContacts = contactsResult.contacts;
+    } catch (_) {
+      messenger.hideCurrentSnackBar();
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
       }
       return;
     }
 
-    // Clear all per-boat local caches so the new boat's remote data always wins.
-    await emergencyRepo.clearLocalData();
-    await themeProvider.clearVesselSettings();
-    themeProvider.resetInitialSync();
-
-    final firestore = FirestoreService(logbookId: logbookId);
-    final storage = StorageService(logbookId: logbookId);
     await repo.reattachAndSync(firestore, storage);
-    await themeProvider.attachFirestore(firestore);
-    await emergencyRepo.attachFirestore(firestore);
+    await themeProvider.applySwitchedLogbookSettings(remoteSettings, firestore);
+    await emergencyRepo.applySwitchedLogbookContacts(remoteContacts, firestore);
     if (mounted) notifier.value = logbookId;
+
+    messenger.hideCurrentSnackBar();
+    if (mounted) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookComplete)));
+    }
   }
 
   /// Looks up [rawCode], confirms with the user, joins as a guest, and
@@ -212,30 +276,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final resolvedName = logbookName ?? code;
     final resolvedId = foundLogbookId;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        final cl = ctx.l10n;
-        return AlertDialog(
-          titleTextStyle: Theme.of(ctx).textTheme.titleLarge!.copyWith(
-              fontSize: 20, fontWeight: FontWeight.w600, color: cs.onSurface),
-          contentTextStyle:
-              Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-          title: Text(cl.settingsSwitchLogbookTitle),
-          content: Text(cl.settingsJoinContent(resolvedName)),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(cl.cancel)),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(cl.connect)),
-          ],
-        );
-      },
+    final confirmed = await showConfirmDialog(
+      context,
+      title: context.l10n.settingsSwitchLogbookTitle,
+      body: context.l10n.settingsJoinContent(resolvedName),
+      confirmLabel: context.l10n.connect,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _syncing = true);
     try {
@@ -268,27 +315,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final logbookId = logbook['logbookId'] as String;
     final name = logbook['name'] as String;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        final cl = ctx.l10n;
-        return AlertDialog(
-          titleTextStyle: Theme.of(ctx).textTheme.titleLarge!.copyWith(
-              fontSize: 20, fontWeight: FontWeight.w600, color: cs.onSurface),
-          title: Text(cl.settingsSwitchTo(name)),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(cl.cancel)),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(cl.connect)),
-          ],
-        );
-      },
+    final confirmed = await showConfirmDialog(
+      context,
+      title: context.l10n.settingsSwitchTo(name),
+      confirmLabel: context.l10n.connect,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _syncing = true);
     try {
@@ -581,32 +613,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _showDeleteLogbookDialog(
       String logbookId, String name, String uid) async {
     final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        final cl = ctx.l10n;
-        return AlertDialog(
-          backgroundColor: cs.surface,
-          surfaceTintColor: Colors.transparent,
-          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-          title: Text(cl.settingsDeleteLogbook),
-          content: Text(cl.settingsDeleteLogbookConfirm(name)),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(cl.cancel)),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: cs.error),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(cl.delete),
-            ),
-          ],
-        );
-      },
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.settingsDeleteLogbook,
+      body: l10n.settingsDeleteLogbookConfirm(name),
+      confirmLabel: l10n.delete,
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _syncing = true);
     try {
@@ -640,32 +654,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _showLeaveLogbookDialog(
       String logbookId, String name, String uid) async {
     final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        final cl = ctx.l10n;
-        return AlertDialog(
-          backgroundColor: cs.surface,
-          surfaceTintColor: Colors.transparent,
-          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-          title: Text(cl.settingsLeaveLogbook),
-          content: Text(cl.settingsLeaveLogbookConfirm(name)),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(cl.cancel)),
-            TextButton(
-              style: TextButton.styleFrom(foregroundColor: cs.error),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(cl.remove),
-            ),
-          ],
-        );
-      },
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.settingsLeaveLogbook,
+      body: l10n.settingsLeaveLogbookConfirm(name),
+      confirmLabel: l10n.remove,
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _syncing = true);
     try {
@@ -729,12 +725,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 Text(
                   _formatCode(shareCode),
-                  style: TextStyle(
-                      fontFamily: 'monospace',
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: cs.onSurface,
-                      letterSpacing: 6),
+                  style: Theme.of(context).textTheme.shareCode.copyWith(color: cs.onSurface),
                 ),
                 const SizedBox(height: 16),
                 TextButton(
@@ -858,38 +849,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Shared card chrome for every settings section below — a rounded
-  /// surface with a [cs.primary] accent bar down the left edge, kept
-  /// identical across cards so the page reads as one consistent list.
-  Widget _cardShell(ColorScheme cs, Widget child) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          children: [
-            Positioned(
-              left: 0, top: 0, bottom: 0,
-              child: Container(width: 4, color: cs.primary),
-            ),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-
   // ── Vessel Information ──────────────────────────────────────────────
   /// Name/MMSI/call sign/life raft/EPIRB/fire suppression fields, each
   /// writing straight through to [ThemeProvider] on every keystroke.
   Widget _buildVesselSection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
-    return _cardShell(
-      cs,
-      Column(
+    return CardShell(
+      child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 InkWell(
@@ -949,6 +915,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _vesselRow(
                           label: l10n.settingsFieldName,
                           controller: _vesselNameCtrl,
+                          focusNode: _vesselNameFocus,
                           hint: l10n.settingsFieldNameHint,
                           onChanged: p.setVesselName,
                           cs: cs,
@@ -957,6 +924,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _vesselRow(
                           label: 'MMSI',
                           controller: _vesselMmsiCtrl,
+                          focusNode: _vesselMmsiFocus,
                           hint: '123456789',
                           onChanged: p.setVesselMmsi,
                           keyboard: TextInputType.number,
@@ -966,6 +934,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _vesselRow(
                           label: l10n.settingsFieldCallSign,
                           controller: _vesselCallSignCtrl,
+                          focusNode: _vesselCallSignFocus,
                           hint: l10n.settingsFieldCallSignHint,
                           onChanged: p.setVesselCallSign,
                           cs: cs,
@@ -974,6 +943,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _vesselRow(
                           label: l10n.emergencyLifeRaft,
                           controller: _lifeRaftCtrl,
+                          focusNode: _lifeRaftFocus,
                           hint: l10n.settingsFieldLifeRaftHint,
                           onChanged: p.setLifeRaftInfo,
                           cs: cs,
@@ -984,6 +954,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           // in English, matching the emergency manifest screen.
                           label: 'EPIRB',
                           controller: _epirbCtrl,
+                          focusNode: _epirbFocus,
                           hint: l10n.settingsFieldEpirbHint,
                           onChanged: p.setEpirbInfo,
                           cs: cs,
@@ -992,6 +963,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _vesselRow(
                           label: l10n.emergencyFireSuppression,
                           controller: _fireSuppCtrl,
+                          focusNode: _fireSuppFocus,
                           hint: l10n.settingsFieldFireSuppHint,
                           onChanged: p.setFireSuppInfo,
                           cs: cs,
@@ -1010,6 +982,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _vesselRow({
     required String label,
     required TextEditingController controller,
+    required FocusNode focusNode,
     required String hint,
     required ValueChanged<String> onChanged,
     required ColorScheme cs,
@@ -1031,6 +1004,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Expanded(
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
               textAlign: TextAlign.right,
               keyboardType: keyboard,
               textInputAction: TextInputAction.next,
@@ -1067,9 +1041,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildEquipmentSection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
     final config = p.vesselEquipment;
-    return _cardShell(
-      cs,
-      Column(
+    return CardShell(
+      child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Header (always visible, tap to expand) ────────────
@@ -1173,9 +1146,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// pickers.
   Widget _buildDisplaySection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
-    return _cardShell(
-      cs,
-      Column(
+    return CardShell(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
@@ -1364,9 +1336,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// max anchor swing, cold-start trimming, underway threshold, max-speed
   /// percentile/ceiling, and a raw-track debug overlay toggle.
   Widget _buildTrackFilterSection(ThemeProvider p, ColorScheme cs) {
-    return _cardShell(
-      cs,
-      Column(
+    return CardShell(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header (always visible, tap to expand) ────────────
@@ -1759,9 +1730,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => context.pushNamed(AppRoute.crewRoster),
-      child: _cardShell(
-        cs,
-        Padding(
+      child: CardShell(
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
           child: Row(
             children: [
@@ -1808,9 +1778,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () => context.pushNamed(AppRoute.backupRestore),
-      child: _cardShell(
-        cs,
-        Padding(
+      child: CardShell(
+        child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
           child: Row(
             children: [
@@ -1861,9 +1830,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     final isActiveOwner = activeMeta['role'] == 'owner';
 
-    return _cardShell(
-      cs,
-      Column(
+    return CardShell(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
@@ -2091,13 +2059,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: Text(
                   _formatCode(shareCode),
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: cs.onPrimaryContainer,
-                    letterSpacing: 6,
-                  ),
+                  style: Theme.of(context).textTheme.shareCode.copyWith(color: cs.onPrimaryContainer),
                 ),
               ),
             ),
@@ -2270,9 +2232,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = context.l10n;
     final user = context.watch<AuthService>().currentUser;
 
-    return _cardShell(
-      cs,
-      Column(
+    return CardShell(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           InkWell(
@@ -2349,53 +2310,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       final isOffline = results.every(
                           (r) => r == ConnectivityResult.none);
                       if (!mounted) return;
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          backgroundColor: cs.surface,
-                          surfaceTintColor: Colors.transparent,
-                          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-                          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-                          title: Text(l10n.authSignOut),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(l10n.authSignOutConfirmDesc),
-                              if (isOffline) ...[
-                                const SizedBox(height: 12),
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(Icons.wifi_off, size: 14,
-                                        color: cs.error),
-                                    const SizedBox(width: 6),
-                                    Expanded(
-                                      child: Text(
-                                        l10n.authSignOutOfflineWarning,
-                                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                                            color: cs.error, fontSize: 13),
-                                      ),
+                      final confirmed = await showConfirmDialog(
+                        context,
+                        title: l10n.authSignOut,
+                        confirmLabel: l10n.authSignOut,
+                        destructive: true,
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.authSignOutConfirmDesc),
+                            if (isOffline) ...[
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.wifi_off, size: 14,
+                                      color: cs.error),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      l10n.authSignOutOfflineWarning,
+                                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                                          color: cs.error, fontSize: 13),
                                     ),
-                                  ],
-                                ),
-                              ],
+                                  ),
+                                ],
+                              ),
                             ],
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: Text(l10n.cancel),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              child: Text(l10n.authSignOut,
-                                  style: TextStyle(color: cs.error)),
-                            ),
                           ],
                         ),
                       );
-                      if (confirmed == true && mounted) {
+                      if (confirmed && mounted) {
                         await context.read<AuthService>().signOut();
                       }
                     },
@@ -2418,32 +2364,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onPressed: _syncing
                         ? null
                         : () async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) {
-                                final dcs = Theme.of(ctx).colorScheme;
-                                return AlertDialog(
-                                  backgroundColor: dcs.surface,
-                                  surfaceTintColor: Colors.transparent,
-                                  title: Text(l10n.authDeleteAccount,
-                                      style: TextStyle(color: dcs.onSurface)),
-                                  content: Text(l10n.authDeleteAccountConfirm,
-                                      style: TextStyle(color: dcs.onSurfaceVariant)),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx, false),
-                                      child: Text(l10n.cancel),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(ctx, true),
-                                      child: Text(l10n.authDeleteAccount,
-                                          style: TextStyle(color: dcs.error)),
-                                    ),
-                                  ],
-                                );
-                              },
+                            final confirmed = await showConfirmDialog(
+                              context,
+                              title: l10n.authDeleteAccount,
+                              body: l10n.authDeleteAccountConfirm,
+                              confirmLabel: l10n.authDeleteAccount,
+                              destructive: true,
                             );
-                            if (confirmed != true || !mounted) return;
+                            if (!confirmed || !mounted) return;
     
                             // Block deletion when offline — Firestore cleanup would
                             // fail silently and the Auth account would still be deleted.

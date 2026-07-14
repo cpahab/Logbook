@@ -667,6 +667,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Switching logbooks requires an internet connection.';
 
   @override
+  String get settingsSwitchLogbookInProgress => 'Switching logbook…';
+
+  @override
+  String get settingsSwitchLogbookComplete => 'Logbook switched.';
+
+  @override
   String get settingsScanQr => 'Scan QR Code';
 
   @override

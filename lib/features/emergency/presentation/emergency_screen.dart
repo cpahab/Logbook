@@ -3,7 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
-import '../../home/widgets/nav_bar.dart';
+import '../../../core/widgets/card_shell.dart';
+import '../../../core/widgets/nav_bar.dart';
 import '../../../l10n/l10n_extension.dart';
 
 /// Static reference guide for non-radio distress signals (pyrotechnics, hand
@@ -247,70 +248,51 @@ class _SignalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
+    return CardShell(
+      backgroundColor: cs.surfaceContainerLow,
+      accentColor: stripeColor,
+      bordered: true,
+      shadowed: true,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              left: 0, top: 0, bottom: 0,
-              child: Container(width: 4, color: stripeColor),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(icon, color: iconColor, size: 24),
-                      const Spacer(),
-                      if (badge != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: badgeBg,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                          child: Text(
-                            badge!,
-                            style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: badgeFg),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontStyle: FontStyle.italic,
-                      height: 1.4,
+            Row(
+              children: [
+                Icon(icon, color: iconColor, size: 24),
+                const Spacer(),
+                if (badge != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: badgeBg,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                    child: Text(
+                      badge!,
+                      style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: badgeFg),
                     ),
                   ),
-                  const Spacer(),
-                  const SizedBox(height: 8),
-                  child,
-                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                color: cs.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+                height: 1.4,
               ),
             ),
+            const Spacer(),
+            const SizedBox(height: 8),
+            child,
           ],
         ),
       ),
@@ -325,80 +307,61 @@ class _FlagSignalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
+    return CardShell(
+      backgroundColor: cs.surfaceContainerLow,
+      accentColor: cs.primary,
+      bordered: true,
+      shadowed: true,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              left: 0, top: 0, bottom: 0,
-              child: Container(width: 4, color: cs.primary),
+            Row(
+              children: [
+                Icon(Icons.flag, color: cs.primary, size: 24),
+                const Spacer(),
+                Text(
+                  'Code: NC',
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 0, color: cs.primary),
+                ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.flag, color: cs.primary, size: 24),
-                      const Spacer(),
-                      Text(
-                        'Code: NC',
-                        style: Theme.of(context).textTheme.labelSmall!.copyWith(letterSpacing: 0, color: cs.primary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              context.l10n.emergencyFlagSignalTitle,
-                              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              context.l10n.emergencyFlagSignalSubtitle,
-                              style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                                color: cs.onSurfaceVariant,
-                                fontStyle: FontStyle.italic,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
+                      Text(
+                        context.l10n.emergencyFlagSignalTitle,
+                        style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
                       ),
-                      const SizedBox(width: 12),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.asset(
-                          'assets/images/distress/flag_nc.png',
-                          height: 64,
-                          width: 80,
-                          fit: BoxFit.contain,
+                      const SizedBox(height: 4),
+                      Text(
+                        context.l10n.emergencyFlagSignalSubtitle,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontStyle: FontStyle.italic,
+                          height: 1.4,
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.asset(
+                    'assets/images/distress/flag_nc.png',
+                    height: 64,
+                    width: 80,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

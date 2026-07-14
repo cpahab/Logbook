@@ -507,6 +507,53 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replaces every vessel/VHF field at once (from a parsed backup archive)
+  /// and pushes the result to Firestore in a single write, rather than the
+  /// per-field debounced pushes the individual setters trigger.
+  Future<void> restoreVesselSettings({
+    required String vesselName,
+    required String vesselMmsi,
+    required String vesselCallSign,
+    required String vesselEquipmentJson,
+    required String lifeRaftInfo,
+    required String epirbInfo,
+    required String fireSuppInfo,
+    required String vhf1Label, required String vhf1Desc,
+    required String vhf2Label, required String vhf2Desc,
+    required String vhf3Label, required String vhf3Desc,
+    required String vhf4Label, required String vhf4Desc,
+  }) async {
+    _vesselName     = vesselName;
+    _vesselMmsi     = vesselMmsi;
+    _vesselCallSign = vesselCallSign;
+    _vesselEquipment = vesselEquipmentJson.isEmpty
+        ? VesselEquipmentConfig.defaultForLocale(_locale.languageCode)
+        : VesselEquipmentConfig.fromJsonString(vesselEquipmentJson, languageCode: _locale.languageCode);
+    _lifeRaftInfo = lifeRaftInfo;
+    _epirbInfo    = epirbInfo;
+    _fireSuppInfo = fireSuppInfo;
+    _vhf1Label = vhf1Label; _vhf1Desc = vhf1Desc;
+    _vhf2Label = vhf2Label; _vhf2Desc = vhf2Desc;
+    _vhf3Label = vhf3Label; _vhf3Desc = vhf3Desc;
+    _vhf4Label = vhf4Label; _vhf4Desc = vhf4Desc;
+
+    _box.put(_vesselNameKey, _vesselName);
+    _box.put(_vesselMmsiKey, _vesselMmsi);
+    _box.put(_vesselCallSignKey, _vesselCallSign);
+    _box.put(_vesselEquipmentKey, _vesselEquipment.toJsonString());
+    _box.put(_lifeRaftKey, _lifeRaftInfo);
+    _box.put(_epirbKey, _epirbInfo);
+    _box.put(_fireSuppKey, _fireSuppInfo);
+    _box.put(_vhf1LabelKey, _vhf1Label); _box.put(_vhf1DescKey, _vhf1Desc);
+    _box.put(_vhf2LabelKey, _vhf2Label); _box.put(_vhf2DescKey, _vhf2Desc);
+    _box.put(_vhf3LabelKey, _vhf3Label); _box.put(_vhf3DescKey, _vhf3Desc);
+    _box.put(_vhf4LabelKey, _vhf4Label); _box.put(_vhf4DescKey, _vhf4Desc);
+
+    _markSettingsModified();
+    notifyListeners();
+    await _firestore?.saveSettings(_toSettingsMap());
+  }
+
   // ── Firestore sync ─────────────────────────────────────────────────────────
 
   /// Attaches Firestore and starts syncing settings.
@@ -586,6 +633,65 @@ class ThemeProvider extends ChangeNotifier {
           await service.saveUiState(_monthExpandedMap);
         }
       }
+    } catch (_) {}
+
+    _uiSub = service.uiStateChanges().listen((remote) {
+      if (remote == null) return;
+      _applyRemoteUiState(remote);
+    }, onError: (_) {});
+  }
+
+  /// Switches vessel/VHF settings to a different logbook. [remoteData] must
+  /// already have been fetched by the caller (via [service.fetchSettingsWithMeta])
+  /// — this method only applies it, it never wipes local state to attempt its
+  /// own fetch. Callers should fetch first and abort the whole logbook switch
+  /// on failure, exactly as [HomeRepository.reattachAndSync] does for day
+  /// entries, so a network blip during a switch can never leave vessel data
+  /// wiped with nothing confirmed to replace it.
+  ///
+  /// [remoteData] null means the new logbook has no settings document yet —
+  /// vessel/VHF fields reset to defaults and that becomes the first write.
+  Future<void> applySwitchedLogbookSettings(
+      Map<String, String>? remoteData, FirestoreService service) async {
+    await _settingsSub?.cancel();
+    _settingsSub = null;
+    await _uiSub?.cancel();
+    _uiSub = null;
+
+    _firestore = service;
+
+    if (remoteData != null) {
+      _applyRemoteSettings(remoteData);
+    } else {
+      _vesselName = '';  _vesselMmsi = '';  _vesselCallSign = '';
+      _vesselEquipment = VesselEquipmentConfig.defaultForLocale(_locale.languageCode);
+      _lifeRaftInfo = ''; _epirbInfo = ''; _fireSuppInfo = '';
+      _vhf1Label = 'Channel 16'; _vhf1Desc  = 'Distress · 156.800 MHz';
+      _vhf2Label = 'Channel 67'; _vhf2Desc  = 'Ship to Ship · 156.375 MHz';
+      _vhf3Label = 'Channel 06'; _vhf3Desc  = 'Search & Rescue · 156.300 MHz';
+      _vhf4Label = 'Channel 13'; _vhf4Desc  = 'Bridge to Bridge · 156.650 MHz';
+      for (final k in [
+        _vesselNameKey, _vesselMmsiKey, _vesselCallSignKey, _vesselEquipmentKey,
+        _lifeRaftKey, _epirbKey, _fireSuppKey,
+        _vhf1LabelKey, _vhf1DescKey, _vhf2LabelKey, _vhf2DescKey,
+        _vhf3LabelKey, _vhf3DescKey, _vhf4LabelKey, _vhf4DescKey,
+      ]) {
+        _box.delete(k);
+      }
+      await service.saveSettings(_toSettingsMap());
+    }
+    _markSettingsModified();
+    notifyListeners();
+
+    _settingsSub = service.settingsChanges().listen((remote) {
+      if (remote == null) return;
+      if (_mapsEqual(_toSettingsMap(), remote)) return;
+      _applyRemoteSettings(remote);
+    }, onError: (_) {});
+
+    try {
+      final (:data, :updatedAt) = await service.fetchUiStateWithMeta();
+      if (data != null) _applyRemoteUiState(data);
     } catch (_) {}
 
     _uiSub = service.uiStateChanges().listen((remote) {

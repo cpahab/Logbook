@@ -325,7 +325,7 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
         border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.cardShadowColor,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

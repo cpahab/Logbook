@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Semantic colour tokens for the timeline / day-detail / crew areas,
 /// derived from [ColorScheme] roles rather than hardcoded per theme.
@@ -69,4 +70,29 @@ extension LogbookFormTextStyles on TextTheme {
 
   /// Small unit suffix next to a numeric field (e.g. "deg", "kn").
   TextStyle get unitLabel => bodySmall!.copyWith(fontWeight: FontWeight.w600);
+
+  /// Monospace logbook share/join-code display (e.g. "AB12-CD34") — large,
+  /// bold, and letter-spaced for scan-ability.
+  TextStyle get shareCode => const TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 6,
+      );
+
+  /// App-bar hero title (e.g. "LOGBOOK") — Newsreader serif, bold, tight tracking.
+  TextStyle get brandTitle => GoogleFonts.newsreader(
+        fontSize: 28,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.5,
+        height: 1.0,
+      );
+
+  /// App-bar vessel-name subtitle beneath [brandTitle] — Newsreader serif, italic.
+  TextStyle get brandSubtitle => GoogleFonts.newsreader(
+        fontSize: 20,
+        fontWeight: FontWeight.w500,
+        fontStyle: FontStyle.italic,
+        height: 1.1,
+      );
 }

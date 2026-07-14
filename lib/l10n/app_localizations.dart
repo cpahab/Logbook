@@ -1340,6 +1340,18 @@ abstract class AppLocalizations {
   /// **'Für den Logbuchwechsel ist eine Internetverbindung erforderlich.'**
   String get settingsSwitchLogbookOffline;
 
+  /// No description provided for @settingsSwitchLogbookInProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch wird gewechselt…'**
+  String get settingsSwitchLogbookInProgress;
+
+  /// No description provided for @settingsSwitchLogbookComplete.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch gewechselt.'**
+  String get settingsSwitchLogbookComplete;
+
   /// No description provided for @settingsScanQr.
   ///
   /// In de, this message translates to:

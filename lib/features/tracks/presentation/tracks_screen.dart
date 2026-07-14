@@ -18,11 +18,12 @@ import '../../home/domain/track_point.dart';
 import '../../home/utils/trim_track.dart'
     show trimStationaryEnds, DisplayModel, SegmentKind,
         splitTrackSegments;
-import '../../home/widgets/nav_bar.dart';
-import '../../home/widgets/stat_inline.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../core/constants/map_config.dart';
+import '../../../core/widgets/date_range_picker.dart';
+import '../../../core/widgets/nav_bar.dart';
+import '../../../core/widgets/stat_inline.dart';
 import '../utils/track_computation_cache.dart';
 
 /// Bearing (radians, clockwise from north) between two LatLng points.
@@ -197,21 +198,7 @@ class _TracksScreenState extends State<TracksScreen> {
   /// Shows the system date-range picker and applies the result as the
   /// custom filter preset.
   Future<void> _pickDateRange() async {
-    final now = DateTime.now();
-    final initial = _effectiveRange ??
-        DateTimeRange(
-            start: DateTime(now.year, now.month - 1, now.day), end: now);
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: now,
-      initialDateRange: initial,
-      locale: context.read<ThemeProvider>().materialLocale,
-      builder: (context, child) => MediaQuery.withClampedTextScaling(
-        maxScaleFactor: 1.0,
-        child: child!,
-      ),
-    );
+    final range = await pickDateRange(context, initialRange: _effectiveRange);
     if (range != null) _applyPreset(_FilterPreset.custom, custom: range);
   }
 
@@ -718,7 +705,7 @@ class _TracksScreenState extends State<TracksScreen> {
         border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.cardShadowColor,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

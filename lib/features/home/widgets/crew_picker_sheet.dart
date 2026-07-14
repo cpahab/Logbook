@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/theme_extensions.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../data/home_repository.dart';
 import '../domain/crew_member.dart';
 import 'add_crew_member_dialog.dart';
@@ -107,30 +108,15 @@ class _RosterTile extends StatelessWidget {
 
   /// Confirms, then permanently removes this person from the roster.
   Future<void> _delete(BuildContext context) async {
-    final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: cs.surface,
-        surfaceTintColor: Colors.transparent,
-        titleTextStyle: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-        contentTextStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-        title: Text(l10n.crewPickerRemoveTitle),
-        content: Text('${member.name} ${l10n.crewPickerRemoveContent}'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.cancel)),
-          FilledButton(
-              style: FilledButton.styleFrom(
-                  backgroundColor: cs.error, foregroundColor: cs.onError),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.remove)),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.crewPickerRemoveTitle,
+      body: '${member.name} ${l10n.crewPickerRemoveContent}',
+      confirmLabel: l10n.remove,
+      destructive: true,
     );
-    if (!context.mounted || confirmed != true) return;
+    if (!context.mounted || !confirmed) return;
     repo.deleteRosterMember(member.id!);
   }
 

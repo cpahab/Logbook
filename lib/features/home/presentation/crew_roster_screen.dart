@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../data/home_repository.dart';
 import '../domain/crew_member.dart';
 import '../widgets/add_crew_member_dialog.dart';
@@ -111,12 +112,11 @@ class _RosterListTile extends StatelessWidget {
 
   /// Opens the edit dialog and saves changes back to the roster.
   Future<void> _edit(BuildContext context) async {
-    final cs = Theme.of(context).colorScheme;
     final updated = await showDialog<CrewMember>(
       context: context,
       builder: (_) => AddCrewMemberDialog(
         initialMember: member,
-        onDelete: () => _confirmDelete(context, cs),
+        onDelete: () => _confirmDelete(context),
       ),
     );
     if (!context.mounted || updated == null) return;
@@ -126,30 +126,16 @@ class _RosterListTile extends StatelessWidget {
 
   /// Confirms, then permanently removes this person from the roster.
   /// Returns whether the deletion actually happened.
-  Future<bool> _confirmDelete(BuildContext context, ColorScheme cs) async {
+  Future<bool> _confirmDelete(BuildContext context) async {
     final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: cs.surface,
-        surfaceTintColor: Colors.transparent,
-        titleTextStyle: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-        contentTextStyle: Theme.of(context).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-        title: Text(l10n.crewRosterRemoveTitle),
-        content: Text(l10n.crewRosterRemoveContent(member.name)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.cancel)),
-          FilledButton(
-              style: FilledButton.styleFrom(
-                  backgroundColor: cs.error, foregroundColor: cs.onError),
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(l10n.remove)),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.crewRosterRemoveTitle,
+      body: l10n.crewRosterRemoveContent(member.name),
+      confirmLabel: l10n.remove,
+      destructive: true,
     );
-    if (!context.mounted || confirmed != true) return false;
+    if (!context.mounted || !confirmed) return false;
     repo.deleteRosterMember(member.id!);
     return true;
   }

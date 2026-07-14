@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:provider/provider.dart';
@@ -16,8 +15,11 @@ import '../utils/filter_settings.dart';
 import '../utils/pdf_exporter.dart';
 import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
-import '../widgets/nav_bar.dart';
-import '../widgets/stat_inline.dart';
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/date_range_picker.dart';
+import '../../../core/widgets/nav_bar.dart';
+import '../../../core/widgets/progress_snackbar.dart';
+import '../../../core/widgets/stat_inline.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../core/services/gps_consent_service.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -197,24 +199,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Shows the system date-range picker and switches the day list's filter
-  /// to the picked custom range, clearing the year-pill filter (mirrors
-  /// TracksScreen's `_pickDateRange`).
+  /// to the picked custom range, clearing the year-pill filter.
   Future<void> _pickDateRange() async {
-    final now = DateTime.now();
-    final initial = _customRange ??
-        DateTimeRange(
-            start: DateTime(now.year, now.month - 1, now.day), end: now);
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: now,
-      initialDateRange: initial,
-      locale: context.read<ThemeProvider>().materialLocale,
-      builder: (context, child) => MediaQuery.withClampedTextScaling(
-        maxScaleFactor: 1.0,
-        child: child!,
-      ),
-    );
+    final range = await pickDateRange(context, initialRange: _customRange);
     if (range == null) return;
     setState(() {
       _customRange = range;
@@ -249,31 +236,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final fmt = DateFormat('d. MMM yyyy', locale);
     final rangeStr = '${fmt.format(range.start)} – ${fmt.format(range.end)}';
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          backgroundColor: cs.surface,
-          surfaceTintColor: Colors.transparent,
-          titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-          contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-          title: Text(context.l10n.homeExportRangeConfirmTitle),
-          content: Text(context.l10n.homeExportRangeConfirmBody(rangeStr)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(context.l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(context.l10n.homeExportRangeConfirmButton),
-            ),
-          ],
-        );
-      },
+    return showConfirmDialog(
+      context,
+      title: context.l10n.homeExportRangeConfirmTitle,
+      body: context.l10n.homeExportRangeConfirmBody(rangeStr),
+      confirmLabel: context.l10n.homeExportRangeConfirmButton,
     );
-    return confirmed == true;
   }
 
   /// Builds a single PDF covering every logged day in [range] (cover page +
@@ -298,22 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _exportingRange = true);
-    messenger.showSnackBar(
-      SnackBar(
-        duration: const Duration(minutes: 2),
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 14),
-            Expanded(child: Text(context.l10n.homeExportRangeInProgress)),
-          ],
-        ),
-      ),
-    );
+    showProgressSnackBar(context, context.l10n.homeExportRangeInProgress);
 
     try {
       final p = context.read<ThemeProvider>();
@@ -549,24 +502,12 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               context.l10n.appTitle.toUpperCase(),
-              style: GoogleFonts.newsreader(
-                color: cs.primary,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-                height: 1.0,
-              ),
+              style: Theme.of(context).textTheme.brandTitle.copyWith(color: cs.primary),
             ),
             if (vesselName.isNotEmpty)
               Text(
                 vesselName,
-                style: GoogleFonts.newsreader(
-                  color: cs.primary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w500,
-                  fontStyle: FontStyle.italic,
-                  height: 1.1,
-                ),
+                style: Theme.of(context).textTheme.brandSubtitle.copyWith(color: cs.primary),
               ),
           ],
         ),
@@ -862,7 +803,7 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: cs.outlineVariant),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: cs.cardShadowColor,
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),

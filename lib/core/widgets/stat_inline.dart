@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../app/theme/theme_extensions.dart';
+import '../../app/theme/theme_extensions.dart';
 
 /// Small icon + label used for inline day/track stats (wind, average speed,
 /// distance, ...). No pill/background — just the glyph and the value.

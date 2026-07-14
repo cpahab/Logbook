@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
-import '../../app/theme/theme_extensions.dart';
 import '../../l10n/l10n_extension.dart';
+import '../widgets/confirm_dialog.dart';
 
 /// Gatekeeper in front of the OS location-permission prompt: shows our own
 /// plain-language explanation dialog first, so the user isn't hit with the
@@ -19,40 +19,14 @@ class GpsConsentService {
     }
     if (!context.mounted) return;
 
-    // ── Explanation dialog (title + body + Later/Allow actions) ──
-    final allowed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        final l10n = ctx.l10n;
-        return AlertDialog(
-          backgroundColor: cs.surface,
-          surfaceTintColor: Colors.transparent,
-          title: Text(
-            l10n.gpsConsentTitle,
-            style: Theme.of(ctx).textTheme.fieldValueProse.copyWith(
-              color: cs.onSurface,
-            ),
-          ),
-          content: Text(
-            l10n.gpsConsentContent,
-            style: TextStyle(fontSize: 14, height: 1.5, color: cs.onSurfaceVariant),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.gpsConsentLater),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.gpsConsentAllow),
-            ),
-          ],
-        );
-      },
-    ); // ── end explanation dialog ──
+    final allowed = await showConfirmDialog(
+      context,
+      title: context.l10n.gpsConsentTitle,
+      body: context.l10n.gpsConsentContent,
+      confirmLabel: context.l10n.gpsConsentAllow,
+    );
 
-    if (allowed == true) {
+    if (allowed) {
       await Geolocator.requestPermission();
     }
   }

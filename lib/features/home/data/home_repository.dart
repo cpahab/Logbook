@@ -77,7 +77,7 @@ class HomeRepository extends ChangeNotifier {
     return (oilLevel: oil, fuelLevel: fuel, keelDown: keel);
   }
 
-  /// The persistent crew roster (features/home/screens/crew_roster_screen.dart),
+  /// The persistent crew roster (features/home/presentation/crew_roster_screen.dart),
   /// sorted alphabetically by name — distinct from any single day's crew list.
   List<CrewMember> get roster {
     final members = _rosterBox.values.toList();

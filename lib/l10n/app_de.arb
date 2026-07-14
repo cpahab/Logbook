@@ -241,6 +241,8 @@
   "settingsSwitchLogbookTitle": "Logbuch wechseln?",
   "settingsSwitchLogbookContent": "Die lokalen Daten werden durch die Daten des verbundenen Logbuchs ersetzt.",
   "settingsSwitchLogbookOffline": "Für den Logbuchwechsel ist eine Internetverbindung erforderlich.",
+  "settingsSwitchLogbookInProgress": "Logbuch wird gewechselt…",
+  "settingsSwitchLogbookComplete": "Logbuch gewechselt.",
   "settingsScanQr": "QR-Code scannen",
   "settingsScanTitle": "Logbuch-QR-Code scannen",
 

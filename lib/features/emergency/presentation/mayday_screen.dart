@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../home/data/home_repository.dart';
-import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/gps_consent_service.dart';
+import '../../../core/widgets/nav_bar.dart';
 import '../../../l10n/l10n_extension.dart';
 
 /// Live, step-by-step SOLAS/IMO MAYDAY radio-call script: DSC alert, MAYDAY

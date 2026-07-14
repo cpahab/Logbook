@@ -6,6 +6,9 @@ import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/backup_service.dart';
+import '../../../core/widgets/card_shell.dart';
+import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/progress_snackbar.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
@@ -25,46 +28,6 @@ class BackupScreen extends StatefulWidget {
 class _BackupScreenState extends State<BackupScreen> {
   bool _busy = false;
 
-  Widget _card(ColorScheme cs, Widget child) {
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Stack(
-          children: [
-            Positioned(
-              left: 0, top: 0, bottom: 0,
-              child: Container(width: 4, color: cs.primary),
-            ),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showProgress(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(minutes: 2),
-        content: Row(
-          children: [
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 14),
-            Expanded(child: Text(message)),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _export() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -76,16 +39,16 @@ class _BackupScreenState extends State<BackupScreen> {
     final l10n = context.l10n;
     final messenger = ScaffoldMessenger.of(context);
 
-    _showProgress(l10n.backupExportInProgress);
+    showProgressSnackBar(context, l10n.backupExportInProgress);
 
     try {
       final info = await PackageInfo.fromPlatform();
       final bytes = await BackupService.exportBackup(
         home: home,
         emergency: emergency,
+        theme: theme,
         logbookId: logbookId,
         logbookName: l10n.appTitle,
-        vesselName: theme.vesselName,
         appVersion: '${info.version}+${info.buildNumber}',
       );
 
@@ -127,48 +90,31 @@ class _BackupScreenState extends State<BackupScreen> {
 
     if (!mounted) return;
     final l10n = context.l10n;
-    final cs = Theme.of(context).colorScheme;
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: cs.surface,
-        surfaceTintColor: Colors.transparent,
-        titleTextStyle: Theme.of(ctx).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-        contentTextStyle: Theme.of(ctx).textTheme.bodyMedium!.copyWith(color: cs.onSurfaceVariant),
-        title: Text(l10n.backupRestoreConfirmTitle),
-        content: Text(l10n.backupRestoreConfirmBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: cs.error,
-              foregroundColor: cs.onError,
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.backupRestoreButton),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.backupRestoreConfirmTitle,
+      body: l10n.backupRestoreConfirmBody,
+      confirmLabel: l10n.backupRestoreButton,
+      destructive: true,
     );
-    if (confirmed != true || !mounted) return;
+    if (!confirmed || !mounted) return;
 
     setState(() => _busy = true);
 
     final home = context.read<HomeRepository>();
     final emergency = context.read<EmergencyRepository>();
+    final theme = context.read<ThemeProvider>();
     final messenger = ScaffoldMessenger.of(context);
 
-    _showProgress(l10n.backupRestoreInProgress);
+    showProgressSnackBar(context, l10n.backupRestoreInProgress);
 
     try {
       await BackupService.restoreBackup(
         zipBytes: Uint8List.fromList(bytes),
         home: home,
         emergency: emergency,
+        theme: theme,
       );
 
       messenger.hideCurrentSnackBar();
@@ -214,9 +160,8 @@ class _BackupScreenState extends State<BackupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _card(
-              cs,
-              Padding(
+            CardShell(
+              child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,9 +191,8 @@ class _BackupScreenState extends State<BackupScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            _card(
-              cs,
-              Padding(
+            CardShell(
+              child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

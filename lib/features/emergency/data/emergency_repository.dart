@@ -100,6 +100,40 @@ class EmergencyRepository extends ChangeNotifier {
     }, onError: (_) {});
   }
 
+  /// Switches contacts to a different logbook. [remoteContacts] must already
+  /// have been fetched by the caller (via
+  /// [FirestoreService.fetchContactsWithMeta]) — this only applies it, it
+  /// never wipes local state to attempt its own fetch. Callers should fetch
+  /// first and abort the whole logbook switch on failure, exactly as
+  /// [HomeRepository.reattachAndSync] does for day entries, so a network
+  /// blip during a switch can never leave contacts wiped with nothing
+  /// confirmed to replace them.
+  ///
+  /// [remoteContacts] null means the new logbook has no contacts document
+  /// yet — local contacts clear to empty and that becomes the first write.
+  Future<void> applySwitchedLogbookContacts(
+      List<Map<String, String>>? remoteContacts, FirestoreService service) async {
+    await _contactsSub?.cancel();
+    _contactsSub = null;
+
+    _firestore = service;
+
+    if (remoteContacts != null) {
+      await _replaceLocalContacts(remoteContacts);
+    } else {
+      await _box.clear();
+      await _pushToFirestore(service);
+      notifyListeners();
+    }
+    _markModified();
+
+    _contactsSub = service.contactsChanges().listen((remote) async {
+      if (remote == null) return;
+      if (_contactsEqual(remote)) return;
+      await _replaceLocalContacts(remote);
+    }, onError: (_) {});
+  }
+
   // ── Mutations ──────────────────────────────────────────────────────────────
 
   /// Adds [contact] locally and pushes the updated list to Firestore.

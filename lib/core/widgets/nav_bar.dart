@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
-import '../../../app/theme/theme_extensions.dart';
-import '../../../l10n/l10n_extension.dart';
+import '../../app/theme/theme_extensions.dart';
+import '../../l10n/l10n_extension.dart';
 
 /// The 4 destinations reachable from the bottom nav bar.
 enum NavTab { journal, map, settings, safety }

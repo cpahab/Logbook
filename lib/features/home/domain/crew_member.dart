@@ -4,7 +4,7 @@ part 'crew_member.g.dart';
 
 /// A crew member, either aboard for a specific day (copied into that
 /// [DayEntry]'s `crew` list) or in the persistent roster
-/// (features/home/screens/crew_roster_screen.dart). Includes medical fields
+/// (features/home/presentation/crew_roster_screen.dart). Includes medical fields
 /// shown on the Emergency Manifest screen (blood type, allergies, conditions,
 /// personal EPIRB). [id] links a per-day copy back to its roster record so
 /// roster edits can be reflected without mutating history.

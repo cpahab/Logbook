@@ -5,11 +5,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../home/data/home_repository.dart';
 import '../../home/domain/crew_member.dart';
-import '../../home/widgets/nav_bar.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
+import '../../../core/widgets/nav_bar.dart';
 import '../data/emergency_repository.dart';
 import '../domain/emergency_contact.dart';
 

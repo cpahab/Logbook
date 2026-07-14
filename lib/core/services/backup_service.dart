@@ -6,6 +6,7 @@ import 'package:archive/archive.dart';
 import '../../features/emergency/data/emergency_repository.dart';
 import '../../features/home/data/home_repository.dart';
 import '../../features/home/utils/photo_service.dart';
+import '../../features/settings/domain/theme_provider.dart';
 import 'backup_mapper.dart';
 
 /// Bump whenever the JSON shape in [backup_mapper.dart] changes in a way
@@ -29,12 +30,13 @@ class BackupService {
   static Future<Uint8List> exportBackup({
     required HomeRepository home,
     required EmergencyRepository emergency,
+    required ThemeProvider theme,
     required String logbookId,
     required String logbookName,
-    required String vesselName,
     required String appVersion,
   }) async {
     final entries = home.entries;
+    final vesselName = theme.vesselName;
     final exportedAt = DateTime.now().toUtc().toIso8601String();
 
     final manifest = {
@@ -58,6 +60,7 @@ class BackupService {
       'entries': entriesJson,
       'roster': home.roster.map(crewMemberToJson).toList(),
       'emergencyContacts': emergency.contacts.map(emergencyContactToJson).toList(),
+      'vessel': _vesselInfoToJson(theme),
     };
 
     final archive = Archive();
@@ -123,7 +126,8 @@ Contents
 --------
 manifest.json   Archive format version and export metadata.
 data.json       All day entries (log, GPS track, stats, crew), the
-                persistent crew roster, and emergency contacts — plain,
+                persistent crew roster, emergency contacts, and vessel/VHF
+                info (name, MMSI, call sign, safety equipment) — plain,
                 indented JSON, readable without any special tooling.
 photos/         Photos attached to day entries, named by their original
                 file name.
@@ -137,10 +141,25 @@ merge with data already there.
 ''';
   }
 
+  static Map<String, dynamic> _vesselInfoToJson(ThemeProvider p) => {
+        'vesselName': p.vesselName,
+        'vesselMmsi': p.vesselMmsi,
+        'vesselCallSign': p.vesselCallSign,
+        'vesselEquipment': p.vesselEquipment.toJsonString(),
+        'lifeRaftInfo': p.lifeRaftInfo,
+        'epirbInfo': p.epirbInfo,
+        'fireSuppInfo': p.fireSuppInfo,
+        'vhf1Label': p.vhf1Label, 'vhf1Desc': p.vhf1Desc,
+        'vhf2Label': p.vhf2Label, 'vhf2Desc': p.vhf2Desc,
+        'vhf3Label': p.vhf3Label, 'vhf3Desc': p.vhf3Desc,
+        'vhf4Label': p.vhf4Label, 'vhf4Desc': p.vhf4Desc,
+      };
+
   static Future<void> restoreBackup({
     required Uint8List zipBytes,
     required HomeRepository home,
     required EmergencyRepository emergency,
+    required ThemeProvider theme,
   }) async {
     final archive = ZipDecoder().decodeBytes(zipBytes);
 
@@ -186,6 +205,8 @@ merge with data already there.
     final contacts = [
       for (final c in contactsJson) emergencyContactFromJson(c as Map<String, dynamic>),
     ];
+    // Optional: absent in a backup made before vessel info was included.
+    final vessel = data['vessel'] as Map<String, dynamic>?;
 
     final photoBytesByFilename = <String, List<int>>{
       for (final f in archive.files)
@@ -209,6 +230,26 @@ merge with data already there.
       }
     }
     await emergency.restoreContacts(contacts);
+
+    if (vessel != null) {
+      await theme.restoreVesselSettings(
+        vesselName:         vessel['vesselName'] as String? ?? '',
+        vesselMmsi:         vessel['vesselMmsi'] as String? ?? '',
+        vesselCallSign:     vessel['vesselCallSign'] as String? ?? '',
+        vesselEquipmentJson: vessel['vesselEquipment'] as String? ?? '',
+        lifeRaftInfo:       vessel['lifeRaftInfo'] as String? ?? '',
+        epirbInfo:          vessel['epirbInfo'] as String? ?? '',
+        fireSuppInfo:       vessel['fireSuppInfo'] as String? ?? '',
+        vhf1Label: vessel['vhf1Label'] as String? ?? 'Channel 16',
+        vhf1Desc:  vessel['vhf1Desc']  as String? ?? 'Distress · 156.800 MHz',
+        vhf2Label: vessel['vhf2Label'] as String? ?? 'Channel 67',
+        vhf2Desc:  vessel['vhf2Desc']  as String? ?? 'Ship to Ship · 156.375 MHz',
+        vhf3Label: vessel['vhf3Label'] as String? ?? 'Channel 06',
+        vhf3Desc:  vessel['vhf3Desc']  as String? ?? 'Search & Rescue · 156.300 MHz',
+        vhf4Label: vessel['vhf4Label'] as String? ?? 'Channel 13',
+        vhf4Desc:  vessel['vhf4Desc']  as String? ?? 'Bridge to Bridge · 156.650 MHz',
+      );
+    }
 
     for (final p in parsedEntries) {
       for (final path in p.entry.photos) {
