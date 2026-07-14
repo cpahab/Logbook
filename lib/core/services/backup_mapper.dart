@@ -105,6 +105,8 @@ Map<String, dynamic> timelineEntryToJson(TimelineEntry t) => {
       'slot12State': t.slot12State,
       'temperature': t.temperature,
       'pressure': t.pressure,
+      'latitude': t.latitude,
+      'longitude': t.longitude,
     };
 
 TimelineEntry timelineEntryFromJson(Map<String, dynamic> d) => TimelineEntry(
@@ -135,6 +137,8 @@ TimelineEntry timelineEntryFromJson(Map<String, dynamic> d) => TimelineEntry(
       slot12State: d['slot12State'] as String?,
       temperature: (d['temperature'] as num?)?.toDouble(),
       pressure: (d['pressure'] as num?)?.toDouble(),
+      latitude: (d['latitude'] as num?)?.toDouble(),
+      longitude: (d['longitude'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> crewMemberToJson(CrewMember c) => {

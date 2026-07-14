@@ -536,6 +536,12 @@ abstract class AppLocalizations {
   /// **'Luftdruck'**
   String get dataPressure;
 
+  /// No description provided for @dataPosition.
+  ///
+  /// In de, this message translates to:
+  /// **'Position'**
+  String get dataPosition;
+
   /// No description provided for @entryDialogTitleNew.
   ///
   /// In de, this message translates to:
@@ -965,13 +971,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsAppearanceSection.
   ///
   /// In de, this message translates to:
-  /// **'Darstellung'**
+  /// **'Darstellung & Standort'**
   String get settingsAppearanceSection;
 
   /// No description provided for @settingsAppearanceInfo.
   ///
   /// In de, this message translates to:
-  /// **'Design und Sprache der App anpassen.'**
+  /// **'Design und Sprache der App anpassen, sowie ob neue Einträge deine GPS-Position erfassen.'**
   String get settingsAppearanceInfo;
 
   /// No description provided for @settingsThemeLabel.
@@ -1015,6 +1021,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'English'**
   String get settingsLanguageEn;
+
+  /// No description provided for @settingsAutoLogPositionLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Position bei neuen Einträgen erfassen'**
+  String get settingsAutoLogPositionLabel;
+
+  /// No description provided for @settingsAutoLogPositionDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Solange dies aktiviert ist, wird die GPS-Position dieses Geräts automatisch für jeden neuen Zeitleisten-Eintrag erfasst. Die Position jedes Eintrags wird einmalig bei dessen Erstellung erfasst und danach nie erneut erfasst oder geändert. Nicht im PDF-Export enthalten.'**
+  String get settingsAutoLogPositionDesc;
 
   /// No description provided for @settingsTrackFilterSection.
   ///
@@ -1183,6 +1201,18 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Daten dieses Logbuchs exportieren oder wiederherstellen'**
   String get settingsBackupSubtitle;
+
+  /// No description provided for @settingsSetUpCloudSync.
+  ///
+  /// In de, this message translates to:
+  /// **'Cloud-Synchronisierung einrichten'**
+  String get settingsSetUpCloudSync;
+
+  /// No description provided for @settingsSetUpCloudSyncSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Anmelden, um geräteübergreifend zu synchronisieren und dein Logbuch in der Cloud zu sichern'**
+  String get settingsSetUpCloudSyncSubtitle;
 
   /// No description provided for @settingsNoEntries.
   ///
@@ -1712,6 +1742,12 @@ abstract class AppLocalizations {
   /// **'Registrieren'**
   String get authRegisterLink;
 
+  /// No description provided for @authContinueOffline.
+  ///
+  /// In de, this message translates to:
+  /// **'Ohne Konto fortfahren'**
+  String get authContinueOffline;
+
   /// No description provided for @authForgotPasswordLink.
   ///
   /// In de, this message translates to:
@@ -1976,11 +2012,29 @@ abstract class AppLocalizations {
   /// **'Logbücher'**
   String get settingsLogbooksSection;
 
+  /// No description provided for @settingsActiveLogbookHeader.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktives Logbuch: {name}'**
+  String settingsActiveLogbookHeader(String name);
+
   /// No description provided for @settingsLogbooksInfo.
   ///
   /// In de, this message translates to:
   /// **'Logbücher verwalten, wechseln oder mit anderen teilen.'**
   String get settingsLogbooksInfo;
+
+  /// No description provided for @settingsLocalLogbooksInfo.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbücher auf diesem Gerät verwalten oder wechseln. Kein Cloud-Backup — zum Sichern die Exportfunktion nutzen.'**
+  String get settingsLocalLogbooksInfo;
+
+  /// No description provided for @settingsDeleteLocalLogbookConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'\"{name}\" löschen? Es gibt kein Cloud-Backup — dies kann nicht rückgängig gemacht werden, ausser du hast es bereits exportiert.'**
+  String settingsDeleteLocalLogbookConfirm(String name);
 
   /// No description provided for @settingsMyLogbooks.
   ///

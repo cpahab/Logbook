@@ -19,7 +19,11 @@ import '../domain/theme_provider.dart';
 /// `.zip`, or restore one back — replacing whatever is currently in the
 /// active logbook.
 class BackupScreen extends StatefulWidget {
-  const BackupScreen({super.key});
+  /// The active logbook's display name, passed by the caller (see
+  /// `settings_screen.dart`'s `_buildBackupSection`) — null if unknown yet.
+  final String? activeLogbookName;
+
+  const BackupScreen({super.key, this.activeLogbookName});
 
   @override
   State<BackupScreen> createState() => _BackupScreenState();
@@ -43,12 +47,13 @@ class _BackupScreenState extends State<BackupScreen> {
 
     try {
       final info = await PackageInfo.fromPlatform();
+      final activeName = widget.activeLogbookName;
       final bytes = await BackupService.exportBackup(
         home: home,
         emergency: emergency,
         theme: theme,
         logbookId: logbookId,
-        logbookName: l10n.appTitle,
+        logbookName: activeName == null || activeName.isEmpty ? l10n.appTitle : activeName,
         appVersion: '${info.version}+${info.buildNumber}',
       );
 
@@ -160,6 +165,23 @@ class _BackupScreenState extends State<BackupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (widget.activeLogbookName != null && widget.activeLogbookName!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 16),
+                child: Row(
+                  children: [
+                    Icon(Icons.anchor, size: 14, color: cs.logbookScopedAccent),
+                    const SizedBox(width: 6),
+                    Text(
+                      l10n.settingsActiveLogbookHeader(widget.activeLogbookName!),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                          color: cs.logbookScopedAccent,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5),
+                    ),
+                  ],
+                ),
+              ),
             CardShell(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),

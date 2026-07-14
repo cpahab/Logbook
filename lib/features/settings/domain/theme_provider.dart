@@ -14,8 +14,20 @@ import '../../home/utils/filter_settings.dart';
 /// the same last-writer-wins-by-`updatedAt` sync strategy as
 /// [HomeRepository] and [EmergencyRepository]; theme mode/locale/last-route
 /// are deliberately device-local and never pushed to Firestore.
+///
+/// Backed by two Hive boxes, opened in [init]: a device-local box (theme,
+/// locale, last route, local-mode flag, active-local-logbook pointer — never
+/// swapped) and a logbook-scoped box (everything else — vessel/VHF, filter
+/// tuning, UI state), which is `'settings'` for cloud users and the default
+/// local logbook, or `'settings_local_$id'` for any other local logbook —
+/// see [switchLocalLogbook] and `LocalLogbookService`.
 class ThemeProvider extends ChangeNotifier {
   static const _boxName             = 'settings';
+  // Device-local prefs live in a separate box from logbook-scoped settings —
+  // see the class doc and [init] — so switching local logbooks never resets
+  // theme/locale/local-mode state, and the reverse: local-logbook data never
+  // leaks between logbooks via a device-local key.
+  static const _deviceBoxName       = 'settings_device';
   static const _themeKey            = 'theme_mode';
   static const _titleKey            = 'logbuch_title';
   static const _weatherKey          = 'weather_url';
@@ -54,11 +66,24 @@ class ThemeProvider extends ChangeNotifier {
   // Debug display toggle — deliberately device-local, not part of the
   // synced filter tuning above.
   static const _showRawTrackKey            = 'debug_show_raw_track';
+  // Device-local: whether new timeline entries auto-capture a GPS fix. Not
+  // part of the synced settings above — a device may or may not have/grant
+  // location access independent of the logbook.
+  static const _autoLogPositionKey         = 'auto_log_position';
   static const _localeKey                  = 'locale';
   static const _lastUidKey                 = 'last_known_uid';
   static const _lastProjectIdKey           = 'last_known_project_id';
+  // Device-local flag: the user chose "Continue without an account" and has
+  // never signed in on this device — see [localModeEnabled].
+  static const _localModeKey               = 'local_mode_enabled';
+  // Device-local pointer: which local logbook is currently active. Empty
+  // string is the reserved sentinel for the first/default local logbook,
+  // which is backed by the same unsuffixed boxes as a cloud user's single
+  // dataset — see `LocalLogbookService` and [switchLocalLogbook].
+  static const _activeLocalLogbookIdKey    = 'active_local_logbook_id';
 
   late Box<String> _box;
+  late Box<String> _deviceBox;
   FirestoreService? _firestore;
   StreamSubscription<Map<String, String>?>? _settingsSub;
   StreamSubscription<Map<String, bool>?>?   _uiSub;
@@ -74,6 +99,9 @@ class ThemeProvider extends ChangeNotifier {
   double _topSpeedPercentile        = 0.99;
   double _maxSpeedKn                = 12.0;
   bool   _showRawTrack              = true;
+  bool   _autoLogPosition           = false; // opt-in, default off
+  bool   _localMode                 = false;
+  String? _activeLocalLogbookId;
   String _title = 'Logbuch';
   String _weatherUrl = '';
   String _vesselName = '';
@@ -110,6 +138,7 @@ class ThemeProvider extends ChangeNotifier {
   double get topSpeedPercentile         => _topSpeedPercentile;
   double get maxSpeedKn                 => _maxSpeedKn;
   bool   get showRawTrack               => _showRawTrack;
+  bool   get autoLogPositionEnabled     => _autoLogPosition;
   FilterSettings get filterSettings => FilterSettings(
     stationaryMode:        _filterMode,
     minStopMinutes:        _minStopMinutes,
@@ -137,11 +166,11 @@ class ThemeProvider extends ChangeNotifier {
   String get vhf3Desc           => _vhf3Desc;
   String get vhf4Label          => _vhf4Label;
   String get vhf4Desc           => _vhf4Desc;
-  String? get lastKnownUid        => _box.get(_lastUidKey);
-  void setLastKnownUid(String uid) => _box.put(_lastUidKey, uid);
+  String? get lastKnownUid        => _deviceBox.get(_lastUidKey);
+  void setLastKnownUid(String uid) => _deviceBox.put(_lastUidKey, uid);
 
-  String? get lastKnownProjectId          => _box.get(_lastProjectIdKey);
-  void setLastKnownProjectId(String id)   => _box.put(_lastProjectIdKey, id);
+  String? get lastKnownProjectId          => _deviceBox.get(_lastProjectIdKey);
+  void setLastKnownProjectId(String id)   => _deviceBox.put(_lastProjectIdKey, id);
 
   /// Returns whether [monthKey] (format `"yyyy-M"`) is expanded.
   /// Defaults to [defaultOpen] when the user has never explicitly set it.
@@ -226,13 +255,13 @@ class ThemeProvider extends ChangeNotifier {
   // day, but a route saved on an earlier day would reopen a stale context
   // (e.g. an old day view) that's more confusing than starting at home.
   String get lastRouteToday {
-    if (_box.get(_lastRouteDateKey) != _todayStr()) return '/';
-    return _box.get(_lastRouteKey) ?? '/';
+    if (_deviceBox.get(_lastRouteDateKey) != _todayStr()) return '/';
+    return _deviceBox.get(_lastRouteKey) ?? '/';
   }
 
   void saveLastRoute(String route) {
-    _box.put(_lastRouteKey, route);
-    _box.put(_lastRouteDateKey, _todayStr());
+    _deviceBox.put(_lastRouteKey, route);
+    _deviceBox.put(_lastRouteDateKey, _todayStr());
   }
 
   static String _todayStr() {
@@ -255,12 +284,60 @@ class ThemeProvider extends ChangeNotifier {
 
   // ── Init ───────────────────────────────────────────────────────────────────
 
-  /// Opens the settings Hive box and loads every field from it (or its
-  /// default). Must complete before any other method is called.
+  /// Opens the device-local box and whichever box holds this session's
+  /// logbook-scoped settings, then loads every field. Must complete before
+  /// any other method is called.
+  ///
+  /// The logbook-scoped box is `'settings'` (today's name, unchanged) unless
+  /// local mode is active with a non-default local logbook selected, in
+  /// which case it's `'settings_local_$id'` — see [switchLocalLogbook] and
+  /// `LocalLogbookService`. The empty-string sentinel id (the first/default
+  /// local logbook) also resolves to `'settings'`, so it needs no box of
+  /// its own either.
   Future<void> init() async {
-    _box = await Hive.openBox<String>(_boxName);
-    _mode                  = _fromString(_box.get(_themeKey, defaultValue: 'system')!);
-    _locale                = _parseLocale(_box.get(_localeKey, defaultValue: 'de')!);
+    _deviceBox = await Hive.openBox<String>(_deviceBoxName);
+    final legacyBox = await Hive.openBox<String>(_boxName);
+    _migrateDeviceKeysIfNeeded(legacyBox);
+
+    _mode          = _fromString(_deviceBox.get(_themeKey, defaultValue: 'system')!);
+    _locale        = _parseLocale(_deviceBox.get(_localeKey, defaultValue: 'de')!);
+    _showRawTrack  = (_deviceBox.get(_showRawTrackKey, defaultValue: 'true')!) != 'false';
+    _autoLogPosition = (_deviceBox.get(_autoLogPositionKey, defaultValue: 'false')!) != 'false';
+    _localMode     = (_deviceBox.get(_localModeKey, defaultValue: 'false')!) != 'false';
+    _activeLocalLogbookId = _deviceBox.get(_activeLocalLogbookIdKey);
+
+    final activeId = _localMode ? _activeLocalLogbookId : null;
+    if (activeId != null && activeId.isNotEmpty) {
+      _box = await Hive.openBox<String>('settings_local_$activeId');
+      await legacyBox.close();
+    } else {
+      _box = legacyBox;
+    }
+
+    await _loadLogbookScopedFields();
+  }
+
+  /// One-time, non-destructive copy of device-local keys from the legacy
+  /// `'settings'` box (where they lived before this box split) into
+  /// [_deviceBox]. Never deletes the originals — cheap, idempotent, and
+  /// carries zero data-loss risk if run more than once.
+  void _migrateDeviceKeysIfNeeded(Box<String> legacyBox) {
+    const deviceKeys = [
+      _themeKey, _localeKey, _lastRouteKey, _lastRouteDateKey,
+      _showRawTrackKey, _lastUidKey, _lastProjectIdKey, _localModeKey,
+    ];
+    for (final k in deviceKeys) {
+      if (_deviceBox.get(k) == null) {
+        final v = legacyBox.get(k);
+        if (v != null) _deviceBox.put(k, v);
+      }
+    }
+  }
+
+  /// Loads every logbook-scoped field (vessel/VHF info, filter tuning,
+  /// title/weather, sync bookkeeping) from whichever box [_box] currently
+  /// points at. Shared by [init] and [switchLocalLogbook].
+  Future<void> _loadLogbookScopedFields() async {
     _filterMode            = _parseFilterMode(_box.get(_filterModeKey, defaultValue: 'speed')!);
     _minStopMinutes        = double.tryParse(_box.get(_minStopMinutesKey,         defaultValue: '5.0')!)  ?? 5.0;
     _maxStopSpreadM        = double.tryParse(_box.get(_maxStopSpreadMKey,         defaultValue: '30.0')!) ?? 30.0;
@@ -269,7 +346,6 @@ class ThemeProvider extends ChangeNotifier {
     _makingWayThresholdKn  = double.tryParse(_box.get(_makingWayThresholdKnKey,   defaultValue: '1.0')!)  ?? 1.0;
     _topSpeedPercentile    = double.tryParse(_box.get(_topSpeedPercentileKey,      defaultValue: '0.99')!) ?? 0.99;
     _maxSpeedKn            = double.tryParse(_box.get(_maxSpeedKnKey,              defaultValue: '12.0')!) ?? 12.0;
-    _showRawTrack          = (_box.get(_showRawTrackKey, defaultValue: 'true')!) != 'false';
     _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
     _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
     _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
@@ -290,7 +366,51 @@ class ThemeProvider extends ChangeNotifier {
     _vhf3Desc  = _box.get(_vhf3DescKey,  defaultValue: 'Search & Rescue · 156.300 MHz')!;
     _vhf4Label = _box.get(_vhf4LabelKey, defaultValue: 'Channel 13')!;
     _vhf4Desc  = _box.get(_vhf4DescKey,  defaultValue: 'Bridge to Bridge · 156.650 MHz')!;
+  }
 
+  /// Switches the active local logbook: opens [newLogbookId]'s box (the
+  /// empty-string sentinel resolves to the shared `'settings'` box, same as
+  /// [init]) and swaps it in *before* closing the old one — several getters
+  /// here (`getMonthExpanded`, `needsInitialSync`, the modification
+  /// timestamps) read straight from [_box] on every call, not from an
+  /// in-memory cache, so they must never observe a closed box even if a
+  /// widget rebuild lands mid-switch. Reloads every logbook-scoped field and
+  /// persists the new active id. Only ever called while already in local
+  /// mode, where [_box] is always a `'settings_local_*'` box (or the shared
+  /// `'settings'` box for the sentinel) — never the box a cloud user's
+  /// single dataset lives in while genuinely signed in.
+  Future<void> switchLocalLogbook(String newLogbookId) async {
+    await _settingsSub?.cancel();
+    _settingsSub = null;
+    await _uiSub?.cancel();
+    _uiSub = null;
+
+    final oldBox = _box;
+    _box = newLogbookId.isEmpty
+        ? await Hive.openBox<String>(_boxName)
+        : await Hive.openBox<String>('settings_local_$newLogbookId');
+
+    await _loadLogbookScopedFields();
+
+    _activeLocalLogbookId = newLogbookId;
+    await _deviceBox.put(_activeLocalLogbookIdKey, newLogbookId);
+
+    notifyListeners();
+
+    await oldBox.close();
+  }
+
+  /// The currently-active local logbook's id (empty string = the default
+  /// sentinel logbook), or null if not in local mode / not yet chosen.
+  String? get activeLocalLogbookId => _activeLocalLogbookId;
+
+  /// Persists [id] as the active local logbook without touching any Hive
+  /// box — used only at boot to adopt a pre-existing local-mode device's
+  /// unsuffixed data as the sentinel logbook (see `main.dart`), where the
+  /// box already opened by [init] is already the right one.
+  Future<void> adoptActiveLocalLogbookId(String id) async {
+    _activeLocalLogbookId = id;
+    await _deviceBox.put(_activeLocalLogbookIdKey, id);
   }
 
   // ── Non-synced setters ─────────────────────────────────────────────────────
@@ -299,21 +419,47 @@ class ThemeProvider extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     if (_mode == mode) return;
     _mode = mode;
-    _box.put(_themeKey, _toString(mode));
+    _deviceBox.put(_themeKey, _toString(mode));
     notifyListeners();
   }
 
   void setLocale(Locale locale) {
     if (_locale == locale) return;
     _locale = locale;
-    _box.put(_localeKey, locale.languageCode);
+    _deviceBox.put(_localeKey, locale.languageCode);
     notifyListeners();
   }
 
   void setShowRawTrack(bool v) {
     if (_showRawTrack == v) return;
     _showRawTrack = v;
-    _box.put(_showRawTrackKey, v.toString());
+    _deviceBox.put(_showRawTrackKey, v.toString());
+    notifyListeners();
+  }
+
+  void setAutoLogPosition(bool v) {
+    if (_autoLogPosition == v) return;
+    _autoLogPosition = v;
+    _deviceBox.put(_autoLogPositionKey, v.toString());
+    notifyListeners();
+  }
+
+  /// True once the user has chosen "Continue without an account" and has
+  /// never signed in on this device. Cleared automatically the moment
+  /// Firestore is successfully attached (see `_initFirestore` in main.dart).
+  bool get localModeEnabled => _localMode;
+
+  void enableLocalMode() {
+    if (_localMode) return;
+    _localMode = true;
+    _deviceBox.put(_localModeKey, 'true');
+    notifyListeners();
+  }
+
+  void disableLocalMode() {
+    if (!_localMode) return;
+    _localMode = false;
+    _deviceBox.put(_localModeKey, 'false');
     notifyListeners();
   }
 

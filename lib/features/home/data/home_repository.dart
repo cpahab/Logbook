@@ -151,16 +151,78 @@ class HomeRepository extends ChangeNotifier {
 
   /// Opens every Hive box this repository owns and loads their contents
   /// into the in-memory caches. Must complete before any other method is called.
-  Future<void> init() async {
-    _dayBox       = await Hive.openBox<DayEntry>('daily_entries');
-    _trackBox     = await Hive.openBox<DailyTrack>('daily_tracks');
-    _rosterBox    = await Hive.openBox<CrewMember>('crew_roster');
-    _syncStateBox = await Hive.openBox<int>('entry_sync_state');
+  ///
+  /// [datasetSuffix] is null for the default dataset (today's exact box
+  /// names — cloud users, or local mode before any local logbook is chosen)
+  /// or a local logbook id for a non-default local logbook (see
+  /// [switchLocalDataset] and `LocalLogbookService`).
+  Future<void> init({String? datasetSuffix}) async {
+    final opened = await _openBoxes(datasetSuffix);
+    _dayBox       = opened.dayBox;
+    _trackBox     = opened.trackBox;
+    _rosterBox    = opened.rosterBox;
+    _syncStateBox = opened.syncStateBox;
 
     for (final e in _dayBox.values) { _entries[e.date] = e; }
     for (final t in _trackBox.values) { dailyTracks[t.day] = t; }
 
     notifyListeners();
+  }
+
+  static Future<
+      ({
+        Box<DayEntry> dayBox,
+        Box<DailyTrack> trackBox,
+        Box<CrewMember> rosterBox,
+        Box<int> syncStateBox
+      })> _openBoxes(String? datasetSuffix) async {
+    final s = datasetSuffix == null ? '' : '_$datasetSuffix';
+    return (
+      dayBox:       await Hive.openBox<DayEntry>('daily_entries$s'),
+      trackBox:     await Hive.openBox<DailyTrack>('daily_tracks$s'),
+      rosterBox:    await Hive.openBox<CrewMember>('crew_roster$s'),
+      syncStateBox: await Hive.openBox<int>('entry_sync_state$s'),
+    );
+  }
+
+  /// Switches this repository to a different local logbook's dataset. Opens
+  /// [newLogbookId]'s boxes and swaps them in *before* closing the old ones,
+  /// so [roster]/[rosterMemberById] — which read straight from the Hive box
+  /// on every call, not from an in-memory cache — can never observe a closed
+  /// box, even if a widget rebuild lands mid-switch. Only meaningful in
+  /// local mode — cloud logbook switching instead overwrites the single
+  /// default dataset via [reattachAndSync].
+  Future<void> switchLocalDataset(String newLogbookId) async {
+    await _entrySub?.cancel();
+    _entrySub = null;
+    await _rosterSub?.cancel();
+    _rosterSub = null;
+    for (final t in _syncTimers.values) { t.cancel(); }
+    _syncTimers.clear();
+    _pendingSyncFields.clear();
+
+    final oldDayBox = _dayBox;
+    final oldTrackBox = _trackBox;
+    final oldRosterBox = _rosterBox;
+    final oldSyncStateBox = _syncStateBox;
+
+    final opened = await _openBoxes(newLogbookId.isEmpty ? null : newLogbookId);
+    _dayBox       = opened.dayBox;
+    _trackBox     = opened.trackBox;
+    _rosterBox    = opened.rosterBox;
+    _syncStateBox = opened.syncStateBox;
+
+    _entries.clear();
+    dailyTracks.clear();
+    for (final e in _dayBox.values) { _entries[e.date] = e; }
+    for (final t in _trackBox.values) { dailyTracks[t.day] = t; }
+
+    notifyListeners();
+
+    await oldDayBox.close();
+    await oldTrackBox.close();
+    await oldRosterBox.close();
+    await oldSyncStateBox.close();
   }
 
   // ── Firestore attachment ───────────────────────────────────────────────────

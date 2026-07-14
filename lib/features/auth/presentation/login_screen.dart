@@ -7,7 +7,9 @@ import 'package:provider/provider.dart';
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/local_logbook_service.dart';
 import '../../../l10n/l10n_extension.dart';
+import '../../settings/domain/theme_provider.dart';
 import 'auth_widgets.dart';
 
 /// Email/password + Google/Apple sign-in screen. The router's redirect logic
@@ -83,6 +85,33 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  /// Enters local mode: all data stays on this device, no account needed.
+  /// The router picks up the flag change and stops forcing the auth screen,
+  /// but doesn't auto-navigate away from it, so this still has to push home
+  /// itself.
+  ///
+  /// A device's first-ever local logbook is the reserved empty-string
+  /// sentinel (see `LocalLogbookService`), which needs no Hive box
+  /// renaming — the base boxes `repo`/`emergencyRepo`/`themeProvider` already
+  /// have open (from `main.dart`'s boot, before local mode was chosen) are
+  /// already exactly the right ones, so only the registry entry and the
+  /// active-id pointer need to be created; nothing needs switching.
+  Future<void> _continueOffline() async {
+    final themeProvider = context.read<ThemeProvider>();
+    final localLogbookService = context.read<LocalLogbookService>();
+
+    final logbooks = await localLogbookService.listLogbooks();
+    if (logbooks.isEmpty) {
+      await localLogbookService.createLogbookWithId('', 'My Logbook');
+      await themeProvider.adoptActiveLocalLogbookId('');
+    }
+    // else: a returning local-mode user already has an active logbook set —
+    // nothing to do here.
+
+    themeProvider.enableLocalMode();
+    if (mounted) context.goNamed(AppRoute.home);
   }
 
   /// Runs the Apple sign-in flow and reports any failure via a snackbar.
@@ -254,6 +283,20 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: cs.primary)),
                     ),
                   ],
+                ),
+
+                const SizedBox(height: 4),
+
+                // -- "Continue without an account" escape hatch: kept
+                // low-emphasis so it doesn't compete with the primary
+                // sign-in/register paths above. --
+                Center(
+                  child: TextButton(
+                    onPressed: _continueOffline,
+                    child: Text(l10n.authContinueOffline,
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                            color: cs.onSurfaceVariant)),
+                  ),
                 ),
               ],
             ),

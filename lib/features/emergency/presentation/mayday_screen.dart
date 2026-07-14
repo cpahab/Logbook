@@ -8,6 +8,7 @@ import '../../settings/domain/theme_provider.dart';
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/gps_consent_service.dart';
+import '../../../core/utils/coordinate_format.dart';
 import '../../../core/widgets/nav_bar.dart';
 import '../../../l10n/l10n_extension.dart';
 
@@ -70,23 +71,11 @@ class _MaydayScreenState extends State<MaydayScreen>
         ),
       );
       if (mounted) {
-        setState(() => _positionText = _formatDDM(pos.latitude, pos.longitude));
+        setState(() => _positionText = formatDDM(pos.latitude, pos.longitude));
       }
     } catch (_) {
       if (mounted) setState(() => _positionError = true);
     }
-  }
-
-  /// Formats decimal degrees as nautical DDM: "N 47° 30.456'  E 008° 18.123'"
-  static String _formatDDM(double lat, double lng) {
-    String ddm(double val, List<String> dirs) {
-      final dir = val >= 0 ? dirs[0] : dirs[1];
-      final abs = val.abs();
-      final deg = abs.truncate();
-      final min = (abs - deg) * 60;
-      return "$dir ${deg.toString().padLeft(dirs[0] == 'N' ? 2 : 3, '0')}° ${min.toStringAsFixed(3)}'";
-    }
-    return '${ddm(lat, ['N', 'S'])}  ${ddm(lng, ['E', 'W'])}';
   }
 
   @override

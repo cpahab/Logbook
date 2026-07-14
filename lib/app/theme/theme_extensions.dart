@@ -17,6 +17,16 @@ extension LogbookTimelineColors on ColorScheme {
       : Colors.black.withValues(alpha: 0.04);
 }
 
+/// Semantic colour token distinguishing logbook-scoped data from
+/// device-scoped data in the Settings screen.
+extension LogbookScopeColors on ColorScheme {
+  /// Left-edge accent for CardShell sections whose data belongs to the
+  /// active logbook (travels with it, resets on switch) rather than to
+  /// this device (theme, locale, account) — a quiet per-section signal
+  /// instead of a text label on every card.
+  Color get logbookScopedAccent => tertiary;
+}
+
 /// General-purpose text colours, derived from [ColorScheme] roles.
 extension LogbookTextColors on ColorScheme {
   /// Small-caps eyebrow labels, secondary stat/date text, and similar

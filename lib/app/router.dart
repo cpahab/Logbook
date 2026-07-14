@@ -1,8 +1,11 @@
 import 'package:go_router/go_router.dart';
 
+import 'package:flutter/foundation.dart';
+
 import 'route_names.dart';
 import '../core/config/feature_flags.dart';
 import '../core/services/auth_service.dart';
+import '../features/settings/domain/theme_provider.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
@@ -20,12 +23,15 @@ import '../features/tracks/presentation/tracks_screen.dart';
 
 /// Builds the app's single [GoRouter], restoring [initialLocation] (the last
 /// route the user was on) and re-running [redirect] whenever [authService]'s
-/// sign-in state changes (`refreshListenable`), so a sign-out/sign-in event
-/// immediately bounces the user to/from the auth flow without a manual nav call.
-GoRouter buildRouter(String initialLocation, AuthService authService) {
+/// sign-in state or [themeProvider]'s local-mode flag changes
+/// (`refreshListenable`), so a sign-out/sign-in event, or entering/leaving
+/// local mode, immediately bounces the user to/from the auth flow without a
+/// manual nav call.
+GoRouter buildRouter(
+    String initialLocation, AuthService authService, ThemeProvider themeProvider) {
   return GoRouter(
     initialLocation: initialLocation,
-    refreshListenable: authService,
+    refreshListenable: Listenable.merge([authService, themeProvider]),
     // Auth + (optional) email-verification gate, evaluated on every navigation.
     redirect: (context, state) {
       // iOS passes the share-intent file:// URI to Flutter as a navigation
@@ -34,10 +40,17 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
       if (state.uri.scheme == 'file') return '/';
 
       final signedIn = authService.currentUser != null;
+      // A user who chose "Continue without an account" also passes the
+      // gate below — but only while genuinely signed out. The instant
+      // `signedIn` becomes true (e.g. mid-upgrade to cloud sync), this stops
+      // mattering and the normal signed-in checks below take over, even if
+      // the flag hasn't been cleared yet (see ThemeProvider.disableLocalMode
+      // and _initFirestore in main.dart).
+      final localMode = !signedIn && themeProvider.localModeEnabled;
       final onAuth = state.matchedLocation.startsWith('/auth');
       final onVerify = state.matchedLocation == '/auth/verify-email';
 
-      if (!signedIn && !onAuth) return '/auth/login';
+      if (!signedIn && !localMode && !onAuth) return '/auth/login';
 
       if (signedIn) {
         // Email verification gate — flip kEnforceEmailVerification in
@@ -116,7 +129,8 @@ GoRouter buildRouter(String initialLocation, AuthService authService) {
       GoRoute(
         path: '/settings/backup-restore',
         name: AppRoute.backupRestore,
-        builder: (context, state) => const BackupScreen(),
+        builder: (context, state) =>
+            BackupScreen(activeLogbookName: state.extra as String?),
       ),
       GoRoute(
         path: '/tracks',

@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/local_logbook_service.dart';
 import '../../../core/services/logbook_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
@@ -65,6 +66,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<Map<String, dynamic>> _logbooks = [];
   bool _loadingLogbooks = false;
   bool _guestsExpanded = false;
+  bool _localLogbooksExpanded = false;
+  List<(String id, String name)> _localLogbooks = [];
   Future<List<Map<String, dynamic>>>? _guestsFuture;
   late ValueNotifier<String?> _logbookIdNotifier;
   late final Future<PackageInfo> _packageInfoFuture;
@@ -91,6 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Refresh list whenever the active boat changes (e.g. async init completes)
     _logbookIdNotifier.addListener(_refreshLogbooks);
     _refreshLogbooks();
+    _refreshLocalLogbooks();
     _packageInfoFuture = PackageInfo.fromPlatform();
     Connectivity().checkConnectivity().then((results) {
       if (mounted) setState(() => _isOffline = results.every((r) => r == ConnectivityResult.none));
@@ -159,6 +163,247 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(content: Text(context.l10n.authErrorGeneric)),
       );
     }
+  }
+
+  // ── Local logbooks (local mode only) ────────────────────────────────────────
+
+  /// Reloads this device's list of local logbooks from the registry.
+  Future<void> _refreshLocalLogbooks() async {
+    final logbooks = await context.read<LocalLogbookService>().listLogbooks();
+    if (mounted) setState(() => _localLogbooks = logbooks);
+  }
+
+  /// Switches every repository/provider over to [newLogbookId]'s local
+  /// dataset — the local-mode analogue of [_reinitFirestore], but with no
+  /// network involved: nothing to fetch, nothing that can fail offline.
+  Future<void> _switchLocalLogbook(String newLogbookId) async {
+    final l10n = context.l10n;
+    final repo = context.read<HomeRepository>();
+    final emergencyRepo = context.read<EmergencyRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    showProgressSnackBar(context, l10n.settingsSwitchLogbookInProgress);
+    setState(() => _syncing = true);
+
+    await repo.switchLocalDataset(newLogbookId);
+    await emergencyRepo.switchLocalDataset(newLogbookId);
+    await _themeProvider.switchLocalLogbook(newLogbookId);
+
+    if (mounted) setState(() => _syncing = false);
+    messenger.hideCurrentSnackBar();
+    if (mounted) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookComplete)));
+    }
+    _refreshLocalLogbooks();
+  }
+
+  /// Owner-only-equivalent actions sheet for a local logbook: rename, and
+  /// (only when it isn't the active one) delete.
+  void _showLocalLogbookOptionsSheet(String id, String name) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    final isActive = id == _themeProvider.activeLocalLogbookId;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading:
+                  Icon(Icons.drive_file_rename_outline, color: cs.onSurface),
+              title: Text(l10n.settingsRename),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showRenameLocalLogbookDialog(id, name);
+              },
+            ),
+            if (!isActive)
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: cs.error),
+                title: Text(l10n.settingsDeleteLogbook,
+                    style: TextStyle(color: cs.error)),
+                onTap: () {
+                  Navigator.pop(sheetCtx);
+                  _showDeleteLocalLogbookDialog(id, name);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Prompts for a name, creates a new local logbook, and switches to it.
+  Future<void> _showNewLocalLogbookDialog() async {
+    final ctrl = TextEditingController();
+    final name = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final cl = ctx.l10n;
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: cs.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  cl.settingsNewLogbookTitle,
+                  style: Theme.of(context).textTheme.dialogTitle.copyWith(fontSize: 20, color: cs.onSurface),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: ctrl,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: cs.onSurface),
+                  decoration: InputDecoration(
+                    hintText: cl.settingsNewLogbookHint,
+                    hintStyle: TextStyle(color: cs.onSurfaceVariant),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: cs.outlineVariant),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: cs.primary, width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  onSubmitted: (v) {
+                    if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(cl.cancel),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () {
+                          final v = ctrl.text.trim();
+                          if (v.isNotEmpty) Navigator.pop(ctx, v);
+                        },
+                        child: Text(cl.add),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    // Deferred to after this frame — see _showNewLogbookDialog for why.
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
+    if (name == null || name.isEmpty || !mounted) return;
+
+    final id = await context.read<LocalLogbookService>().createLogbook(name);
+    if (!mounted) return;
+    await _switchLocalLogbook(id);
+  }
+
+  /// Prompts for a new name and renames the local logbook.
+  Future<void> _showRenameLocalLogbookDialog(String id, String currentName) async {
+    final ctrl = TextEditingController(text: currentName);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final cl = ctx.l10n;
+        final dcs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          backgroundColor: dcs.surface,
+          surfaceTintColor: Colors.transparent,
+          title: Text(cl.settingsRename, style: TextStyle(color: dcs.onSurface)),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+            style: TextStyle(color: dcs.onSurface),
+            decoration: InputDecoration(
+              hintText: cl.settingsNewLogbookHint,
+              hintStyle: TextStyle(color: dcs.onSurfaceVariant),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: dcs.outlineVariant),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: dcs.primary, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+            onSubmitted: (v) {
+              if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
+            },
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: Text(cl.cancel)),
+            FilledButton(
+              onPressed: () {
+                final v = ctrl.text.trim();
+                if (v.isNotEmpty) Navigator.pop(ctx, v);
+              },
+              child: Text(cl.saveChanges),
+            ),
+          ],
+        );
+      },
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
+    if (newName == null || newName == currentName || !mounted) return;
+
+    await context.read<LocalLogbookService>().renameLogbook(id, newName);
+    if (mounted) _refreshLocalLogbooks();
+  }
+
+  /// Confirms — warning that local logbooks have no cloud backup — then
+  /// permanently deletes the local logbook. Never called on the active
+  /// logbook (see [_showLocalLogbookOptionsSheet]).
+  Future<void> _showDeleteLocalLogbookDialog(String id, String name) async {
+    final l10n = context.l10n;
+    final confirmed = await showConfirmDialog(
+      context,
+      title: l10n.settingsDeleteLogbook,
+      body: l10n.settingsDeleteLocalLogbookConfirm(name),
+      confirmLabel: l10n.delete,
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    await context.read<LocalLogbookService>().deleteLogbook(id);
+    if (mounted) _refreshLocalLogbooks();
   }
 
   /// Switches every repository/provider over to [logbookId]'s Firestore
@@ -766,6 +1011,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final p = context.watch<ThemeProvider>();
     final cs = Theme.of(context).colorScheme;
     final l10n = context.l10n;
+    final isLocalMode = context.watch<AuthService>().currentUser == null &&
+        p.localModeEnabled;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -793,7 +1040,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // ── App settings ─────────────────────────────────────────────
             // ── Account ───────────────────────────────────────────────
-            _buildAccountSection(cs),
+            isLocalMode ? _buildCloudSyncCtaSection(cs) : _buildAccountSection(cs),
             const SizedBox(height: 16),
 
             // ── Display & Appearance ──────────────────────────────────
@@ -801,8 +1048,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 24),
 
             // ── Logbook / vessel settings ────────────────────────────────
+            _buildActiveLogbookHeader(isLocalMode, cs),
             // ── Logbooks ──────────────────────────────────────────────
-            _buildLogbooksSection(cs),
+            isLocalMode ? _buildLocalLogbooksSection(cs) : _buildLogbooksSection(cs),
             const SizedBox(height: 16),
 
             // ── Vessel Information ────────────────────────────────────
@@ -822,7 +1070,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
 
             // ── Backup & Restore ──────────────────────────────────────
-            _buildBackupSection(cs),
+            _buildBackupSection(isLocalMode, cs),
             const SizedBox(height: 32),
 
             // ── App version ───────────────────────────────────────────
@@ -855,6 +1103,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildVesselSection(ThemeProvider p, ColorScheme cs) {
     final l10n = context.l10n;
     return CardShell(
+      accentColor: cs.logbookScopedAccent,
       child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1042,6 +1291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = context.l10n;
     final config = p.vesselEquipment;
     return CardShell(
+      accentColor: cs.logbookScopedAccent,
       child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1242,6 +1492,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.settingsAutoLogPositionLabel,
+                        style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
+                      ),
+                      Switch(
+                        value: p.autoLogPositionEnabled,
+                        onChanged: p.setAutoLogPosition,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.settingsAutoLogPositionDesc,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1337,6 +1609,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// percentile/ceiling, and a raw-track debug overlay toggle.
   Widget _buildTrackFilterSection(ThemeProvider p, ColorScheme cs) {
     return CardShell(
+      accentColor: cs.logbookScopedAccent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1731,6 +2004,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       borderRadius: BorderRadius.circular(12),
       onTap: () => context.pushNamed(AppRoute.crewRoster),
       child: CardShell(
+        accentColor: cs.logbookScopedAccent,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
           child: Row(
@@ -1774,10 +2048,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // ── Backup & Restore ───────────────────────────────────────────────────
   /// Tappable shortcut card into [BackupScreen].
-  Widget _buildBackupSection(ColorScheme cs) {
+  /// Shown instead of [_buildAccountSection] for a local-mode user (no
+  /// Firebase account, all data on this device only). Starts the upgrade
+  /// path: registering/signing in from here pushes this device's local data
+  /// into the new cloud logbook automatically (see `_initFirestore` in
+  /// main.dart) and clears the local-mode flag once that completes.
+  Widget _buildCloudSyncCtaSection(ColorScheme cs) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => context.pushNamed(AppRoute.backupRestore),
+      onTap: () => context.pushNamed(AppRoute.register),
+      child: CardShell(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.settingsSetUpCloudSync.toUpperCase(),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                        color: cs.secondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.l10n.settingsSetUpCloudSyncSubtitle,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.cloud_upload_outlined, size: 20, color: cs.outlineVariant),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: cs.outlineVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackupSection(bool isLocalMode, ColorScheme cs) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => context.pushNamed(AppRoute.backupRestore,
+          extra: _activeLogbookName(isLocalMode)),
       child: CardShell(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
@@ -1813,6 +2132,212 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// The active logbook's display name — local logbook name in local mode,
+  /// cloud logbook name otherwise — or `''` if not yet known. Shared by
+  /// [_buildActiveLogbookHeader] and [_buildBackupSection], so Backup &
+  /// Restore can name the logbook it's about to export/replace too.
+  String _activeLogbookName(bool isLocalMode) {
+    if (isLocalMode) {
+      final activeId = _themeProvider.activeLocalLogbookId;
+      final match = _localLogbooks.where((lb) => lb.$1 == activeId);
+      return match.isEmpty ? '' : match.first.$2;
+    } else {
+      final activeId = context.watch<ValueNotifier<String?>>().value;
+      final match = _logbooks.where((b) => b['logbookId'] == activeId);
+      return match.isEmpty ? '' : (match.first['name'] as String? ?? '');
+    }
+  }
+
+  /// A small eyebrow header naming the active logbook, shown once above the
+  /// whole logbook-scoped group (Logbooks, Vessel, Equipment, Track Filter,
+  /// Crew Roster) — makes it visually explicit that everything below, down
+  /// to the Backup section, travels with *that* logbook and would change if
+  /// you switched to a different one.
+  Widget _buildActiveLogbookHeader(bool isLocalMode, ColorScheme cs) {
+    final l10n = context.l10n;
+    final name = _activeLogbookName(isLocalMode);
+    if (name.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+      child: Row(
+        children: [
+          Icon(Icons.anchor, size: 14, color: cs.logbookScopedAccent),
+          const SizedBox(width: 6),
+          Text(
+            l10n.settingsActiveLogbookHeader(name),
+            style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                color: cs.logbookScopedAccent,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Local logbooks (local mode only) ────────────────────────────────────────
+  /// Local-mode analogue of [_buildLogbooksSection]: lists every logbook on
+  /// this device (as a [_buildLocalBoatRow] each), with an add-logbook
+  /// button. No owner/guest role, no share code/QR — a local logbook is a
+  /// single-device concept.
+  Widget _buildLocalLogbooksSection(ColorScheme cs) {
+    final l10n = context.l10n;
+    final activeId = _themeProvider.activeLocalLogbookId;
+
+    return CardShell(
+      accentColor: cs.logbookScopedAccent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _syncing
+                ? null
+                : () => setState(() => _localLogbooksExpanded = !_localLogbooksExpanded),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.settingsLogbooksSection.toUpperCase(),
+                        style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                          color: cs.secondary,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.anchor, size: 20, color: cs.outlineVariant),
+                          const SizedBox(width: 4),
+                          if (_syncing)
+                            SizedBox(
+                              width: 16, height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: cs.secondary),
+                            )
+                          else
+                            AnimatedRotation(
+                              turns: _localLogbooksExpanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Icon(Icons.expand_more,
+                                  size: 20, color: cs.outlineVariant),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.settingsLocalLogbooksInfo,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _localLogbooksExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox(width: double.infinity),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: _syncing ? null : _showNewLocalLogbookDialog,
+                      style: TextButton.styleFrom(
+                        foregroundColor: cs.secondary,
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: Text(l10n.settingsNewLogbook),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (_localLogbooks.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Text(l10n.settingsNoLogbooks,
+                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                              color: cs.onSurfaceVariant)),
+                    )
+                  else
+                    ..._localLogbooks.map(
+                        (lb) => _buildLocalBoatRow(lb.$1, lb.$2, activeId, cs)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// One local logbook's row: active-indicator dot, name, and (trailing
+  /// icon) its rename/delete options sheet. Tapping a non-active row
+  /// switches to it — no confirmation needed, unlike the cloud version:
+  /// there's no network round-trip to worry about, and switching back is
+  /// just as instant.
+  Widget _buildLocalBoatRow(
+      String id, String name, String? activeId, ColorScheme cs) {
+    final isActive = id == activeId;
+    final canSwitch = !isActive && !_syncing;
+
+    return InkWell(
+      onTap: canSwitch ? () => _switchLocalLogbook(id) : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+        child: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isActive
+                    ? cs.primary
+                    : cs.outlineVariant.withValues(alpha: 0.4),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                name,
+                style: Theme.of(context).textTheme.fieldValueCompact.copyWith(
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: cs.onSurface),
+              ),
+            ),
+            if (isActive) Icon(Icons.check, size: 18, color: cs.primary),
+            IconButton(
+              icon: Icon(Icons.more_vert, size: 18, color: cs.outlineVariant),
+              onPressed: _syncing
+                  ? null
+                  : () => _showLocalLogbookOptionsSheet(id, name),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ── Logbooks ─────────────────────────────────────────────────────────
   /// Lists every logbook this user can access (as a [_buildBoatRow] each),
   /// with an add-logbook button, and — only when the active logbook is
@@ -1831,6 +2356,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isActiveOwner = activeMeta['role'] == 'owner';
 
     return CardShell(
+      accentColor: cs.logbookScopedAccent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

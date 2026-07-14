@@ -363,6 +363,8 @@ class FirestoreService {
         'slot12State': t.slot12State,
         'temperature': t.temperature,
         'pressure': t.pressure,
+        'latitude': t.latitude,
+        'longitude': t.longitude,
       };
 
   static Map<String, dynamic> _crewToMap(CrewMember c) => {
@@ -422,6 +424,8 @@ class FirestoreService {
         slot12State: d['slot12State'] as String?,
         temperature: (d['temperature'] as num?)?.toDouble(),
         pressure: (d['pressure'] as num?)?.toDouble(),
+        latitude: (d['latitude'] as num?)?.toDouble(),
+        longitude: (d['longitude'] as num?)?.toDouble(),
       );
 
   static Map<String, dynamic> _amendmentToMap(TimelineAmendment a) => {

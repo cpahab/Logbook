@@ -24,10 +24,35 @@ class EmergencyRepository extends ChangeNotifier {
 
   // ── Init ───────────────────────────────────────────────────────────────────
 
-  Future<void> init() async {
-    _box     = await Hive.openBox<EmergencyContact>('emergency_contacts');
-    _metaBox = await Hive.openBox<int>('emergency_contacts_meta');
+  /// [datasetSuffix] is null for the default dataset (today's exact box
+  /// names) or a local logbook id for a non-default local logbook — see
+  /// [HomeRepository.init] for the identical convention.
+  Future<void> init({String? datasetSuffix}) async {
+    final s = datasetSuffix == null ? '' : '_$datasetSuffix';
+    _box     = await Hive.openBox<EmergencyContact>('emergency_contacts$s');
+    _metaBox = await Hive.openBox<int>('emergency_contacts_meta$s');
     notifyListeners();
+  }
+
+  /// Switches to a different local logbook's contacts dataset. Opens the
+  /// new boxes and swaps them in *before* closing the old ones, so
+  /// [contacts] — which reads straight from the Hive box on every call, not
+  /// from an in-memory cache — can never observe a closed box, even if a
+  /// widget rebuild lands mid-switch. See [HomeRepository.switchLocalDataset].
+  Future<void> switchLocalDataset(String newLogbookId) async {
+    await _contactsSub?.cancel();
+    _contactsSub = null;
+
+    final oldBox = _box;
+    final oldMetaBox = _metaBox;
+
+    final s = newLogbookId.isEmpty ? '' : '_$newLogbookId';
+    _box     = await Hive.openBox<EmergencyContact>('emergency_contacts$s');
+    _metaBox = await Hive.openBox<int>('emergency_contacts_meta$s');
+    notifyListeners();
+
+    await oldBox.close();
+    await oldMetaBox.close();
   }
 
   // ── Local modification timestamp ───────────────────────────────────────────

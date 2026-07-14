@@ -63,6 +63,8 @@ void main() {
         slot1State: 'Reefed',
         slot11State: 'Off',
         temperature: 19.0,
+        latitude: 46.2044,
+        longitude: 6.1432,
         amendments: [
           TimelineAmendment(
             amendedAt: DateTime.utc(2026, 7, 11, 11),

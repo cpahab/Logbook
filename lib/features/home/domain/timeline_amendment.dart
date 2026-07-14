@@ -64,6 +64,10 @@ class TimelineAmendment extends HiveObject {
   @HiveField(25) double? temperature;
   @HiveField(26) double? pressure;
 
+  // Deliberately does NOT mirror TimelineEntry.latitude/longitude: like
+  // createdAt, position is captured once at entry creation and never
+  // user-edited, so there is nothing for an amendment to snapshot.
+
   TimelineAmendment({
     required this.amendedAt,
     this.reason,

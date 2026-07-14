@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/home_repository.dart';
@@ -25,6 +26,8 @@ import '../widgets/add_timeline_entry_dialog.dart';
 import '../widgets/add_crew_member_dialog.dart';
 import '../widgets/crew_picker_sheet.dart';
 import '../widgets/keel_icon.dart';
+import '../../../core/services/gps_consent_service.dart';
+import '../../../core/utils/coordinate_format.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/nav_bar.dart';
 import '../utils/compute_daily_stats.dart';
@@ -760,6 +763,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       DayEntry entry, DailyTrack? track, DailyStats? stats, ColorScheme cs) {
     final tl = cs;
     final hasTrack = track != null && track.points.isNotEmpty;
+    final positioned = entry.timeline
+        .where((t) => t.latitude != null && t.longitude != null)
+        .toList();
     final fromH = entry.fromHarbor?.isNotEmpty ?? false;
     final toH = entry.toHarbor?.isNotEmpty ?? false;
     final routeLabel = (fromH || toH)
@@ -910,25 +916,30 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                             if (stats != null) _buildStatsGrid(stats, cs),
                           ],
                         )
-                      : InkWell(
-                          onTap: _importGpx,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 20, horizontal: 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.map_outlined,
-                                    color: cs.onSurfaceVariant),
-                                const SizedBox(width: 8),
-                                Text(
-                                  context.l10n.dayAddGpxTrack,
-                                  style: Theme.of(context).textTheme.fieldHintCompact.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+                      : (positioned.isNotEmpty
+                          ? SizedBox(
+                              height: 220,
+                              child: _buildPositionsOnlyMap(entry, positioned),
+                            )
+                          : InkWell(
+                              onTap: _importGpx,
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 20, horizontal: 16),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.map_outlined,
+                                        color: cs.onSurfaceVariant),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      context.l10n.dayAddGpxTrack,
+                                      style: Theme.of(context).textTheme.fieldHintCompact.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
+                              ),
+                            )),
                 ),
               ],
             ),
@@ -1249,6 +1260,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 t.weather != null ||
                 t.temperature != null ||
                 t.pressure != null ||
+                (t.latitude != null && t.longitude != null) ||
                 VesselEquipmentConfig.slotKeys.any((k) => _slotValue(t, k) != null)) ...[
               const SizedBox(height: 8),
               Text(
@@ -1264,6 +1276,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     '${context.l10n.dataTemperature}: ${t.temperature!.toStringAsFixed(1)}°C',
                   if (t.pressure != null)
                     '${context.l10n.dataPressure}: ${t.pressure!.toStringAsFixed(0)} mBar',
+                  if (t.latitude != null && t.longitude != null)
+                    '${context.l10n.dataPosition}: ${formatDDM(t.latitude!, t.longitude!)}',
                   ..._equipmentStatusLines(
                       t, context.read<ThemeProvider>().vesselEquipment.activeSlots),
                 ].join(' · '),
@@ -2458,6 +2472,184 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
+  /// Simplified inline map for a day with no imported GPX track but ≥1
+  /// timeline entry carrying its own auto-captured GPS fix
+  /// ([TimelineEntry.latitude]/[longitude]). Shows one pin per such entry —
+  /// no polyline, no stop halos, no uncertainty band, no fullscreen (there's
+  /// no route to expand into); this is a lightweight "you were roughly
+  /// here" view, not a route. Zoom/center and satellite-toggle controls
+  /// match the track map's.
+  Widget _buildPositionsOnlyMap(DayEntry entry, List<TimelineEntry> positioned) {
+    final cs = Theme.of(context).colorScheme;
+    final points =
+        positioned.map((t) => LatLng(t.latitude!, t.longitude!)).toList();
+
+    final markers = <Marker>[
+      for (final t in positioned)
+        Marker(
+          point: LatLng(t.latitude!, t.longitude!),
+          width: 20,
+          height: 20,
+          alignment: Alignment.center,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _dropMarker(
+              LatLng(t.latitude!, t.longitude!),
+              _buildEntryTooltip(t, context.l10n,
+                  context.read<ThemeProvider>().vesselEquipment.activeSlots),
+            ),
+            child: Center(
+              child: Container(
+                width: 11,
+                height: 11,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surface,
+                  border: Border.all(color: cs.primary, width: 2.5),
+                ),
+              ),
+            ),
+          ),
+        ),
+    ];
+
+    if (_droppedMarkerLatLng != null) {
+      markers.add(Marker(
+        point: _droppedMarkerLatLng!,
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            _markerDismissTimer?.cancel();
+            setState(() {
+              _droppedMarkerLatLng = null;
+              _droppedMarkerLabel = null;
+            });
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 11,
+                height: 11,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surface,
+                  border: Border.all(color: cs.primary, width: 2.5),
+                ),
+              ),
+              if (_droppedMarkerLabel != null)
+                Positioned(
+                  left: 16,
+                  top: 3,
+                  child: IgnorePointer(child: _trackLabel(_droppedMarkerLabel!, cs)),
+                ),
+            ],
+          ),
+        ),
+      ));
+    }
+
+    return Stack(
+      children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            initialCenter: points.length == 1 ? points.first : const LatLng(0, 0),
+            initialZoom: 13,
+            initialCameraFit: points.length >= 2
+                ? CameraFit.bounds(
+                    bounds: LatLngBounds.fromPoints(points),
+                    padding: const EdgeInsets.all(40),
+                  )
+                : null,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
+              userAgentPackageName: 'com.logbook.app',
+              keepBuffer: 4,
+              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
+              errorTileCallback: kDebugMode
+                  ? (tile, error, stackTrace) =>
+                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
+                  : null,
+              tileBuilder: (context, tileWidget, tile) => tile.loadError
+                  ? Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: const Icon(Icons.map_outlined, size: 20),
+                    )
+                  : tileWidget,
+            ),
+            MarkerLayer(markers: markers),
+            RichAttributionWidget(
+              attributions: [
+                if (_satelliteView)
+                  TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
+                    final uri = Uri.parse(kSatelliteAttributionUrl);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  })
+                else
+                  TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
+                    final uri = Uri.parse(kBaseAttributionUrl);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }),
+              ],
+            ),
+          ],
+        ),
+        // Map controls — zoom + center on macOS, satellite always. No
+        // fullscreen button: there's no route to expand into here.
+        Positioned(
+          right: 10,
+          bottom: 10,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (defaultTargetPlatform == TargetPlatform.macOS) ...[
+                _smallMapBtn(Icons.add, () => _mapController.move(
+                  _mapController.camera.center,
+                  _mapController.camera.zoom + 1,
+                )),
+                const SizedBox(height: 6),
+                _smallMapBtn(Icons.remove, () => _mapController.move(
+                  _mapController.camera.center,
+                  _mapController.camera.zoom - 1,
+                )),
+                const SizedBox(height: 6),
+                _smallMapBtn(Icons.explore, () {
+                  if (points.length >= 2) {
+                    _mapController.fitCamera(CameraFit.bounds(
+                      bounds: LatLngBounds.fromPoints(points),
+                      padding: const EdgeInsets.all(32),
+                    ));
+                  } else if (points.isNotEmpty) {
+                    _mapController.move(points.first, 13);
+                  }
+                }),
+                const SizedBox(height: 6),
+              ],
+              FloatingActionButton.small(
+                heroTag: 'detail_satellite_button',
+                onPressed: () =>
+                    setState(() => _satelliteView = !_satelliteView),
+                tooltip: _satelliteView
+                    ? context.l10n.tracksMapView
+                    : context.l10n.tracksSatelliteView,
+                child: Icon(_satelliteView
+                    ? Icons.map_outlined
+                    : Icons.satellite_alt),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   // ── Edit dialogs ──────────────────────────────────────────────────
   /// Opens the diary/reflection editor dialog and saves the result.
   void _editNotes(DayEntry entry) async {
@@ -2853,6 +3045,52 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
     if (!mounted || result == null) return;
     repo.addTimelineEntry(day, result.entry);
+    unawaited(_captureEntryPosition(result.entry, day));
+  }
+
+  /// Fire-and-forget: if the device-local "auto-log position" setting is on,
+  /// requests a one-time high-accuracy GPS fix (same 15s timeout as the
+  /// MAYDAY screen) for the just-created entry [t], then patches it into
+  /// whichever timeline currently holds it. Never surfaces an error — this
+  /// is a best-effort background enhancement, not a required part of saving
+  /// the entry. Editing an existing entry never calls this.
+  Future<void> _captureEntryPosition(TimelineEntry t, DateTime day) async {
+    if (!context.read<ThemeProvider>().autoLogPositionEnabled) return;
+    try {
+      await GpsConsentService.requestIfNeeded(context);
+      if (!mounted) return;
+
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
+      if (!mounted) return;
+
+      final repo = context.read<HomeRepository>();
+      // Re-fetch rather than trust a captured reference: the debounced
+      // Firestore sync may already have replaced the object graph by the
+      // time this GPS fix resolves — see _deleteTimelineEntry.
+      final current = repo.getEntry(day);
+      if (current == null) return;
+      final index = _indexOfTimelineEntry(current.timeline, t);
+      if (index == -1) return; // entry was deleted while we were waiting
+
+      setState(() {
+        current.timeline[index].latitude = pos.latitude;
+        current.timeline[index].longitude = pos.longitude;
+        repo.saveEntry(current, changedFields: {'timeline'});
+      });
+    } catch (_) {
+      // Silently swallow: permission errors, timeouts, location-services-off,
+      // etc. must never surface for a best-effort background feature.
+    }
   }
 
   /// Finds [t]'s position within [timeline] by reference (the common,

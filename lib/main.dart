@@ -19,6 +19,7 @@ import 'features/home/domain/timeline_amendment.dart';
 import 'features/emergency/domain/emergency_contact.dart';
 import 'features/emergency/data/emergency_repository.dart';
 import 'features/settings/domain/theme_provider.dart';
+import 'core/services/local_logbook_service.dart';
 import 'core/services/logbook_service.dart';
 import 'core/services/firestore_service.dart';
 import 'core/services/storage_service.dart';
@@ -88,6 +89,10 @@ Future<void> _initFirestore(
     themeProvider.setLastKnownUid(user.uid);
     themeProvider.setLastKnownProjectId(currentProjectId);
     logbookIdNotifier.value = logbookId;
+    // A local-mode user who just registered/signed in has fully upgraded
+    // to cloud sync at this point — their local data was already pushed
+    // above via initialSync.
+    if (themeProvider.localModeEnabled) themeProvider.disableLocalMode();
   } catch (e, st) {
     // ignore: avoid_print
     print('[initFirestore] failed: $e\n$st');
@@ -128,15 +133,43 @@ void main() async {
   Hive.registerAdapter(CrewMemberAdapter());
   Hive.registerAdapter(EmergencyContactAdapter());
 
-  // --- Repositories and providers: local-only until Firebase attaches below ---
-  final repo = HomeRepository();
-  await repo.init();
-
-  final emergencyRepo = EmergencyRepository();
-  await emergencyRepo.init();
-
+  // --- Providers: local-only until Firebase attaches below. ThemeProvider
+  // goes first so its localModeEnabled/activeLocalLogbookId are known before
+  // deciding what (if any) local-logbook box suffix the other two repos
+  // should open — see local_logbook_service.dart for the empty-string
+  // sentinel convention. ---
   final themeProvider = ThemeProvider();
   await themeProvider.init();
+
+  // A device with localModeEnabled=true but no activeLocalLogbookId predates
+  // local multi-logbook support (or is mid-first-run, handled by
+  // login_screen.dart's _continueOffline instead) — adopt today's base boxes
+  // as the sentinel '' logbook. No data movement: '' already means "use the
+  // unsuffixed boxes."
+  if (themeProvider.localModeEnabled && themeProvider.activeLocalLogbookId == null) {
+    final localLogbookService = LocalLogbookService();
+    final logbooks = await localLogbookService.listLogbooks();
+    final String id;
+    if (logbooks.isEmpty) {
+      await localLogbookService.createLogbookWithId('', 'My Logbook');
+      id = '';
+    } else {
+      id = logbooks.first.$1;
+    }
+    await themeProvider.adoptActiveLocalLogbookId(id);
+  }
+
+  final localSuffix = themeProvider.localModeEnabled
+      ? (themeProvider.activeLocalLogbookId!.isEmpty
+          ? null
+          : themeProvider.activeLocalLogbookId)
+      : null;
+
+  final repo = HomeRepository();
+  await repo.init(datasetSuffix: localSuffix);
+
+  final emergencyRepo = EmergencyRepository();
+  await emergencyRepo.init(datasetSuffix: localSuffix);
 
   final authService = AuthService();
 
@@ -187,7 +220,7 @@ void main() async {
   }
 
   // --- Router and root widget ---
-  final router = buildRouter(themeProvider.lastRouteToday, authService);
+  final router = buildRouter(themeProvider.lastRouteToday, authService, themeProvider);
 
   // Navigate to the import screen from anywhere in the app — using the router
   // directly avoids the issue of calling context.go from a non-top-level screen.
@@ -216,6 +249,7 @@ void main() async {
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider.value(value: logbookIdNotifier),
         Provider.value(value: gpxShareService),
+        Provider(create: (_) => LocalLogbookService()),
       ],
       child: Logbook(router: router),
     ),

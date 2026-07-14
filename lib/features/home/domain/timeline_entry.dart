@@ -86,6 +86,14 @@ class TimelineEntry extends HiveObject {
   /// Barometric pressure in millibar (mBar, numerically identical to hPa).
   @HiveField(34) double? pressure;
 
+  /// GPS fix captured once when this entry is first created (if the
+  /// device-local "auto-log position" setting was on at that moment). Never
+  /// re-captured or edited afterward — same immutability convention as
+  /// [createdAt]. Null if the setting was off, permission was denied, or the
+  /// fix failed/timed out.
+  @HiveField(35) double? latitude;
+  @HiveField(36) double? longitude;
+
   TimelineEntry({
     required this.time,
     this.course,
@@ -112,5 +120,7 @@ class TimelineEntry extends HiveObject {
     this.slot12State,
     this.temperature,
     this.pressure,
+    this.latitude,
+    this.longitude,
   }) : amendments = amendments ?? [];
 }

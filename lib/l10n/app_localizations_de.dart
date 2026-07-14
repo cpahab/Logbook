@@ -228,6 +228,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dataPressure => 'Luftdruck';
 
   @override
+  String get dataPosition => 'Position';
+
+  @override
   String get entryDialogTitleNew => 'Neuer Eintrag';
 
   @override
@@ -451,10 +454,11 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get settingsAppearanceSection => 'Darstellung';
+  String get settingsAppearanceSection => 'Darstellung & Standort';
 
   @override
-  String get settingsAppearanceInfo => 'Design und Sprache der App anpassen.';
+  String get settingsAppearanceInfo =>
+      'Design und Sprache der App anpassen, sowie ob neue Einträge deine GPS-Position erfassen.';
 
   @override
   String get settingsThemeLabel => 'App-Design';
@@ -476,6 +480,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsLanguageEn => 'English';
+
+  @override
+  String get settingsAutoLogPositionLabel =>
+      'Position bei neuen Einträgen erfassen';
+
+  @override
+  String get settingsAutoLogPositionDesc =>
+      'Solange dies aktiviert ist, wird die GPS-Position dieses Geräts automatisch für jeden neuen Zeitleisten-Eintrag erfasst. Die Position jedes Eintrags wird einmalig bei dessen Erstellung erfasst und danach nie erneut erfasst oder geändert. Nicht im PDF-Export enthalten.';
 
   @override
   String get settingsTrackFilterSection => 'Trackfilter';
@@ -572,6 +584,13 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get settingsBackupSubtitle =>
       'Daten dieses Logbuchs exportieren oder wiederherstellen';
+
+  @override
+  String get settingsSetUpCloudSync => 'Cloud-Synchronisierung einrichten';
+
+  @override
+  String get settingsSetUpCloudSyncSubtitle =>
+      'Anmelden, um geräteübergreifend zu synchronisieren und dein Logbuch in der Cloud zu sichern';
 
   @override
   String get settingsNoEntries => 'Noch keine Einträge';
@@ -868,6 +887,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get authRegisterLink => 'Registrieren';
 
   @override
+  String get authContinueOffline => 'Ohne Konto fortfahren';
+
+  @override
   String get authForgotPasswordLink => 'Passwort vergessen?';
 
   @override
@@ -1015,8 +1037,22 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLogbooksSection => 'Logbücher';
 
   @override
+  String settingsActiveLogbookHeader(String name) {
+    return 'Aktives Logbuch: $name';
+  }
+
+  @override
   String get settingsLogbooksInfo =>
       'Logbücher verwalten, wechseln oder mit anderen teilen.';
+
+  @override
+  String get settingsLocalLogbooksInfo =>
+      'Logbücher auf diesem Gerät verwalten oder wechseln. Kein Cloud-Backup — zum Sichern die Exportfunktion nutzen.';
+
+  @override
+  String settingsDeleteLocalLogbookConfirm(String name) {
+    return '\"$name\" löschen? Es gibt kein Cloud-Backup — dies kann nicht rückgängig gemacht werden, ausser du hast es bereits exportiert.';
+  }
 
   @override
   String get settingsMyLogbooks => 'Meine Logbücher';
