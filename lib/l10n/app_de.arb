@@ -522,6 +522,7 @@
   "pdfCourseCol": "Kurs",
   "pdfWindCol": "Wind",
   "pdfSeaCol": "See",
+  "pdfPositionCol": "Position",
   "pdfRemarksCol": "Bemerkungen",
   "pdfTrackMap": "KURS & TRACK",
   "pdfPassageTo": "Passage nach {destination}",

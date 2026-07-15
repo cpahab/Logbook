@@ -13,6 +13,7 @@ import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/domain/day_entry.dart';
+import '../../home/domain/timeline_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
 import '../../home/domain/track_point.dart';
 import '../../home/utils/trim_track.dart'
@@ -227,31 +228,59 @@ class _TracksScreenState extends State<TracksScreen> {
     final filterSettings = provider.filterSettings;
     final showRawTrack   = provider.showRawTrack;
 
-    final trackedDays = repo.dailyTracks.keys.toList()..sort();
-    final totalTracks =
-        trackedDays.where((d) => repo.dailyTracks[d]!.points.isNotEmpty).length;
+    bool hasPositionedEntry(DayEntry e) =>
+        e.timeline.any((t) => t.latitude != null && t.longitude != null);
+
+    final allDays = <DateTime>{
+      ...repo.dailyTracks.keys,
+      ...repo.entries.where(hasPositionedEntry).map((e) => e.date),
+    }.toList()
+      ..sort();
 
     final List<_DayTrackData> trackData = [];
     int trackIdx = 0;
-    for (final day in trackedDays) {
-      final track = repo.dailyTracks[day]!;
-      if (track.points.isEmpty) continue;
+    for (final day in allDays) {
+      final track = repo.dailyTracks[day];
+      final dayEntry = repo.getEntry(day);
 
-      final cached = TrackComputationCache.get(
-        day: day,
-        sourcePoints: track.points,
-        settings: filterSettings,
-      );
-      final display = cached.display;
+      if (track != null && track.points.isNotEmpty) {
+        final cached = TrackComputationCache.get(
+          day: day,
+          sourcePoints: track.points,
+          settings: filterSettings,
+        );
+        final display = cached.display;
 
+        trackData.add(_DayTrackData(
+          day: day,
+          display: display,
+          rawPoints: display.rawMovingPoints,
+          positionsOnly: null,
+          color: _colorForIndex(trackIdx, 0),
+          entry: dayEntry,
+          stats: cached.stats,
+          startTime: display.firstMovingPoint?.time.toLocal(),
+        ));
+        trackIdx++;
+        continue;
+      }
+
+      final positioned = dayEntry?.timeline
+              .where((t) => t.latitude != null && t.longitude != null)
+              .toList() ??
+          const <TimelineEntry>[];
+      if (positioned.isEmpty) continue;
+
+      final sorted = [...positioned]..sort((a, b) => a.time.compareTo(b.time));
       trackData.add(_DayTrackData(
         day: day,
-        display: display,
-        rawPoints: display.rawMovingPoints,
-        color: _colorForIndex(trackIdx, totalTracks),
-        entry: repo.getEntry(day),
-        stats: cached.stats,
-        startTime: display.firstMovingPoint?.time.toLocal(),
+        display: null,
+        rawPoints: null,
+        positionsOnly: sorted.map((t) => LatLng(t.latitude!, t.longitude!)).toList(),
+        color: _colorForIndex(trackIdx, 0),
+        entry: dayEntry,
+        stats: null,
+        startTime: sorted.first.time.toLocal(),
       ));
       trackIdx++;
     }
@@ -271,23 +300,32 @@ class _TracksScreenState extends State<TracksScreen> {
       final color = isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65);
       final width = isSelected ? 5.0 : 3.0;
       final segs = <Polyline>[];
-      for (final seg in e.value.display.segments) {
-        if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
-          segs.add(Polyline(
-            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-            color: color,
-            strokeWidth: width,
-          ));
-        } else if ((seg.kind == SegmentKind.stopEntry ||
-                    seg.kind == SegmentKind.stopExit) &&
-                   seg.points.length >= 2) {
-          segs.add(Polyline(
-            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-            color: e.value.color.withValues(alpha: isSelected ? 0.40 : 0.26),
-            strokeWidth: width * 0.6,
-          ));
+      final display = e.value.display;
+      if (display != null) {
+        for (final seg in display.segments) {
+          if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
+            segs.add(Polyline(
+              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+              color: color,
+              strokeWidth: width,
+            ));
+          } else if ((seg.kind == SegmentKind.stopEntry ||
+                      seg.kind == SegmentKind.stopExit) &&
+                     seg.points.length >= 2) {
+            segs.add(Polyline(
+              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+              color: e.value.color.withValues(alpha: isSelected ? 0.40 : 0.26),
+              strokeWidth: width * 0.6,
+            ));
+          }
+          // teleportBreak: no polyline — gap is the visual signal
         }
-        // teleportBreak: no polyline — gap is the visual signal
+      } else if (e.value.positionsOnly != null && e.value.positionsOnly!.length >= 2) {
+        segs.add(Polyline(
+          points: e.value.positionsOnly!,
+          color: color,
+          strokeWidth: width,
+        ));
       }
       return segs;
     }).toList();
@@ -299,10 +337,13 @@ class _TracksScreenState extends State<TracksScreen> {
       polylines.addAll(polylinesByDay[_selectedIndex!]);
     }
 
-    // Departure arrows at the start of each displayed track
+    // Departure arrows at the start of each displayed track (or connected
+    // positions-only day).
     final arrowMarkers = <Marker>[];
     for (final d in displayed) {
-      final movPts = d.display.movingPoints().map((p) => LatLng(p.lat, p.lon)).toList();
+      final movPts = d.display != null
+          ? d.display!.movingPoints().map((p) => LatLng(p.lat, p.lon)).toList()
+          : (d.positionsOnly ?? const <LatLng>[]);
       if (movPts.length < 2) continue;
       final bearing = _departureBearing(movPts);
       arrowMarkers.add(Marker(
@@ -327,9 +368,12 @@ class _TracksScreenState extends State<TracksScreen> {
       ));
     }
 
+    // Stop halos come from the GPS-trimming pipeline's stop detection, which
+    // doesn't run for positions-only days — skip those entirely.
     final anchorCircles = <CircleMarker>[];
     for (final d in displayed) {
-      for (final stop in d.display.stops) {
+      if (d.display == null) continue;
+      for (final stop in d.display!.stops) {
         anchorCircles.add(CircleMarker(
           point: LatLng(stop.lat, stop.lon),
           radius: stop.r95M,
@@ -449,22 +493,24 @@ class _TracksScreenState extends State<TracksScreen> {
     ColorScheme cs,
   ) {
     final initialBounds = _boundsFor(
-      displayed.expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon))).toList(),
+      displayed.expand((d) => d.boundsPoints).toList(),
     );
     final uncertaintyPolygons = [
       for (final d in displayed)
-        for (final ring in d.display.uncertaintyBands())
-          Polygon(
-            points: ring.map((c) => LatLng(c.$1, c.$2)).toList(),
-            color: d.color.withValues(alpha: 0.10),
-            borderStrokeWidth: 0,
-          ),
+        if (d.display != null)
+          for (final ring in d.display!.uncertaintyBands())
+            Polygon(
+              points: ring.map((c) => LatLng(c.$1, c.$2)).toList(),
+              color: d.color.withValues(alpha: 0.10),
+              borderStrokeWidth: 0,
+            ),
     ];
     return Stack(
       children: [
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
+            maxZoom: kMaxMapZoom,
             initialCameraFit: initialBounds != null
                 ? CameraFit.bounds(bounds: initialBounds, padding: const EdgeInsets.all(24))
                 : null,
@@ -511,13 +557,14 @@ class _TracksScreenState extends State<TracksScreen> {
               return PolylineLayer(
                 polylines: [
                   for (final d in displayed)
-                    for (final seg in splitTrackSegments(d.rawPoints))
-                      if (seg.length >= 2)
-                        Polyline(
-                          points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
-                          strokeWidth: 1.0,
-                          color: d.color.withValues(alpha: 0.20),
-                        ),
+                    if (d.rawPoints != null)
+                      for (final seg in splitTrackSegments(d.rawPoints!))
+                        if (seg.length >= 2)
+                          Polyline(
+                            points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+                            strokeWidth: 1.0,
+                            color: d.color.withValues(alpha: 0.20),
+                          ),
                 ],
                 cullingMargin: null,
                 simplificationTolerance: 0,
@@ -837,7 +884,7 @@ class _TracksScreenState extends State<TracksScreen> {
             child: GestureDetector(
               onTap: () {
                 setState(() => _selectedIndex = index);
-                _focusTrack(d.display.allPoints().map((p) => LatLng(p.lat, p.lon)).toList());
+                _focusTrack(d.boundsPoints);
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 180),
@@ -995,11 +1042,16 @@ class _TracksScreenState extends State<TracksScreen> {
 
 /// One day's processed track data, cached per-render for the tracks screen:
 /// its computed [DisplayModel]/[DailyStats], assigned [color], and the
-/// [DayEntry] it correlates to (if any).
+/// [DayEntry] it correlates to (if any). A day with no imported GPX track
+/// but 2+ timeline entries carrying a logged position ([TimelineEntry]'s
+/// `latitude`/`longitude`) instead has [display]/[rawPoints]/[stats] null
+/// and [positionsOnly] set — those positions never go through the
+/// GPS-trimming pipeline, so there's no [DisplayModel] to build for them.
 class _DayTrackData {
   final DateTime day;
-  final DisplayModel display;
-  final List<TrackPoint> rawPoints;
+  final DisplayModel? display;
+  final List<TrackPoint>? rawPoints;
+  final List<LatLng>? positionsOnly;
   final Color color;
   final DayEntry? entry;
   final DailyStats? stats;
@@ -1009,11 +1061,19 @@ class _DayTrackData {
     required this.day,
     required this.display,
     required this.rawPoints,
+    required this.positionsOnly,
     required this.color,
     required this.entry,
     required this.stats,
     required this.startTime,
   });
+
+  /// Every renderable coordinate for this day (real track or logged
+  /// positions) — for bounds-fitting/tap-to-focus, not per-segment
+  /// polyline geometry.
+  List<LatLng> get boundsPoints => display != null
+      ? display!.allPoints().map((p) => LatLng(p.lat, p.lon)).toList()
+      : (positionsOnly ?? const []);
 }
 
 // ── Full-screen overview map ───────────────────────────────────────────────────
@@ -1120,22 +1180,31 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
       final color = isSelected ? e.value.color : e.value.color.withValues(alpha: 0.65);
       final width = isSelected ? 5.0 : 3.0;
       final segs = <Polyline>[];
-      for (final seg in e.value.display.segments) {
-        if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
-          segs.add(Polyline(
-            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-            color: color,
-            strokeWidth: width,
-          ));
-        } else if ((seg.kind == SegmentKind.stopEntry ||
-                    seg.kind == SegmentKind.stopExit) &&
-                   seg.points.length >= 2) {
-          segs.add(Polyline(
-            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-            color: e.value.color.withValues(alpha: isSelected ? 0.40 : 0.26),
-            strokeWidth: width * 0.6,
-          ));
+      final display = e.value.display;
+      if (display != null) {
+        for (final seg in display.segments) {
+          if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
+            segs.add(Polyline(
+              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+              color: color,
+              strokeWidth: width,
+            ));
+          } else if ((seg.kind == SegmentKind.stopEntry ||
+                      seg.kind == SegmentKind.stopExit) &&
+                     seg.points.length >= 2) {
+            segs.add(Polyline(
+              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+              color: e.value.color.withValues(alpha: isSelected ? 0.40 : 0.26),
+              strokeWidth: width * 0.6,
+            ));
+          }
         }
+      } else if (e.value.positionsOnly != null && e.value.positionsOnly!.length >= 2) {
+        segs.add(Polyline(
+          points: e.value.positionsOnly!,
+          color: color,
+          strokeWidth: width,
+        ));
       }
       return segs;
     }).toList();
@@ -1149,7 +1218,9 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
 
     final arrowMarkers = <Marker>[];
     for (final d in displayed) {
-      final movPts = d.display.movingPoints().map((p) => LatLng(p.lat, p.lon)).toList();
+      final movPts = d.display != null
+          ? d.display!.movingPoints().map((p) => LatLng(p.lat, p.lon)).toList()
+          : (d.positionsOnly ?? const <LatLng>[]);
       if (movPts.length < 2) continue;
       final bearing = _departureBearing(movPts);
       arrowMarkers.add(Marker(
@@ -1172,7 +1243,8 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
 
     final anchorCircles = <CircleMarker>[];
     for (final d in displayed) {
-      for (final stop in d.display.stops) {
+      if (d.display == null) continue;
+      for (final stop in d.display!.stops) {
         anchorCircles.add(CircleMarker(point: LatLng(stop.lat, stop.lon), radius: stop.r95M, useRadiusInMeter: true, color: d.color.withValues(alpha: 0.07)));
         anchorCircles.add(CircleMarker(point: LatLng(stop.lat, stop.lon), radius: stop.cep50M, useRadiusInMeter: true,
             color: d.color.withValues(alpha: 0.22), borderStrokeWidth: 1.5, borderColor: d.color.withValues(alpha: 0.50)));
@@ -1181,17 +1253,16 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
 
     final fsUncertaintyPolygons = [
       for (final d in displayed)
-        for (final ring in d.display.uncertaintyBands())
-          Polygon(
-            points: ring.map((c) => LatLng(c.$1, c.$2)).toList(),
-            color: d.color.withValues(alpha: 0.10),
-            borderStrokeWidth: 0,
-          ),
+        if (d.display != null)
+          for (final ring in d.display!.uncertaintyBands())
+            Polygon(
+              points: ring.map((c) => LatLng(c.$1, c.$2)).toList(),
+              color: d.color.withValues(alpha: 0.10),
+              borderStrokeWidth: 0,
+            ),
     ];
 
-    final allPts = displayed
-        .expand((d) => d.display.allPoints().map((p) => LatLng(p.lat, p.lon)))
-        .toList();
+    final allPts = displayed.expand((d) => d.boundsPoints).toList();
 
     /// Fits the map camera to every displayed day's track.
     void refitAll() {
@@ -1230,6 +1301,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
+            maxZoom: kMaxMapZoom,
             initialCameraFit: widget.initialBounds != null
                 ? CameraFit.bounds(bounds: widget.initialBounds!, padding: const EdgeInsets.all(32))
                 : null,
@@ -1276,13 +1348,14 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
               return PolylineLayer(
                 polylines: [
                   for (final d in displayed)
-                    for (final seg in splitTrackSegments(d.rawPoints))
-                      if (seg.length >= 2)
-                        Polyline(
-                          points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
-                          strokeWidth: 1.0,
-                          color: d.color.withValues(alpha: 0.20),
-                        ),
+                    if (d.rawPoints != null)
+                      for (final seg in splitTrackSegments(d.rawPoints!))
+                        if (seg.length >= 2)
+                          Polyline(
+                            points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
+                            strokeWidth: 1.0,
+                            color: d.color.withValues(alpha: 0.20),
+                          ),
                 ],
                 cullingMargin: null,
                 simplificationTolerance: 0,

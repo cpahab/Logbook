@@ -1429,6 +1429,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pdfSeaCol => 'Sea';
 
   @override
+  String get pdfPositionCol => 'Position';
+
+  @override
   String get pdfRemarksCol => 'Remarks';
 
   @override

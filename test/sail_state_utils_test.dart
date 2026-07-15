@@ -75,6 +75,49 @@ void main() {
     });
   });
 
+  // ── isCrewNote / crewNoteDisplay ──────────────────────────────────────────
+
+  group('isCrewNote', () {
+    test('true for a crew: sentinel', () {
+      expect(isCrewNote('crew:role=0:Alice · Bob'), isTrue);
+    });
+
+    test('false for a vs: sentinel', () {
+      expect(isCrewNote('vs:oil=75'), isFalse);
+    });
+
+    test('false for null', () {
+      expect(isCrewNote(null), isFalse);
+    });
+
+    test('false for plain text', () {
+      expect(isCrewNote('Some remark'), isFalse);
+    });
+  });
+
+  group('crewNoteDisplay', () {
+    test('marks the skipper (role=0) and passes other names through', () {
+      expect(
+        crewNoteDisplay('crew:role=0:Alice · Bob', 'Crew', 'Skipper'),
+        'Crew: Alice (Skipper) · Bob',
+      );
+    });
+
+    test('handles a single skipper with no other crew', () {
+      expect(
+        crewNoteDisplay('crew:role=0:Alice', 'Crew', 'Skipper'),
+        'Crew: Alice (Skipper)',
+      );
+    });
+
+    test('handles crew with no role=0 marker', () {
+      expect(
+        crewNoteDisplay('crew:Alice · Bob', 'Crew', 'Skipper'),
+        'Crew: Alice · Bob',
+      );
+    });
+  });
+
   // ── PdfStrings construction ───────────────────────────────────────────────
 
   group('PdfStrings', () {
@@ -97,10 +140,18 @@ void main() {
           courseCol:     'Hdg',
           windCol:       'Wind',
           seaCol:        'Sea',
+          positionCol:   'Position',
           remarksCol:    'Remarks',
           trackMap:      'COURSE & TRACK',
           locale:        'en_US',
           generatedOn:   'GENERATED ON',
+          crewNoteLabel: 'Crew',
+          skipperLabel:  'Skipper',
+          oilLabel:      'Engine oil',
+          fuelLabel:     'Fuel',
+          keelLabel:     'Keel',
+          keelDownLabel: 'Down',
+          keelUpLabel:   'Up',
           passageToTemplate:     'Passage to \u0000',
           departureFromTemplate: 'Departure from \u0000',
           pageOfTemplate:        'Page -1 of -2',

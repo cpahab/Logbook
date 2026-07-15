@@ -2744,6 +2744,12 @@ abstract class AppLocalizations {
   /// **'See'**
   String get pdfSeaCol;
 
+  /// No description provided for @pdfPositionCol.
+  ///
+  /// In de, this message translates to:
+  /// **'Position'**
+  String get pdfPositionCol;
+
   /// No description provided for @pdfRemarksCol.
   ///
   /// In de, this message translates to:

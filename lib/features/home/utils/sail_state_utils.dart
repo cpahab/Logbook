@@ -1,3 +1,18 @@
+/// Whether a `TimelineEntry.vesselStatusNote` is a crew-change note
+/// (`crew:role=0:Alice · Bob`) rather than a `vs:` vessel-status sentinel.
+bool isCrewNote(String? note) => note?.startsWith('crew:') == true;
+
+/// Renders a crew note into its display string, stripping the sentinel
+/// prefix and prepending the (caller-supplied, l10n-ready) crew label.
+/// 'crew:role=0:Alice · Bob' → 'Crew: Alice (Skipper) · Bob'
+String crewNoteDisplay(String note, String crewLabel, String skipperLabel) {
+  final body = note.substring(5).split(' · ').map((part) {
+    if (part.startsWith('role=0:')) return '${part.substring(7)} ($skipperLabel)';
+    return part;
+  }).join(' · ');
+  return '$crewLabel: $body';
+}
+
 /// Parses a vessel-status sentinel string (`vs:key=val,...`) into display
 /// parts. The caller supplies label functions so this stays l10n-free and
 /// fully testable.

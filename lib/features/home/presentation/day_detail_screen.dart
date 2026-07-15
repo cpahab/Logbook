@@ -73,19 +73,6 @@ class DayDetailScreen extends StatefulWidget {
 }
 
 class _DayDetailScreenState extends State<DayDetailScreen> {
-  // Detects crew notes, stored as 'crew:role=0:Alice · Bob'.
-  static bool _isCrewNote(String? note) => note?.startsWith('crew:') == true;
-
-  // Returns the display string for a crew note, stripping the sentinel prefix
-  // and prepending a localisation-ready display label.
-  // 'crew:role=0:Alice · Bob' → 'Crew: Alice (Skipper) · Bob'
-  static String _crewNoteDisplay(String note, String crewLabel, String skipperLabel) {
-    final body = note.substring(5).split(' · ').map((part) {
-      if (part.startsWith('role=0:')) return '${part.substring(7)} ($skipperLabel)';
-      return part;
-    }).join(' · ');
-    return '$crewLabel: $body';
-  }
 
   /// Looks up the recorded state for one configurable equipment [slot] on
   /// [t] by its fixed storage key ('slot1' … 'slot12').
@@ -1152,7 +1139,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final timeStr =
         '${t.time.hour.toString().padLeft(2, '0')}:${t.time.minute.toString().padLeft(2, '0')}';
 
-    final bool isCrewEntry = _isCrewNote(t.vesselStatusNote);
+    final bool isCrewEntry = isCrewNote(t.vesselStatusNote);
     final bool isStatusEntry = t.vesselStatusNote != null && !isCrewEntry;
     final String entryLabel;
     if (isCrewEntry) {
@@ -1254,7 +1241,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               const SizedBox(height: 8),
               Text(
                 isCrewEntry
-                    ? _crewNoteDisplay(t.vesselStatusNote!, context.l10n.dataCrewNote, context.l10n.labelSkipper)
+                    ? crewNoteDisplay(t.vesselStatusNote!, context.l10n.dataCrewNote, context.l10n.labelSkipper)
                     : _vesselStatusDisplay(t.vesselStatusNote!, context.l10n),
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: cs.onSurfaceVariant,
@@ -2008,9 +1995,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           children: [
             Icon(icon, color: cs.onSurfaceVariant, size: 22),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.fieldHintCompact.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+            Flexible(
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.fieldHintCompact.copyWith(fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+              ),
             ),
           ],
         ),
@@ -2179,36 +2169,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       );
     }).toList();
 
-    final timeWaypoints = _sampleHourlyPoints(display.movingPoints()).map((p) =>
-      Marker(
-        point: LatLng(p.lat, p.lon),
-        width: 20,
-        height: 20,
-        alignment: Alignment.center,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => _dropMarker(
-            LatLng(p.lat, p.lon),
-            DateFormat('HH:mm').format(p.time.toLocal()),
-          ),
-          child: Center(
-            child: Container(
-              width: 11,
-              height: 11,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: cs.primary.withValues(alpha: 0.12),
-                border: Border.all(
-                  color: cs.primary.withValues(alpha: 0.60),
-                  width: 2.5,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ).toList();
-
     final midStopMarkers = [
       for (final stop in display.stops.where((s) => s.kind == AnchorKind.mid))
         Marker(
@@ -2243,7 +2203,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     ];
 
     final markers = <Marker>[
-      ...timeWaypoints,
       ...timelineMarkers,
       ...midStopMarkers,
       // ── Departure: label to the left, arrow at the coordinate ───────
@@ -2349,6 +2308,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
+            maxZoom: kMaxMapZoom,
             initialCameraFit: trackBounds != null
                 ? CameraFit.bounds(bounds: trackBounds, padding: const EdgeInsets.all(40))
                 : null,
@@ -2488,18 +2448,29 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   /// Simplified inline map for a day with no imported GPX track but ≥1
   /// timeline entry carrying its own auto-captured GPS fix
-  /// ([TimelineEntry.latitude]/[longitude]). Shows one pin per such entry —
-  /// no polyline, no stop halos, no uncertainty band, no fullscreen (there's
-  /// no route to expand into); this is a lightweight "you were roughly
-  /// here" view, not a route. Zoom/center and satellite-toggle controls
-  /// match the track map's.
+  /// ([TimelineEntry.latitude]/[longitude]). Shows one pin per such entry,
+  /// connected by a polyline (styled like a real track's) once there are
+  /// 2+ of them — no stop halos, no uncertainty band, since neither
+  /// concept applies to a handful of manually-logged fixes. Zoom/center,
+  /// satellite-toggle, and fullscreen controls match the track map's.
   Widget _buildPositionsOnlyMap(DayEntry entry, List<TimelineEntry> positioned) {
     final cs = Theme.of(context).colorScheme;
-    final points =
-        positioned.map((t) => LatLng(t.latitude!, t.longitude!)).toList();
+    final sorted = [...positioned]..sort((a, b) => a.time.compareTo(b.time));
+    final points = sorted.map((t) => LatLng(t.latitude!, t.longitude!)).toList();
+    final positionsColor = _satelliteView ? cs.secondaryFixed : cs.primary;
+    final positionsPolylines = <Polyline>[
+      if (points.length >= 2)
+        Polyline(
+          points: points,
+          strokeWidth: 4,
+          color: positionsColor,
+          borderStrokeWidth: _satelliteView ? 1.5 : 0,
+          borderColor: Colors.black.withValues(alpha: 0.45),
+        ),
+    ];
 
     final markers = <Marker>[
-      for (final t in positioned)
+      for (final t in sorted)
         Marker(
           point: LatLng(t.latitude!, t.longitude!),
           width: 20,
@@ -2572,6 +2543,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
+            maxZoom: kMaxMapZoom,
             initialCenter: points.length == 1 ? points.first : const LatLng(0, 0),
             initialZoom: 13,
             initialCameraFit: points.length >= 2
@@ -2598,6 +2570,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     )
                   : tileWidget,
             ),
+            PolylineLayer(polylines: positionsPolylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: markers),
             RichAttributionWidget(
               attributions: [
@@ -2615,8 +2588,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
           ],
         ),
-        // Map controls — zoom + center on macOS, satellite always. No
-        // fullscreen button: there's no route to expand into here.
+        // Map controls — zoom + center on macOS, satellite + fullscreen always.
         Positioned(
           right: 10,
           bottom: 10,
@@ -2646,6 +2618,22 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 }),
                 const SizedBox(height: 6),
               ],
+              FloatingActionButton.small(
+                heroTag: 'positions_fullscreen_button',
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => _PositionsOnlyMapFullScreen(
+                      entry: entry,
+                      positioned: sorted,
+                      initialSatellite: _satelliteView,
+                    ),
+                  ),
+                ),
+                tooltip: context.l10n.tracksFullscreen,
+                child: const Icon(Icons.fullscreen),
+              ),
+              const SizedBox(height: 6),
               FloatingActionButton.small(
                 heroTag: 'detail_satellite_button',
                 onPressed: () =>
@@ -3383,10 +3371,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         courseCol:     l10n.pdfCourseCol,
         windCol:       l10n.pdfWindCol,
         seaCol:        l10n.pdfSeaCol,
+        positionCol:   l10n.pdfPositionCol,
         remarksCol:    l10n.pdfRemarksCol,
         trackMap:      l10n.pdfTrackMap,
         locale:        l10n.pdfLocale,
         generatedOn:   l10n.pdfGeneratedOn,
+        crewNoteLabel: l10n.dataCrewNote,
+        skipperLabel:  l10n.labelSkipper,
+        oilLabel:      l10n.vesselOilLabel,
+        fuelLabel:     l10n.vesselFuelLabel,
+        keelLabel:     l10n.entryDialogKeelLabel,
+        keelDownLabel: l10n.vesselKeelDown,
+        keelUpLabel:   l10n.vesselKeelUp,
         passageToTemplate:     l10n.pdfPassageTo('\u0000'),
         departureFromTemplate: l10n.pdfDepartureFrom('\u0000'),
         pageOfTemplate:        l10n.pdfPageOf(-1, -2),
@@ -3851,29 +3847,6 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
       );
     }).toList();
 
-    final fsTimeWaypoints = _sampleHourlyPoints(display.movingPoints()).map((p) =>
-      Marker(
-        point: LatLng(p.lat, p.lon), width: 20, height: 20, alignment: Alignment.center,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => _dropMarker(
-            LatLng(p.lat, p.lon),
-            DateFormat('HH:mm').format(p.time.toLocal()),
-          ),
-          child: Center(
-            child: Container(
-              width: 11, height: 11,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: cs.primary.withValues(alpha: 0.12),
-                border: Border.all(color: cs.primary.withValues(alpha: 0.60), width: 2.5),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ).toList();
-
     final fsMidStopMarkers = [
       for (final stop in display.stops.where((s) => s.kind == AnchorKind.mid))
         Marker(
@@ -3908,7 +3881,6 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     ];
 
     final markers = <Marker>[
-      ...fsTimeWaypoints,
       ...timelineMarkers,
       ...fsMidStopMarkers,
       Marker(
@@ -3997,6 +3969,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
+            maxZoom: kMaxMapZoom,
             initialCameraFit: trackBounds != null
                 ? CameraFit.bounds(bounds: trackBounds, padding: const EdgeInsets.all(60))
                 : null,
@@ -4094,6 +4067,263 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
   }
 }
 
+// ── Full-screen map for a positions-only day ──────────────────────────────────
+/// Full-screen version of [_DayDetailScreenState._buildPositionsOnlyMap]
+/// (opened from its fullscreen button): same simplified rendering — a
+/// polyline once there are 2+ logged positions, otherwise just the pin(s)
+/// — plus its own satellite toggle and dropped-marker state, so it works
+/// standalone without the day-detail screen's state.
+class _PositionsOnlyMapFullScreen extends StatefulWidget {
+  final DayEntry entry;
+  final List<TimelineEntry> positioned; // pre-sorted by the caller
+  final bool initialSatellite;
+
+  const _PositionsOnlyMapFullScreen({
+    required this.entry,
+    required this.positioned,
+    required this.initialSatellite,
+  });
+
+  @override
+  State<_PositionsOnlyMapFullScreen> createState() => _PositionsOnlyMapFullScreenState();
+}
+
+class _PositionsOnlyMapFullScreenState extends State<_PositionsOnlyMapFullScreen> {
+  final MapController _mapController = MapController();
+  late bool _satelliteView;
+  LatLng? _droppedMarkerLatLng;
+  String? _droppedMarkerLabel;
+  Timer? _markerDismissTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _satelliteView = widget.initialSatellite;
+  }
+
+  @override
+  void dispose() {
+    _markerDismissTimer?.cancel();
+    _mapController.dispose();
+    super.dispose();
+  }
+
+  /// Shows a tap-to-inspect marker at [pos] with [label], auto-dismissing
+  /// after 5 seconds.
+  void _dropMarker(LatLng pos, String label) {
+    _markerDismissTimer?.cancel();
+    setState(() {
+      _droppedMarkerLatLng = pos;
+      _droppedMarkerLabel  = label;
+    });
+    _markerDismissTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; });
+    });
+  }
+
+  Widget _trackLabel(String text, ColorScheme cs) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    decoration: BoxDecoration(
+      color: cs.primary.withValues(alpha: 0.85),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: Text(text, style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, letterSpacing: 0, color: Colors.white)),
+  );
+
+  /// Small floating action button for this screen's zoom/recenter/satellite/close controls.
+  Widget _mapBtn(IconData icon, VoidCallback onTap, ColorScheme cs) =>
+    FloatingActionButton.small(
+      heroTag: 'posfs_${icon.codePoint}',
+      onPressed: onTap,
+      backgroundColor: cs.surfaceContainerLowest,
+      foregroundColor: cs.primary,
+      elevation: 2,
+      child: Icon(icon, size: 18),
+    );
+
+  /// Renders the same map layers as
+  /// [_DayDetailScreenState._buildPositionsOnlyMap], sized to fill the
+  /// whole screen, with its own zoom/recenter/satellite/close controls.
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final points = widget.positioned.map((t) => LatLng(t.latitude!, t.longitude!)).toList();
+    final positionsColor = _satelliteView ? cs.secondaryFixed : cs.primary;
+    final positionsPolylines = <Polyline>[
+      if (points.length >= 2)
+        Polyline(
+          points: points,
+          strokeWidth: 4,
+          color: positionsColor,
+          borderStrokeWidth: _satelliteView ? 1.5 : 0,
+          borderColor: Colors.black.withValues(alpha: 0.45),
+        ),
+    ];
+
+    final markers = <Marker>[
+      for (final t in widget.positioned)
+        Marker(
+          point: LatLng(t.latitude!, t.longitude!),
+          width: 20,
+          height: 20,
+          alignment: Alignment.center,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _dropMarker(
+              LatLng(t.latitude!, t.longitude!),
+              _buildEntryTooltip(t, context.l10n,
+                  context.read<ThemeProvider>().vesselEquipment.activeSlots),
+            ),
+            child: Center(
+              child: Container(
+                width: 11,
+                height: 11,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surface,
+                  border: Border.all(color: cs.primary, width: 2.5),
+                ),
+              ),
+            ),
+          ),
+        ),
+    ];
+
+    if (_droppedMarkerLatLng != null) {
+      markers.add(Marker(
+        point: _droppedMarkerLatLng!,
+        width: 20,
+        height: 20,
+        alignment: Alignment.center,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            _markerDismissTimer?.cancel();
+            setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; });
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 11,
+                height: 11,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: cs.surface,
+                  border: Border.all(color: cs.primary, width: 2.5),
+                ),
+              ),
+              if (_droppedMarkerLabel != null)
+                Positioned(
+                  left: 16,
+                  top: 3,
+                  child: IgnorePointer(child: _trackLabel(_droppedMarkerLabel!, cs)),
+                ),
+            ],
+          ),
+        ),
+      ));
+    }
+
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8),
+          child: FloatingActionButton.small(
+            heroTag: 'posfs_close',
+            onPressed: () => Navigator.pop(context),
+            backgroundColor: cs.surfaceContainerLowest.withValues(alpha: 0.9),
+            foregroundColor: cs.primary,
+            elevation: 2,
+            child: const Icon(Icons.fullscreen_exit, size: 20),
+          ),
+        ),
+      ),
+      body: Stack(children: [
+        FlutterMap(
+          mapController: _mapController,
+          options: MapOptions(
+            maxZoom: kMaxMapZoom,
+            initialCenter: points.length == 1 ? points.first : const LatLng(0, 0),
+            initialZoom: 13,
+            initialCameraFit: points.length >= 2
+                ? CameraFit.bounds(
+                    bounds: LatLngBounds.fromPoints(points),
+                    padding: const EdgeInsets.all(60),
+                  )
+                : null,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
+              userAgentPackageName: 'com.logbook.app',
+              keepBuffer: 4,
+              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
+              errorTileCallback: kDebugMode
+                  ? (tile, error, stackTrace) =>
+                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
+                  : null,
+              tileBuilder: (context, tileWidget, tile) => tile.loadError
+                  ? Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: const Icon(Icons.map_outlined, size: 20),
+                    )
+                  : tileWidget,
+            ),
+            PolylineLayer(polylines: positionsPolylines, cullingMargin: null, simplificationTolerance: 0),
+            MarkerLayer(markers: markers),
+            RichAttributionWidget(
+              attributions: [
+                if (_satelliteView)
+                  TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
+                    final uri = Uri.parse(kSatelliteAttributionUrl);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  })
+                else
+                  TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
+                    final uri = Uri.parse(kBaseAttributionUrl);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }),
+              ],
+            ),
+          ],
+        ),
+        Positioned(
+          right: 10, bottom: 10,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            if (defaultTargetPlatform == TargetPlatform.macOS) ...[
+              _mapBtn(Icons.add, () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1), cs),
+              const SizedBox(height: 6),
+              _mapBtn(Icons.remove, () => _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1), cs),
+              const SizedBox(height: 6),
+              _mapBtn(Icons.explore, () {
+                if (points.length >= 2) {
+                  _mapController.fitCamera(CameraFit.bounds(bounds: LatLngBounds.fromPoints(points), padding: const EdgeInsets.all(60)));
+                } else if (points.isNotEmpty) {
+                  _mapController.move(points.first, 13);
+                }
+              }, cs),
+              const SizedBox(height: 6),
+            ],
+            FloatingActionButton.small(
+              heroTag: 'posfs_satellite',
+              onPressed: () => setState(() => _satelliteView = !_satelliteView),
+              tooltip: _satelliteView
+                  ? context.l10n.tracksMapView
+                  : context.l10n.tracksSatelliteView,
+              child: Icon(_satelliteView ? Icons.map_outlined : Icons.satellite_alt),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
 // ── Shared map helpers ────────────────────────────────────────────────────────
 
 /// Full timeline entry as a multi-line tooltip string.
@@ -4122,7 +4352,9 @@ String _buildEntryTooltip(
 
   if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');
   if (t.vesselStatusNote?.isNotEmpty == true) {
-    buf.write('\n${_DayDetailScreenState._vesselStatusDisplay(t.vesselStatusNote!, l10n)}');
+    buf.write('\n${isCrewNote(t.vesselStatusNote)
+        ? crewNoteDisplay(t.vesselStatusNote!, l10n.dataCrewNote, l10n.labelSkipper)
+        : _DayDetailScreenState._vesselStatusDisplay(t.vesselStatusNote!, l10n)}');
   }
 
   return buf.toString();
@@ -4134,28 +4366,6 @@ bool get _isTouchPlatform =>
     !kIsWeb &&
     (defaultTargetPlatform == TargetPlatform.iOS ||
      defaultTargetPlatform == TargetPlatform.android);
-
-/// Returns one representative TrackPoint per clock-hour, skipping the first
-/// and last 20 minutes of the track to avoid overlapping start/end markers.
-List<TrackPoint> _sampleHourlyPoints(List<TrackPoint> pts) {
-  if (pts.length < 2) return [];
-  final first = pts.first.time;
-  final last  = pts.last.time;
-  const minGap = Duration(minutes: 20);
-  final result = <TrackPoint>[];
-  DateTime? lastBucket;
-  for (final p in pts) {
-    if (p.time.difference(first).abs() < minGap) continue;
-    if (last.difference(p.time).abs() < minGap) continue;
-    final l = p.time.toLocal();
-    final bucket = DateTime(l.year, l.month, l.day, l.hour);
-    if (lastBucket == null || bucket.isAfter(lastBucket)) {
-      result.add(p);
-      lastBucket = bucket;
-    }
-  }
-  return result;
-}
 
 /// Formats a stop duration as "1h 30m" or "45m", for a mid-stop marker tooltip.
 String _fmtDur(double minutes) {

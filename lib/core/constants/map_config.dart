@@ -53,3 +53,11 @@ const kBaseAttributionLabel = 'OpenStreetMap contributors';
 const kBaseAttributionUrl = 'https://www.openstreetmap.org/copyright';
 const kSatelliteAttributionLabel = 'Esri World Imagery';
 const kSatelliteAttributionUrl = 'https://www.esri.com';
+
+/// Highest zoom the OSM tile server actually has tiles for. Every map's
+/// `MapOptions` must set this as `maxZoom` — without it, fitting the camera
+/// to a near-zero-size bounding box (e.g. a track of two almost-identical
+/// points) asks `CameraFit.bounds` to zoom in far past this, which requests
+/// tiles that don't exist (a permanently blank/grey map) and can leave the
+/// camera in a state no later `fitCamera`/`move` call recovers from.
+const kMaxMapZoom = 19.0;

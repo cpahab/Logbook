@@ -15,12 +15,15 @@ import 'package:printing/printing.dart';
 
 import '../../../core/constants/map_config.dart';
 import '../../../core/services/backup_mapper.dart';
+import '../../../core/utils/coordinate_format.dart';
 import '../domain/crew_member.dart';
 import '../domain/day_entry.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/track_point.dart';
 import '../domain/vessel_equipment.dart';
 import 'compute_daily_stats.dart';
+import 'sail_state_utils.dart';
+import 'track_correlation.dart';
 
 /// Returns true for codepoints that NotoSans can't render but NotoEmoji can
 /// — used to split free-text (which may contain emoji) into runs so each
@@ -107,10 +110,23 @@ class PdfStrings {
   final String courseCol;
   final String windCol;
   final String seaCol;
+  final String positionCol;
   final String remarksCol;
   final String trackMap;
   final String locale;
   final String generatedOn;
+
+  /// Labels for decoding a timeline entry's auto-generated
+  /// `vesselStatusNote` sentinel (see [isCrewNote]/[crewNoteDisplay]/
+  /// [parseVesselStatus] in sail_state_utils.dart) into the timeline
+  /// table's Remarks column, instead of showing the raw sentinel text.
+  final String crewNoteLabel;
+  final String skipperLabel;
+  final String oilLabel;
+  final String fuelLabel;
+  final String keelLabel;
+  final String keelDownLabel;
+  final String keelUpLabel;
 
   /// Localized "Passage to {destination}" with the destination replaced by
   /// a NUL placeholder (never appears in real text) -- plain data (not a
@@ -148,10 +164,18 @@ class PdfStrings {
     required this.courseCol,
     required this.windCol,
     required this.seaCol,
+    required this.positionCol,
     required this.remarksCol,
     required this.trackMap,
     required this.locale,
     required this.generatedOn,
+    required this.crewNoteLabel,
+    required this.skipperLabel,
+    required this.oilLabel,
+    required this.fuelLabel,
+    required this.keelLabel,
+    required this.keelDownLabel,
+    required this.keelUpLabel,
     required this.passageToTemplate,
     required this.departureFromTemplate,
     required this.pageOfTemplate,
@@ -348,8 +372,12 @@ Future<Uint8List> buildVoyagePdf({
 
   // Falls back to per-entry logged positions (no connecting line) when
   // there's no continuous GPS track, so a hand-logged day still gets a map.
+  // When there IS a track, every logbook entry gets marked on it (own
+  // captured fix, or time-correlated onto the track — see _renderTrackImage
+  // and _entryMarkerPositions).
   final Uint8List? trackImageBytes = trackPoints.length >= 2
-      ? await _renderTrackImage(trackPoints)
+      ? await _renderTrackImage(trackPoints,
+          entryPositions: _entryMarkerPositions(entry, trackPoints))
       : await _renderPositionsImage(_positionedFixes(entry));
 
   // entry as loaded from HomeRepository is a live HiveObject bound to its
@@ -476,10 +504,13 @@ Future<Uint8List> buildRangeVoyagePdf({
   // network-bound tile fetch, so there's no benefit to doing them serially.
   // Falls back to per-entry logged positions (no connecting line) when a
   // day has no continuous GPS track, so a hand-logged day still gets a map.
+  // When there IS a track, every logbook entry gets marked on it (own
+  // captured fix, or time-correlated onto the track).
   final trackImages = await Future.wait([
     for (final d in days)
       d.trackPoints.length >= 2
-          ? _renderTrackImage(d.trackPoints)
+          ? _renderTrackImage(d.trackPoints,
+              entryPositions: _entryMarkerPositions(d.entry, d.trackPoints))
           : _renderPositionsImage(_positionedFixes(d.entry)),
   ]);
 
@@ -761,6 +792,7 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
   final hasSea     = entries.any((e) => e.sea?.isNotEmpty   == true);
   final hasTemperature = entries.any((e) => e.temperature != null);
   final hasPressure    = entries.any((e) => e.pressure != null);
+  final hasPosition = entries.any((e) => e.latitude != null && e.longitude != null);
   final hasRemarks = entries.any((e) =>
       e.remarks?.isNotEmpty == true || e.vesselStatusNote?.isNotEmpty == true);
 
@@ -777,6 +809,7 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
     if (hasPressure)    (header: 'mBar', flex: 0.7),
     for (final slot in activeSlots)
       (header: slot.label.substring(0, slot.label.length.clamp(0, 6)), flex: 0.7),
+    if (hasPosition) (header: strings.positionCol, flex: 1.8),
     if (hasRemarks) (header: strings.remarksCol, flex: 2.6),
   ];
 
@@ -815,7 +848,22 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
   };
 
   pw.TableRow dataRow(TimelineEntry e, bool shade) {
-    final remarksText = [e.remarks, e.vesselStatusNote]
+    // vesselStatusNote is an auto-generated sentinel ('crew:role=0:...' or
+    // 'vs:oil=...,fuel=...,keel=...') — decode it into display text instead
+    // of showing the raw internal format, same as the in-app entry card.
+    final vesselStatusText = e.vesselStatusNote?.isNotEmpty == true
+        ? (isCrewNote(e.vesselStatusNote)
+            ? crewNoteDisplay(e.vesselStatusNote!, strings.crewNoteLabel, strings.skipperLabel)
+            : parseVesselStatus(
+                e.vesselStatusNote!,
+                oilLabel:       (pct) => '${strings.oilLabel}: $pct%',
+                fuelLabel:      (pct) => '${strings.fuelLabel}: $pct%',
+                keelDownLabel:  strings.keelDownLabel,
+                keelUpLabel:    strings.keelUpLabel,
+                keelFieldLabel: strings.keelLabel,
+              ))
+        : null;
+    final remarksText = [e.remarks, vesselStatusText]
         .where((s) => s?.isNotEmpty == true)
         .join(' · ');
 
@@ -828,6 +876,10 @@ pw.Widget _buildTimeline(List<TimelineEntry> entries, pw.Font bold, pw.Font regu
       if (hasTemperature) cell(e.temperature != null ? e.temperature!.toStringAsFixed(1) : '—'),
       if (hasPressure)    cell(e.pressure    != null ? e.pressure!.toStringAsFixed(0)    : '—'),
       for (final slot in activeSlots) cell(_slotAbbr(slotValue(e, slot.key))),
+      if (hasPosition)
+        cell(e.latitude != null && e.longitude != null
+            ? formatDDM(e.latitude!, e.longitude!)
+            : '—'),
       if (hasRemarks) cell(remarksText.isEmpty ? '—' : remarksText),
     ];
 
@@ -1022,6 +1074,33 @@ int _chooseZoom(double minLat, double maxLat, double minLon, double maxLon) {
   return 1;
 }
 
+/// Output size (in 256px map tiles) every rendered PDF map image is padded
+/// out to, regardless of how large or small the day's own content actually
+/// is. Without this, a tightly-clustered day (a few nearby positions) and a
+/// widely-spread one (a long track) naturally fit different tile-grid
+/// shapes — e.g. 4×4 tiles vs. 5×3 — and since every map gets scaled into
+/// the *same* fixed-size PDF container with `BoxFit.cover`, a different
+/// source canvas resolution means the exact same pixel-width polyline or
+/// marker ends up rendered at a visibly different physical size on the
+/// page. Locking every map to one constant canvas size keeps line weight
+/// and dot size identical across all of them.
+const int _kMapTilesWide = 5;
+const int _kMapTilesTall = 4;
+
+/// Expands the inclusive tile range [lo]..[hi] symmetrically until it spans
+/// exactly [target] tiles, clamped to the valid `[0, maxIdx]` index range.
+(int, int) _expandTileRange(int lo, int hi, int maxIdx, int target) {
+  while (hi - lo + 1 < target) {
+    final canGrowLo = lo > 0;
+    final canGrowHi = hi < maxIdx;
+    if (!canGrowLo && !canGrowHi) break;
+    if (canGrowLo) lo--;
+    if (hi - lo + 1 >= target) break;
+    if (canGrowHi) hi++;
+  }
+  return (lo, hi);
+}
+
 /// Decodes raw image bytes (a downloaded/cached tile) into a drawable [ui.Image].
 Future<ui.Image?> _decodeBytes(Uint8List bytes) async {
   final codec = await ui.instantiateImageCodec(bytes);
@@ -1119,9 +1198,13 @@ Future<ui.Image?> _fetchTile(int z, int tx, int ty, String base) async {
 }
 
 /// Renders [points] onto a composited basemap-tile image (with start/end
-/// markers and a north indicator) and returns it as PNG bytes, or null if
-/// there are too few points to draw a track.
-Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
+/// markers, a small dot per [entryPositions] fix, and a north indicator)
+/// and returns it as PNG bytes, or null if there are too few points to
+/// draw a track.
+Future<Uint8List?> _renderTrackImage(
+  List<TrackPoint> points, {
+  List<(double, double)> entryPositions = const [],
+}) async {
   if (points.length < 2) return null;
 
   var minLat = points.first.lat, maxLat = minLat;
@@ -1132,16 +1215,27 @@ Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
     if (p.lon < minLon) minLon = p.lon;
     if (p.lon > maxLon) maxLon = p.lon;
   }
+  // Widen the bounds to fit every logged entry position too, in case one
+  // falls outside the track itself (GPS drift, a fix logged just off the
+  // route) — otherwise its marker would be drawn outside the canvas.
+  for (final (lat, lon) in entryPositions) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+  }
 
   final zoom   = _chooseZoom(minLat, maxLat, minLon, maxLon);
   final maxIdx = math.pow(2, zoom).toInt() - 1;
 
   final (nx0, ny0) = _tile(minLon, maxLat, zoom); // NW tile
   final (nx1, ny1) = _tile(maxLon, minLat, zoom); // SE tile
-  final tx0 = (nx0 - 1).clamp(0, maxIdx);
-  final ty0 = (ny0 - 1).clamp(0, maxIdx);
-  final tx1 = (nx1 + 1).clamp(0, maxIdx);
-  final ty1 = (ny1 + 1).clamp(0, maxIdx);
+  var tx0 = (nx0 - 1).clamp(0, maxIdx);
+  var ty0 = (ny0 - 1).clamp(0, maxIdx);
+  var tx1 = (nx1 + 1).clamp(0, maxIdx);
+  var ty1 = (ny1 + 1).clamp(0, maxIdx);
+  (tx0, tx1) = _expandTileRange(tx0, tx1, maxIdx, _kMapTilesWide);
+  (ty0, ty1) = _expandTileRange(ty0, ty1, maxIdx, _kMapTilesTall);
 
   final canvasW = (tx1 - tx0 + 1) * 256.0;
   final canvasH = (ty1 - ty0 + 1) * 256.0;
@@ -1204,6 +1298,15 @@ Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
     ..strokeCap  = ui.StrokeCap.round
     ..strokeJoin = ui.StrokeJoin.round);
 
+  // Dots for logbook entries — same solid navy, same radius as the
+  // positions-only map's own dots, for full visual consistency between the
+  // two. Drawn *before* the start/end markers so that when an entry's
+  // position coincides with the track's own start or end (e.g. an
+  // "arrived" entry logged at the final track point), the bold green/red
+  // coloring always wins on top instead of being obscured by the entry dot.
+  for (final (lat, lon) in entryPositions) {
+    _drawMarker(canvas, toX(lon), toY(lat), const ui.Color(0xFF003366));
+  }
   _drawMarker(canvas, toX(points.first.lon), toY(points.first.lat),
       const ui.Color(0xFF2E7D32));
   _drawMarker(canvas, toX(points.last.lon),  toY(points.last.lat),
@@ -1216,19 +1319,48 @@ Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
   return byteData?.buffer.asUint8List();
 }
 
-/// The (lat, lon) of every timeline entry that captured a GPS fix — used as
-/// a fallback map when the day has no continuous GPS track (e.g. logged
-/// entirely by hand, or the track wasn't imported) but at least one log
-/// entry still has a position.
-List<(double, double)> _positionedFixes(DayEntry entry) => [
-      for (final t in entry.timeline)
-        if (t.latitude != null && t.longitude != null) (t.latitude!, t.longitude!),
-    ];
+/// The (lat, lon) marker position for every logbook entry on a tracked day —
+/// an entry's own captured GPS fix if it has one, otherwise the track's
+/// nearest-in-time point, via the same [correlateTimelineWithTrack] the
+/// in-app day-detail map already uses. Unlike [_positionedFixes], this
+/// covers every entry (a course change, an equipment note, ...), not just
+/// ones that logged their own position.
+List<(double, double)> _entryMarkerPositions(
+  DayEntry entry,
+  List<TrackPoint> trackPoints,
+) {
+  if (entry.timeline.isEmpty) return [];
+  final correlated = {
+    for (final (t, p) in correlateTimelineWithTrack(entry.timeline, trackPoints))
+      t: p,
+  };
+  final sorted = [...entry.timeline]..sort((a, b) => a.time.compareTo(b.time));
+  return [
+    for (final t in sorted)
+      if (t.latitude != null && t.longitude != null)
+        (t.latitude!, t.longitude!)
+      else if (correlated[t] != null)
+        (correlated[t]!.lat, correlated[t]!.lon),
+  ];
+}
+
+/// The (lat, lon) of every timeline entry that captured a GPS fix, in
+/// chronological order — used as a fallback map when the day has no
+/// continuous GPS track (e.g. logged entirely by hand, or the track wasn't
+/// imported) but at least one log entry still has a position.
+List<(double, double)> _positionedFixes(DayEntry entry) {
+  final positioned = entry.timeline
+      .where((t) => t.latitude != null && t.longitude != null)
+      .toList()
+    ..sort((a, b) => a.time.compareTo(b.time));
+  return [for (final t in positioned) (t.latitude!, t.longitude!)];
+}
 
 /// Renders discrete [positions] (per-entry GPS fixes, not a continuous
-/// track) onto a composited basemap-tile image — one dot per position, no
-/// connecting line, since these are independent point-in-time fixes rather
-/// than a route. Returns PNG bytes, or null if there are no positions.
+/// track) onto a composited basemap-tile image — connected by a polyline
+/// (styled like a real track's) once there are 2+ of them, styled with a
+/// dot per position either way. Returns PNG bytes, or null if there are no
+/// positions.
 Future<Uint8List?> _renderPositionsImage(List<(double, double)> positions) async {
   if (positions.isEmpty) return null;
 
@@ -1246,10 +1378,12 @@ Future<Uint8List?> _renderPositionsImage(List<(double, double)> positions) async
 
   final (nx0, ny0) = _tile(minLon, maxLat, zoom); // NW tile
   final (nx1, ny1) = _tile(maxLon, minLat, zoom); // SE tile
-  final tx0 = (nx0 - 1).clamp(0, maxIdx);
-  final ty0 = (ny0 - 1).clamp(0, maxIdx);
-  final tx1 = (nx1 + 1).clamp(0, maxIdx);
-  final ty1 = (ny1 + 1).clamp(0, maxIdx);
+  var tx0 = (nx0 - 1).clamp(0, maxIdx);
+  var ty0 = (ny0 - 1).clamp(0, maxIdx);
+  var tx1 = (nx1 + 1).clamp(0, maxIdx);
+  var ty1 = (ny1 + 1).clamp(0, maxIdx);
+  (tx0, tx1) = _expandTileRange(tx0, tx1, maxIdx, _kMapTilesWide);
+  (ty0, ty1) = _expandTileRange(ty0, ty1, maxIdx, _kMapTilesTall);
 
   final canvasW = (tx1 - tx0 + 1) * 256.0;
   final canvasH = (ty1 - ty0 + 1) * 256.0;
@@ -1286,8 +1420,43 @@ Future<Uint8List?> _renderPositionsImage(List<(double, double)> positions) async
   double toX(double lon) => _mercX(lon, zoom) - tx0 * 256;
   double toY(double lat) => _mercY(lat, zoom) - ty0 * 256;
 
-  for (final (lat, lon) in positions) {
-    _drawMarker(canvas, toX(lon), toY(lat), const ui.Color(0xFF003366));
+  // Connecting polyline — same white-halo + navy-line style as a real
+  // track's, so a hand-logged day reads the same way once there are
+  // enough fixes to draw a line between.
+  if (positions.length >= 2) {
+    final path = ui.Path();
+    bool first = true;
+    for (final (lat, lon) in positions) {
+      final x = toX(lon);
+      final y = toY(lat);
+      if (first) { path.moveTo(x, y); first = false; }
+      else        { path.lineTo(x, y); }
+    }
+    canvas.drawPath(path, ui.Paint()
+      ..color      = const ui.Color(0xCCFFFFFF)
+      ..strokeWidth = 6.0
+      ..style      = ui.PaintingStyle.stroke
+      ..strokeCap  = ui.StrokeCap.round
+      ..strokeJoin = ui.StrokeJoin.round);
+    canvas.drawPath(path, ui.Paint()
+      ..color      = const ui.Color(0xDD003366)
+      ..strokeWidth = 3.0
+      ..style      = ui.PaintingStyle.stroke
+      ..strokeCap  = ui.StrokeCap.round
+      ..strokeJoin = ui.StrokeJoin.round);
+  }
+
+  // First/last position colored green/red, same convention as a real
+  // track's start/end markers — only meaningful once there are 2+ (a lone
+  // position has no distinct start vs. end, so it stays neutral navy).
+  for (int i = 0; i < positions.length; i++) {
+    final (lat, lon) = positions[i];
+    final color = positions.length >= 2 && i == 0
+        ? const ui.Color(0xFF2E7D32)
+        : positions.length >= 2 && i == positions.length - 1
+            ? const ui.Color(0xFFC62828)
+            : const ui.Color(0xFF003366);
+    _drawMarker(canvas, toX(lon), toY(lat), color);
   }
   _drawNorthIndicator(canvas, canvasW - 32, 34);
 
@@ -1297,15 +1466,18 @@ Future<Uint8List?> _renderPositionsImage(List<(double, double)> positions) async
   return byteData?.buffer.asUint8List();
 }
 
-/// Draws a filled, white-ringed dot at (x, y) — used for the track's start
-/// (green) and end (red) markers.
-void _drawMarker(ui.Canvas canvas, double x, double y, ui.Color color) {
-  canvas.drawCircle(ui.Offset(x, y), 7, ui.Paint()..color = color);
-  canvas.drawCircle(ui.Offset(x, y), 7,
+/// Draws a filled, ringed dot at (x, y) — used for the track's start
+/// (green) and end (red) markers, and (with the fill/ring colors swapped)
+/// for entry-position markers on top of a track.
+void _drawMarker(ui.Canvas canvas, double x, double y, ui.Color color,
+    {double radius = 7, ui.Color ringColor = const ui.Color(0xFFFFFFFF)}) {
+  final ringWidth = radius * 2 / 7; // keeps the default's 7px-radius/2px-ring proportion
+  canvas.drawCircle(ui.Offset(x, y), radius, ui.Paint()..color = color);
+  canvas.drawCircle(ui.Offset(x, y), radius,
     ui.Paint()
-      ..color      = const ui.Color(0xFFFFFFFF)
+      ..color      = ringColor
       ..style      = ui.PaintingStyle.stroke
-      ..strokeWidth = 2);
+      ..strokeWidth = ringWidth);
 }
 
 /// Draws a small "N" compass badge in the map image's top-right corner.
