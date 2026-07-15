@@ -24,6 +24,8 @@ migrate_working_dir/
 #.vscode/
 # launch.json carries the local MAPTILER_KEY dart-define — keep it out of git.
 .vscode/launch.json
+# settings.json holds machine-specific absolute paths (e.g. cmake.sourceDirectory).
+.vscode/settings.json
 
 # Local build-time secrets (see lib/core/constants/map_config.dart)
 .dart_defines
