@@ -145,7 +145,7 @@ final ThemeData darkTheme = ThemeData(
     ),
   ),
   floatingActionButtonTheme: FloatingActionButtonThemeData(
-    backgroundColor: Color(0xFF2A5A99),
+    backgroundColor: const Color(0xFF2A5A99),
     foregroundColor: const Color(0xFFFFFFFF),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
   ),
@@ -155,19 +155,19 @@ final ThemeData darkTheme = ThemeData(
     headerBackgroundColor: const Color(0xFF09101B),     // surfaceContainerLow
     headerForegroundColor: const Color(0xFFF2F0F1),     // onSurface
     headerHeadlineStyle: GoogleFonts.dmSans(
-        fontSize: 28, fontWeight: FontWeight.w600, color: Color(0xFFF2F0F1)),
-    weekdayStyle: GoogleFonts.dmSans(fontSize: 12, color: Color(0xFFC3C6CF)),
-    dayStyle: GoogleFonts.dmSans(fontSize: 13, color: Color(0xFFF2F0F1)),
+        fontSize: 28, fontWeight: FontWeight.w600, color: const Color(0xFFF2F0F1)),
+    weekdayStyle: GoogleFonts.dmSans(fontSize: 12, color: const Color(0xFFC3C6CF)),
+    dayStyle: GoogleFonts.dmSans(fontSize: 13, color: const Color(0xFFF2F0F1)),
     rangePickerBackgroundColor: _surface,
     rangePickerHeaderBackgroundColor: _surface,
     rangePickerHeaderForegroundColor: const Color(0xFFF2F0F1),
     rangePickerHeaderHelpStyle: GoogleFonts.dmSans(
-        fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFC3C6CF),
+        fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFFC3C6CF),
         letterSpacing: 1.2),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: const Color(0xFF14253D),
-      labelStyle: GoogleFonts.dmSans(fontSize: 12, color: Color(0xFFC3C6CF)),
+      labelStyle: GoogleFonts.dmSans(fontSize: 12, color: const Color(0xFFC3C6CF)),
       border: const OutlineInputBorder(
         borderSide: BorderSide(color: _outline),
       ),

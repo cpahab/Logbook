@@ -1483,6 +1483,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeExportRangeError => 'PDF export failed. Please try again.';
 
   @override
+  String get dayExportPdfInProgress => 'Preparing PDF export…';
+
+  @override
+  String get dayExportPdfSuccess => 'PDF export ready to share.';
+
+  @override
+  String get dayExportPdfError => 'PDF export failed. Please try again.';
+
+  @override
   String get backupExportTitle => 'Export all data';
 
   @override

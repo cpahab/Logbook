@@ -2834,6 +2834,24 @@ abstract class AppLocalizations {
   /// **'PDF-Export fehlgeschlagen. Bitte erneut versuchen.'**
   String get homeExportRangeError;
 
+  /// No description provided for @dayExportPdfInProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Export wird vorbereitet…'**
+  String get dayExportPdfInProgress;
+
+  /// No description provided for @dayExportPdfSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Export bereit zum Teilen.'**
+  String get dayExportPdfSuccess;
+
+  /// No description provided for @dayExportPdfError.
+  ///
+  /// In de, this message translates to:
+  /// **'PDF-Export fehlgeschlagen. Bitte erneut versuchen.'**
+  String get dayExportPdfError;
+
   /// No description provided for @backupExportTitle.
   ///
   /// In de, this message translates to:

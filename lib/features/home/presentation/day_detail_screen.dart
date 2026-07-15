@@ -39,10 +39,12 @@ import '../utils/pdf_exporter.dart';
 import '../utils/sail_state_utils.dart';
 import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
+import '../../tracks/utils/track_computation_cache.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/constants/map_config.dart';
+import '../../../core/widgets/progress_snackbar.dart';
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
 
@@ -201,7 +203,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final filterSettings = context.watch<ThemeProvider>().filterSettings;
     DailyStats? stats;
     if (track != null && track.points.isNotEmpty) {
-      stats = computeDailyStats(track.points, settings: filterSettings);
+      stats = TrackComputationCache.get(
+        day: day,
+        sourcePoints: track.points,
+        settings: filterSettings,
+      ).stats;
     }
 
     final l10n = context.l10n;
@@ -330,7 +336,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   Widget _buildBody(DayEntry entry, DailyTrack? track, DailyStats? stats,
       FilterSettings filterSettings, ColorScheme cs) {
     final corrPoints = track != null
-        ? buildDisplayModel(track.points, settings: filterSettings).correlationPoints
+        ? TrackComputationCache.get(
+            day: track.day,
+            sourcePoints: track.points,
+            settings: filterSettings,
+          ).display.correlationPoints
         : <TrackPoint>[];
     final correlatedMap = track != null
         ? Map<TimelineEntry, TrackPoint>.fromEntries(
@@ -1742,11 +1752,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _addPhotos(DayEntry entry) async {
     if (_importingPhotos) return;
     setState(() => _importingPhotos = true);
-    final logbookId = context.read<ValueNotifier<String?>>().value;
-    if (logbookId == null) {
-      setState(() => _importingPhotos = false);
-      return;
-    }
+    // null in local mode (no cloud "active logbook" was ever assigned) means
+    // the default local logbook — '' is its reserved sentinel, same
+    // convention as backup_screen.dart — not "no logbook, abort".
+    final logbookId = context.read<ValueNotifier<String?>>().value ?? '';
     final day = DateTime(widget.year, widget.month, widget.day);
     try {
       final paths = await PhotoService.pickAndUpload(day, logbookId);
@@ -2013,8 +2022,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   /// The inline preview map embedded in the Route card: track polyline(s),
   /// stop halos, an uncertainty corridor (at close zoom), start/end/hourly
   /// tap-to-inspect markers, and satellite/normal toggle support. Builds a
-  /// [DisplayModel] from the raw track fresh on every call rather than
-  /// caching it, since track/filter-settings can change between rebuilds.
+  /// [DisplayModel] via [TrackComputationCache], which keys on track
+  /// identity + filter settings so it recomputes exactly when either
+  /// changes between rebuilds, not on every rebuild.
   Widget _buildMap(DayEntry entry, DailyTrack? track) {
     if (track == null || track.points.isEmpty) return const SizedBox();
 
@@ -2022,7 +2032,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final provider = context.watch<ThemeProvider>();
     final filterSettings = provider.filterSettings;
     final showRawTrack = provider.showRawTrack;
-    final display    = buildDisplayModel(track.points, settings: filterSettings);
+    final display    = TrackComputationCache.get(
+      day: track.day,
+      sourcePoints: track.points,
+      settings: filterSettings,
+    ).display;
     final correlated = correlateTimelineWithTrack(entry.timeline, display.correlationPoints);
 
     final startPoint = display.firstMovingPoint ?? track.points.first;
@@ -3241,11 +3255,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     if (kIsWeb) {
       final bytes = picked.bytes;
       if (bytes == null) return;
-      preview = GpxParser().parseBytes(bytes).points;
+      preview = (await compute(parseGpxBytes, bytes)).points;
     } else {
       final path = picked.path;
       if (path == null) return;
-      preview = (await GpxParser().parse(File(path))).points;
+      final bytes = await File(path).readAsBytes();
+      preview = (await compute(parseGpxBytes, bytes)).points;
     }
 
     if (!mounted) return;
@@ -3299,7 +3314,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _exportGpx(DailyTrack track, DateTime day) async {
     final filterSettings = context.read<ThemeProvider>().filterSettings;
     final vesselName    = context.read<ThemeProvider>().vesselName;
-    final display = buildDisplayModel(track.points, settings: filterSettings);
+    final display = TrackComputationCache.get(
+      day: track.day,
+      sourcePoints: track.points,
+      settings: filterSettings,
+    ).display;
     final gpxStr  = buildGpxExport(
       rawPoints:  track.points,
       display:    display,
@@ -3329,53 +3348,74 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
   void _exportPdf(DayEntry entry, DailyStats? stats, DailyTrack? track) async {
     final p = context.read<ThemeProvider>();
     final l10n = context.l10n;
-    final filteredPoints = track != null
-        ? buildDisplayModel(track.points, settings: p.filterSettings).allPoints()
-        : const <TrackPoint>[];
-    final photoBytes = <Uint8List>[];
-    for (final path in entry.photos) {
-      final file = await PhotoService.localFile(path);
-      if (file != null) photoBytes.add(await file.readAsBytes());
+    final messenger = ScaffoldMessenger.of(context);
+    showProgressSnackBar(context, l10n.dayExportPdfInProgress);
+
+    try {
+      final filteredPoints = track != null
+          ? TrackComputationCache.get(
+              day: track.day,
+              sourcePoints: track.points,
+              settings: p.filterSettings,
+            ).display.allPoints()
+          : const <TrackPoint>[];
+      final photoBytes = <Uint8List>[];
+      for (final path in entry.photos) {
+        final file = await PhotoService.localFile(path);
+        if (file != null) photoBytes.add(await file.readAsBytes());
+      }
+      final pdfStrings = PdfStrings(
+        voyageLog:     l10n.pdfVoyageLog,
+        notes:         l10n.pdfNotes,
+        date:          l10n.pdfDate,
+        distance:         l10n.pdfDistance,
+        avgSpeed:         l10n.pdfAvgSpeed,
+        avgSpeedUnderway: l10n.pdfAvgSpeedUnderway,
+        max:              l10n.pdfMax,
+        duration:      l10n.pdfDuration,
+        stops:         l10n.pdfStops,
+        statistics:    l10n.pdfStatistics,
+        crew:          l10n.pdfCrew,
+        skipper:       l10n.pdfSkipper,
+        crewMember:    l10n.pdfCrewMember,
+        logEntries:    l10n.pdfLogEntries,
+        timeCol:       l10n.pdfTimeCol,
+        courseCol:     l10n.pdfCourseCol,
+        windCol:       l10n.pdfWindCol,
+        seaCol:        l10n.pdfSeaCol,
+        remarksCol:    l10n.pdfRemarksCol,
+        trackMap:      l10n.pdfTrackMap,
+        locale:        l10n.pdfLocale,
+        generatedOn:   l10n.pdfGeneratedOn,
+        passageToTemplate:     l10n.pdfPassageTo('\u0000'),
+        departureFromTemplate: l10n.pdfDepartureFrom('\u0000'),
+        pageOfTemplate:        l10n.pdfPageOf(-1, -2),
+      );
+      final bytes = await buildVoyagePdf(
+        entry:       entry,
+        stats:       stats,
+        vesselName:  p.vesselName,
+        strings:     pdfStrings,
+        equipment:   p.vesselEquipment,
+        trackPoints: filteredPoints,
+        photoBytes:  photoBytes,
+      );
+
+      messenger.hideCurrentSnackBar();
+      if (!mounted) return;
+
+      final fileName =
+          'logbuch_${DateFormat('yyyy-MM-dd').format(entry.date)}.pdf';
+      await Printing.sharePdf(bytes: bytes, filename: fileName);
+
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.dayExportPdfSuccess)));
+    } catch (e, st) {
+      if (kDebugMode) debugPrint('_exportPdf failed: $e\n$st');
+      messenger.hideCurrentSnackBar();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.dayExportPdfError)));
     }
-    final pdfStrings = PdfStrings(
-      voyageLog:     l10n.pdfVoyageLog,
-      notes:         l10n.pdfNotes,
-      date:          l10n.pdfDate,
-      distance:         l10n.pdfDistance,
-      avgSpeed:         l10n.pdfAvgSpeed,
-      avgSpeedUnderway: l10n.pdfAvgSpeedUnderway,
-      max:              l10n.pdfMax,
-      duration:      l10n.pdfDuration,
-      stops:         l10n.pdfStops,
-      statistics:    l10n.pdfStatistics,
-      crew:          l10n.pdfCrew,
-      skipper:       l10n.pdfSkipper,
-      crewMember:    l10n.pdfCrewMember,
-      logEntries:    l10n.pdfLogEntries,
-      timeCol:       l10n.pdfTimeCol,
-      courseCol:     l10n.pdfCourseCol,
-      windCol:       l10n.pdfWindCol,
-      seaCol:        l10n.pdfSeaCol,
-      remarksCol:    l10n.pdfRemarksCol,
-      trackMap:      l10n.pdfTrackMap,
-      locale:        l10n.pdfLocale,
-      generatedOn:   l10n.pdfGeneratedOn,
-      passageTo:     l10n.pdfPassageTo,
-      departureFrom: l10n.pdfDepartureFrom,
-      pageOf:        l10n.pdfPageOf,
-    );
-    final bytes = await buildVoyagePdf(
-      entry:       entry,
-      stats:       stats,
-      vesselName:  p.vesselName,
-      strings:     pdfStrings,
-      equipment:   p.vesselEquipment,
-      trackPoints: filteredPoints,
-      photoBytes:  photoBytes,
-    );
-    final fileName =
-        'logbuch_${DateFormat('yyyy-MM-dd').format(entry.date)}.pdf';
-    await Printing.sharePdf(bytes: bytes, filename: fileName);
   }
 
   /// Confirms, then deletes this day's GPX track (the day entry itself is kept).
@@ -3705,7 +3745,11 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final track = widget.track;
     final entry = widget.entry;
 
-    final display    = buildDisplayModel(track.points, settings: widget.filterSettings);
+    final display    = TrackComputationCache.get(
+      day: track.day,
+      sourcePoints: track.points,
+      settings: widget.filterSettings,
+    ).display;
     final correlated = correlateTimelineWithTrack(entry.timeline, display.correlationPoints);
 
     final startPoint = display.firstMovingPoint ?? track.points.first;

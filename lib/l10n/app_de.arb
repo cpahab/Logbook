@@ -559,6 +559,9 @@
   "homeExportRangeEmpty": "Keine Logbucheinträge im gewählten Zeitraum.",
   "homeExportRangeSuccess": "PDF-Export bereit zum Teilen.",
   "homeExportRangeError": "PDF-Export fehlgeschlagen. Bitte erneut versuchen.",
+  "dayExportPdfInProgress": "PDF-Export wird vorbereitet…",
+  "dayExportPdfSuccess": "PDF-Export bereit zum Teilen.",
+  "dayExportPdfError": "PDF-Export fehlgeschlagen. Bitte erneut versuchen.",
 
   "backupExportTitle": "Alle Daten exportieren",
   "backupExportDescription": "Sichert alle Tageseinträge, GPS-Tracks, die Besatzungsliste, Notfallkontakte und Fotos dieses Logbuchs in einer einzigen Datei.",

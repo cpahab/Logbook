@@ -559,6 +559,9 @@
   "homeExportRangeEmpty": "No log entries in the selected date range.",
   "homeExportRangeSuccess": "PDF export ready to share.",
   "homeExportRangeError": "PDF export failed. Please try again.",
+  "dayExportPdfInProgress": "Preparing PDF export…",
+  "dayExportPdfSuccess": "PDF export ready to share.",
+  "dayExportPdfError": "PDF export failed. Please try again.",
 
   "backupExportTitle": "Export all data",
   "backupExportDescription": "Save every day entry, GPS track, crew roster, emergency contact and photo in this logbook as a single file you control.",

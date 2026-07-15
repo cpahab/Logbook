@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -68,11 +69,21 @@ class PhotoService {
         final cache = await _cacheDir();
         final local = File('${cache.path}/$id.jpg');
         await local.writeAsBytes(compressed.isNotEmpty ? compressed : srcBytes);
-        await FirebaseStorage.instance.ref(storagePath).putFile(local);
+        // The local cache write above is what makes the photo usable (see
+        // localFile, which checks the cache before ever touching Storage),
+        // so it counts as success on its own — the Storage upload is
+        // best-effort, same as restorePhoto's treatment of it, so a local-mode
+        // or offline user (no authenticated Storage access) doesn't silently
+        // lose every photo they add.
         uploaded.add(storagePath);
+        try {
+          await FirebaseStorage.instance.ref(storagePath).putFile(local);
+        } catch (_) {
+          // Expected for local-mode/offline users (no authenticated Storage
+          // access) — same silent, best-effort treatment as restorePhoto.
+        }
       } catch (e, st) {
-        // ignore: avoid_print
-        print('[PhotoService] upload failed: $e\n$st');
+        if (kDebugMode) debugPrint('[PhotoService] photo processing failed: $e\n$st');
       }
     }
     return uploaded;

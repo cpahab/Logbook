@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -60,7 +61,7 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
       return;
     }
 
-    final result = GpxParser().parseBytes(bytes);
+    final result = await compute(parseGpxBytes, bytes);
     final resolution = GpxDateResolver.resolve(result);
 
     if (!mounted) return;

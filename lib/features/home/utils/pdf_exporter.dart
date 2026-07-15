@@ -7,12 +7,14 @@ import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:flutter_map/flutter_map.dart'
     show BuiltInMapCachingProvider, CachedMapTile, CachedMapTileMetadata;
 
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../../../core/constants/map_config.dart';
+import '../../../core/services/backup_mapper.dart';
 import '../domain/crew_member.dart';
 import '../domain/day_entry.dart';
 import '../domain/timeline_entry.dart';
@@ -109,9 +111,23 @@ class PdfStrings {
   final String trackMap;
   final String locale;
   final String generatedOn;
-  final String Function(String destination) passageTo;
-  final String Function(String origin) departureFrom;
-  final String Function(int page, int total) pageOf;
+
+  /// Localized "Passage to {destination}" with the destination replaced by
+  /// a NUL placeholder (never appears in real text) -- plain data (not a
+  /// closure over AppLocalizations) so PdfStrings can cross an isolate
+  /// boundary via compute(). Built at the call site with
+  /// l10n.pdfPassageTo('\u0000'); substitute the real destination with
+  /// replaceFirst('\u0000', destination).
+  final String passageToTemplate;
+
+  /// Same trick as [passageToTemplate] for "Departure from {origin}".
+  final String departureFromTemplate;
+
+  /// Same trick as [passageToTemplate] for "Page {page} of {total}", built
+  /// with sentinel values l10n.pdfPageOf(-1, -2) (real page/total are
+  /// always positive, so -1/-2 can't collide) -- substitute with
+  /// replaceFirst('-1', '$page').replaceFirst('-2', '$total').
+  final String pageOfTemplate;
 
   const PdfStrings({
     required this.voyageLog,
@@ -136,9 +152,9 @@ class PdfStrings {
     required this.trackMap,
     required this.locale,
     required this.generatedOn,
-    required this.passageTo,
-    required this.departureFrom,
-    required this.pageOf,
+    required this.passageToTemplate,
+    required this.departureFromTemplate,
+    required this.pageOfTemplate,
   });
 }
 
@@ -255,6 +271,63 @@ List<pw.Widget> _buildDaySections({
   return sections;
 }
 
+/// Inputs to [_buildVoyagePdfBytes] — plain, isolate-sendable data only
+/// (fonts, decoded images, parsed entries), so the actual pdf-widget layout
+/// and byte serialization (the CPU-heavy part) can run via [compute] off
+/// the UI isolate.
+typedef _VoyagePdfInput = ({
+  DayEntry entry,
+  DailyStats? stats,
+  String vesselName,
+  PdfStrings strings,
+  VesselEquipmentConfig equipment,
+  pw.Font regular,
+  pw.Font bold,
+  pw.Font italic,
+  pw.Font emojiFont,
+  Uint8List? trackImageBytes,
+  List<Uint8List> photoBytes,
+});
+
+/// Builds the single-day [pw.Document] and serializes it to PDF bytes.
+/// Top-level (and taking only plain data) so it can run via [compute] —
+/// layout/pagination/text-shaping for a long timeline is real CPU work,
+/// and unlike [_renderTrackImage] this part is pure Dart (no `dart:ui`,
+/// no platform channels), so it's safe to run off the UI isolate.
+Future<Uint8List> _buildVoyagePdfBytes(_VoyagePdfInput input) async {
+  // compute() runs this in a fresh isolate, which doesn't share the main
+  // isolate's intl locale data (initialized once in main.dart) — DateFormat
+  // with a non-default locale (see _buildRoute/_buildTitlePage) throws
+  // LocaleDataException without this.
+  await initializeDateFormatting(input.strings.locale);
+
+  final doc = pw.Document();
+  doc.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 44),
+      theme: pw.ThemeData.withFont(
+          base: input.regular, bold: input.bold, italic: input.italic),
+      footer: (ctx) => _footer(ctx, input.regular, input.strings),
+      build: (ctx) => _buildDaySections(
+        entry:           input.entry,
+        stats:           input.stats,
+        vesselName:      input.vesselName,
+        strings:         input.strings,
+        equipment:       input.equipment,
+        regular:         input.regular,
+        bold:            input.bold,
+        italic:          input.italic,
+        emojiFont:       input.emojiFont,
+        trackImageBytes: input.trackImageBytes,
+        photoBytes:      input.photoBytes,
+      ),
+    ),
+  );
+
+  return doc.save();
+}
+
 /// Builds and returns the PDF bytes for a single-day voyage report.
 ///
 /// Fonts are downloaded from Google Fonts on first call and cached by the
@@ -273,33 +346,31 @@ Future<Uint8List> buildVoyagePdf({
   final italic   = await PdfGoogleFonts.notoSansItalic();
   final emojiFont = await PdfGoogleFonts.notoEmojiRegular();
 
-  final Uint8List? trackImageBytes =
-      trackPoints.length >= 2 ? await _renderTrackImage(trackPoints) : null;
+  // Falls back to per-entry logged positions (no connecting line) when
+  // there's no continuous GPS track, so a hand-logged day still gets a map.
+  final Uint8List? trackImageBytes = trackPoints.length >= 2
+      ? await _renderTrackImage(trackPoints)
+      : await _renderPositionsImage(_positionedFixes(entry));
 
-  final doc = pw.Document();
-  doc.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 44),
-      theme: pw.ThemeData.withFont(base: regular, bold: bold, italic: italic),
-      footer: (ctx) => _footer(ctx, regular, strings),
-      build: (ctx) => _buildDaySections(
-        entry:           entry,
-        stats:           stats,
-        vesselName:      vesselName,
-        strings:         strings,
-        equipment:       equipment,
-        regular:         regular,
-        bold:            bold,
-        italic:          italic,
-        emojiFont:       emojiFont,
-        trackImageBytes: trackImageBytes,
-        photoBytes:      photoBytes,
-      ),
-    ),
-  );
+  // entry as loaded from HomeRepository is a live HiveObject bound to its
+  // Hive box (which holds a StreamController with listener closures) —
+  // that can't cross the compute() isolate boundary. Round-tripping through
+  // the (already-tested) backup JSON mapper produces a plain, detached copy.
+  final detachedEntry = dayEntryFromJson(dayEntryToJson(entry)).entry;
 
-  return doc.save();
+  return compute(_buildVoyagePdfBytes, (
+    entry:           detachedEntry,
+    stats:           stats,
+    vesselName:      vesselName,
+    strings:         strings,
+    equipment:       equipment,
+    regular:         regular,
+    bold:            bold,
+    italic:          italic,
+    emojiFont:       emojiFont,
+    trackImageBytes: trackImageBytes,
+    photoBytes:      photoBytes,
+  ));
 }
 
 /// One day's pre-loaded inputs for [buildRangeVoyagePdf] — mirrors the
@@ -325,6 +396,67 @@ class RangeDayInput {
 /// each of [days] starting on its own page, in one continuous document so
 /// page numbers ("Page X of Y") span the whole thing.
 ///
+/// Inputs to [_buildRangeVoyagePdfBytes] — see [_VoyagePdfInput].
+typedef _RangeVoyagePdfInput = ({
+  List<RangeDayInput> days,
+  String logbookName,
+  String vesselName,
+  DateTimeRange range,
+  PdfStrings strings,
+  VesselEquipmentConfig equipment,
+  pw.Font regular,
+  pw.Font bold,
+  pw.Font italic,
+  pw.Font emojiFont,
+  List<Uint8List?> trackImages,
+});
+
+/// Builds the multi-day [pw.Document] and serializes it to PDF bytes.
+/// Top-level for the same reason as [_buildVoyagePdfBytes] — this is the
+/// CPU-heavy pure-Dart part (layout/pagination across every day in the
+/// range), safe to run via [compute].
+Future<Uint8List> _buildRangeVoyagePdfBytes(_RangeVoyagePdfInput input) async {
+  // See _buildVoyagePdfBytes — this isolate needs its own intl locale init.
+  await initializeDateFormatting(input.strings.locale);
+
+  final doc = pw.Document();
+  doc.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 44),
+      theme: pw.ThemeData.withFont(
+          base: input.regular, bold: input.bold, italic: input.italic),
+      footer: (ctx) => _footer(ctx, input.regular, input.strings),
+      build: (ctx) {
+        final widgets = <pw.Widget>[
+          _buildTitlePage(input.logbookName, input.vesselName, input.range,
+              input.bold, input.regular, input.italic, input.emojiFont, input.strings),
+        ];
+        for (int i = 0; i < input.days.length; i++) {
+          widgets.add(pw.NewPage());
+          widgets.addAll(_buildDaySections(
+            entry:           input.days[i].entry,
+            stats:           input.days[i].stats,
+            vesselName:      input.vesselName,
+            strings:         input.strings,
+            equipment:       input.equipment,
+            regular:         input.regular,
+            bold:            input.bold,
+            italic:          input.italic,
+            emojiFont:       input.emojiFont,
+            trackImageBytes: input.trackImages[i],
+            photoBytes:      input.days[i].photoBytes,
+            showHeader:      false,
+          ));
+        }
+        return widgets;
+      },
+    ),
+  );
+
+  return doc.save();
+}
+
 /// [days] must already be sorted ascending by date and pre-filtered to the
 /// picked range — this function does no filtering of its own.
 Future<Uint8List> buildRangeVoyagePdf({
@@ -342,45 +474,40 @@ Future<Uint8List> buildRangeVoyagePdf({
 
   // Render every day's track image in parallel — each is an independent
   // network-bound tile fetch, so there's no benefit to doing them serially.
+  // Falls back to per-entry logged positions (no connecting line) when a
+  // day has no continuous GPS track, so a hand-logged day still gets a map.
   final trackImages = await Future.wait([
     for (final d in days)
-      d.trackPoints.length >= 2 ? _renderTrackImage(d.trackPoints) : Future.value(null),
+      d.trackPoints.length >= 2
+          ? _renderTrackImage(d.trackPoints)
+          : _renderPositionsImage(_positionedFixes(d.entry)),
   ]);
 
-  final doc = pw.Document();
-  doc.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 44),
-      theme: pw.ThemeData.withFont(base: regular, bold: bold, italic: italic),
-      footer: (ctx) => _footer(ctx, regular, strings),
-      build: (ctx) {
-        final widgets = <pw.Widget>[
-          _buildTitlePage(logbookName, vesselName, range, bold, regular, italic, emojiFont, strings),
-        ];
-        for (int i = 0; i < days.length; i++) {
-          widgets.add(pw.NewPage());
-          widgets.addAll(_buildDaySections(
-            entry:           days[i].entry,
-            stats:           days[i].stats,
-            vesselName:      vesselName,
-            strings:         strings,
-            equipment:       equipment,
-            regular:         regular,
-            bold:            bold,
-            italic:          italic,
-            emojiFont:       emojiFont,
-            trackImageBytes: trackImages[i],
-            photoBytes:      days[i].photoBytes,
-            showHeader:      false,
-          ));
-        }
-        return widgets;
-      },
-    ),
-  );
+  // Same detachment as buildVoyagePdf — each day's entry is a live,
+  // box-attached HiveObject until round-tripped through the JSON mapper.
+  final detachedDays = [
+    for (final d in days)
+      RangeDayInput(
+        entry:       dayEntryFromJson(dayEntryToJson(d.entry)).entry,
+        stats:       d.stats,
+        trackPoints: d.trackPoints,
+        photoBytes:  d.photoBytes,
+      ),
+  ];
 
-  return doc.save();
+  return compute(_buildRangeVoyagePdfBytes, (
+    days:        detachedDays,
+    logbookName: logbookName,
+    vesselName:  vesselName,
+    range:       range,
+    strings:     strings,
+    equipment:   equipment,
+    regular:     regular,
+    bold:        bold,
+    italic:      italic,
+    emojiFont:   emojiFont,
+    trackImages: trackImages,
+  ));
 }
 
 // ── Title page ────────────────────────────────────────────────────────────────
@@ -465,7 +592,9 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
     return pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [dateColumn]);
   }
 
-  final title = hasTo ? strings.passageTo(to) : strings.departureFrom(from);
+  final title = hasTo
+      ? strings.passageToTemplate.replaceFirst('\u0000', to)
+      : strings.departureFromTemplate.replaceFirst('\u0000', from);
 
   return pw.Row(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -477,7 +606,7 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
             _richText(title, base: bold, emoji: emoji, size: 18, color: _navy),
             if (hasFrom && hasTo) ...[
               pw.SizedBox(height: 2),
-              _richText(strings.departureFrom(from),
+              _richText(strings.departureFromTemplate.replaceFirst('\u0000', from),
                   base: italic, emoji: emoji, size: 10, color: _steel),
             ],
           ],
@@ -572,7 +701,7 @@ pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular, pw.Fo
       for (int i = 0; i < crew.length; i++)
         pw.Container(
           padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-          decoration: pw.BoxDecoration(
+          decoration: const pw.BoxDecoration(
             border: pw.Border(
               bottom: pw.BorderSide(color: _rule, width: 0.5),
             ),
@@ -586,10 +715,10 @@ pw.Widget _buildCrew(List<CrewMember> crew, pw.Font bold, pw.Font regular, pw.Fo
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                 decoration: i == 0
-                    ? pw.BoxDecoration(
+                    ? const pw.BoxDecoration(
                         color: _navy,
                         borderRadius:
-                            const pw.BorderRadius.all(pw.Radius.circular(2)),
+                            pw.BorderRadius.all(pw.Radius.circular(2)),
                       )
                     : pw.BoxDecoration(
                         border: pw.Border.all(color: _rule, width: 0.5),
@@ -800,7 +929,9 @@ pw.Widget _footer(pw.Context ctx, pw.Font regular, PdfStrings strings) {
       pw.Align(
         alignment: pw.Alignment.centerRight,
         child: pw.Text(
-          strings.pageOf(ctx.pageNumber, ctx.pagesCount),
+          strings.pageOfTemplate
+              .replaceFirst('-1', '${ctx.pageNumber}')
+              .replaceFirst('-2', '${ctx.pagesCount}'),
           style: pw.TextStyle(font: regular, fontSize: 7, color: _rule),
         ),
       ),
@@ -1077,6 +1208,87 @@ Future<Uint8List?> _renderTrackImage(List<TrackPoint> points) async {
       const ui.Color(0xFF2E7D32));
   _drawMarker(canvas, toX(points.last.lon),  toY(points.last.lat),
       const ui.Color(0xFFC62828));
+  _drawNorthIndicator(canvas, canvasW - 32, 34);
+
+  final picture  = recorder.endRecording();
+  final image    = await picture.toImage(canvasW.toInt(), canvasH.toInt());
+  final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+  return byteData?.buffer.asUint8List();
+}
+
+/// The (lat, lon) of every timeline entry that captured a GPS fix — used as
+/// a fallback map when the day has no continuous GPS track (e.g. logged
+/// entirely by hand, or the track wasn't imported) but at least one log
+/// entry still has a position.
+List<(double, double)> _positionedFixes(DayEntry entry) => [
+      for (final t in entry.timeline)
+        if (t.latitude != null && t.longitude != null) (t.latitude!, t.longitude!),
+    ];
+
+/// Renders discrete [positions] (per-entry GPS fixes, not a continuous
+/// track) onto a composited basemap-tile image — one dot per position, no
+/// connecting line, since these are independent point-in-time fixes rather
+/// than a route. Returns PNG bytes, or null if there are no positions.
+Future<Uint8List?> _renderPositionsImage(List<(double, double)> positions) async {
+  if (positions.isEmpty) return null;
+
+  var minLat = positions.first.$1, maxLat = minLat;
+  var minLon = positions.first.$2, maxLon = minLon;
+  for (final (lat, lon) in positions) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+  }
+
+  final zoom   = _chooseZoom(minLat, maxLat, minLon, maxLon);
+  final maxIdx = math.pow(2, zoom).toInt() - 1;
+
+  final (nx0, ny0) = _tile(minLon, maxLat, zoom); // NW tile
+  final (nx1, ny1) = _tile(maxLon, minLat, zoom); // SE tile
+  final tx0 = (nx0 - 1).clamp(0, maxIdx);
+  final ty0 = (ny0 - 1).clamp(0, maxIdx);
+  final tx1 = (nx1 + 1).clamp(0, maxIdx);
+  final ty1 = (ny1 + 1).clamp(0, maxIdx);
+
+  final canvasW = (tx1 - tx0 + 1) * 256.0;
+  final canvasH = (ty1 - ty0 + 1) * 256.0;
+
+  final coords = [
+    for (int tx = tx0; tx <= tx1; tx++)
+      for (int ty = ty0; ty <= ty1; ty++) (tx, ty),
+  ];
+
+  final tileImages = await Future.wait([
+    for (final (tx, ty) in coords) _fetchTile(zoom, tx, ty, kBaseTileUrl),
+  ]);
+
+  final recorder = ui.PictureRecorder();
+  final canvas   = ui.Canvas(recorder);
+
+  canvas.drawRect(
+    ui.Rect.fromLTWH(0, 0, canvasW, canvasH),
+    ui.Paint()..color = const ui.Color(0xFFD8E8F0),
+  );
+
+  for (int i = 0; i < coords.length; i++) {
+    final (tx, ty) = coords[i];
+    final img = tileImages[i];
+    if (img != null) {
+      canvas.drawImage(
+        img,
+        ui.Offset((tx - tx0) * 256.0, (ty - ty0) * 256.0),
+        ui.Paint(),
+      );
+    }
+  }
+
+  double toX(double lon) => _mercX(lon, zoom) - tx0 * 256;
+  double toY(double lat) => _mercY(lat, zoom) - ty0 * 256;
+
+  for (final (lat, lon) in positions) {
+    _drawMarker(canvas, toX(lon), toY(lat), const ui.Color(0xFF003366));
+  }
   _drawNorthIndicator(canvas, canvasW - 32, 34);
 
   final picture  = recorder.endRecording();

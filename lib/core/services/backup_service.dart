@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:flutter/foundation.dart' show compute;
 
 import '../../features/emergency/data/emergency_repository.dart';
+import '../../features/emergency/domain/emergency_contact.dart';
 import '../../features/home/data/home_repository.dart';
+import '../../features/home/domain/crew_member.dart';
 import '../../features/home/utils/photo_service.dart';
 import '../../features/settings/domain/theme_provider.dart';
 import 'backup_mapper.dart';
@@ -20,13 +23,123 @@ class BackupFormatException implements Exception {
   String toString() => message;
 }
 
+/// Inputs to [_buildBackupZip] — plain, isolate-sendable data only (no
+/// repository/provider references), so archive+zip building (the CPU-heavy
+/// part of export) can run via [compute] off the UI isolate.
+typedef _BackupZipInput = ({
+  Map<String, dynamic> manifest,
+  Map<String, dynamic> data,
+  String readme,
+  Map<String, List<int>> photoBytesByFilename,
+});
+
+/// Builds the backup archive (manifest, data, README, photos) and zip-encodes
+/// it. Top-level so it can be handed to [compute] — JSON + zip encoding is
+/// CPU-heavy for a logbook with many entries/photos.
+Uint8List _buildBackupZip(_BackupZipInput input) {
+  const prettyJson = JsonEncoder.withIndent('  ');
+  final archive = Archive();
+  void addTextFile(String name, String content) {
+    final bytes = utf8.encode(content);
+    archive.addFile(ArchiveFile(name, bytes.length, bytes));
+  }
+
+  addTextFile('manifest.json', prettyJson.convert(input.manifest));
+  addTextFile('data.json', prettyJson.convert(input.data));
+  for (final entry in input.photoBytesByFilename.entries) {
+    archive.addFile(
+        ArchiveFile('photos/${entry.key}', entry.value.length, entry.value));
+  }
+  addTextFile('README.txt', input.readme);
+
+  final zipBytes = ZipEncoder().encode(archive);
+  if (zipBytes == null) throw Exception('Failed to build backup archive.');
+  return Uint8List.fromList(zipBytes);
+}
+
+/// Inputs to [_parseBackupArchive] — just the raw zip bytes, so archive
+/// decoding + JSON parsing (the CPU-heavy part of restore) can run via
+/// [compute] off the UI isolate.
+typedef _ParsedBackup = ({
+  List<ParsedDayEntry> entries,
+  List<CrewMember> roster,
+  List<EmergencyContact> contacts,
+  Map<String, dynamic>? vessel,
+  Map<String, List<int>> photoBytesByFilename,
+});
+
+/// Decodes and parses a backup archive into plain data — no repository/
+/// provider access, so it's safe to run via [compute]. Top-level for the
+/// same reason as [_buildBackupZip].
+_ParsedBackup _parseBackupArchive(Uint8List zipBytes) {
+  final archive = ZipDecoder().decodeBytes(zipBytes);
+
+  final manifestFile = archive.findFile('manifest.json');
+  final dataFile = archive.findFile('data.json');
+  if (manifestFile == null || dataFile == null) {
+    throw BackupFormatException('backupInvalidFile');
+  }
+
+  final Map<String, dynamic> manifest;
+  final Map<String, dynamic> data;
+  try {
+    manifest = json.decode(utf8.decode(manifestFile.content as List<int>))
+        as Map<String, dynamic>;
+    data = json.decode(utf8.decode(dataFile.content as List<int>))
+        as Map<String, dynamic>;
+  } catch (_) {
+    throw BackupFormatException('backupInvalidFile');
+  }
+
+  final schemaVersion = manifest['schemaVersion'] as int?;
+  if (schemaVersion == null || schemaVersion > backupSchemaVersion) {
+    throw BackupFormatException('backupSchemaTooNew');
+  }
+
+  final List<ParsedDayEntry> parsedEntries;
+  final List<dynamic> rosterJson;
+  final List<dynamic> contactsJson;
+  try {
+    parsedEntries = [
+      for (final e in (data['entries'] as List? ?? const []))
+        dayEntryFromJson(e as Map<String, dynamic>),
+    ];
+    rosterJson = data['roster'] as List? ?? const [];
+    contactsJson = data['emergencyContacts'] as List? ?? const [];
+  } catch (_) {
+    throw BackupFormatException('backupInvalidFile');
+  }
+
+  final roster = [
+    for (final m in rosterJson) crewMemberFromJson(m as Map<String, dynamic>),
+  ];
+  final contacts = [
+    for (final c in contactsJson)
+      emergencyContactFromJson(c as Map<String, dynamic>),
+  ];
+  // Optional: absent in a backup made before vessel info was included.
+  final vessel = data['vessel'] as Map<String, dynamic>?;
+
+  final photoBytesByFilename = <String, List<int>>{
+    for (final f in archive.files)
+      if (f.isFile && f.name.startsWith('photos/'))
+        f.name.substring('photos/'.length): f.content as List<int>,
+  };
+
+  return (
+    entries: parsedEntries,
+    roster: roster,
+    contacts: contacts,
+    vessel: vessel,
+    photoBytesByFilename: photoBytesByFilename,
+  );
+}
+
 /// Exports the active logbook (day entries, GPS tracks, crew roster,
 /// emergency contacts, and locally-reachable photos) to a single
 /// human-readable `.zip`, and restores one back — replacing whatever is
 /// currently in the active logbook.
 class BackupService {
-  static const JsonEncoder _prettyJson = JsonEncoder.withIndent('  ');
-
   static Future<Uint8List> exportBackup({
     required HomeRepository home,
     required EmergencyRepository emergency,
@@ -63,39 +176,33 @@ class BackupService {
       'vessel': _vesselInfoToJson(theme),
     };
 
-    final archive = Archive();
-    void addTextFile(String name, String content) {
-      final bytes = utf8.encode(content);
-      archive.addFile(ArchiveFile(name, bytes.length, bytes));
-    }
-
-    addTextFile('manifest.json', _prettyJson.convert(manifest));
-    addTextFile('data.json', _prettyJson.convert(data));
-
+    // Photo reads are I/O-bound (Storage/disk plugin calls) so they stay on
+    // the UI isolate; only the CPU-heavy JSON/zip encoding below moves off it.
+    final photoBytesByFilename = <String, List<int>>{};
     var photosIncluded = 0;
     for (final path in photoPaths) {
       final file = await PhotoService.localFile(path);
       if (file == null) continue;
       final bytes = await file.readAsBytes();
-      archive.addFile(ArchiveFile('photos/${path.split('/').last}', bytes.length, bytes));
+      photoBytesByFilename[path.split('/').last] = bytes;
       photosIncluded++;
     }
 
-    addTextFile(
-      'README.txt',
-      _buildReadme(
-        logbookName: logbookName,
-        vesselName: vesselName,
-        exportedAt: exportedAt,
-        entryCount: entries.length,
-        photosIncluded: photosIncluded,
-        photosTotal: photoPaths.length,
-      ),
+    final readme = _buildReadme(
+      logbookName: logbookName,
+      vesselName: vesselName,
+      exportedAt: exportedAt,
+      entryCount: entries.length,
+      photosIncluded: photosIncluded,
+      photosTotal: photoPaths.length,
     );
 
-    final zipBytes = ZipEncoder().encode(archive);
-    if (zipBytes == null) throw Exception('Failed to build backup archive.');
-    return Uint8List.fromList(zipBytes);
+    return compute(_buildBackupZip, (
+      manifest: manifest,
+      data: data,
+      readme: readme,
+      photoBytesByFilename: photoBytesByFilename,
+    ));
   }
 
   static String _buildReadme({
@@ -161,76 +268,27 @@ merge with data already there.
     required EmergencyRepository emergency,
     required ThemeProvider theme,
   }) async {
-    final archive = ZipDecoder().decodeBytes(zipBytes);
+    // Archive decode + JSON parsing is pure computation on the zip bytes
+    // alone — runs off the UI isolate. A malformed archive throws from
+    // inside compute() before anything below touches local data.
+    final parsed = await compute(_parseBackupArchive, zipBytes);
 
-    final manifestFile = archive.findFile('manifest.json');
-    final dataFile = archive.findFile('data.json');
-    if (manifestFile == null || dataFile == null) {
-      throw BackupFormatException('backupInvalidFile');
-    }
-
-    final Map<String, dynamic> manifest;
-    final Map<String, dynamic> data;
-    try {
-      manifest = json.decode(utf8.decode(manifestFile.content as List<int>))
-          as Map<String, dynamic>;
-      data = json.decode(utf8.decode(dataFile.content as List<int>))
-          as Map<String, dynamic>;
-    } catch (_) {
-      throw BackupFormatException('backupInvalidFile');
-    }
-
-    final schemaVersion = manifest['schemaVersion'] as int?;
-    if (schemaVersion == null || schemaVersion > backupSchemaVersion) {
-      throw BackupFormatException('backupSchemaTooNew');
-    }
-
-    final List<ParsedDayEntry> parsedEntries;
-    final List<dynamic> rosterJson;
-    final List<dynamic> contactsJson;
-    try {
-      parsedEntries = [
-        for (final e in (data['entries'] as List? ?? const []))
-          dayEntryFromJson(e as Map<String, dynamic>),
-      ];
-      rosterJson = data['roster'] as List? ?? const [];
-      contactsJson = data['emergencyContacts'] as List? ?? const [];
-    } catch (_) {
-      throw BackupFormatException('backupInvalidFile');
-    }
-
-    final roster = [
-      for (final m in rosterJson) crewMemberFromJson(m as Map<String, dynamic>),
-    ];
-    final contacts = [
-      for (final c in contactsJson) emergencyContactFromJson(c as Map<String, dynamic>),
-    ];
-    // Optional: absent in a backup made before vessel info was included.
-    final vessel = data['vessel'] as Map<String, dynamic>?;
-
-    final photoBytesByFilename = <String, List<int>>{
-      for (final f in archive.files)
-        if (f.isFile && f.name.startsWith('photos/'))
-          f.name.substring('photos/'.length): f.content as List<int>,
-    };
-
-    // Nothing wiped until here — everything above only parsed into local
-    // variables, so a malformed archive is rejected without touching data.
     await home.clearLocalData();
     await emergency.clearLocalData();
 
     await home.restoreFromBackup(
-      entries: [for (final p in parsedEntries) p.entry],
-      roster: roster,
+      entries: [for (final p in parsed.entries) p.entry],
+      roster: parsed.roster,
     );
-    for (final p in parsedEntries) {
+    for (final p in parsed.entries) {
       final track = p.track;
       if (track != null) {
         await home.replaceTrackPoints(p.entry.date, track.points);
       }
     }
-    await emergency.restoreContacts(contacts);
+    await emergency.restoreContacts(parsed.contacts);
 
+    final vessel = parsed.vessel;
     if (vessel != null) {
       await theme.restoreVesselSettings(
         vesselName:         vessel['vesselName'] as String? ?? '',
@@ -251,9 +309,9 @@ merge with data already there.
       );
     }
 
-    for (final p in parsedEntries) {
+    for (final p in parsed.entries) {
       for (final path in p.entry.photos) {
-        final bytes = photoBytesByFilename[path.split('/').last];
+        final bytes = parsed.photoBytesByFilename[path.split('/').last];
         if (bytes != null) await PhotoService.restorePhoto(path, bytes);
       }
     }

@@ -149,26 +149,26 @@ final ThemeData lightTheme = ThemeData(
     headerBackgroundColor: _primary,
     headerForegroundColor: const Color(0xFFFFFFFF),
     headerHeadlineStyle: GoogleFonts.dmSans(
-        fontSize: 28, fontWeight: FontWeight.w600, color: Color(0xFFFFFFFF)),
-    weekdayStyle: GoogleFonts.dmSans(fontSize: 12, color: Color(0xFF43474E)),
-    dayStyle: GoogleFonts.dmSans(fontSize: 13, color: Color(0xFF1B1C1D)),
+        fontSize: 28, fontWeight: FontWeight.w600, color: const Color(0xFFFFFFFF)),
+    weekdayStyle: GoogleFonts.dmSans(fontSize: 12, color: const Color(0xFF43474E)),
+    dayStyle: GoogleFonts.dmSans(fontSize: 13, color: const Color(0xFF1B1C1D)),
     rangePickerBackgroundColor: _surface,
     rangePickerHeaderBackgroundColor: _primary,
     rangePickerHeaderForegroundColor: const Color(0xFFFFFFFF),
     rangePickerHeaderHelpStyle: GoogleFonts.dmSans(
-        fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFFABC9F2),
+        fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFFABC9F2),
         letterSpacing: 1.2),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: const Color(0xFFF5F3F4),
-      labelStyle: GoogleFonts.dmSans(fontSize: 12, color: Color(0xFF43474E)),
-      border: OutlineInputBorder(
+      labelStyle: GoogleFonts.dmSans(fontSize: 12, color: const Color(0xFF43474E)),
+      border: const OutlineInputBorder(
         borderSide: BorderSide(color: _outline),
       ),
-      enabledBorder: OutlineInputBorder(
+      enabledBorder: const OutlineInputBorder(
         borderSide: BorderSide(color: _outline),
       ),
-      focusedBorder: OutlineInputBorder(
+      focusedBorder: const OutlineInputBorder(
         borderSide: BorderSide(color: _primary, width: 2),
       ),
     ),

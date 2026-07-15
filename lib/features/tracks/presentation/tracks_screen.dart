@@ -199,7 +199,8 @@ class _TracksScreenState extends State<TracksScreen> {
   /// custom filter preset.
   Future<void> _pickDateRange() async {
     final range = await pickDateRange(context, initialRange: _effectiveRange);
-    if (range != null) _applyPreset(_FilterPreset.custom, custom: range);
+    if (range == null || !mounted) return;
+    _applyPreset(_FilterPreset.custom, custom: range);
   }
 
   /// Shared bottom nav bar (no FAB) for both the normal and fullscreen map views.

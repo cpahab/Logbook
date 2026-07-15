@@ -14,7 +14,7 @@ import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../utils/pdf_exporter.dart';
 import '../utils/photo_service.dart';
-import '../utils/trim_track.dart';
+import '../../tracks/utils/track_computation_cache.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/date_range_picker.dart';
 import '../../../core/widgets/nav_bar.dart';
@@ -202,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// to the picked custom range, clearing the year-pill filter.
   Future<void> _pickDateRange() async {
     final range = await pickDateRange(context, initialRange: _customRange);
-    if (range == null) return;
+    if (range == null || !mounted) return;
     setState(() {
       _customRange = range;
       _showAllYears = false;
@@ -277,12 +277,15 @@ class _HomeScreenState extends State<HomeScreen> {
       for (final entry in rangeEntries) {
         final day = DateTime(entry.date.year, entry.date.month, entry.date.day);
         final track = repo.dailyTracks[day];
-        final trackPoints = track != null
-            ? buildDisplayModel(track.points, settings: filterSettings).allPoints()
-            : const <TrackPoint>[];
-        final stats = track != null && track.points.isNotEmpty
-            ? computeDailyStats(track.points, settings: filterSettings)
+        final cached = track != null && track.points.isNotEmpty
+            ? TrackComputationCache.get(
+                day: day,
+                sourcePoints: track.points,
+                settings: filterSettings,
+              )
             : null;
+        final trackPoints = cached?.display.allPoints() ?? const <TrackPoint>[];
+        final stats = cached?.stats;
         final photoBytes = <Uint8List>[];
         for (final path in entry.photos) {
           final file = await PhotoService.localFile(path);
@@ -319,9 +322,9 @@ class _HomeScreenState extends State<HomeScreen> {
         trackMap:         l10n.pdfTrackMap,
         locale:           l10n.pdfLocale,
         generatedOn:      l10n.pdfGeneratedOn,
-        passageTo:        l10n.pdfPassageTo,
-        departureFrom:    l10n.pdfDepartureFrom,
-        pageOf:           l10n.pdfPageOf,
+        passageToTemplate:     l10n.pdfPassageTo('\u0000'),
+        departureFromTemplate: l10n.pdfDepartureFrom('\u0000'),
+        pageOfTemplate:        l10n.pdfPageOf(-1, -2),
       );
 
       final bytes = await buildRangeVoyagePdf(
@@ -473,7 +476,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (effectiveYear != null && day.year != effectiveYear) continue;
       final track = repo.dailyTracks[day]!;
       if (track.points.isEmpty) continue;
-      final stats = computeDailyStats(track.points, settings: filterSettings);
+      final stats = TrackComputationCache.get(
+        day: day,
+        sourcePoints: track.points,
+        settings: filterSettings,
+      ).stats;
       if (stats.distanceNm > 0) {
         totalNm += stats.distanceNm;
         countedDays.add(day);
@@ -929,7 +936,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final track = repo.dailyTracks[dayKey];
     DailyStats? stats;
     if (track != null && track.points.isNotEmpty) {
-      stats = computeDailyStats(track.points, settings: filterSettings);
+      stats = TrackComputationCache.get(
+        day: dayKey,
+        sourcePoints: track.points,
+        settings: filterSettings,
+      ).stats;
     }
     final firstTl = entry.timeline.isNotEmpty ? entry.timeline.first : null;
     final note = (entry.notes?.isNotEmpty ?? false)

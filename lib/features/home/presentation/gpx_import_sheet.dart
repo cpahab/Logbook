@@ -404,7 +404,7 @@ class _DatePickerRow extends StatelessWidget {
           lastDate: DateTime.now().add(const Duration(days: 365)),
           locale: context.read<ThemeProvider>().materialLocale,
         );
-        if (picked != null) {
+        if (picked != null && context.mounted) {
           onChanged(DateTime(picked.year, picked.month, picked.day));
         }
       },

@@ -30,6 +30,11 @@ class GpxParseResult {
   });
 }
 
+/// Top-level so it can be handed to [compute] — parsing (XML decode, sort,
+/// dedupe) is CPU-heavy for long tracks and would otherwise block the UI
+/// isolate.
+GpxParseResult parseGpxBytes(Uint8List bytes) => GpxParser().parseBytes(bytes);
+
 /// Parses a GPX file's track points, tolerating encoding quirks (UTF-16
 /// BOMs, HH:mm-only timestamps) and real-world exporter oddities seen in
 /// the wild (Null Island sentinel fixes, duplicate points across segments).

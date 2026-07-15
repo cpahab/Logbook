@@ -278,7 +278,9 @@ class _AddTimelineEntryDialogState extends State<AddTimelineEntryDialog> {
                           onTap: () async {
                             final t = await showTimePicker(
                                 context: context, initialTime: selectedTime);
-                            if (t != null) setState(() => selectedTime = t);
+                            if (t != null && mounted) {
+                              setState(() => selectedTime = t);
+                            }
                           },
                           child: Text(
                             selectedTime.format(context),

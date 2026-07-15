@@ -78,7 +78,7 @@ void main() {
   // ── PdfStrings construction ───────────────────────────────────────────────
 
   group('PdfStrings', () {
-    PdfStrings make() => PdfStrings(
+    PdfStrings make() => const PdfStrings(
           voyageLog:     'VOYAGE LOG',
           notes:         'NOTES',
           date:          'DATE',
@@ -101,9 +101,9 @@ void main() {
           trackMap:      'COURSE & TRACK',
           locale:        'en_US',
           generatedOn:   'GENERATED ON',
-          passageTo:     (dest) => 'Passage to $dest',
-          departureFrom: (orig) => 'Departure from $orig',
-          pageOf:        (p, t) => 'Page $p of $t',
+          passageToTemplate:     'Passage to \u0000',
+          departureFromTemplate: 'Departure from \u0000',
+          pageOfTemplate:        'Page -1 of -2',
         );
 
     test('stores scalar fields correctly', () {
@@ -114,17 +114,23 @@ void main() {
       expect(s.locale,     'en_US');
     });
 
-    test('passageTo closure interpolates destination', () {
-      expect(make().passageTo('Mallorca'), 'Passage to Mallorca');
+    test('passageToTemplate substitutes the destination placeholder', () {
+      expect(make().passageToTemplate.replaceFirst('\u0000', 'Mallorca'),
+          'Passage to Mallorca');
     });
 
-    test('departureFrom closure interpolates origin', () {
-      expect(make().departureFrom('Barcelona'), 'Departure from Barcelona');
+    test('departureFromTemplate substitutes the origin placeholder', () {
+      expect(make().departureFromTemplate.replaceFirst('\u0000', 'Barcelona'),
+          'Departure from Barcelona');
     });
 
-    test('pageOf closure formats page numbers', () {
-      expect(make().pageOf(1, 4), 'Page 1 of 4');
-      expect(make().pageOf(3, 3), 'Page 3 of 3');
+    test('pageOfTemplate substitutes the page/total placeholders', () {
+      expect(
+          make().pageOfTemplate.replaceFirst('-1', '1').replaceFirst('-2', '4'),
+          'Page 1 of 4');
+      expect(
+          make().pageOfTemplate.replaceFirst('-1', '3').replaceFirst('-2', '3'),
+          'Page 3 of 3');
     });
   });
 }

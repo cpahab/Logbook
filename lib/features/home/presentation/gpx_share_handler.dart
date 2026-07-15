@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -40,7 +41,7 @@ class GpxShareHandler {
     }
 
     // ── 2. Parse ───────────────────────────────────────────────────────────────
-    final parseResult = GpxParser().parseBytes(bytes);
+    final parseResult = await compute(parseGpxBytes, bytes);
 
     // ── 3. Resolve date ────────────────────────────────────────────────────────
     final resolution = GpxDateResolver.resolve(parseResult);

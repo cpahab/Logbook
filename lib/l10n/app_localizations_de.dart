@@ -1493,6 +1493,16 @@ class AppLocalizationsDe extends AppLocalizations {
       'PDF-Export fehlgeschlagen. Bitte erneut versuchen.';
 
   @override
+  String get dayExportPdfInProgress => 'PDF-Export wird vorbereitet…';
+
+  @override
+  String get dayExportPdfSuccess => 'PDF-Export bereit zum Teilen.';
+
+  @override
+  String get dayExportPdfError =>
+      'PDF-Export fehlgeschlagen. Bitte erneut versuchen.';
+
+  @override
   String get backupExportTitle => 'Alle Daten exportieren';
 
   @override
