@@ -63,8 +63,11 @@ service cloud.firestore {
         allow create: if isSignedIn()
                       && request.auth.uid == uid
                       && request.resource.data.role == 'guest';
-        // Members can read the members list.
-        allow read: if isMember(logbookId);
+        // Members can read the members list. A caller may also read only
+        // their own membership document before joining, so the share-code
+        // flow can check whether they are already connected.
+        allow read: if isMember(logbookId) ||
+                    (isSignedIn() && request.auth.uid == uid);
       }
     }
   }
