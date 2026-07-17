@@ -33,6 +33,7 @@ import '../utils/bearing_utils.dart';
 import '../utils/compute_daily_stats.dart';
 import '../widgets/day_detail_display_helpers.dart';
 import '../widgets/edit_text_dialog.dart';
+import '../widgets/edit_vessel_status_dialog.dart';
 import '../widgets/entry_tooltip.dart';
 import '../widgets/map_layers.dart';
 import 'day_map_fullscreen.dart';
@@ -2506,90 +2507,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   /// Shows the oil/fuel-slider + keel-toggle dialog and saves the result.
   void _editVesselStatus(DayEntry entry) async {
-    int oilVal = entry.oilLevel ?? 50;
-    int fuelVal = entry.fuelLevel ?? 50;
-    bool? keelVal = entry.keelDown;
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) {
-          final cs = Theme.of(ctx).colorScheme;
-          return AlertDialog(
-            title: Text(
-              context.l10n.vesselStatusTitle,
-              style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(context.l10n.vesselOilLabel, style: TextStyle(color: cs.onSurface)),
-                    Text('$oilVal%',
-                        style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.w600, color: cs.onSurface)),
-                  ],
-                ),
-                Slider(
-                  value: oilVal.toDouble(),
-                  min: 0,
-                  max: 100,
-                  divisions: 20,
-                  onChanged: (v) => setS(() => oilVal = v.round()),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(context.l10n.vesselFuelLabel, style: TextStyle(color: cs.onSurface)),
-                    Text('$fuelVal%',
-                        style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
-                            fontWeight: FontWeight.w600, color: cs.onSurface)),
-                  ],
-                ),
-                Slider(
-                  value: fuelVal.toDouble(),
-                  min: 0,
-                  max: 100,
-                  divisions: 20,
-                  onChanged: (v) => setS(() => fuelVal = v.round()),
-                ),
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    Text(context.l10n.entryDialogKeelLabel, style: TextStyle(color: cs.onSurface)),
-                    const Spacer(),
-                    Text(
-                      keelVal == null ? '—' : (keelVal! ? context.l10n.vesselKeelDown : context.l10n.vesselKeelUp),
-                      style: Theme.of(ctx).textTheme.bodyMedium!.copyWith(
-                          fontWeight: FontWeight.w600, color: cs.onSurface),
-                    ),
-                    const SizedBox(width: 8),
-                    Switch(
-                      value: keelVal ?? false,
-                      onChanged: (v) => setS(() => keelVal = v),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(context.l10n.cancel),
-              ),
-              FilledButton.icon(
-                onPressed: () => Navigator.pop(ctx, true),
-                icon: const Icon(Icons.anchor, size: 18),
-                label: Text(context.l10n.saveChanges),
-              ),
-            ],
-          );
-        },
-      ),
+    final result = await showEditVesselStatusDialog(
+      context,
+      initialOil: entry.oilLevel ?? 50,
+      initialFuel: entry.fuelLevel ?? 50,
+      initialKeel: entry.keelDown,
     );
-    if (!mounted || saved != true) return;
+    if (!mounted || result == null) return;
+    final oilVal = result.oil;
+    final fuelVal = result.fuel;
+    final keelVal = result.keel;
     final oldOil = entry.oilLevel;
     final oldFuel = entry.fuelLevel;
     final oldKeel = entry.keelDown;
@@ -2610,7 +2537,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (keelVal != oldKeel && keelVal != null) {
         entry.timeline.add(TimelineEntry(
           time: entryTime,
-          vesselStatusNote: keelVal! ? 'vs:keel=down' : 'vs:keel=up',
+          vesselStatusNote: keelVal ? 'vs:keel=down' : 'vs:keel=up',
         ));
         timelineTouched = true;
       }
