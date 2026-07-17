@@ -458,8 +458,14 @@ class HomeRepository extends ChangeNotifier {
     try {
       if (initialSync) {
         for (final entry in dailyTracks.entries) {
-          final bytes = _trackToGpxBytes(entry.value);
-          await service.uploadTrack(entry.key, bytes);
+          try {
+            final bytes = _trackToGpxBytes(entry.value);
+            await service.uploadTrack(entry.key, bytes);
+          } catch (e, st) {
+            // One bad track shouldn't stop the rest from uploading.
+            // ignore: avoid_print
+            debugPrint('[attachStorage] upload ${entry.key} failed: $e\n$st');
+          }
         }
       }
       final cloudDates = await service.listTrackDates();
@@ -468,11 +474,17 @@ class HomeRepository extends ChangeNotifier {
               !dailyTracks.containsKey(d) && _entries[d]?.trackDeletedAt == null)
           .toList();
       for (final date in missing) {
-        final bytes = await service.downloadTrack(date);
-        if (bytes == null || bytes.isEmpty) continue;
-        final points = (await compute(parseGpxBytes, bytes)).points;
-        if (points.isEmpty) continue;
-        await _saveTrack(date, '$date.gpx', points);
+        try {
+          final bytes = await service.downloadTrack(date);
+          if (bytes == null || bytes.isEmpty) continue;
+          final points = (await compute(parseGpxBytes, bytes)).points;
+          if (points.isEmpty) continue;
+          await _saveTrack(date, '$date.gpx', points);
+        } catch (e, st) {
+          // One bad track shouldn't stop the rest from downloading.
+          // ignore: avoid_print
+          debugPrint('[attachStorage] download $date failed: $e\n$st');
+        }
       }
     } catch (e, st) {
       // ignore: avoid_print
@@ -909,11 +921,17 @@ class HomeRepository extends ChangeNotifier {
               !dailyTracks.containsKey(d) && _entries[d]?.trackDeletedAt == null)
           .toList();
       for (final date in missing) {
-        final bytes = await st.downloadTrack(date);
-        if (bytes == null || bytes.isEmpty) continue;
-        final points = (await compute(parseGpxBytes, bytes)).points;
-        if (points.isEmpty) continue;
-        await _saveTrack(date, '$date.gpx', points);
+        try {
+          final bytes = await st.downloadTrack(date);
+          if (bytes == null || bytes.isEmpty) continue;
+          final points = (await compute(parseGpxBytes, bytes)).points;
+          if (points.isEmpty) continue;
+          await _saveTrack(date, '$date.gpx', points);
+        } catch (e, stack) {
+          // One bad track shouldn't stop the rest from downloading.
+          // ignore: avoid_print
+          debugPrint('[forceSync] track download $date failed: $e\n$stack');
+        }
       }
     }
   }
@@ -952,9 +970,17 @@ class HomeRepository extends ChangeNotifier {
     _syncTimers.clear();
 
     // ── Step 1: download new logbook data before touching local state ──────────
+    // Both the entry list AND the track-date list must be fetched here, before
+    // anything local is cleared — otherwise a listTrackDates() failure (network
+    // blip, momentary permission-check lag right after joining/creating a
+    // logbook) would hit the old code path *after* dailyTracks was already
+    // wiped, permanently losing every GPX track for the newly-switched-to
+    // logbook instead of just failing to sync them this one time.
     List<DayEntry> newEntries;
+    List<DateTime> cloudTrackDates;
     try {
       newEntries = await firestoreService.fetchAllEntries();
+      cloudTrackDates = await storageService.listTrackDates();
     } catch (_) {
       // Download failed — leave existing local data intact and abort.
       return;
@@ -982,17 +1008,19 @@ class HomeRepository extends ChangeNotifier {
     }
     _setLastSyncAt();
 
-    try {
-      final cloudDates = await storageService.listTrackDates();
-      for (final date in cloudDates) {
-        if (_entries[date]?.trackDeletedAt != null) continue;
+    for (final date in cloudTrackDates) {
+      if (_entries[date]?.trackDeletedAt != null) continue;
+      try {
         final bytes = await storageService.downloadTrack(date);
         if (bytes == null || bytes.isEmpty) continue;
         final points = (await compute(parseGpxBytes, bytes)).points;
         if (points.isEmpty) continue;
         await _saveTrack(date, '$date.gpx', points);
+      } catch (_) {
+        // One bad track (network hiccup, corrupt file) shouldn't cost every
+        // other date's track — keep going instead of aborting the whole loop.
       }
-    } catch (_) {}
+    }
 
     notifyListeners();
 
