@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/local_logbook_service.dart';
@@ -28,6 +27,7 @@ import '../../../l10n/l10n_extension.dart';
 import '../utils/settings_format_utils.dart';
 import '../widgets/connect_bottom_sheet.dart';
 import '../widgets/equipment_slot_editor.dart';
+import '../widgets/logbook_dialogs.dart';
 
 /// The app's Settings screen: vessel/VHF info, display preferences (theme,
 /// locale, units), GPS track-filter tuning, crew roster shortcut, multi-boat
@@ -587,80 +587,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  /// Owner-only actions sheet for a logbook: rename, share (QR), delete.
-  void _showLogbookOptionsSheet(Map<String, dynamic> logbook, String uid) {
-    final logbookId = logbook['logbookId'] as String;
-    final name = logbook['name'] as String;
-    final shareCode = logbook['shareCode'] as String? ?? '';
-    final cs = Theme.of(context).colorScheme;
-    final l10n = context.l10n;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cs.surface,
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading:
-                  Icon(Icons.drive_file_rename_outline, color: cs.onSurface),
-              title: Text(l10n.settingsRename),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _showRenameDialog(logbookId, name, uid);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.qr_code, color: cs.onSurface),
-              title: Text(l10n.settingsShare),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _showQrModal(shareCode);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outline, color: cs.error),
-              title: Text(l10n.settingsDeleteLogbook,
-                  style: TextStyle(color: cs.error)),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _showDeleteLogbookDialog(logbookId, name, uid);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Guest-only actions sheet for a logbook: leave.
-  void _showGuestOptionsSheet(Map<String, dynamic> logbook, String uid) {
-    final logbookId = logbook['logbookId'] as String;
-    final name = logbook['name'] as String;
-    final cs = Theme.of(context).colorScheme;
-    final l10n = context.l10n;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cs.surface,
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.exit_to_app, color: cs.error),
-              title: Text(l10n.settingsLeaveLogbook,
-                  style: TextStyle(color: cs.error)),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _showLeaveLogbookDialog(logbookId, name, uid);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Prompts for a name, creates a new logbook owned by [uid], and switches
   /// this device to it.
   Future<void> _showNewLogbookDialog(String uid) async {
@@ -929,56 +855,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
-  }
-
-  /// Shows [shareCode] as a scannable QR code (`logbook://join/{code}`) for
-  /// another device to join this logbook.
-  void _showQrModal(String shareCode) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        final cl = ctx.l10n;
-        return Dialog(
-          backgroundColor: cs.surface,
-          surfaceTintColor: Colors.transparent,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(cl.settingsShowQrCode,
-                    style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface)),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12)),
-                  child: QrImageView(
-                    data: 'logbook://join/$shareCode',
-                    version: QrVersions.auto,
-                    size: 200,
-                    backgroundColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  formatCode(shareCode),
-                  style: Theme.of(context).textTheme.shareCode.copyWith(color: cs.onSurface),
-                ),
-                const SizedBox(height: 16),
-                TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(cl.close)),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   /// Opens the "connect to a logbook" bottom sheet (scan QR or type a code).
@@ -2533,8 +2409,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: _syncing
                   ? null
                   : () => isOwner
-                      ? _showLogbookOptionsSheet(logbook, uid)
-                      : _showGuestOptionsSheet(logbook, uid),
+                      ? showLogbookOptionsSheet(
+                          context,
+                          onRename: () => _showRenameDialog(logbookId, name, uid),
+                          onShare: () => showQrModal(context, logbook['shareCode'] as String? ?? ''),
+                          onDelete: () => _showDeleteLogbookDialog(logbookId, name, uid),
+                        )
+                      : showGuestOptionsSheet(
+                          context,
+                          onLeave: () => _showLeaveLogbookDialog(logbookId, name, uid),
+                        ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               visualDensity: VisualDensity.compact,
@@ -2610,7 +2494,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _showQrModal(shareCode),
+                onPressed: () => showQrModal(context, shareCode),
                 icon: const Icon(Icons.qr_code, size: 18),
                 label: Text(l10n.settingsShowQrCode),
                 style: OutlinedButton.styleFrom(
