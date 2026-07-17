@@ -497,7 +497,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
           return;
         }
-        logbookName = await LogbookService().getLogbookName(foundLogbookId) ?? code;
+        // The caller is not a member yet, so the logbook document is not
+        // readable at this point. The share-code lookup carries the display
+        // name specifically for this pre-join confirmation step.
+        logbookName = await LogbookService().getLogbookNameByShareCode(code) ?? code;
       }
     } catch (e) {
       if (mounted) {

@@ -31,7 +31,12 @@ class LogbookService {
     final batch = _db.batch();
     batch.set(
       _db.collection('shareCodes').doc(shareCode),
-      {'logbookId': logbookId},
+      {
+        'logbookId': logbookId,
+        // The join flow can read this lookup document before the caller is a
+        // member, while the logbook document itself remains member-only.
+        'name': name,
+      },
     );
     batch.set(
       logbookRef.collection('members').doc(uid),
@@ -115,6 +120,13 @@ class LogbookService {
     return doc.data()?['logbookId'] as String?;
   }
 
+  /// Returns the display name stored with [shareCode], or null for an older
+  /// share-code document that predates name metadata.
+  Future<String?> getLogbookNameByShareCode(String shareCode) async {
+    final doc = await _db.collection('shareCodes').doc(shareCode).get();
+    return doc.data()?['name'] as String?;
+  }
+
   // ── Join / Remove ──────────────────────────────────────────────────────────
 
   /// Adds [uid] to [logbookId] as a guest and sets it as their active logbook.
@@ -194,13 +206,15 @@ class LogbookService {
     final logbookDoc =
         await _db.collection('logbooks').doc(logbookId).get();
     final oldCode = logbookDoc.data()?['shareCode'] as String?;
+    final name = logbookDoc.data()?['name'] as String? ?? '';
 
     final newCode = _generateShareCode();
     final batch = _db.batch();
     batch.update(
         _db.collection('logbooks').doc(logbookId), {'shareCode': newCode});
     batch.set(
-        _db.collection('shareCodes').doc(newCode), {'logbookId': logbookId});
+        _db.collection('shareCodes').doc(newCode),
+        {'logbookId': logbookId, 'name': name});
     if (oldCode != null) {
       batch.delete(_db.collection('shareCodes').doc(oldCode));
     }
