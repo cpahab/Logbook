@@ -27,6 +27,7 @@ import '../../../l10n/l10n_extension.dart';
 import '../utils/settings_format_utils.dart';
 import '../widgets/connect_bottom_sheet.dart';
 import '../widgets/equipment_slot_editor.dart';
+import '../widgets/local_logbook_dialogs.dart';
 import '../widgets/logbook_dialogs.dart';
 
 /// The app's Settings screen: vessel/VHF info, display preferences (theme,
@@ -191,44 +192,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _refreshLocalLogbooks();
   }
 
-  /// Owner-only-equivalent actions sheet for a local logbook: rename, and
-  /// (only when it isn't the active one) delete.
-  void _showLocalLogbookOptionsSheet(String id, String name) {
-    final cs = Theme.of(context).colorScheme;
-    final l10n = context.l10n;
-    final isActive = id == _themeProvider.activeLocalLogbookId;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cs.surface,
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading:
-                  Icon(Icons.drive_file_rename_outline, color: cs.onSurface),
-              title: Text(l10n.settingsRename),
-              onTap: () {
-                Navigator.pop(sheetCtx);
-                _showRenameLocalLogbookDialog(id, name);
-              },
-            ),
-            if (!isActive)
-              ListTile(
-                leading: Icon(Icons.delete_outline, color: cs.error),
-                title: Text(l10n.settingsDeleteLogbook,
-                    style: TextStyle(color: cs.error)),
-                onTap: () {
-                  Navigator.pop(sheetCtx);
-                  _showDeleteLocalLogbookDialog(id, name);
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Prompts for a name, creates a new local logbook, and switches to it.
   Future<void> _showNewLocalLogbookDialog() async {
     final ctrl = TextEditingController();
@@ -325,79 +288,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final id = await context.read<LocalLogbookService>().createLogbook(name);
     if (!mounted) return;
     await _switchLocalLogbook(id);
-  }
-
-  /// Prompts for a new name and renames the local logbook.
-  Future<void> _showRenameLocalLogbookDialog(String id, String currentName) async {
-    final ctrl = TextEditingController(text: currentName);
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        final cl = ctx.l10n;
-        final dcs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          backgroundColor: dcs.surface,
-          surfaceTintColor: Colors.transparent,
-          title: Text(cl.settingsRename, style: TextStyle(color: dcs.onSurface)),
-          content: TextField(
-            controller: ctrl,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            style: TextStyle(color: dcs.onSurface),
-            decoration: InputDecoration(
-              hintText: cl.settingsNewLogbookHint,
-              hintStyle: TextStyle(color: dcs.onSurfaceVariant),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: dcs.outlineVariant),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: dcs.primary, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-            onSubmitted: (v) {
-              if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
-            },
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx), child: Text(cl.cancel)),
-            FilledButton(
-              onPressed: () {
-                final v = ctrl.text.trim();
-                if (v.isNotEmpty) Navigator.pop(ctx, v);
-              },
-              child: Text(cl.saveChanges),
-            ),
-          ],
-        );
-      },
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
-    if (newName == null || newName == currentName || !mounted) return;
-
-    await context.read<LocalLogbookService>().renameLogbook(id, newName);
-    if (mounted) _refreshLocalLogbooks();
-  }
-
-  /// Confirms — warning that local logbooks have no cloud backup — then
-  /// permanently deletes the local logbook. Never called on the active
-  /// logbook (see [_showLocalLogbookOptionsSheet]).
-  Future<void> _showDeleteLocalLogbookDialog(String id, String name) async {
-    final l10n = context.l10n;
-    final confirmed = await showConfirmDialog(
-      context,
-      title: l10n.settingsDeleteLogbook,
-      body: l10n.settingsDeleteLocalLogbookConfirm(name),
-      confirmLabel: l10n.delete,
-      destructive: true,
-    );
-    if (!confirmed || !mounted) return;
-
-    await context.read<LocalLogbookService>().deleteLogbook(id);
-    if (mounted) _refreshLocalLogbooks();
   }
 
   /// Switches every repository/provider over to [logbookId]'s Firestore
@@ -2206,7 +2096,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icon(Icons.more_vert, size: 18, color: cs.outlineVariant),
               onPressed: _syncing
                   ? null
-                  : () => _showLocalLogbookOptionsSheet(id, name),
+                  : () => showLocalLogbookOptionsSheet(
+                        context,
+                        isActive: isActive,
+                        onRename: () => showRenameLocalLogbookDialog(
+                            context, id: id, currentName: name, onRenamed: _refreshLocalLogbooks),
+                        onDelete: () => showDeleteLocalLogbookDialog(
+                            context, id: id, name: name, onDeleted: _refreshLocalLogbooks),
+                      ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
               visualDensity: VisualDensity.compact,
