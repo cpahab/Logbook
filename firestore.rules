@@ -42,16 +42,24 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
       allow update, delete: if isOwner(logbookId);
 
-      // Logbook data: any member reads and writes.
-      match /{collection}/{document=**} {
+      // Day entries and logbook-scoped metadata: any member reads and writes.
+      // Keep these collections explicit. A broad `/{collection}/{document=**}`
+      // rule would also match `/members/...`; Firestore combines overlapping
+      // matches with OR semantics, which would bypass the owner-only member
+      // management rules below.
+      match /entries/{document=**} {
+        allow read, write: if isMember(logbookId);
+      }
+
+      match /meta/{document=**} {
         allow read, write: if isMember(logbookId);
       }
 
       // Members sub-collection.
       match /members/{uid} {
-        // Owner can add/remove anyone.
+        // The owner can add, update, or remove anyone.
         allow write: if isOwner(logbookId);
-        // Anyone signed in can add themselves (join flow).
+        // Anyone signed in can add only themselves as a guest (join flow).
         allow create: if isSignedIn()
                       && request.auth.uid == uid
                       && request.resource.data.role == 'guest';

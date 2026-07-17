@@ -2,12 +2,16 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Logbook IDs are non-guessable Firestore auto-IDs, so authentication
-    // is sufficient protection for a personal logbook app.
-    // The stronger isMember() cross-service check can be restored once
-    // Apple DeviceCheck / App Check is configured for release builds.
+    // Storage access follows Firestore membership. Authentication alone is
+    // not sufficient: a signed-in user who learns another logbook ID must not
+    // be able to read or overwrite its GPX files and photos.
+    function isMember(logbookId) {
+      return request.auth != null && firestore.exists(
+        /databases/(default)/documents/logbooks/$(logbookId)/members/$(request.auth.uid));
+    }
+
     match /logbooks/{logbookId}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isMember(logbookId);
     }
   }
 }
