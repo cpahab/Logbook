@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -7,11 +8,27 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 /// notifying listeners on every state change so `go_router`'s
 /// `refreshListenable` can re-run its redirect logic (see app/router.dart).
 class AuthService extends ChangeNotifier {
-  static final _auth = FirebaseAuth.instance;
+  /// True once Firebase itself has been initialized (main.dart's
+  /// Firebase.initializeApp is best-effort — this stays false if that
+  /// failed, e.g. no connectivity on first launch). Every ambient/passive
+  /// read below is guarded by this: `FirebaseAuth.instance` throws
+  /// `[core/no-app] No Firebase App has been created` when it hasn't, and
+  /// [currentUser] in particular is read on *every* go_router redirect
+  /// (app/router.dart) starting at launch — completely outside main.dart's
+  /// own try/catch around Firebase init. Without this guard, an app that's
+  /// documented to "still run fully offline" if Firebase fails would instead
+  /// crash on its very first navigation. Sign-in methods below deliberately
+  /// stay unguarded — a user actively tapping "sign in" while Firebase is
+  /// unavailable should see a real error, not silently do nothing.
+  static bool get _available => Firebase.apps.isNotEmpty;
 
-  User? get currentUser => _auth.currentUser;
-  bool get emailVerified => _auth.currentUser?.emailVerified ?? false;
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  static FirebaseAuth get _auth => FirebaseAuth.instance;
+
+  User? get currentUser => _available ? _auth.currentUser : null;
+  bool get emailVerified =>
+      _available ? (_auth.currentUser?.emailVerified ?? false) : false;
+  Stream<User?> get authStateChanges =>
+      _available ? _auth.authStateChanges() : Stream<User?>.value(null);
 
   // ── Email / Password ───────────────────────────────────────────────
 
