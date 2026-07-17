@@ -28,6 +28,7 @@ import '../widgets/connect_bottom_sheet.dart';
 import '../widgets/delete_account_dialog.dart';
 import '../widgets/equipment_slot_editor.dart';
 import '../widgets/local_logbook_dialogs.dart';
+import '../widgets/vessel_section.dart';
 import '../widgets/logbook_dialogs.dart';
 
 /// The app's Settings screen: vessel/VHF info, display preferences (theme,
@@ -45,24 +46,11 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  late TextEditingController _vesselNameCtrl;
-  late TextEditingController _vesselMmsiCtrl;
-  late TextEditingController _vesselCallSignCtrl;
-  late TextEditingController _lifeRaftCtrl;
-  late TextEditingController _epirbCtrl;
-  late TextEditingController _fireSuppCtrl;
-  final _vesselNameFocus     = FocusNode();
-  final _vesselMmsiFocus     = FocusNode();
-  final _vesselCallSignFocus = FocusNode();
-  final _lifeRaftFocus       = FocusNode();
-  final _epirbFocus          = FocusNode();
-  final _fireSuppFocus       = FocusNode();
   late ThemeProvider _themeProvider;
   bool _syncing = false;
   bool _accountExpanded = false;
   bool _appearanceExpanded = false;
   bool _logbooksExpanded = false;
-  bool _vesselExpanded = false;
   bool _trackFilterExpanded = false;
   bool _equipmentExpanded = false;
   List<Map<String, dynamic>> _logbooks = [];
@@ -79,19 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    final p = context.read<ThemeProvider>();
-    _themeProvider = p;
-    _vesselNameCtrl = TextEditingController(text: p.vesselName);
-    _vesselMmsiCtrl = TextEditingController(text: p.vesselMmsi);
-    _vesselCallSignCtrl = TextEditingController(text: p.vesselCallSign);
-    _lifeRaftCtrl = TextEditingController(text: p.lifeRaftInfo);
-    _epirbCtrl = TextEditingController(text: p.epirbInfo);
-    _fireSuppCtrl = TextEditingController(text: p.fireSuppInfo);
-    // Vessel fields are also replaced wholesale by a backup restore or a
-    // logbook switch, both of which can happen while this screen stays
-    // mounted — resync from the provider whenever it changes, but only for
-    // fields the user isn't actively typing into.
-    _themeProvider.addListener(_syncVesselControllers);
+    _themeProvider = context.read<ThemeProvider>();
     _logbookIdNotifier = context.read<ValueNotifier<String?>>();
     // Refresh list whenever the active boat changes (e.g. async init completes)
     _logbookIdNotifier.addListener(_refreshLogbooks);
@@ -110,37 +86,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _connectivitySub?.cancel();
     _logbookIdNotifier.removeListener(_refreshLogbooks);
-    _themeProvider.removeListener(_syncVesselControllers);
-    _vesselNameCtrl.dispose();
-    _vesselMmsiCtrl.dispose();
-    _vesselCallSignCtrl.dispose();
-    _lifeRaftCtrl.dispose();
-    _epirbCtrl.dispose();
-    _fireSuppCtrl.dispose();
-    _vesselNameFocus.dispose();
-    _vesselMmsiFocus.dispose();
-    _vesselCallSignFocus.dispose();
-    _lifeRaftFocus.dispose();
-    _epirbFocus.dispose();
-    _fireSuppFocus.dispose();
     super.dispose();
-  }
-
-  /// Resyncs each vessel-field controller from [_themeProvider] whenever it
-  /// changes externally (backup restore, logbook switch, remote sync) — but
-  /// only for fields that don't currently have focus, so this never fights
-  /// the user's own typing (which is what triggers these same notifications
-  /// on every keystroke, via the field's own onChanged → setVesselXxx call).
-  void _syncVesselControllers() {
-    void sync(TextEditingController ctrl, FocusNode focus, String value) {
-      if (!focus.hasFocus && ctrl.text != value) ctrl.text = value;
-    }
-    sync(_vesselNameCtrl, _vesselNameFocus, _themeProvider.vesselName);
-    sync(_vesselMmsiCtrl, _vesselMmsiFocus, _themeProvider.vesselMmsi);
-    sync(_vesselCallSignCtrl, _vesselCallSignFocus, _themeProvider.vesselCallSign);
-    sync(_lifeRaftCtrl, _lifeRaftFocus, _themeProvider.lifeRaftInfo);
-    sync(_epirbCtrl, _epirbFocus, _themeProvider.epirbInfo);
-    sync(_fireSuppCtrl, _fireSuppFocus, _themeProvider.fireSuppInfo);
   }
 
   /// Reloads the current user's list of accessible logbooks (owned + joined).
@@ -817,7 +763,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
 
             // ── Vessel Information ────────────────────────────────────
-            _buildVesselSection(p, cs),
+            VesselSection(themeProvider: p, cs: cs),
             const SizedBox(height: 16),
 
             // ── Vessel Equipment ───────────────────────────────────────
@@ -860,190 +806,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // ── Vessel Information ──────────────────────────────────────────────
-  /// Name/MMSI/call sign/life raft/EPIRB/fire suppression fields, each
-  /// writing straight through to [ThemeProvider] on every keystroke.
-  Widget _buildVesselSection(ThemeProvider p, ColorScheme cs) {
-    final l10n = context.l10n;
-    return CardShell(
-      accentColor: cs.logbookScopedAccent,
-      child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () => setState(() => _vesselExpanded = !_vesselExpanded),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              l10n.settingsVesselSection.toUpperCase(),
-                              style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                                color: cs.secondary,
-                              ),
-                            ),
-                            Row(
-                              children: [
-                                Icon(Icons.directions_boat_outlined,
-                                    size: 20, color: cs.outlineVariant),
-                                const SizedBox(width: 4),
-                                AnimatedRotation(
-                                  turns: _vesselExpanded ? 0.5 : 0,
-                                  duration: const Duration(milliseconds: 200),
-                                  child: Icon(Icons.expand_more,
-                                      size: 20, color: cs.outlineVariant),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          l10n.settingsVesselInfo,
-                          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                AnimatedCrossFade(
-                  duration: const Duration(milliseconds: 220),
-                  crossFadeState: _vesselExpanded
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  firstChild: const SizedBox(width: double.infinity),
-                  secondChild: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 16, 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _vesselRow(
-                          label: l10n.settingsFieldName,
-                          controller: _vesselNameCtrl,
-                          focusNode: _vesselNameFocus,
-                          hint: l10n.settingsFieldNameHint,
-                          onChanged: p.setVesselName,
-                          cs: cs,
-                        ),
-                        _rowDivider(cs),
-                        _vesselRow(
-                          label: 'MMSI',
-                          controller: _vesselMmsiCtrl,
-                          focusNode: _vesselMmsiFocus,
-                          hint: '123456789',
-                          onChanged: p.setVesselMmsi,
-                          keyboard: TextInputType.number,
-                          cs: cs,
-                        ),
-                        _rowDivider(cs),
-                        _vesselRow(
-                          label: l10n.settingsFieldCallSign,
-                          controller: _vesselCallSignCtrl,
-                          focusNode: _vesselCallSignFocus,
-                          hint: l10n.settingsFieldCallSignHint,
-                          onChanged: p.setVesselCallSign,
-                          cs: cs,
-                        ),
-                        _rowDivider(cs),
-                        _vesselRow(
-                          label: l10n.emergencyLifeRaft,
-                          controller: _lifeRaftCtrl,
-                          focusNode: _lifeRaftFocus,
-                          hint: l10n.settingsFieldLifeRaftHint,
-                          onChanged: p.setLifeRaftInfo,
-                          cs: cs,
-                        ),
-                        _rowDivider(cs),
-                        _vesselRow(
-                          // EPIRB is an international maritime acronym — kept
-                          // in English, matching the emergency manifest screen.
-                          label: 'EPIRB',
-                          controller: _epirbCtrl,
-                          focusNode: _epirbFocus,
-                          hint: l10n.settingsFieldEpirbHint,
-                          onChanged: p.setEpirbInfo,
-                          cs: cs,
-                        ),
-                        _rowDivider(cs),
-                        _vesselRow(
-                          label: l10n.emergencyFireSuppression,
-                          controller: _fireSuppCtrl,
-                          focusNode: _fireSuppFocus,
-                          hint: l10n.settingsFieldFireSuppHint,
-                          onChanged: p.setFireSuppInfo,
-                          cs: cs,
-                          isLast: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  /// One label/value row within [_buildVesselSection].
-  Widget _vesselRow({
-    required String label,
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required String hint,
-    required ValueChanged<String> onChanged,
-    required ColorScheme cs,
-    TextInputType keyboard = TextInputType.text,
-    bool isLast = false,
-  }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 150,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                  fontWeight: FontWeight.w600, color: cs.onSurface),
-            ),
-          ),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              textAlign: TextAlign.right,
-              keyboardType: keyboard,
-              // Unbounded so longer entries (e.g. a life raft/EPIRB
-              // description) wrap onto more lines instead of scrolling
-              // off-field in a single fixed line, which read as if the
-              // text had been silently truncated.
-              maxLines: null,
-              textInputAction: TextInputAction.next,
-              style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-                hintText: hint,
-                hintStyle: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.outline.withValues(alpha: 0.5)),
-              ),
-              onChanged: onChanged,
-              onSubmitted: (_) => FocusScope.of(context).unfocus(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Thin divider between [_vesselRow]s.
+  /// Thin divider between rows in the equipment section below (also used,
+  /// under its own copy, by [VesselSection]).
   Widget _rowDivider(ColorScheme cs) => Divider(
         color: cs.surfaceContainerHigh,
         height: 16,
