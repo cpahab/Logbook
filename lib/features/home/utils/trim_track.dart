@@ -33,6 +33,27 @@ const _mpsToKn    = 1.94384;
 const _accelSigma = 4.0;  // spike threshold in MAD-sigmas above the median moving speed
 const _mergeGap   = 4; // merge stationary runs separated by ≤ this many moving fixes
 
+// A stop candidate can fail the maxStopSpreadM gate not because the boat was
+// moving, but because slow drift/orbit under wide GPS scatter spreads its
+// raw fixes over an area wider than a real berth's precise position — the
+// boat never actually went anywhere, the *positions* are just noisy. Median
+// windowed speed and median step distance between consecutive fixes measure
+// "not moving" directly instead of via positional spread, and stay tight
+// even when the scatter is wide. Validated against real tracks: these two
+// medians separate berth from sailing with no overlap at all (berth p95 /
+// sailing p5: 0.067/0.561 kn and 5.6/5.8 m respectively), so a candidate
+// passing both is accepted as a genuine stop regardless of its spread.
+const _berthWinMedKn  = 0.10;
+const _berthStepMedM  = 6.0;
+
+/// Simplified median (upper-middle element for an even-length list, matching
+/// the same percentile convention _computeAnchor already uses elsewhere in
+/// this file). [values] must be non-empty.
+double _median(List<double> values) {
+  final sorted = List<double>.of(values)..sort();
+  return sorted[sorted.length ~/ 2];
+}
+
 // ── Geometry ─────────────────────────────────────────────────────────────────
 
 /// Great-circle distance in metres between two lat/lon points.
@@ -254,10 +275,24 @@ List<_StopSegment> _findStationarySegments(
       if (d > maxSpread) maxSpread = d;
     }
 
-    // Gate: must last long enough AND stay tight enough.
-    if (durationMinutes < settings.minStopMinutes ||
-        maxSpread > settings.maxStopSpreadM) {
-      continue;
+    // Gate: must last long enough.
+    if (durationMinutes < settings.minStopMinutes) continue;
+
+    if (maxSpread > settings.maxStopSpreadM) {
+      // Failed on spread alone — before rejecting outright, check whether
+      // the boat genuinely wasn't moving despite the wide scatter (see the
+      // _berthWinMedKn/_berthStepMedM doc comment above).
+      final winMedKn = _median(nonFlagged.map((f) => f.winSpeedKn).toList());
+
+      final steps = <double>[];
+      for (int k = a; k < b; k++) {
+        if (fixes[k].flagged || fixes[k + 1].flagged) continue;
+        steps.add(_haversineM(fixes[k].pt.lat, fixes[k].pt.lon,
+            fixes[k + 1].pt.lat, fixes[k + 1].pt.lon));
+      }
+      final stepMedM = steps.isEmpty ? double.infinity : _median(steps);
+
+      if (winMedKn >= _berthWinMedKn || stepMedM >= _berthStepMedM) continue;
     }
 
     // v6: a stop beginning at or before effectiveFirst is a 'start' stop even

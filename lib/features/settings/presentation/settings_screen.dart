@@ -1241,6 +1241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 150,
@@ -1256,6 +1257,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               focusNode: focusNode,
               textAlign: TextAlign.right,
               keyboardType: keyboard,
+              // Unbounded so longer entries (e.g. a life raft/EPIRB
+              // description) wrap onto more lines instead of scrolling
+              // off-field in a single fixed line, which read as if the
+              // text had been silently truncated.
+              maxLines: null,
               textInputAction: TextInputAction.next,
               style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
               decoration: InputDecoration(
