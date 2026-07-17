@@ -67,9 +67,23 @@ class FirestoreService {
         .set(partial, SetOptions(merge: true));
   }
 
-  /// Deletes the entry document for [date] entirely.
-  Future<void> deleteEntry(DateTime date) =>
-      _entriesRef.doc(_dateKey(date)).delete();
+  /// Marks the entry for [date] deleted — a tombstone field write, not a
+  /// physical `.delete()`. A real delete is invisible to every sync path
+  /// except a live listener that happened to be connected at the exact
+  /// moment it occurred: incremental "updated since" queries and one-shot
+  /// fetches can only see documents that still exist, so a genuinely
+  /// deleted doc simply looks the same as one that was never created —
+  /// there is no way to distinguish "gone" from "never existed" once it's
+  /// physically removed. Writing `deletedAt` instead makes the deletion
+  /// travel through the exact same durable channels a normal edit already
+  /// does (this is a plain merge write, so it retries like any other write
+  /// if offline). The document itself is kept forever after this — at
+  /// personal-logbook scale that's a few dozen bytes per deleted day, which
+  /// is judged an acceptable tradeoff over building a server-side cleanup job.
+  Future<void> deleteEntry(DateTime date) => _entriesRef.doc(_dateKey(date)).set({
+        'deletedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
   // ── One-shot reads ─────────────────────────────────────────────────────────
 
@@ -335,6 +349,8 @@ class FirestoreService {
         // type as the query value — a client-set ISO string would silently
         // never match and the incremental pull would always come back empty.
         'updatedAt': FieldValue.serverTimestamp(),
+        'deletedAt': e.deletedAt?.toUtc().toIso8601String(),
+        'trackDeletedAt': e.trackDeletedAt?.toUtc().toIso8601String(),
       };
 
   static Map<String, dynamic> _timelineToMap(TimelineEntry t) => {
@@ -394,6 +410,8 @@ class FirestoreService {
         keelDown: d['keelDown'] as bool?,
         createdAt: _tsToDate(d['createdAt']),
         updatedAt: _tsToDate(d['updatedAt']),
+        deletedAt: _tsToDate(d['deletedAt']),
+        trackDeletedAt: _tsToDate(d['trackDeletedAt']),
       );
 
   static TimelineEntry _timelineFromMap(Map<String, dynamic> d) => TimelineEntry(

@@ -36,13 +36,15 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       photos: (fields[21] as List?)?.cast<String>(),
       createdAt: fields[22] as DateTime?,
       updatedAt: fields[23] as DateTime?,
+      deletedAt: fields[24] as DateTime?,
+      trackDeletedAt: fields[25] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DayEntry obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.date)
       ..writeByte(1)
@@ -80,7 +82,11 @@ class DayEntryAdapter extends TypeAdapter<DayEntry> {
       ..writeByte(22)
       ..write(obj.createdAt)
       ..writeByte(23)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(24)
+      ..write(obj.deletedAt)
+      ..writeByte(25)
+      ..write(obj.trackDeletedAt);
   }
 
   @override

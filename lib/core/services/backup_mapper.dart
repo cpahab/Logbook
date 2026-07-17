@@ -193,6 +193,8 @@ Map<String, dynamic> dayEntryToJson(DayEntry e, {DailyTrack? track}) => {
       'timeline': e.timeline.map(timelineEntryToJson).toList(),
       'createdAt': e.createdAt?.toUtc().toIso8601String(),
       'updatedAt': e.updatedAt?.toUtc().toIso8601String(),
+      'deletedAt': e.deletedAt?.toUtc().toIso8601String(),
+      'trackDeletedAt': e.trackDeletedAt?.toUtc().toIso8601String(),
       if (track != null)
         'track': {
           'fileName': track.fileName,
@@ -232,6 +234,10 @@ ParsedDayEntry dayEntryFromJson(Map<String, dynamic> d) {
         .toList(),
     createdAt: d['createdAt'] != null ? DateTime.parse(d['createdAt'] as String) : null,
     updatedAt: d['updatedAt'] != null ? DateTime.parse(d['updatedAt'] as String) : null,
+    deletedAt: d['deletedAt'] != null ? DateTime.parse(d['deletedAt'] as String) : null,
+    trackDeletedAt: d['trackDeletedAt'] != null
+        ? DateTime.parse(d['trackDeletedAt'] as String)
+        : null,
   );
 
   final trackJson = d['track'] as Map<String, dynamic>?;

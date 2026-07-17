@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:gpx/gpx.dart';
 import 'package:hive/hive.dart';
@@ -29,9 +30,13 @@ class HomeRepository extends ChangeNotifier {
   late Box<DailyTrack> _trackBox;
   late Box<CrewMember> _rosterBox;
 
-  /// Stores two kinds of integers keyed by string:
-  ///   'last_sync_at'           → epoch-ms of the last successful Firestore pull
-  ///   'entry_{isoDate}_at'     → epoch-ms of the last *local* edit for that entry
+  /// Stores small per-date sync bookkeeping, keyed by string:
+  ///   'last_sync_at'              → epoch-ms of the last successful Firestore pull
+  ///   'entry_{isoDate}_at'        → epoch-ms of the last *local* edit for that entry
+  ///   'pending_delete_{isoDate}'  → a delete was requested for that date but
+  ///                                 not yet confirmed pushed to Firestore/Storage
+  ///                                 (see _pushPendingDelete) — retried on every
+  ///                                 attachFirestore/forceSync/reattachAndSync.
   late Box<int> _syncStateBox;
 
   // ── In-memory caches ───────────────────────────────────────────────────────
@@ -134,6 +139,53 @@ class HomeRepository extends ChangeNotifier {
   }
 
   void _clearLocalEdit(DateTime date) => _syncStateBox.delete(_syncKey(date));
+
+  static const _pendingDeletePrefix = 'pending_delete_';
+  static String _pendingDeleteKey(DateTime date) =>
+      '$_pendingDeletePrefix${date.toIso8601String()}';
+
+  /// Marks [date] as having a delete that hasn't been confirmed pushed to
+  /// Firestore/Storage yet — see [_pushPendingDelete].
+  void _recordPendingDelete(DateTime date) =>
+      _syncStateBox.put(_pendingDeleteKey(date), 1);
+
+  void _clearPendingDelete(DateTime date) =>
+      _syncStateBox.delete(_pendingDeleteKey(date));
+
+  Iterable<DateTime> _pendingDeleteDates() => _syncStateBox.keys
+      .where((k) => k.toString().startsWith(_pendingDeletePrefix))
+      .map((k) => DateTime.parse(
+          k.toString().substring(_pendingDeletePrefix.length)));
+
+  /// Test-only visibility into which dates still have an unconfirmed delete.
+  @visibleForTesting
+  Iterable<DateTime> get pendingDeleteDatesForTesting => _pendingDeleteDates();
+
+  /// Attempts to push [date]'s deletion to Firestore (as a tombstone, see
+  /// FirestoreService.deleteEntry) and Storage independently, only clearing
+  /// the pending marker once both are confirmed (or don't apply / the
+  /// Storage object is already gone — a missing object on delete is the
+  /// desired end state, not a failure). Safe to call repeatedly: retried on
+  /// every attachFirestore/forceSync/reattachAndSync until it succeeds.
+  Future<void> _pushPendingDelete(DateTime date) async {
+    var entryOk = _firestore == null;
+    var trackOk = _storage == null;
+    if (!entryOk) {
+      try {
+        await _firestore!.deleteEntry(date);
+        entryOk = true;
+      } catch (_) {}
+    }
+    if (!trackOk) {
+      try {
+        await _storage!.deleteTrack(date);
+        trackOk = true;
+      } on FirebaseException catch (e) {
+        trackOk = e.code == 'object-not-found';
+      } catch (_) {}
+    }
+    if (entryOk && trackOk) _clearPendingDelete(date);
+  }
 
   /// The timestamp of the last successful pull from Firestore.
   /// Defaults to the Unix epoch so the first incremental pull fetches everything.
@@ -247,6 +299,14 @@ class HomeRepository extends ChangeNotifier {
     try {
       final lastSync = _lastSyncAt;
 
+      // ── Step 0: retry any deletes that never got confirmed pushed ──────────
+      // Must run before Step 2's pull — otherwise a pull could re-fetch the
+      // still-undeleted server doc and resurrect it locally before this
+      // device's own tombstone has a chance to land.
+      for (final date in _pendingDeleteDates().toList()) {
+        await _pushPendingDelete(date);
+      }
+
       // ── Step 1: push offline edits ────────────────────────────────────────
       if (initialSync) {
         for (final e in _entries.values) {
@@ -274,22 +334,7 @@ class HomeRepository extends ChangeNotifier {
 
       var changed = false;
       for (final e in remote) {
-        // Do not overwrite an entry that was edited locally *after* the server
-        // last saved this version — we just pushed that version in step 1, and
-        // the stream will echo it back; skipping here avoids a transient
-        // overwrite flash. Compared against this entry's own updatedAt (not
-        // the global lastSync) so a genuinely newer remote write from another
-        // device is never mistaken for stale data.
-        final localEdit = _localEditTime(e.date);
-        if (localEdit != null &&
-            e.updatedAt != null &&
-            localEdit.isAfter(e.updatedAt!)) {
-          continue;
-        }
-
-        _entries[e.date] = e;
-        await _dayBox.put(e.date.toIso8601String(), e);
-        changed = true;
+        if (await applyIncomingEntry(e)) changed = true;
       }
       if (changed) notifyListeners();
 
@@ -321,29 +366,73 @@ class HomeRepository extends ChangeNotifier {
         .listen((_) {}, onError: (_) {});
   }
 
-  /// Applies a batch of entry changes received from Firestore.
+  /// Applies one incoming entry (from any fetch/pull path — initial sync,
+  /// incremental sync, forceSync, reattach, or the live listener) to local
+  /// state. This is the single place that interprets the tombstone fields:
+  ///   - `deletedAt` set → remove the entry locally (it was deleted, possibly
+  ///     on another device, or its own delete is only now confirmed).
+  ///   - `trackDeletedAt` set and a local track exists for that date → remove
+  ///     the local track too, and best-effort re-issue the Storage delete
+  ///     (covers the device that deleted it never confirming that half).
+  ///   - Otherwise → normal upsert.
+  /// Skips entirely if an edit to this date is actively debounced (about to
+  /// push) or — when [respectLocalEdit] is true — if our own unpushed local
+  /// edit is newer than this specific incoming version (never compared
+  /// against the global lastSync, so a pending edit to one date can't cause
+  /// every other date's genuinely newer remote update to be ignored too).
+  /// [respectLocalEdit] is false for forceSync, which is documented and
+  /// intended to mean "remote wins unconditionally" for a deliberate,
+  /// user-triggered reconciliation — only the debounce-timer skip still
+  /// applies there, to avoid clobbering an edit mid-keystroke.
   ///
-  /// Entries with an active debounce timer are skipped — the user is actively
-  /// editing that entry locally and the Firestore push is pending.
-  /// Removed dates (from date-moves or explicit deletes) are erased locally.
-  Future<void> _applyRemoteEntries(
-      ({List<DayEntry> upserted, List<DateTime> removed}) changes) async {
-    var changed = false;
-    for (final e in changes.upserted) {
-      if (_syncTimers.containsKey(e.date)) continue;
-      // Skip only if our local edit is newer than *this specific* server
-      // version (not the global lastSync) — otherwise a device with any
-      // pending local edit would ignore every subsequent remote update for
-      // that date indefinitely, even ones newer than its own edit.
+  /// Used by all four places that apply fetched/pushed entries to local
+  /// state (attachFirestore's pull step, forceSync, reattachAndSync, and the
+  /// live listener via [_applyRemoteEntries]) so their tombstone-interpretation
+  /// logic can't drift apart from each other.
+  @visibleForTesting
+  Future<bool> applyIncomingEntry(DayEntry e, {bool respectLocalEdit = true}) async {
+    if (_syncTimers.containsKey(e.date)) return false;
+    if (respectLocalEdit) {
       final localEdit = _localEditTime(e.date);
       if (localEdit != null &&
           e.updatedAt != null &&
           localEdit.isAfter(e.updatedAt!)) {
-        continue;
+        return false;
       }
+    }
+
+    var changed = false;
+    if (e.deletedAt != null) {
+      if (_entries.remove(e.date) != null) {
+        await _dayBox.delete(e.date.toIso8601String());
+        changed = true;
+      }
+    } else {
       _entries[e.date] = e;
       await _dayBox.put(e.date.toIso8601String(), e);
       changed = true;
+    }
+
+    if (e.trackDeletedAt != null && dailyTracks.containsKey(e.date)) {
+      dailyTracks.remove(e.date);
+      await _trackBox.delete(e.date.toIso8601String());
+      _storage?.deleteTrack(e.date).catchError((_) {});
+      changed = true;
+    }
+
+    return changed;
+  }
+
+  /// Applies a batch of entry changes received from Firestore's live
+  /// listener. `removed` (real Firestore deletes) is effectively unused
+  /// today — deleteEntry now writes a tombstone instead of physically
+  /// deleting — but is still handled defensively in case a document is ever
+  /// removed by some other means (e.g. manual console edit).
+  Future<void> _applyRemoteEntries(
+      ({List<DayEntry> upserted, List<DateTime> removed}) changes) async {
+    var changed = false;
+    for (final e in changes.upserted) {
+      if (await applyIncomingEntry(e)) changed = true;
     }
     for (final date in changes.removed) {
       if (_syncTimers.containsKey(date)) continue;
@@ -374,7 +463,10 @@ class HomeRepository extends ChangeNotifier {
         }
       }
       final cloudDates = await service.listTrackDates();
-      final missing = cloudDates.where((d) => !dailyTracks.containsKey(d)).toList();
+      final missing = cloudDates
+          .where((d) =>
+              !dailyTracks.containsKey(d) && _entries[d]?.trackDeletedAt == null)
+          .toList();
       for (final date in missing) {
         final bytes = await service.downloadTrack(date);
         if (bytes == null || bytes.isEmpty) continue;
@@ -479,19 +571,27 @@ class HomeRepository extends ChangeNotifier {
       if (_storage != null) {
         final bytes = _trackToGpxBytes(track);
         _storage!.uploadTrack(newNorm, bytes).catchError((_) {});
-        _storage!.deleteTrack(oldNorm).catchError((_) {});
       }
     }
 
-    _firestore?.deleteEntry(oldNorm).catchError((_) {});
     _syncToFirestore(entry);
-
     notifyListeners();
+
+    // The old date's entry/track deletion shares the same durability gap
+    // (and fix) as removeEntry: recorded as pending and retried on every
+    // future attachFirestore/forceSync/reattachAndSync until confirmed.
+    _recordPendingDelete(oldNorm);
+    await _pushPendingDelete(oldNorm);
+
     return true;
   }
 
-  /// Deletes the entry for [date] (and its GPX track, if any) locally and on
-  /// Firestore.
+  /// Deletes the entry for [date] (and its GPX track, if any) locally
+  /// immediately, then durably pushes the deletion to Firestore/Storage —
+  /// if that push fails or the app is offline, the date is marked pending
+  /// and retried on every future attachFirestore/forceSync/reattachAndSync
+  /// (see _pushPendingDelete), so the deleted data cannot resurrect on a
+  /// later sync the way a bare fire-and-forget delete could.
   Future<void> removeEntry(DateTime date) async {
     final normalized = DateTime(date.year, date.month, date.day);
 
@@ -507,8 +607,9 @@ class HomeRepository extends ChangeNotifier {
       await _trackBox.delete(normalized.toIso8601String());
     }
 
-    _firestore?.deleteEntry(normalized).catchError((_) {});
+    _recordPendingDelete(normalized);
     notifyListeners();
+    await _pushPendingDelete(normalized);
   }
 
   // ── Save ───────────────────────────────────────────────────────────────────
@@ -654,7 +755,14 @@ class HomeRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Deletes [day]'s GPX track locally and in Storage.
+  /// Deletes [day]'s GPX track locally and in Storage, durably. If a log
+  /// entry exists for [day], the deletion is also recorded on it
+  /// (trackDeletedAt) and pushed through the normal saveEntry pipeline, so
+  /// it durably retries via the exact same mechanism any other edit already
+  /// does (see removeEntry's doc comment for why that matters). If no entry
+  /// exists for [day] (a track can be imported standalone), falls back to
+  /// the same pending-delete tracking removeEntry uses, since there's no
+  /// entry document to durably carry the tombstone on.
   Future<void> removeGpx(DateTime day) async {
     final normalized = DateTime(day.year, day.month, day.day);
 
@@ -664,14 +772,16 @@ class HomeRepository extends ChangeNotifier {
 
     final entry = _entries[normalized];
     if (entry != null) {
+      entry.trackDeletedAt = DateTime.now();
       await _dayBox.put(normalized.toIso8601String(), entry);
       _recordLocalEdit(normalized);
-      // GPX tracks are stored outside the DayEntry document (see class doc),
-      // so no entry field actually changed here — just bump the timestamps.
-      _syncToFirestore(entry, const {});
+      _syncToFirestore(entry, {'trackDeletedAt'});
+      notifyListeners();
+    } else {
+      notifyListeners();
+      _recordPendingDelete(normalized);
+      await _pushPendingDelete(normalized);
     }
-
-    notifyListeners();
   }
 
   // ── Cross-correlation ──────────────────────────────────────────────────────
@@ -700,6 +810,13 @@ class HomeRepository extends ChangeNotifier {
     final fs = _firestore;
     if (fs == null) throw Exception('Cloud sync unavailable.');
 
+    // Retry any deletes that never got confirmed pushed, before pulling —
+    // otherwise the pull below could re-fetch the still-undeleted server
+    // doc and resurrect it locally.
+    for (final date in _pendingDeleteDates().toList()) {
+      await _pushPendingDelete(date);
+    }
+
     // Push all local entries.
     for (final e in _entries.values) {
       await fs.saveEntry(e);
@@ -710,9 +827,7 @@ class HomeRepository extends ChangeNotifier {
     final all = await fs.fetchAllEntries();
     var changed = false;
     for (final e in all) {
-      _entries[e.date] = e;
-      await _dayBox.put(e.date.toIso8601String(), e);
-      changed = true;
+      if (await applyIncomingEntry(e, respectLocalEdit: false)) changed = true;
     }
     if (changed) notifyListeners();
 
@@ -722,7 +837,10 @@ class HomeRepository extends ChangeNotifier {
     final st = _storage;
     if (st != null) {
       final cloudDates = await st.listTrackDates();
-      final missing = cloudDates.where((d) => !dailyTracks.containsKey(d)).toList();
+      final missing = cloudDates
+          .where((d) =>
+              !dailyTracks.containsKey(d) && _entries[d]?.trackDeletedAt == null)
+          .toList();
       for (final date in missing) {
         final bytes = await st.downloadTrack(date);
         if (bytes == null || bytes.isEmpty) continue;
@@ -775,6 +893,12 @@ class HomeRepository extends ChangeNotifier {
       return;
     }
 
+    // Give any delete pending from the logbook being left one last chance to
+    // push before its bookkeeping is wiped below.
+    for (final date in _pendingDeleteDates().toList()) {
+      await _pushPendingDelete(date);
+    }
+
     // ── Step 2: download complete, now safe to replace local state ─────────────
     await _dayBox.clear();
     await _trackBox.clear();
@@ -787,14 +911,14 @@ class HomeRepository extends ChangeNotifier {
     _storage = storageService;
 
     for (final e in newEntries) {
-      _entries[e.date] = e;
-      await _dayBox.put(e.date.toIso8601String(), e);
+      await applyIncomingEntry(e, respectLocalEdit: false);
     }
     _setLastSyncAt();
 
     try {
       final cloudDates = await storageService.listTrackDates();
       for (final date in cloudDates) {
+        if (_entries[date]?.trackDeletedAt != null) continue;
         final bytes = await storageService.downloadTrack(date);
         if (bytes == null || bytes.isEmpty) continue;
         final points = (await compute(parseGpxBytes, bytes)).points;

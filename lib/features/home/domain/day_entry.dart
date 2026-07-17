@@ -88,6 +88,23 @@ class DayEntry extends HiveObject {
   @HiveField(23)
   DateTime? updatedAt;
 
+  /// Set when this whole day was deleted — a tombstone, not a physical
+  /// removal, so the deletion itself durably syncs (see FirestoreService's
+  /// deleteEntry doc comment). A locally-deleted entry is removed from
+  /// HomeRepository's in-memory/Hive state entirely; this field only ever
+  /// exists on an *incoming* remote entry that needs to be interpreted as
+  /// "remove this locally too."
+  @HiveField(24)
+  DateTime? deletedAt;
+
+  /// Set when this day's GPX track (but not the day entry itself) was
+  /// deleted — same tombstone rationale as [deletedAt], scoped to just the
+  /// track. GPX tracks live in Firebase Storage, not Firestore, so this
+  /// field on the (Firestore-synced) entry is what makes track deletion
+  /// durable and lets other devices learn about it.
+  @HiveField(25)
+  DateTime? trackDeletedAt;
+
   DayEntry({
     required this.date,
     this.timeline = const [],
@@ -108,6 +125,8 @@ class DayEntry extends HiveObject {
     List<String>? photos,
     this.createdAt,
     this.updatedAt,
+    this.deletedAt,
+    this.trackDeletedAt,
   })  : crew = crew ?? <CrewMember>[],
         photos = photos ?? <String>[];
 
