@@ -94,6 +94,16 @@ flutter:
   assets:
     - assets/icon/
     - assets/images/distress/
+    # Bundled Noto Sans/Emoji TTFs for PDF export (see pdf_exporter.dart's
+    # PdfGoogleFonts.notoXxx() calls). The `printing` package's
+    # DownloadableFont.getFont() checks for a bundled asset at
+    # `google_fonts/$name.ttf` *before* falling back to a network fetch from
+    # Google's font CDN — that default path (no `assets/` prefix) is why this
+    # folder must live at the project root, not nested under assets/. Without
+    # these, PDF export silently falls back to Helvetica (no Unicode support)
+    # whenever offline — a real risk for a "must work with unstable marine
+    # connectivity" app doing PDF export, its own core feature.
+    - google_fonts/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
