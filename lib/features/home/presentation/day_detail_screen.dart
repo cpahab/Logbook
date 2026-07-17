@@ -31,6 +31,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/nav_bar.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/compute_daily_stats.dart';
+import '../widgets/entry_tooltip.dart';
 import '../utils/filter_settings.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
@@ -42,7 +43,6 @@ import '../utils/trim_track.dart';
 import '../../tracks/utils/track_computation_cache.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
-import '../../../l10n/app_localizations.dart';
 import '../../../core/constants/map_config.dart';
 import '../../../core/widgets/progress_snackbar.dart';
 import '../../../app/route_names.dart';
@@ -2110,7 +2110,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           behavior: HitTestBehavior.opaque,
           onTap: () => _dropMarker(
             LatLng(p.lat, p.lon),
-            _buildEntryTooltip(t, context.l10n,
+            buildEntryTooltip(t, context.l10n,
                 context.read<ThemeProvider>().vesselEquipment.activeSlots),
           ),
           child: Center(
@@ -2136,10 +2136,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           height: 32,
           alignment: Alignment.center,
           child: Tooltip(
-            message: _fmtDur(stop.minutes),
-            triggerMode: _isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
-            showDuration: _isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
-            waitDuration: _isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
+            message: fmtDur(stop.minutes),
+            triggerMode: isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
+            showDuration: isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
+            waitDuration: isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
             child: Container(
               width: 28,
               height: 28,
@@ -2439,7 +2439,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             behavior: HitTestBehavior.opaque,
             onTap: () => _dropMarker(
               LatLng(t.latitude!, t.longitude!),
-              _buildEntryTooltip(t, context.l10n,
+              buildEntryTooltip(t, context.l10n,
                   context.read<ThemeProvider>().vesselEquipment.activeSlots),
             ),
             child: Center(
@@ -3733,7 +3733,7 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
           behavior: HitTestBehavior.opaque,
           onTap: () => _dropMarker(
             LatLng(p.lat, p.lon),
-            _buildEntryTooltip(t, context.l10n,
+            buildEntryTooltip(t, context.l10n,
                 context.read<ThemeProvider>().vesselEquipment.activeSlots),
           ),
           child: Center(child: Container(
@@ -3752,10 +3752,10 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
           height: 32,
           alignment: Alignment.center,
           child: Tooltip(
-            message: _fmtDur(stop.minutes),
-            triggerMode: _isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
-            showDuration: _isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
-            waitDuration: _isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
+            message: fmtDur(stop.minutes),
+            triggerMode: isTouchPlatform ? TooltipTriggerMode.tap : TooltipTriggerMode.longPress,
+            showDuration: isTouchPlatform ? const Duration(seconds: 4) : const Duration(milliseconds: 1500),
+            waitDuration: isTouchPlatform ? Duration.zero : const Duration(milliseconds: 400),
             child: Container(
               width: 28,
               height: 28,
@@ -4068,7 +4068,7 @@ class _PositionsOnlyMapFullScreenState extends State<_PositionsOnlyMapFullScreen
             behavior: HitTestBehavior.opaque,
             onTap: () => _dropMarker(
               LatLng(t.latitude!, t.longitude!),
-              _buildEntryTooltip(t, context.l10n,
+              buildEntryTooltip(t, context.l10n,
                   context.read<ThemeProvider>().vesselEquipment.activeSlots),
             ),
             child: Center(
@@ -4222,53 +4222,6 @@ class _PositionsOnlyMapFullScreenState extends State<_PositionsOnlyMapFullScreen
 }
 
 // ── Shared map helpers ────────────────────────────────────────────────────────
-
-/// Full timeline entry as a multi-line tooltip string.
-String _buildEntryTooltip(
-    TimelineEntry t, AppLocalizations l10n, List<EquipmentSlot> activeSlots) {
-  final buf = StringBuffer(DateFormat('HH:mm').format(t.time.toLocal()));
-
-  final nav = <String>[];
-  // Course/speed: strip unit annotation from dialog label (e.g. "Course (°)" → "Course")
-  final courseLabel = l10n.entryDialogCourseLabel.split(' ').first;
-  final speedLabel  = l10n.entryDialogSpeedLabel.split(' ').first;
-  if (t.course != null) nav.add('$courseLabel: ${t.course!.toStringAsFixed(0)}°');
-  if (t.speed  != null) nav.add('$speedLabel: ${t.speed!.toStringAsFixed(1)} kn');
-  if (nav.isNotEmpty) buf.write('\n${nav.join(' · ')}');
-
-  final cond = <String>[];
-  if (t.wind?.isNotEmpty    == true) cond.add('${l10n.entryDialogWindLabel.split(' ').first}: ${t.wind!}');
-  if (t.sea?.isNotEmpty     == true) cond.add('${l10n.entryDialogSeaLabel}: ${t.sea!}');
-  if (t.weather?.isNotEmpty == true) cond.add('${l10n.entryDialogWeatherLabel}: ${t.weather!}');
-  if (t.temperature != null) cond.add('${t.temperature!.toStringAsFixed(1)}°C');
-  if (t.pressure != null) cond.add('${t.pressure!.toStringAsFixed(0)} mBar');
-  if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
-
-  final sails = equipmentStatusLines(t, activeSlots);
-  if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
-
-  if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');
-  if (t.vesselStatusNote?.isNotEmpty == true) {
-    buf.write('\n${isCrewNote(t.vesselStatusNote)
-        ? crewNoteDisplay(t.vesselStatusNote!, l10n.dataCrewNote, l10n.labelSkipper)
-        : vesselStatusDisplay(t.vesselStatusNote!, l10n)}');
-  }
-
-  return buf.toString();
-}
-
-/// True on native iOS/Android; false on web and desktop.
-/// Used to select tooltip trigger mode: tap on touch, hover+longPress on desktop.
-bool get _isTouchPlatform =>
-    !kIsWeb &&
-    (defaultTargetPlatform == TargetPlatform.iOS ||
-     defaultTargetPlatform == TargetPlatform.android);
-
-/// Formats a stop duration as "1h 30m" or "45m", for a mid-stop marker tooltip.
-String _fmtDur(double minutes) {
-  final m = minutes.round();
-  return m >= 60 ? '${m ~/ 60}h ${m % 60}m' : '${m}m';
-}
 
 /// Shows the GPS accuracy rings (CEP50 / R95) only at harbour zoom (> 15).
 /// flutter_map propagates MapCamera via InheritedWidget, so this widget
