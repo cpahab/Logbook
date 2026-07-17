@@ -32,6 +32,7 @@ import '../../../core/widgets/nav_bar.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/compute_daily_stats.dart';
 import '../widgets/entry_tooltip.dart';
+import '../widgets/map_layers.dart';
 import '../utils/filter_settings.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/track_correlation.dart';
@@ -2060,7 +2061,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     }
 
     // Uncertainty bands: translucent blue corridor per moving segment.
-    // Gated to zoom > 15 by _ZoomAwareUncertaintyLayer (sub-pixel at route zoom).
+    // Gated to zoom > 15 by ZoomAwareUncertaintyLayer (sub-pixel at route zoom).
     // Fixed blue regardless of theme — reads as "confidence", not alarm.
     final uncertaintyPolygons = display.uncertaintyBands()
         .map((ring) => Polygon(
@@ -2309,10 +2310,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     )
                   : tileWidget,
             ),
-            _ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
-            _ZoomAwareCircleLayer(circles: anchorCircles),
+            ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
+            ZoomAwareCircleLayer(circles: anchorCircles),
             PolylineLayer(polylines: trackPolylines, cullingMargin: null, simplificationTolerance: 0),
-            if (showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
+            if (showRawTrack) ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             MarkerLayer(markers: markers),
             RichAttributionWidget(
               attributions: [
@@ -3905,10 +3906,10 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
                     )
                   : tileWidget,
             ),
-            _ZoomAwareUncertaintyLayer(polygons: fsUncertaintyPolygons),
-            _ZoomAwareCircleLayer(circles: anchorCircles),
+            ZoomAwareUncertaintyLayer(polygons: fsUncertaintyPolygons),
+            ZoomAwareCircleLayer(circles: anchorCircles),
             PolylineLayer(polylines: fsTrackPolylines, cullingMargin: null, simplificationTolerance: 0),
-            if (widget.showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
+            if (widget.showRawTrack) ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             MarkerLayer(markers: markers),
             RichAttributionWidget(attributions: [
               // MapTiler version (temporarily disabled, see map_config.dart):
@@ -4222,66 +4223,6 @@ class _PositionsOnlyMapFullScreenState extends State<_PositionsOnlyMapFullScreen
 }
 
 // ── Shared map helpers ────────────────────────────────────────────────────────
-
-/// Shows the GPS accuracy rings (CEP50 / R95) only at harbour zoom (> 15).
-/// flutter_map propagates MapCamera via InheritedWidget, so this widget
-/// rebuilds automatically whenever the camera zoom changes.
-class _ZoomAwareCircleLayer extends StatelessWidget {
-  final List<CircleMarker> circles;
-  const _ZoomAwareCircleLayer({required this.circles});
-
-  @override
-  Widget build(BuildContext context) {
-    if (circles.isEmpty) return const SizedBox.shrink();
-    final zoom = MapCamera.of(context).zoom;
-    if (zoom <= 15) return const SizedBox.shrink();
-    return CircleLayer(circles: circles);
-  }
-}
-
-/// Shows the ±GPS uncertainty corridor only at harbour/detail zoom (> 15).
-/// At route zoom the band is sub-pixel and would only hurt performance.
-/// Fixed blue colour regardless of theme — reads as "confidence", not alarm.
-class _ZoomAwareUncertaintyLayer extends StatelessWidget {
-  final List<Polygon> polygons;
-  const _ZoomAwareUncertaintyLayer({required this.polygons});
-
-  @override
-  Widget build(BuildContext context) {
-    if (polygons.isEmpty) return const SizedBox.shrink();
-    if (MapCamera.of(context).zoom <= 15) return const SizedBox.shrink();
-    return PolygonLayer(polygons: polygons);
-  }
-}
-
-/// Shows the raw (unfiltered) GPS fixes only at harbour/detail zoom (> 15),
-/// as faint blue texture inside the uncertainty band — not a competing line.
-/// At route zoom two overlapping tracks just look like a mess.
-class _ZoomAwareRawTrackLayer extends StatelessWidget {
-  final List<TrackPoint> rawPoints;
-  const _ZoomAwareRawTrackLayer({required this.rawPoints});
-
-  static const _rawColor = Color(0x3342A5F5); // Blue 400 at ~20 %
-
-  @override
-  Widget build(BuildContext context) {
-    if (rawPoints.isEmpty) return const SizedBox.shrink();
-    if (MapCamera.of(context).zoom <= 15) return const SizedBox.shrink();
-    return PolylineLayer(
-      polylines: [
-        for (final seg in splitTrackSegments(rawPoints))
-          if (seg.length >= 2)
-            Polyline(
-              points: seg.map((p) => LatLng(p.lat, p.lon)).toList(),
-              strokeWidth: 1.0,
-              color: _rawColor,
-            ),
-      ],
-      cullingMargin: null,
-      simplificationTolerance: 0,
-    );
-  }
-}
 
 // ── Keel icon ─────────────────────────────────────────────────────────────────
 
