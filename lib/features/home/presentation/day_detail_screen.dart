@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +29,7 @@ import '../../../core/services/gps_consent_service.dart';
 import '../../../core/utils/coordinate_format.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/nav_bar.dart';
+import '../utils/bearing_utils.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../utils/gpx_parser.dart';
@@ -2063,9 +2063,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         : LatLng(endPoint.lat, endPoint.lon);
 
     final departureBearing = cleanedLatLngs.length >= 2
-        ? _dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
+        ? dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
     final arrivalBearing = cleanedLatLngs.length >= 2
-        ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
+        ? dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
     // Effective departure/arrival (from windowed speed) rather than the raw/
     // segment-based start/endPoint time, which can read hours off when a
     // genuine stop's GPS scatter was too wide to pass stop validation — see
@@ -3570,68 +3570,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
 }
 
-// ── File-level geometry helpers (used by both day-detail and fullscreen) ──────
-
-/// Initial compass bearing (radians) from [from] to [to], for rotating the
-/// departure/arrival direction-arrow markers.
-double _trackBearing(LatLng from, LatLng to) {
-  final lat1 = from.latitude  * pi / 180;
-  final lat2 = to.latitude    * pi / 180;
-  final dLon = (to.longitude - from.longitude) * pi / 180;
-  final y = sin(dLon) * cos(lat2);
-  final x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLon);
-  return atan2(y, x);
-}
-
-/// Great-circle distance in metres between two map coordinates.
-double _distM(LatLng a, LatLng b) {
-  const r   = 6371000.0;
-  final lat1 = a.latitude  * pi / 180;
-  final lat2 = b.latitude  * pi / 180;
-  final dLat = (b.latitude  - a.latitude)  * pi / 180;
-  final dLon = (b.longitude - a.longitude) * pi / 180;
-  final s = sin(dLat / 2) * sin(dLat / 2) +
-      cos(lat1) * cos(lat2) * sin(dLon / 2) * sin(dLon / 2);
-  return r * 2 * atan2(sqrt(s), sqrt(1 - s));
-}
-
-/// Direction the boat headed away from [origin]: bearing toward the point
-/// ~500m along the track (or the single farthest point, if the whole track
-/// is shorter than that), so a short initial wobble doesn't skew the arrow.
-double _dayDetailDepartureBearing(List<LatLng> pts, LatLng origin) {
-  if (pts.length < 2) return 0;
-  const targetM = 500.0;
-  double cum = 0;
-  for (int i = 1; i < pts.length; i++) {
-    cum += _distM(pts[i - 1], pts[i]);
-    if (cum >= targetM) return _trackBearing(origin, pts[i]);
-  }
-  double maxD = 0; int farIdx = 1;
-  for (int i = 1; i < pts.length; i++) {
-    final d = _distM(origin, pts[i]);
-    if (d > maxD) { maxD = d; farIdx = i; }
-  }
-  return _trackBearing(origin, pts[farIdx]);
-}
-
-/// Direction the boat was heading into [destination]: bearing from the point
-/// ~500m before it along the track (mirrors [_dayDetailDepartureBearing]).
-double _dayDetailArrivalBearing(List<LatLng> pts, LatLng destination) {
-  if (pts.length < 2) return 0;
-  const targetM = 500.0;
-  double cum = 0;
-  for (int i = pts.length - 2; i >= 0; i--) {
-    cum += _distM(pts[i], pts[i + 1]);
-    if (cum >= targetM) return _trackBearing(pts[i], destination);
-  }
-  double maxD = 0; int farIdx = 0;
-  for (int i = 0; i < pts.length - 1; i++) {
-    final d = _distM(pts[i], destination);
-    if (d > maxD) { maxD = d; farIdx = i; }
-  }
-  return _trackBearing(pts[farIdx], destination);
-}
-
 // ── Full-screen map for a single day ──────────────────────────────────────────
 /// Full-screen version of [_DayDetailScreenState._buildMap] (opened from its
 /// fullscreen button): same rendering, plus its own satellite toggle and
@@ -3773,8 +3711,8 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final startPos  = startStop != null ? LatLng(startStop.lat, startStop.lon) : LatLng(startPoint.lat, startPoint.lon);
     final endPos    = endStop   != null ? LatLng(endStop.lat,   endStop.lon)   : LatLng(endPoint.lat,   endPoint.lon);
 
-    final departureBearing = cleanedLatLngs.length >= 2 ? _dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
-    final arrivalBearing   = cleanedLatLngs.length >= 2 ? _dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
+    final departureBearing = cleanedLatLngs.length >= 2 ? dayDetailDepartureBearing(cleanedLatLngs, startPos) : 0.0;
+    final arrivalBearing   = cleanedLatLngs.length >= 2 ? dayDetailArrivalBearing(cleanedLatLngs, endPos) : 0.0;
     // Effective departure/arrival (from windowed speed) rather than the raw/
     // segment-based start/endPoint time — see the doc comments on
     // DisplayModel.departureTime/arrivalTime.
