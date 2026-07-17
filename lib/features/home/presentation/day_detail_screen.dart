@@ -74,47 +74,6 @@ class DayDetailScreen extends StatefulWidget {
 
 class _DayDetailScreenState extends State<DayDetailScreen> {
 
-  /// Looks up the recorded state for one configurable equipment [slot] on
-  /// [t] by its fixed storage key ('slot1' … 'slot12').
-  static String? _slotValue(TimelineEntry t, String key) => switch (key) {
-    'slot1'  => t.slot1State,
-    'slot2'  => t.slot2State,
-    'slot3'  => t.slot3State,
-    'slot4'  => t.slot4State,
-    'slot5'  => t.slot5State,
-    'slot6'  => t.slot6State,
-    'slot7'  => t.slot7State,
-    'slot8'  => t.slot8State,
-    'slot9'  => t.slot9State,
-    'slot10' => t.slot10State,
-    'slot11' => t.slot11State,
-    'slot12' => t.slot12State,
-    _        => null,
-  };
-
-  /// Builds one display line per active equipment [slot] with a recorded
-  /// state on [t] ("Label: state").
-  static List<String> _equipmentStatusLines(
-      TimelineEntry t, List<EquipmentSlot> activeSlots) {
-    final lines = <String>[];
-    for (final slot in activeSlots) {
-      final val = _slotValue(t, slot.key);
-      if (val != null) lines.add('${slot.label}: $val');
-    }
-    return lines;
-  }
-
-  /// Renders a `vs:` vessel-status sentinel note into its localised display string.
-  static String _vesselStatusDisplay(String note, AppLocalizations l10n) =>
-      parseVesselStatus(
-        note,
-        oilLabel:       (pct) => '${l10n.vesselOilLabel}: $pct%',
-        fuelLabel:      (pct) => '${l10n.vesselFuelLabel}: $pct%',
-        keelDownLabel:  l10n.vesselKeelDown,
-        keelUpLabel:    l10n.vesselKeelUp,
-        keelFieldLabel: l10n.entryDialogKeelLabel,
-      );
-
   /// Whether this screen's date is the current calendar day — gates
   /// same-day-only affordances like adding a live timeline entry without an
   /// amendment reason.
@@ -1242,7 +1201,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               Text(
                 isCrewEntry
                     ? crewNoteDisplay(t.vesselStatusNote!, context.l10n.dataCrewNote, context.l10n.labelSkipper)
-                    : _vesselStatusDisplay(t.vesselStatusNote!, context.l10n),
+                    : vesselStatusDisplay(t.vesselStatusNote!, context.l10n),
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                   color: cs.onSurfaceVariant,
                   height: 1.5,
@@ -1258,7 +1217,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 t.temperature != null ||
                 t.pressure != null ||
                 (t.latitude != null && t.longitude != null) ||
-                VesselEquipmentConfig.slotKeys.any((k) => _slotValue(t, k) != null)) ...[
+                VesselEquipmentConfig.slotKeys.any((k) => slotValue(t, k) != null)) ...[
               const SizedBox(height: 8),
               Text(
                 [
@@ -1275,7 +1234,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     '${context.l10n.dataPressure}: ${t.pressure!.toStringAsFixed(0)} mBar',
                   if (t.latitude != null && t.longitude != null)
                     '${context.l10n.dataPosition}: ${formatDDM(t.latitude!, t.longitude!)}',
-                  ..._equipmentStatusLines(
+                  ...equipmentStatusLines(
                       t, context.read<ThemeProvider>().vesselEquipment.activeSlots),
                 ].join(' · '),
                 style: Theme.of(context).textTheme.bodyMedium!.copyWith(
@@ -4285,14 +4244,14 @@ String _buildEntryTooltip(
   if (t.pressure != null) cond.add('${t.pressure!.toStringAsFixed(0)} mBar');
   if (cond.isNotEmpty) buf.write('\n${cond.join(' · ')}');
 
-  final sails = _DayDetailScreenState._equipmentStatusLines(t, activeSlots);
+  final sails = equipmentStatusLines(t, activeSlots);
   if (sails.isNotEmpty) buf.write('\n${sails.join(' · ')}');
 
   if (t.remarks?.isNotEmpty          == true) buf.write('\n${t.remarks}');
   if (t.vesselStatusNote?.isNotEmpty == true) {
     buf.write('\n${isCrewNote(t.vesselStatusNote)
         ? crewNoteDisplay(t.vesselStatusNote!, l10n.dataCrewNote, l10n.labelSkipper)
-        : _DayDetailScreenState._vesselStatusDisplay(t.vesselStatusNote!, l10n)}');
+        : vesselStatusDisplay(t.vesselStatusNote!, l10n)}');
   }
 
   return buf.toString();
