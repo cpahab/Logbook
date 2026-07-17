@@ -31,6 +31,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/nav_bar.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/compute_daily_stats.dart';
+import '../widgets/day_detail_display_helpers.dart';
 import '../widgets/edit_text_dialog.dart';
 import '../widgets/entry_tooltip.dart';
 import '../widgets/map_layers.dart';
@@ -213,7 +214,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 PopupMenuItem<String>(
                   value: 'import_gpx',
                   child: Row(children: [
-                    _gpxUploadIcon(),
+                    gpxUploadIcon(context),
                     const SizedBox(width: 12),
                     Text(l10n.dayMenuImportGpx, style: TextStyle(color: cs.onSurface)),
                   ]),
@@ -551,7 +552,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       return Column(
                         key: ValueKey(member.name),
                         children: [
-                          _buildCrewRow(
+                          buildCrewRow(
+                            context,
                             member: member,
                             isFirst: isFirst,
                             cs: cs,
@@ -577,7 +579,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                         return Column(
                           key: ValueKey(e.value.name),
                           children: [
-                            _buildCrewRow(
+                            buildCrewRow(
+                            context,
                               member: e.value,
                               isFirst: isFirst,
                               cs: cs,
@@ -650,68 +653,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           ),
         ],
         const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  /// One crew member's row: avatar, name, skipper/crew role label — with a
-  /// drag handle and chevron in [editing] mode.
-  Widget _buildCrewRow({
-    required CrewMember member,
-    required bool isFirst,
-    required ColorScheme cs,
-    required bool editing,
-    required int index,
-    VoidCallback? onTap,
-  }) {
-    return Row(
-      children: [
-        if (editing) ...[
-          ReorderableDragStartListener(
-            index: index,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Icon(Icons.drag_handle,
-                  size: 20, color: cs.outline.withValues(alpha: 0.4)),
-            ),
-          ),
-        ],
-        GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: cs.surfaceContainerHigh,
-            ),
-            child: Icon(Icons.person, color: cs.primary, size: 22),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: GestureDetector(
-            onTap: onTap,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  member.name,
-                  style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
-                ),
-                Text(
-                  isFirst ? context.l10n.labelSkipper.toUpperCase() : context.l10n.labelCrewRole.toUpperCase(),
-                  style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: isFirst ? cs.primary : cs.mutedLabel),
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (editing && onTap != null)
-          GestureDetector(
-            onTap: onTap,
-            child: Icon(Icons.chevron_right, size: 18, color: cs.outlineVariant),
-          ),
       ],
     );
   }
@@ -926,14 +867,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 child: Container(
                   decoration: BoxDecoration(border: Border(right: div)),
                   padding: const EdgeInsets.all(12),
-                  child: _statCell(
+                  child: statCell(
+                      context,
                       context.l10n.statDistance.toUpperCase(), '${stats.distanceNm.toStringAsFixed(1)} nm', cs),
                 ),
               ),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: _statCell(
+                  child: statCell(
+                      context,
                       context.l10n.statAvgSpeed, '${stats.avgOverGroundKn.toStringAsFixed(1)} kn', cs),
                 ),
               ),
@@ -948,14 +891,16 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     child: Container(
                       decoration: BoxDecoration(border: Border(right: div)),
                       padding: const EdgeInsets.all(12),
-                      child: _statCell(
+                      child: statCell(
+                      context,
                           context.l10n.statAvgSpeedUnderway, '${stats.avgMakingWayKn.toStringAsFixed(1)} kn', cs),
                     ),
                   ),
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
-                      child: _statCell(
+                      child: statCell(
+                      context,
                           context.l10n.statMax.toUpperCase(), '${stats.maxSpeedKn.toStringAsFixed(1)} kn', cs),
                     ),
                   ),
@@ -967,23 +912,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     );
   }
 
-  /// One label/value pair within [_buildStatsGrid].
-  Widget _statCell(String label, String value, ColorScheme cs) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.microLabel.copyWith(color: cs.mutedLabel),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.primary),
-        ),
-      ],
-    );
-  }
 
   // ── Log Section ───────────────────────────────────────────────────
   /// "Log Entries" section: the day's timeline as a vertical spine of cards,
@@ -1350,7 +1278,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     if (i == entries.length) {
                       // Original entry (oldest amendment's snapshot)
                       final orig = t.amendments.first;
-                      return _amendmentSnapshotTile(
+                      return amendmentSnapshotTile(context, 
                         label: l10n.amendmentOriginal,
                         dateStr: DateFormat('d MMM yyyy · HH:mm', locale).format(orig.amendedAt),
                         reason: null,
@@ -1367,7 +1295,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     }
                     final e = entries[i];
                     if (e.isCurrent) {
-                      return _amendmentSnapshotTile(
+                      return amendmentSnapshotTile(context, 
                         label: l10n.amendmentCurrent,
                         dateStr: t.updatedAt != null
                             ? DateFormat('d MMM yyyy · HH:mm', locale).format(t.updatedAt!)
@@ -1385,7 +1313,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       );
                     }
                     final a = t.amendments.reversed.toList()[i - 1];
-                    return _amendmentSnapshotTile(
+                    return amendmentSnapshotTile(context, 
                       label: DateFormat('d MMM yyyy · HH:mm', locale).format(a.amendedAt),
                       dateStr: '',
                       reason: a.reason ?? l10n.amendmentNoReason,
@@ -1406,84 +1334,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           ),
         );
       },
-    );
-  }
-
-  /// One row in the amendment-history sheet: label/date, time, and a
-  /// course/speed/wind/sea/weather summary line for that snapshot.
-  Widget _amendmentSnapshotTile({
-    required String label,
-    required String dateStr,
-    required String? reason,
-    required DateTime time,
-    required double? course,
-    required double? speed,
-    required String? wind,
-    required String? sea,
-    required String? weather,
-    required String? remarks,
-    required ColorScheme cs,
-    required bool isOriginal,
-  }) {
-    final timeStr =
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-    final details = [
-      if (course != null) 'COG ${course.toStringAsFixed(0)}°',
-      if (speed != null) '${speed.toStringAsFixed(1)} kn',
-      ?wind,
-      ?sea,
-      ?weather,
-    ].join(' · ');
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                color: isOriginal ? cs.mutedLabel : cs.secondary,
-              ),
-            ),
-            if (dateStr.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Text(dateStr,
-                style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11, color: cs.mutedLabel)),
-            ],
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          timeStr,
-          style: Theme.of(context).textTheme.titleLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w500, color: isOriginal ? cs.mutedLabel : cs.primary),
-        ),
-        if (details.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(details,
-            style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurfaceVariant)),
-        ],
-        if (remarks?.isNotEmpty == true) ...[
-          const SizedBox(height: 2),
-          Text(remarks!,
-            style: Theme.of(context).textTheme.bodySmall!.copyWith(
-              fontStyle: FontStyle.italic, color: cs.onSurface)),
-        ],
-        if (reason != null) ...[
-          const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              reason,
-              style: Theme.of(context).textTheme.bodySmall!.copyWith(color: cs.onSurfaceVariant),
-            ),
-          ),
-        ],
-      ],
     );
   }
 
@@ -1825,12 +1675,12 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: _vesselStatCell(
+                        child: vesselStatCell(context, 
                             context.l10n.vesselOilLabel.toUpperCase(), entry.oilLevel, Icons.opacity, cs, cardFg),
                       ),
                       const SizedBox(width: 20),
                       Expanded(
-                        child: _vesselStatCell(context.l10n.vesselFuelLabel.toUpperCase(), entry.fuelLevel,
+                        child: vesselStatCell(context, context.l10n.vesselFuelLabel.toUpperCase(), entry.fuelLevel,
                             Icons.local_gas_station, cs, cardFg, isFuel: true),
                       ),
                     ],
@@ -1879,62 +1729,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           ),
         ),
         const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  /// One oil/fuel gauge within [_buildVesselStatus]: icon, percentage, and a
-  /// filled progress bar.
-  Widget _vesselStatCell(
-      String label, int? level, IconData icon, ColorScheme cs, Color onCard, {bool isFuel = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall!.copyWith(
-            color: onCard.withValues(alpha: 0.70),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(icon, color: onCard.withValues(alpha: 0.75), size: 20),
-            const SizedBox(width: 8),
-            Text(
-              level != null ? '$level%' : '—',
-              style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: level != null ? onCard : onCard.withValues(alpha: 0.54)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: Stack(
-            children: [
-              Container(height: 8, color: onCard.withValues(alpha: 0.20)),
-              if (level != null)
-                FractionallySizedBox(
-                  widthFactor: level / 100,
-                  child: Container(height: 8, color: cs.secondaryFixed),
-                ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              context.l10n.vesselEmptyLabel.toUpperCase(),
-              style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: onCard.withValues(alpha: 0.50)),
-            ),
-            Text(
-              context.l10n.vesselFullLabel.toUpperCase(),
-              style: Theme.of(context).textTheme.microLabel.copyWith(letterSpacing: 0.5, color: onCard.withValues(alpha: 0.50)),
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -2188,14 +1982,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _trackLabel(startTimeStr, cs),
+              trackLabel(context, startTimeStr, cs),
               const SizedBox(width: 5),
               departurePrecision == TimePrecision.precise
                   ? Transform.rotate(
                       angle: departureBearing,
-                      child: _trackArrow(cs.primary),
+                      child: trackArrow(cs.primary),
                     )
-                  : _trackArrow(cs.primary, icon: Icons.gps_not_fixed),
+                  : trackArrow(cs.primary, icon: Icons.gps_not_fixed),
             ],
           ),
         ),
@@ -2220,11 +2014,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               endPositionReliable
                   ? Transform.rotate(
                       angle: arrivalBearing,
-                      child: _trackArrow(cs.primary),
+                      child: trackArrow(cs.primary),
                     )
-                  : _trackArrow(cs.primary, icon: Icons.gps_not_fixed),
+                  : trackArrow(cs.primary, icon: Icons.gps_not_fixed),
               const SizedBox(width: 5),
-              _trackLabel(endTimeStr, cs),
+              trackLabel(context, endTimeStr, cs),
             ],
           ),
         ),
@@ -2258,7 +2052,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               if (_droppedMarkerLabel != null)
                 Positioned(
                   left: 16, top: 3,
-                  child: IgnorePointer(child: _trackLabel(_droppedMarkerLabel!, cs)),
+                  child: IgnorePointer(child: trackLabel(context, _droppedMarkerLabel!, cs)),
                 ),
             ],
           ),
@@ -2493,7 +2287,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 Positioned(
                   left: 16,
                   top: 3,
-                  child: IgnorePointer(child: _trackLabel(_droppedMarkerLabel!, cs)),
+                  child: IgnorePointer(child: trackLabel(context, _droppedMarkerLabel!, cs)),
                 ),
             ],
           ),
@@ -3453,41 +3247,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     return nearest;
   }
 
-  /// Upload icon with a small "GPX" badge, used for the import-GPX menu item.
-  Widget _gpxUploadIcon() {
-    return SizedBox(
-      width: 26,
-      height: 26,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Icon(Icons.file_upload_outlined, size: 22, color: Theme.of(context).colorScheme.onSurface),
-          Positioned(
-            bottom: -3,
-            right: -6,
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: Text(
-                'GPX',
-                style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontSize: 7,
-                  height: 1,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Small floating action button used for the desktop-only zoom/recenter map controls.
   Widget _smallMapBtn(IconData icon, VoidCallback onTap) {
     final cs = Theme.of(context).colorScheme;
@@ -3500,36 +3259,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       child: Icon(icon, size: 18),
     );
   }
-
-  // ── Map marker helpers ────────────────────────────────────────────
-
-  /// Small circular directional-arrow (or fallback icon) badge for the
-  /// departure/arrival map markers.
-  Widget _trackArrow(Color color, {IconData icon = Icons.arrow_upward}) => Container(
-        width: 15,
-        height: 15,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.85),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 1.5),
-        ),
-        alignment: Alignment.center,
-        child: Icon(icon, color: Colors.white, size: 8),
-      );
-
-  /// Small pill label (departure/arrival time, dropped-marker timestamp) next
-  /// to a map marker.
-  Widget _trackLabel(String text, ColorScheme cs) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-        decoration: BoxDecoration(
-          color: cs.primary.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 10, letterSpacing: 0, color: Colors.white),
-        ),
-      );
 
 }
 
