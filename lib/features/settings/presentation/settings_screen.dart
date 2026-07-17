@@ -25,6 +25,7 @@ import '../../../app/theme/theme_extensions.dart';
 import '../domain/theme_provider.dart';
 import '../../../app/route_names.dart';
 import '../../../l10n/l10n_extension.dart';
+import '../utils/settings_format_utils.dart';
 import '../widgets/connect_bottom_sheet.dart';
 import '../widgets/equipment_slot_editor.dart';
 
@@ -140,13 +141,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     sync(_epirbCtrl, _epirbFocus, _themeProvider.epirbInfo);
     sync(_fireSuppCtrl, _fireSuppFocus, _themeProvider.fireSuppInfo);
   }
-
-  /// Formats an 8-char share code as "XXXX-XXXX" for display.
-  String _formatCode(String code) {
-    if (code.length == 8) return '${code.substring(0, 4)}-${code.substring(4)}';
-    return code;
-  }
-
 
   /// Reloads the current user's list of accessible logbooks (owned + joined).
   Future<void> _refreshLogbooks() async {
@@ -972,7 +966,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  _formatCode(shareCode),
+                  formatCode(shareCode),
                   style: Theme.of(context).textTheme.shareCode.copyWith(color: cs.onSurface),
                 ),
                 const SizedBox(height: 16),
@@ -2592,7 +2586,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  _formatCode(shareCode),
+                  formatCode(shareCode),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.shareCode.copyWith(color: cs.onPrimaryContainer),
                 ),
@@ -2602,7 +2596,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             IconButton.filled(
               onPressed: () {
                 Clipboard.setData(
-                    ClipboardData(text: _formatCode(shareCode)));
+                    ClipboardData(text: formatCode(shareCode)));
                 ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(l10n.settingsCodeCopied)));
               },
