@@ -663,6 +663,73 @@ class HomeRepository extends ChangeNotifier {
     _syncRosterToFirestore();
   }
 
+  /// Deletes (tombstones) any cloud entry/track whose date isn't part of
+  /// the current local state — call this once a restore has fully
+  /// repopulated both entries ([restoreFromBackup]) *and* tracks
+  /// ([replaceTrackPoints] for each restored entry), so this sees the
+  /// complete restored picture.
+  ///
+  /// Without this, a restore only ever pushes what's *in* the backup; any
+  /// entry or track that existed in the cloud but isn't part of the backup
+  /// is never told to go away, and reappears the moment something re-syncs
+  /// it (the live listener resubscribing, or a future incremental pull —
+  /// restoreFromBackup's clearLocalData wipes the sync-state box, so the
+  /// very next attachFirestore's "updated since last sync" query effectively
+  /// becomes "fetch everything"). Restore is documented as a full replace,
+  /// not a merge (see BackupService's generated README), so this is the
+  /// correct, intended behavior — not an aggressive extra deletion.
+  ///
+  /// Best-effort: if offline, silently does nothing (nothing pending is
+  /// recorded for cloud-only dates never learned about) — a manual
+  /// forceSync once back online is the way to retry this reconciliation.
+  /// Pure decision logic for [reconcileCloudAfterRestore]'s entry half:
+  /// which dates exist on the server (and aren't already tombstoned) but
+  /// are absent from [restoredDates] — these are the dates that must be
+  /// tombstoned so they don't reappear. Separated out from the actual
+  /// Firestore/Storage calls so it's directly unit-testable.
+  @visibleForTesting
+  static Set<DateTime> datesToTombstone(
+    Iterable<DayEntry> serverEntries,
+    Set<DateTime> restoredDates,
+  ) =>
+      {
+        for (final e in serverEntries)
+          if (e.deletedAt == null && !restoredDates.contains(e.date)) e.date,
+      };
+
+  Future<void> reconcileCloudAfterRestore() async {
+    final fs = _firestore;
+    if (fs != null) {
+      try {
+        final serverEntries = await fs.fetchAllEntries();
+        for (final date in datesToTombstone(serverEntries, _entries.keys.toSet())) {
+          _recordPendingDelete(date);
+          await _pushPendingDelete(date);
+        }
+      } catch (_) {}
+    }
+
+    final st = _storage;
+    if (st != null) {
+      try {
+        final serverTrackDates = await st.listTrackDates();
+        for (final date in serverTrackDates) {
+          if (dailyTracks.containsKey(date)) continue; // restored, keep it
+          final entry = _entries[date];
+          if (entry != null && entry.deletedAt == null) {
+            // The entry survived the restore but its track didn't —
+            // tombstone just the track, same as removeGpx.
+            entry.trackDeletedAt = DateTime.now();
+            await _dayBox.put(date.toIso8601String(), entry);
+            _recordLocalEdit(date);
+            _syncToFirestore(entry, {'trackDeletedAt'});
+          }
+          await st.deleteTrack(date).catchError((_) {});
+        }
+      } catch (_) {}
+    }
+  }
+
   // ── Timeline management ────────────────────────────────────────────────────
 
   /// Adds [entry] to [day]'s timeline (auto-inserting a crew/vessel-status

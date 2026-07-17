@@ -286,6 +286,12 @@ merge with data already there.
         await home.replaceTrackPoints(p.entry.date, track.points);
       }
     }
+    // Entries/tracks now fully reflect the backup — anything still in the
+    // cloud but absent from this restored state (created after the backup
+    // was taken, or on another device) must be told to go away too, or it
+    // reappears on the next sync. Restore is documented as a full replace,
+    // not a merge, so this is the intended behavior.
+    await home.reconcileCloudAfterRestore();
     await emergency.restoreContacts(parsed.contacts);
 
     final vessel = parsed.vessel;

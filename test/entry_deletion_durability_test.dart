@@ -179,4 +179,51 @@ void main() {
       expect(home.getEntry(date)!.notes, 'remote wins');
     });
   });
+
+  group('datesToTombstone (restore reconciliation — see wiki "Backup restore '
+      'does not actually replace cloud data")', () {
+    test('a server entry absent from the restored set is tombstoned', () {
+      final serverOnly = DateTime(2024, 1, 1);
+      final restored = DateTime(2024, 1, 2);
+      final result = HomeRepository.datesToTombstone(
+        [DayEntry(date: serverOnly), DayEntry(date: restored)],
+        {restored},
+      );
+      expect(result, {serverOnly});
+    });
+
+    test('an already-tombstoned server entry is not tombstoned again', () {
+      final date = DateTime(2024, 1, 1);
+      final result = HomeRepository.datesToTombstone(
+        [DayEntry(date: date, deletedAt: DateTime.now())],
+        <DateTime>{},
+      );
+      expect(result, isEmpty);
+    });
+
+    test('a server entry present in the restored set is kept', () {
+      final date = DateTime(2024, 1, 1);
+      final result = HomeRepository.datesToTombstone(
+        [DayEntry(date: date)],
+        {date},
+      );
+      expect(result, isEmpty);
+    });
+  });
+
+  group('reconcileCloudAfterRestore (unattached)', () {
+    test('is a no-op when no cloud service is attached (local-mode users '
+        'never restore-reconcile against a cloud they never connected to)',
+        () async {
+      final home = HomeRepository();
+      await home.init();
+      final date = DateTime(2024, 1, 1);
+      home.addEntry(date);
+
+      await home.reconcileCloudAfterRestore();
+
+      expect(home.getEntry(date), isNotNull);
+      expect(home.pendingDeleteDatesForTesting, isEmpty);
+    });
+  });
 }
