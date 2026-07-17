@@ -569,6 +569,20 @@ class AppLocalizationsDe extends AppLocalizations {
       'Fixe Punkte über dieser Geschwindigkeit gelten immer als GPS-Ausreißer. Bei schnellen Booten (Regatta, Foiler, Motorboot) erhöhen, sonst werden echte schnelle Fahrten herausgefiltert.';
 
   @override
+  String get settingsManeuverLabel => 'Manöver-Erkennung (experimentell)';
+
+  @override
+  String get settingsManeuverDesc =>
+      'Blendet die Spur aus und markiert den Bereich, wenn das Boot beim Manövrieren an einer Stelle bleibt (z. B. beim Anlegen), ohne je langsam genug für einen Stopp zu werden. Standardmäßig aus — noch in Abstimmung, kann mitten auf der Strecke falsch auslösen.';
+
+  @override
+  String get settingsManeuverRadiusLabel => 'Manöver-Radius';
+
+  @override
+  String get settingsManeuverRadiusDesc =>
+      'Wie weit ein Manöverbereich reichen darf, bevor er nicht mehr als \"an einer Stelle bleiben\" zählt (Standard: 60 m).';
+
+  @override
   String get settingsShowRawTrackLabel => 'Ungefilterte Spur anzeigen';
 
   @override

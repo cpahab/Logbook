@@ -63,6 +63,8 @@ class ThemeProvider extends ChangeNotifier {
   static const _makingWayThresholdKnKey    = 'filter_making_way_threshold_kn';
   static const _topSpeedPercentileKey      = 'filter_top_speed_percentile';
   static const _maxSpeedKnKey              = 'filter_max_speed_kn';
+  static const _detectManeuveringKey       = 'filter_detect_maneuvering';
+  static const _maneuverRadiusMKey         = 'filter_maneuver_radius_m';
   // Debug display toggle — deliberately device-local, not part of the
   // synced filter tuning above.
   static const _showRawTrackKey            = 'debug_show_raw_track';
@@ -98,6 +100,8 @@ class ThemeProvider extends ChangeNotifier {
   double _makingWayThresholdKn      = 1.0;
   double _topSpeedPercentile        = 0.99;
   double _maxSpeedKn                = 12.0;
+  bool   _detectManeuvering         = false;
+  double _maneuverRadiusM           = 60.0;
   bool   _showRawTrack              = true;
   bool   _autoLogPosition           = false; // opt-in, default off
   bool   _localMode                 = false;
@@ -137,6 +141,8 @@ class ThemeProvider extends ChangeNotifier {
   double get makingWayThresholdKn       => _makingWayThresholdKn;
   double get topSpeedPercentile         => _topSpeedPercentile;
   double get maxSpeedKn                 => _maxSpeedKn;
+  bool   get detectManeuvering          => _detectManeuvering;
+  double get maneuverRadiusM            => _maneuverRadiusM;
   bool   get showRawTrack               => _showRawTrack;
   bool   get autoLogPositionEnabled     => _autoLogPosition;
   FilterSettings get filterSettings => FilterSettings(
@@ -148,6 +154,8 @@ class ThemeProvider extends ChangeNotifier {
     makingWayThresholdKn:  _makingWayThresholdKn,
     topSpeedPercentile:    _topSpeedPercentile,
     maxSpeedKn:            _maxSpeedKn,
+    detectManeuvering:     _detectManeuvering,
+    maneuverRadiusM:       _maneuverRadiusM,
   );
   String get logbuchTitle          => _title;
   String get weatherUrl         => _weatherUrl;
@@ -346,6 +354,8 @@ class ThemeProvider extends ChangeNotifier {
     _makingWayThresholdKn  = double.tryParse(_box.get(_makingWayThresholdKnKey,   defaultValue: '1.0')!)  ?? 1.0;
     _topSpeedPercentile    = double.tryParse(_box.get(_topSpeedPercentileKey,      defaultValue: '0.99')!) ?? 0.99;
     _maxSpeedKn            = double.tryParse(_box.get(_maxSpeedKnKey,              defaultValue: '12.0')!) ?? 12.0;
+    _detectManeuvering     = (_box.get(_detectManeuveringKey,     defaultValue: 'false')!) != 'false';
+    _maneuverRadiusM       = double.tryParse(_box.get(_maneuverRadiusMKey,         defaultValue: '60.0')!) ?? 60.0;
     _title       = _box.get(_titleKey,       defaultValue: 'Logbuch')!;
     _weatherUrl  = _box.get(_weatherKey,     defaultValue: '')!;
     _vesselName      = _box.get(_vesselNameKey,     defaultValue: '')!;
@@ -533,6 +543,22 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setDetectManeuvering(bool v) {
+    if (_detectManeuvering == v) return;
+    _detectManeuvering = v;
+    _box.put(_detectManeuveringKey, v.toString());
+    _pushSettings();
+    notifyListeners();
+  }
+
+  void setManeuverRadiusM(double v) {
+    if (_maneuverRadiusM == v) return;
+    _maneuverRadiusM = v;
+    _box.put(_maneuverRadiusMKey, v.toString());
+    _pushSettingsDebounced();
+    notifyListeners();
+  }
+
   /// Restores every GPX track-filter tuning value to its factory default and pushes it.
   void resetFilterDefaults() {
     _filterMode           = StationaryMode.speed;
@@ -543,6 +569,8 @@ class ThemeProvider extends ChangeNotifier {
     _makingWayThresholdKn = 1.0;
     _topSpeedPercentile   = 0.99;
     _maxSpeedKn           = 12.0;
+    _detectManeuvering    = false;
+    _maneuverRadiusM      = 60.0;
     _box
       ..put(_filterModeKey,            StationaryMode.speed.name)
       ..put(_minStopMinutesKey,        '5.0')
@@ -551,7 +579,9 @@ class ThemeProvider extends ChangeNotifier {
       ..put(_coldStartSettleFactorKey, '3.0')
       ..put(_makingWayThresholdKnKey,  '1.0')
       ..put(_topSpeedPercentileKey,    '0.99')
-      ..put(_maxSpeedKnKey,            '12.0');
+      ..put(_maxSpeedKnKey,            '12.0')
+      ..put(_detectManeuveringKey,     'false')
+      ..put(_maneuverRadiusMKey,       '60.0');
     _pushSettings();
     notifyListeners();
   }
@@ -874,6 +904,8 @@ class ThemeProvider extends ChangeNotifier {
         _makingWayThresholdKnKey:  _makingWayThresholdKn.toString(),
         _topSpeedPercentileKey:    _topSpeedPercentile.toString(),
         _maxSpeedKnKey:            _maxSpeedKn.toString(),
+        _detectManeuveringKey:     _detectManeuvering.toString(),
+        _maneuverRadiusMKey:       _maneuverRadiusM.toString(),
       };
 
   void _pushSettings() {
@@ -952,6 +984,14 @@ class ThemeProvider extends ChangeNotifier {
     apply(_maxSpeedKnKey, _maxSpeedKn.toString(), (v) {
       _maxSpeedKn = double.tryParse(v) ?? _maxSpeedKn;
       _box.put(_maxSpeedKnKey, v);
+    });
+    apply(_detectManeuveringKey, _detectManeuvering.toString(), (v) {
+      _detectManeuvering = v != 'false';
+      _box.put(_detectManeuveringKey, v);
+    });
+    apply(_maneuverRadiusMKey, _maneuverRadiusM.toString(), (v) {
+      _maneuverRadiusM = double.tryParse(v) ?? _maneuverRadiusM;
+      _box.put(_maneuverRadiusMKey, v);
     });
 
     if (changed) notifyListeners();

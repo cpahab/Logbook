@@ -172,7 +172,7 @@ class _StopSegment {
       this.durationMinutes, this.fixCount);
 }
 
-List<_StopSegment> _findStationarySegments(
+({List<_StopSegment> stops, List<_StopSegment> rejectedWide}) _findStationarySegments(
     List<_Fix> fixes, FilterSettings settings) {
   final n = fixes.length;
   for (final f in fixes) { f.stationary = false; }
@@ -229,6 +229,14 @@ List<_StopSegment> _findStationarySegments(
   final effectiveFirst  = firstNonFlagged < 0 ? 0 : firstNonFlagged;
 
   final stops = <_StopSegment>[];
+  // Candidates that lasted long enough to be a genuine stop attempt (not
+  // just a brief pause) but whose GPS spread was too wide to certify a
+  // precise berth — e.g. maneuvering/berthing, drifting on anchor, a wide
+  // mooring swing. These never get excluded from the moving track (their
+  // fixes keep .stationary = false below), so the render side needs to know
+  // about them separately to fade that raw wiggle instead of drawing it at
+  // full opacity — see DisplayModel.uncertainAreas.
+  final rejectedWide = <_StopSegment>[];
   for (final span in merged) {
     final a   = span[0];
     final b   = span[1];
@@ -254,11 +262,7 @@ List<_StopSegment> _findStationarySegments(
       if (d > maxSpread) maxSpread = d;
     }
 
-    // Gate: must last long enough AND stay tight enough.
-    if (durationMinutes < settings.minStopMinutes ||
-        maxSpread > settings.maxStopSpreadM) {
-      continue;
-    }
+    if (durationMinutes < settings.minStopMinutes) continue;
 
     // v6: a stop beginning at or before effectiveFirst is a 'start' stop even
     // when the true first fix (index 0) was flagged.
@@ -266,11 +270,80 @@ List<_StopSegment> _findStationarySegments(
         ? AnchorKind.start
         : (b == n - 1 ? AnchorKind.end : AnchorKind.mid);
 
+    if (maxSpread > settings.maxStopSpreadM) {
+      rejectedWide.add(_StopSegment(a, b, kind, durationMinutes, seg.length));
+      continue;
+    }
+
     for (final f in seg) { f.stationary = true; }
     stops.add(_StopSegment(a, b, kind, durationMinutes, seg.length));
   }
 
-  return stops;
+  return (stops: stops, rejectedWide: rejectedWide);
+}
+
+/// Finds stretches where the boat stays within [FilterSettings.maneuverRadiusM]
+/// of one spot for at least [FilterSettings.minStopMinutes], despite never
+/// dropping below the stationary speed threshold long enough to register as
+/// a stop — active maneuvering (working into a berth, circling to pick up a
+/// mooring) rather than idle drift, which [_findStationarySegments] can't
+/// see since it classifies purely on speed. Only considers fixes not already
+/// claimed by a validated stop or flagged as a spike, so this never overlaps
+/// that pass's own candidates. Experimental — [FilterSettings.maneuverRadiusM]
+/// is meant to be tuned (or disabled via [FilterSettings.detectManeuvering])
+/// while this heuristic is still being dialed in.
+List<_StopSegment> _findManeuveringClusters(
+    List<_Fix> fixes, FilterSettings settings) {
+  if (!settings.detectManeuvering) return [];
+  final n = fixes.length;
+  final clusters = <_StopSegment>[];
+
+  final firstNonFlagged = fixes.indexWhere((f) => !f.flagged);
+  final effectiveFirst  = firstNonFlagged < 0 ? 0 : firstNonFlagged;
+
+  var i = 0;
+  while (i < n) {
+    if (fixes[i].flagged || fixes[i].stationary) { i++; continue; }
+
+    // Greedily grow a window from i while its own centroid-max-distance
+    // stays within maneuverRadiusM (same "distance from centroid" style
+    // _findStationarySegments/_computeAnchor already use elsewhere).
+    var b = i;
+    var sumLat = fixes[i].pt.lat, sumLon = fixes[i].pt.lon;
+    var count = 1;
+    while (b + 1 < n && !fixes[b + 1].flagged && !fixes[b + 1].stationary) {
+      final nb = b + 1;
+      final newSumLat = sumLat + fixes[nb].pt.lat;
+      final newSumLon = sumLon + fixes[nb].pt.lon;
+      final newCount  = count + 1;
+      final cLat = newSumLat / newCount;
+      final cLon = newSumLon / newCount;
+      var maxD = 0.0;
+      for (int k = i; k <= nb; k++) {
+        final d = _haversineM(cLat, cLon, fixes[k].pt.lat, fixes[k].pt.lon);
+        if (d > maxD) maxD = d;
+      }
+      if (maxD > settings.maneuverRadiusM) break;
+      b = nb;
+      sumLat = newSumLat;
+      sumLon = newSumLon;
+      count = newCount;
+    }
+
+    final durationMinutes =
+        fixes[b].pt.time.difference(fixes[i].pt.time).inSeconds / 60.0;
+    if (b > i && durationMinutes >= settings.minStopMinutes) {
+      final kind = i <= effectiveFirst
+          ? AnchorKind.start
+          : (b == n - 1 ? AnchorKind.end : AnchorKind.mid);
+      clusters.add(_StopSegment(i, b, kind, durationMinutes, b - i + 1));
+      i = b + 1;
+    } else {
+      i++;
+    }
+  }
+
+  return clusters;
 }
 
 // ── Pass 3b — GPS cold-start convergence at track start ──────────────────────
@@ -467,6 +540,33 @@ TrackAnchor _computeAnchor(
   );
 }
 
+/// Minimum fixes needed to characterise an [EstimatedCloud] — fewer than
+/// this and a centroid/spread would be too noisy to be useful.
+const _minCloudFixes = 5;
+
+/// Same centroid/percentile math as [_computeAnchor], but for a stop
+/// candidate that failed width validation rather than one that passed.
+/// Returns null when there aren't enough usable fixes.
+EstimatedCloud? _computeEstimatedCloud(List<TrackPoint> clusterPoints) {
+  final n = clusterPoints.length;
+  if (n < _minCloudFixes) return null;
+
+  var sumLat = 0.0, sumLon = 0.0;
+  for (final p in clusterPoints) { sumLat += p.lat; sumLon += p.lon; }
+  final cLat = sumLat / n;
+  final cLon = sumLon / n;
+
+  final radii = clusterPoints
+      .map((p) => _haversineM(cLat, cLon, p.lat, p.lon))
+      .toList()
+    ..sort();
+
+  final cep50M = max(10.0, radii[(radii.length * 0.50).floor().clamp(0, radii.length - 1)]);
+  final r95M   = max(20.0, radii[(radii.length * 0.95).floor().clamp(0, radii.length - 1)]);
+
+  return EstimatedCloud(lat: cLat, lon: cLon, cep50M: cep50M, r95M: r95M, nFixes: n);
+}
+
 // ── Public result type ────────────────────────────────────────────────────────
 
 /// Result of the full four-pass pipeline.
@@ -533,7 +633,7 @@ TrimResult trimTrackWithAnchors(
   _annotate(fixes, settings.window);
 
   // Pass 5 — find all stationary segments (spread excludes flagged fixes)
-  final stops = _findStationarySegments(fixes, settings);
+  final stops = _findStationarySegments(fixes, settings).stops;
 
   // Pass 6 — GPS cold-start (only at start stop; sets .coldStart on leading fixes)
   final nColdStart = settings.detectColdStart
@@ -682,6 +782,34 @@ class StopMarker {
   });
 }
 
+/// Centroid + GPS-spread radii for a stop candidate that lasted long enough
+/// to be genuine but was too wide to validate as a precise berth — the "we
+/// know it stopped roughly here, just not exactly where" area. Same
+/// centroid/percentile math as [TrackAnchor], computed over that candidate's
+/// own fixes instead of a validated stop cluster. See
+/// [DisplayModel.uncertainAreas].
+class EstimatedCloud {
+  final double lat;
+  final double lon;
+
+  /// Radius containing 50 % of the tail fixes. Inner ring.
+  final double cep50M;
+
+  /// Radius containing 95 % of the tail fixes. Outer ring.
+  final double r95M;
+
+  /// Number of fixes used to compute this cloud.
+  final int nFixes;
+
+  const EstimatedCloud({
+    required this.lat,
+    required this.lon,
+    required this.cep50M,
+    required this.r95M,
+    required this.nFixes,
+  });
+}
+
 /// Complete rendering model for one day's GPS track.
 class DisplayModel {
   final List<TrackSegment> segments;
@@ -729,6 +857,14 @@ class DisplayModel {
   /// unlike departure, a track can't end before it starts.
   final TimePrecision arrivalPrecision;
 
+  /// Stop candidates anywhere in the track (start, mid, or the final
+  /// arrival) that lasted long enough to be a genuine stop attempt but
+  /// whose GPS spread was too wide to certify a precise berth — their
+  /// fixes stay classified as ordinary moving track. Empty when every stop
+  /// attempt either validated cleanly or never lasted long enough to
+  /// bother with. See [buildDisplayModel]'s `rejectedWide` handling.
+  final List<EstimatedCloud> uncertainAreas;
+
   const DisplayModel({
     this.segments           = const [],
     this.stops              = const [],
@@ -740,6 +876,7 @@ class DisplayModel {
     this.departurePrecision = TimePrecision.estimated,
     this.arrivalTime,
     this.arrivalPrecision   = TimePrecision.estimated,
+    this.uncertainAreas     = const [],
   });
 
   /// First moving fix — departure time.
@@ -1083,7 +1220,9 @@ DisplayModel buildDisplayModel(
   _flagSpikes(fixes, settings.maxSpeedKn);
   if (settings.detectBadFirstFix) _detectBadFirstFix(fixes);
   _annotate(fixes, settings.window);
-  final stops = _findStationarySegments(fixes, settings);
+  final stopResult   = _findStationarySegments(fixes, settings);
+  final stops        = stopResult.stops;
+  final rejectedWide = stopResult.rejectedWide;
   if (settings.detectColdStart) {
     _flagColdStart(fixes, stops, settings.coldStartSettleFactor);
   }
@@ -1093,6 +1232,26 @@ DisplayModel buildDisplayModel(
       fixes, stops, departure.index, settings.speedThresholdKn);
   final departureTime = fixes[departure.index].pt.time;
   final arrivalTime = fixes[arrival.index].pt.time;
+
+  // Stop candidates that lasted long enough to be a genuine stop attempt
+  // but whose GPS spread was too wide to certify a precise berth (see
+  // _findStationarySegments), plus fast-moving maneuvering stretches that
+  // never registered as stationary at all (see _findManeuveringClusters) —
+  // both stay classified "moving" and would otherwise render as a solid
+  // tangle of raw GPS noise. Surface each as an uncertain area so the map
+  // can fade that wiggle and ring it instead, wherever in the track it
+  // falls — start, mid, or the final arrival.
+  final maneuveringClusters = _findManeuveringClusters(fixes, settings);
+  final uncertainAreas = <EstimatedCloud>[];
+  for (final s in [...rejectedWide, ...maneuveringClusters]) {
+    final cluster = fixes
+        .sublist(s.startIdx, s.endIdx + 1)
+        .where((f) => !f.flagged)
+        .map((f) => f.pt)
+        .toList();
+    final cloud = _computeEstimatedCloud(cluster);
+    if (cloud != null) uncertainAreas.add(cloud);
+  }
 
   // Per-fix uncertainty: compute base accuracy from stop scatter, then
   // infer jitter-based uncertainty for every moving fix.
@@ -1281,5 +1440,6 @@ DisplayModel buildDisplayModel(
     departurePrecision: departure.precision,
     arrivalTime:        arrivalTime,
     arrivalPrecision:   arrival.precision,
+    uncertainAreas:     uncertainAreas,
   );
 }

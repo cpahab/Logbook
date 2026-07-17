@@ -18,7 +18,8 @@ import '../../home/utils/compute_daily_stats.dart';
 import '../../home/domain/track_point.dart';
 import '../../home/utils/trim_track.dart'
     show trimStationaryEnds, DisplayModel, SegmentKind,
-        splitTrackSegments;
+        splitTrackSegments, EstimatedCloud;
+import '../../home/utils/track_fade_render.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../core/constants/map_config.dart';
@@ -304,16 +305,25 @@ class _TracksScreenState extends State<TracksScreen> {
       if (display != null) {
         for (final seg in display.segments) {
           if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
-            segs.add(Polyline(
-              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-              color: color,
-              strokeWidth: width,
-            ));
+            if (display.uncertainAreas.isNotEmpty) {
+              segs.addAll(fadeMovingNearCloud(
+                seg,
+                clouds: display.uncertainAreas,
+                color: color,
+                strokeWidth: width,
+              ));
+            } else {
+              segs.add(Polyline(
+                points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+                color: color,
+                strokeWidth: width,
+              ));
+            }
           } else if ((seg.kind == SegmentKind.stopEntry ||
                       seg.kind == SegmentKind.stopExit) &&
                      seg.points.length >= 2) {
-            segs.add(Polyline(
-              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+            segs.addAll(fadeConnectorPolylines(
+              seg,
               color: e.value.color.withValues(alpha: isSelected ? 0.40 : 0.26),
               strokeWidth: width * 0.6,
             ));
@@ -391,6 +401,12 @@ class _TracksScreenState extends State<TracksScreen> {
       }
     }
 
+    final estimatedClouds = <(EstimatedCloud, Color)>[
+      for (final d in displayed)
+        for (final c in d.display?.uncertainAreas ?? const [])
+          (c, d.color),
+    ];
+
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -411,7 +427,7 @@ class _TracksScreenState extends State<TracksScreen> {
                   flex: 12,
                   child: _buildMapSection(
                       displayed, polylines, showRawTrack,
-                      anchorCircles, arrowMarkers, cs),
+                      anchorCircles, estimatedClouds, arrowMarkers, cs),
                 ),
                 // ── List ───────────────────────────────────────────────
                 Expanded(
@@ -489,6 +505,7 @@ class _TracksScreenState extends State<TracksScreen> {
     List<Polyline> polylines,
     bool showRawTrack,
     List<CircleMarker> anchorCircles,
+    List<(EstimatedCloud, Color)> estimatedClouds,
     List<Marker> arrowMarkers,
     ColorScheme cs,
   ) {
@@ -551,6 +568,11 @@ class _TracksScreenState extends State<TracksScreen> {
               if (anchorCircles.isEmpty || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
               return CircleLayer(circles: anchorCircles);
             }),
+            if (estimatedClouds.isNotEmpty)
+              EstimatedCloudLayer(
+                clouds: estimatedClouds,
+                tooltipMessage: context.l10n.arrivalTimeUncertainTooltip,
+              ),
             PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             Builder(builder: (ctx) {
               if (!showRawTrack || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
@@ -1184,16 +1206,25 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
       if (display != null) {
         for (final seg in display.segments) {
           if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
-            segs.add(Polyline(
-              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-              color: color,
-              strokeWidth: width,
-            ));
+            if (display.uncertainAreas.isNotEmpty) {
+              segs.addAll(fadeMovingNearCloud(
+                seg,
+                clouds: display.uncertainAreas,
+                color: color,
+                strokeWidth: width,
+              ));
+            } else {
+              segs.add(Polyline(
+                points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+                color: color,
+                strokeWidth: width,
+              ));
+            }
           } else if ((seg.kind == SegmentKind.stopEntry ||
                       seg.kind == SegmentKind.stopExit) &&
                      seg.points.length >= 2) {
-            segs.add(Polyline(
-              points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+            segs.addAll(fadeConnectorPolylines(
+              seg,
               color: e.value.color.withValues(alpha: isSelected ? 0.40 : 0.26),
               strokeWidth: width * 0.6,
             ));
@@ -1250,6 +1281,12 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
             color: d.color.withValues(alpha: 0.22), borderStrokeWidth: 1.5, borderColor: d.color.withValues(alpha: 0.50)));
       }
     }
+
+    final estimatedClouds = <(EstimatedCloud, Color)>[
+      for (final d in displayed)
+        for (final c in d.display?.uncertainAreas ?? const [])
+          (c, d.color),
+    ];
 
     final fsUncertaintyPolygons = [
       for (final d in displayed)
@@ -1342,6 +1379,11 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
               if (anchorCircles.isEmpty || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
               return CircleLayer(circles: anchorCircles);
             }),
+            if (estimatedClouds.isNotEmpty)
+              EstimatedCloudLayer(
+                clouds: estimatedClouds,
+                tooltipMessage: context.l10n.arrivalTimeUncertainTooltip,
+              ),
             PolylineLayer(polylines: polylines, cullingMargin: null, simplificationTolerance: 0),
             Builder(builder: (ctx) {
               if (!showRawTrack || MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();

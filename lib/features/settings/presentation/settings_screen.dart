@@ -1241,6 +1241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 150,
@@ -1256,6 +1257,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               focusNode: focusNode,
               textAlign: TextAlign.right,
               keyboardType: keyboard,
+              // Unbounded so longer entries (e.g. a life raft/EPIRB
+              // description) wrap onto more lines instead of scrolling
+              // off-field in a single fixed line, which read as if the
+              // text had been silently truncated.
+              maxLines: null,
               textInputAction: TextInputAction.next,
               style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
               decoration: InputDecoration(
@@ -1600,7 +1606,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       p.coldStartSettleFactor != 3.0 ||
       p.makingWayThresholdKn != 1.0 ||
       p.topSpeedPercentile != 0.99 ||
-      p.maxSpeedKn != 12.0;
+      p.maxSpeedKn != 12.0 ||
+      p.detectManeuvering != false ||
+      p.maneuverRadiusM != 60.0;
 
   // ── Track Filter ────────────────────────────────────────────────────
   /// Collapsible advanced section tuning the GPS track-cleaning pipeline
@@ -1909,6 +1917,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: cs.onSurfaceVariant,
                     ),
                   ),
+                  _rowDivider(cs),
+                  // ── Maneuvering detection (experimental) ────────
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        context.l10n.settingsManeuverLabel,
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
+                      ),
+                      Switch(
+                        value: p.detectManeuvering,
+                        onChanged: p.setDetectManeuvering,
+                      ),
+                    ],
+                  ),
+                  Text(
+                    context.l10n.settingsManeuverDesc,
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  if (p.detectManeuvering) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          context.l10n.settingsManeuverRadiusLabel,
+                          style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
+                        ),
+                        Text(
+                          '${p.maneuverRadiusM.round()} ${context.l10n.settingsMetersUnit}',
+                          style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.primary),
+                        ),
+                      ],
+                    ),
+                    Slider(
+                      value: p.maneuverRadiusM,
+                      min: 20,
+                      max: 150,
+                      divisions: 13,
+                      onChanged: p.setManeuverRadiusM,
+                    ),
+                    Text(
+                      context.l10n.settingsManeuverRadiusDesc,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                   _rowDivider(cs),
                   // ── Raw track overlay ───────────────────────────
                   Row(

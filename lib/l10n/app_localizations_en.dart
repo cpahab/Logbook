@@ -568,6 +568,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Fixes faster than this are always treated as GPS glitches. Raise it for fast boats (racing, foiling, powerboats) or genuinely fast runs will get filtered out.';
 
   @override
+  String get settingsManeuverLabel => 'Maneuvering detection (experimental)';
+
+  @override
+  String get settingsManeuverDesc =>
+      'Fades the track and rings the area when the boat stays in one spot while maneuvering (e.g. working into a berth) without ever slowing enough to count as a stop. Off by default — still being tuned, may misfire mid-route.';
+
+  @override
+  String get settingsManeuverRadiusLabel => 'Maneuvering radius';
+
+  @override
+  String get settingsManeuverRadiusDesc =>
+      'How wide a maneuvering area can be before it no longer counts as \"staying in one spot\" (default: 60 m).';
+
+  @override
   String get settingsShowRawTrackLabel => 'Show unfiltered track';
 
   @override

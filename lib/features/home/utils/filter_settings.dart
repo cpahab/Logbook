@@ -78,6 +78,26 @@ class FilterSettings {
   /// value or spikes will be false-flagged during genuinely fast runs.
   final double maxSpeedKn;
 
+  /// Whether to detect "maneuvering" clusters: stretches lasting at least
+  /// [minStopMinutes] where the boat stays within [maneuverRadiusM] of one
+  /// spot despite never dropping below [speedThresholdKn] long enough to
+  /// register as stationary (e.g. picking a way into a berth, circling to
+  /// pick up a mooring). Surfaced as [DisplayModel.uncertainAreas] so the
+  /// map can fade that raw wiggle instead of drawing it at full opacity.
+  ///
+  /// Off by default — this heuristic is still experimental. Testing against
+  /// real tracks found it fires plausibly for a genuine berthing approach,
+  /// but also spuriously mid-route (a lock, a lull with tight tacking) and
+  /// even for stretches immediately before an otherwise cleanly validated
+  /// stop. Opt in and tune [maneuverRadiusM] (and [minStopMinutes]) rather
+  /// than trusting the default.
+  final bool detectManeuvering;
+
+  /// Radius (metres) within which a maneuvering stretch must stay to count.
+  /// Larger than [maxStopSpreadM] since active maneuvering covers more
+  /// ground than idle drift.
+  final double maneuverRadiusM;
+
   const FilterSettings({
     this.stationaryMode        = StationaryMode.speed,
     this.speedThresholdKn      = 0.5,
@@ -92,6 +112,8 @@ class FilterSettings {
     this.makingWayThresholdKn  = 1.0,
     this.topSpeedPercentile    = 0.99,
     this.maxSpeedKn            = 12.0,
+    this.detectManeuvering     = false,
+    this.maneuverRadiusM       = 60.0,
   });
 
   // Value equality — the settings live behind a getter that constructs a new
@@ -113,7 +135,9 @@ class FilterSettings {
       detectBadFirstFix == other.detectBadFirstFix &&
       makingWayThresholdKn == other.makingWayThresholdKn &&
       topSpeedPercentile == other.topSpeedPercentile &&
-      maxSpeedKn == other.maxSpeedKn;
+      maxSpeedKn == other.maxSpeedKn &&
+      detectManeuvering == other.detectManeuvering &&
+      maneuverRadiusM == other.maneuverRadiusM;
 
   @override
   int get hashCode => Object.hash(
@@ -129,6 +153,6 @@ class FilterSettings {
         detectBadFirstFix,
         makingWayThresholdKn,
         topSpeedPercentile,
-        maxSpeedKn,
+        Object.hash(maxSpeedKn, detectManeuvering, maneuverRadiusM),
       );
 }

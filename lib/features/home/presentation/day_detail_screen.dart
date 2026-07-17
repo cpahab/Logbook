@@ -39,6 +39,7 @@ import '../utils/pdf_exporter.dart';
 import '../utils/sail_state_utils.dart';
 import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
+import '../utils/track_fade_render.dart';
 import '../../tracks/utils/track_computation_cache.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -2115,20 +2116,31 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final trackColor = _satelliteView ? cs.secondaryFixed : cs.primary;
     for (final seg in display.segments) {
       if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
-        trackPolylines.add(Polyline(
-          points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-          strokeWidth: 4,
-          color: trackColor,
-          borderStrokeWidth: _satelliteView ? 1.5 : 0,
-          borderColor: Colors.black.withValues(alpha: 0.45),
-        ));
+        if (display.uncertainAreas.isNotEmpty) {
+          trackPolylines.addAll(fadeMovingNearCloud(
+            seg,
+            clouds: display.uncertainAreas,
+            color: trackColor,
+            strokeWidth: 4,
+            borderStrokeWidth: _satelliteView ? 1.5 : 0,
+            borderColor: Colors.black.withValues(alpha: 0.45),
+          ));
+        } else {
+          trackPolylines.add(Polyline(
+            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+            strokeWidth: 4,
+            color: trackColor,
+            borderStrokeWidth: _satelliteView ? 1.5 : 0,
+            borderColor: Colors.black.withValues(alpha: 0.45),
+          ));
+        }
       } else if ((seg.kind == SegmentKind.stopEntry ||
                   seg.kind == SegmentKind.stopExit) &&
                  seg.points.length >= 2) {
-        trackPolylines.add(Polyline(
-          points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+        trackPolylines.addAll(fadeConnectorPolylines(
+          seg,
+          color: trackColor,
           strokeWidth: 2.5,
-          color: trackColor.withValues(alpha: 0.50),
           borderStrokeWidth: _satelliteView ? 1.0 : 0,
           borderColor: Colors.black.withValues(alpha: 0.35),
         ));
@@ -2352,6 +2364,11 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
             _ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
             _ZoomAwareCircleLayer(circles: anchorCircles),
+            if (display.uncertainAreas.isNotEmpty)
+              EstimatedCloudLayer(
+                clouds: [for (final c in display.uncertainAreas) (c, trackColor)],
+                tooltipMessage: context.l10n.arrivalTimeUncertainTooltip,
+              ),
             PolylineLayer(polylines: trackPolylines, cullingMargin: null, simplificationTolerance: 0),
             if (showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             MarkerLayer(markers: markers),
@@ -3808,20 +3825,31 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
     final fsTrackColor = _satelliteView ? cs.secondaryFixed : cs.primary;
     for (final seg in display.segments) {
       if (seg.kind == SegmentKind.moving && seg.points.length >= 2) {
-        fsTrackPolylines.add(Polyline(
-          points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
-          strokeWidth: 4,
-          color: fsTrackColor,
-          borderStrokeWidth: _satelliteView ? 1.5 : 0,
-          borderColor: Colors.black.withValues(alpha: 0.45),
-        ));
+        if (display.uncertainAreas.isNotEmpty) {
+          fsTrackPolylines.addAll(fadeMovingNearCloud(
+            seg,
+            clouds: display.uncertainAreas,
+            color: fsTrackColor,
+            strokeWidth: 4,
+            borderStrokeWidth: _satelliteView ? 1.5 : 0,
+            borderColor: Colors.black.withValues(alpha: 0.45),
+          ));
+        } else {
+          fsTrackPolylines.add(Polyline(
+            points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+            strokeWidth: 4,
+            color: fsTrackColor,
+            borderStrokeWidth: _satelliteView ? 1.5 : 0,
+            borderColor: Colors.black.withValues(alpha: 0.45),
+          ));
+        }
       } else if ((seg.kind == SegmentKind.stopEntry ||
                   seg.kind == SegmentKind.stopExit) &&
                  seg.points.length >= 2) {
-        fsTrackPolylines.add(Polyline(
-          points: seg.points.map((p) => LatLng(p.lat, p.lon)).toList(),
+        fsTrackPolylines.addAll(fadeConnectorPolylines(
+          seg,
+          color: fsTrackColor,
           strokeWidth: 2.5,
-          color: fsTrackColor.withValues(alpha: 0.50),
           borderStrokeWidth: _satelliteView ? 1.0 : 0,
           borderColor: Colors.black.withValues(alpha: 0.35),
         ));
@@ -4010,6 +4038,11 @@ class _DayMapFullScreenState extends State<_DayMapFullScreen> {
             ),
             _ZoomAwareUncertaintyLayer(polygons: fsUncertaintyPolygons),
             _ZoomAwareCircleLayer(circles: anchorCircles),
+            if (display.uncertainAreas.isNotEmpty)
+              EstimatedCloudLayer(
+                clouds: [for (final c in display.uncertainAreas) (c, fsTrackColor)],
+                tooltipMessage: context.l10n.arrivalTimeUncertainTooltip,
+              ),
             PolylineLayer(polylines: fsTrackPolylines, cullingMargin: null, simplificationTolerance: 0),
             if (widget.showRawTrack) _ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             MarkerLayer(markers: markers),
