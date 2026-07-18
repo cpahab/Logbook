@@ -335,42 +335,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  /// Confirms, then makes [logbook] the active logbook for [uid] and
-  /// switches this device to it.
-  Future<void> _switchLogbook(Map<String, dynamic> logbook, String uid) async {
-    final l10n = context.l10n;
-    final logbookId = logbook['logbookId'] as String;
-    final name = logbook['name'] as String;
-
-    final confirmed = await showConfirmDialog(
-      context,
-      title: context.l10n.settingsSwitchTo(name),
-      confirmLabel: context.l10n.connect,
-    );
-    if (!confirmed || !mounted) return;
-
-    setState(() => _syncing = true);
-    try {
-      await LogbookService().setActiveLogbook(uid, logbookId);
-      if (!mounted) return;
-      await reinitFirestore(context, logbookId);
-      if (mounted) {
-        _guestsExpanded = false;
-        _refreshLogbooks();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.settingsConnected)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.settingsError}: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
 
 
   /// Opens the "connect to a logbook" bottom sheet (scan QR or type a code).
@@ -1711,7 +1675,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = context.l10n;
 
     return InkWell(
-      onTap: canSwitch ? () => _switchLogbook(logbook, uid) : null,
+      onTap: canSwitch ? () => switchLogbook(
+          context,
+          logbook: logbook,
+          uid: uid,
+          onSyncingChanged: (v) => setState(() => _syncing = v),
+          onGuestsCollapse: _onGuestsCollapse) : null,
       borderRadius: BorderRadius.circular(8),
       child: Opacity(
         opacity: !isActive && _isOffline ? 0.45 : 1.0,

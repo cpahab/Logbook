@@ -319,3 +319,49 @@ Future<void> showLeaveLogbookDialog(
     if (context.mounted) onSyncingChanged(false);
   }
 }
+
+/// Confirms, then makes [logbook] the active logbook for [uid] and
+/// switches this device to it.
+Future<void> switchLogbook(
+  BuildContext context, {
+  required Map<String, dynamic> logbook,
+  required String uid,
+  required ValueChanged<bool> onSyncingChanged,
+  required VoidCallback onGuestsCollapse,
+}) async {
+  final l10n = context.l10n;
+  final logbookId = logbook['logbookId'] as String;
+  final name = logbook['name'] as String;
+
+  final confirmed = await showConfirmDialog(
+    context,
+    title: l10n.settingsSwitchTo(name),
+    confirmLabel: l10n.connect,
+  );
+  if (!confirmed || !context.mounted) return;
+
+  onSyncingChanged(true);
+  try {
+    await LogbookService().setActiveLogbook(uid, logbookId);
+    if (!context.mounted) return;
+    // reinitFirestore always runs here (unconditional on this success
+    // path) and its own ValueNotifier<String?> write already triggers the
+    // logbook-list refresh via the listener — see showNewLogbookDialog for
+    // the same reasoning.
+    await reinitFirestore(context, logbookId);
+    if (context.mounted) {
+      onGuestsCollapse();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsConnected)),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.settingsError}: $e')),
+      );
+    }
+  } finally {
+    if (context.mounted) onSyncingChanged(false);
+  }
+}
