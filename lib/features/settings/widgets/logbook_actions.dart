@@ -198,7 +198,8 @@ Future<void> showNewLogbookDialog(
     // write (on success) already triggers the logbook-list refresh via the
     // listener registered in initState — so, unlike the guest-panel reset,
     // no separate "logbooks changed" callback is needed here.
-    final switched = await reinitFirestore(context, newLogbookId);
+    final switched = await reinitFirestore(context, newLogbookId,
+        showCompleteSnackbar: false);
     if (!switched) return;
     await LogbookService().setActiveLogbook(uid, newLogbookId);
     if (context.mounted) {
@@ -358,7 +359,8 @@ Future<void> switchLogbook(
     // ValueNotifier<String?> write (on success) already triggers the
     // logbook-list refresh via the listener — see showNewLogbookDialog for
     // the same reasoning.
-    final switched = await reinitFirestore(context, logbookId);
+    final switched = await reinitFirestore(context, logbookId,
+        showCompleteSnackbar: false);
     if (!switched) return;
     await LogbookService().setActiveLogbook(uid, logbookId);
     if (context.mounted) {
@@ -457,7 +459,8 @@ Future<void> joinLogbook(
     // stale data leak into whichever logbook was joined).
     await LogbookService().joinLogbook(resolvedId, user.uid);
     if (!context.mounted) return;
-    final switched = await reinitFirestore(context, resolvedId);
+    final switched = await reinitFirestore(context, resolvedId,
+        showCompleteSnackbar: false);
     if (!switched) return;
     await LogbookService().setActiveLogbook(user.uid, resolvedId);
     if (context.mounted) {

@@ -23,7 +23,17 @@ import '../domain/theme_provider.dart';
 /// Callers MUST check this and skip anything that "commits" to the new
 /// logbook being active (e.g. LogbookService.setActiveLogbook) on a false
 /// return — see createLogbook/joinLogbook's doc comments for why.
-Future<bool> reinitFirestore(BuildContext context, String logbookId) async {
+///
+/// [showCompleteSnackbar] controls whether the generic "Logbook switched."
+/// message is shown on success. Callers that show their own more specific
+/// follow-up message (e.g. "Connected.", "Joined `name`") should pass
+/// `false` — otherwise both queue and play back-to-back, showing two
+/// snackbars in a row for what's conceptually one outcome.
+Future<bool> reinitFirestore(
+  BuildContext context,
+  String logbookId, {
+  bool showCompleteSnackbar = true,
+}) async {
   // Cache context-dependent objects before any await.
   final repo          = context.read<HomeRepository>();
   final themeProvider = context.read<ThemeProvider>();
@@ -88,7 +98,7 @@ Future<bool> reinitFirestore(BuildContext context, String logbookId) async {
   if (context.mounted) notifier.value = logbookId;
 
   messenger.hideCurrentSnackBar();
-  if (context.mounted) {
+  if (showCompleteSnackbar && context.mounted) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookComplete)));
   }
   return true;
