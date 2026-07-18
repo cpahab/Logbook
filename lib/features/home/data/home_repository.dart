@@ -993,16 +993,15 @@ class HomeRepository extends ChangeNotifier {
     // write that just created that membership (e.g. right after creating or
     // joining a logbook) — a same-client Firestore read (fetchAllEntries
     // above) doesn't have this gap, but a Storage rule reading *into*
-    // Firestore isn't guaranteed to see it instantly. Failing here shouldn't
-    // abort the whole switch over what's really a track-only timing issue;
-    // any tracks missed this way are picked up by the next attachStorage
-    // (next app launch) or forceSync, same as any other missed track.
-    List<DateTime> cloudTrackDates;
-    try {
-      cloudTrackDates = await storageService.listTrackDates();
-    } catch (_) {
-      cloudTrackDates = [];
-    }
+    // Firestore isn't guaranteed to see it instantly. Unlike Firestore reads,
+    // Storage's listAll() has no offline cache and no built-in retry, so a
+    // single transient hiccup here (not just the membership-propagation
+    // case) would otherwise silently cost every track for this switch — a
+    // few quick retries cover both without blocking the whole switch on
+    // what's really a track-only issue; any tracks still missed are picked
+    // up by the next attachStorage (next app launch) or forceSync, same as
+    // any other missed track.
+    final cloudTrackDates = await _listTrackDatesWithRetry(storageService);
 
     // Give any delete pending from the logbook being left one last chance to
     // push before its bookkeeping is wiped below.
@@ -1058,6 +1057,29 @@ class HomeRepository extends ChangeNotifier {
         .listen((_) {}, onError: (_) {});
 
     return true;
+  }
+
+  /// Lists [storageService]'s track dates, retrying a couple of times on
+  /// failure before giving up (returning `[]`) — Storage's listAll() has no
+  /// offline cache and no built-in retry, unlike Firestore reads, so a
+  /// single transient hiccup (or the membership-propagation lag documented
+  /// on the [reattachAndSync] call site) would otherwise cost every track
+  /// for a switch that's already been decided to be best-effort here.
+  static Future<List<DateTime>> _listTrackDatesWithRetry(
+      StorageService storageService) async {
+    const delays = [Duration(milliseconds: 400), Duration(milliseconds: 900)];
+    for (final delay in delays) {
+      try {
+        return await storageService.listTrackDates();
+      } catch (_) {
+        await Future.delayed(delay);
+      }
+    }
+    try {
+      return await storageService.listTrackDates();
+    } catch (_) {
+      return [];
+    }
   }
 
   // ── Crew roster CRUD ───────────────────────────────────────────────────────
