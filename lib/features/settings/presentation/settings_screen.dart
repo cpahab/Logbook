@@ -372,47 +372,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  /// Confirms, then permanently deletes the logbook (owner-only) and — if it
-  /// was this device's active logbook — switches to whichever logbook is
-  /// now active for [uid].
-  Future<void> _showDeleteLogbookDialog(
-      String logbookId, String name, String uid) async {
-    final l10n = context.l10n;
-    final confirmed = await showConfirmDialog(
-      context,
-      title: l10n.settingsDeleteLogbook,
-      body: l10n.settingsDeleteLogbookConfirm(name),
-      confirmLabel: l10n.delete,
-      destructive: true,
-    );
-    if (!confirmed || !mounted) return;
-
-    setState(() => _syncing = true);
-    try {
-      final activeId = context.read<ValueNotifier<String?>>().value;
-      await LogbookService().deleteLogbook(logbookId, uid);
-      if (!mounted) return;
-      if (activeId == logbookId) {
-        final newActiveId = await LogbookService().getActiveLogbookId(uid);
-        if (mounted && newActiveId != null) {
-          await reinitFirestore(context, newActiveId);
-        }
-      }
-      if (mounted) {
-        _guestsExpanded = false;
-        _refreshLogbooks();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.settingsError}: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
-
   /// Confirms, then removes [uid] as a guest member of the logbook and — if
   /// it was this device's active logbook — switches to whichever logbook is
   /// now active.
@@ -1840,7 +1799,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           onRename: () => showRenameLogbookDialog(
                               context, logbookId: logbookId, currentName: name, onLogbooksChanged: _onLogbooksChanged),
                           onShare: () => showQrModal(context, logbook['shareCode'] as String? ?? ''),
-                          onDelete: () => _showDeleteLogbookDialog(logbookId, name, uid),
+                          onDelete: () => showDeleteLogbookDialog(
+                              context,
+                              logbookId: logbookId,
+                              name: name,
+                              uid: uid,
+                              onSyncingChanged: (v) => setState(() => _syncing = v),
+                              onGuestsCollapse: _onGuestsCollapse,
+                              onLogbooksChanged: _onLogbooksChanged),
                         )
                       : showGuestOptionsSheet(
                           context,

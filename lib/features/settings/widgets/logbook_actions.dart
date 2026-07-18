@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/logbook_service.dart';
+import '../../../core/widgets/confirm_dialog.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../utils/logbook_switch.dart';
 
@@ -197,6 +199,62 @@ Future<void> showNewLogbookDialog(
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsConnected)),
       );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.settingsError}: $e')),
+      );
+    }
+  } finally {
+    if (context.mounted) onSyncingChanged(false);
+  }
+}
+
+/// Confirms, then permanently deletes the logbook (owner-only) and — if it
+/// was this device's active logbook — switches to whichever logbook is
+/// now active for [uid].
+Future<void> showDeleteLogbookDialog(
+  BuildContext context, {
+  required String logbookId,
+  required String name,
+  required String uid,
+  required ValueChanged<bool> onSyncingChanged,
+  required VoidCallback onGuestsCollapse,
+  required VoidCallback onLogbooksChanged,
+}) async {
+  final l10n = context.l10n;
+  final confirmed = await showConfirmDialog(
+    context,
+    title: l10n.settingsDeleteLogbook,
+    body: l10n.settingsDeleteLogbookConfirm(name),
+    confirmLabel: l10n.delete,
+    destructive: true,
+  );
+  if (!confirmed || !context.mounted) return;
+
+  onSyncingChanged(true);
+  try {
+    final activeId = context.read<ValueNotifier<String?>>().value;
+    await LogbookService().deleteLogbook(logbookId, uid);
+    if (!context.mounted) return;
+    // reinitFirestore only runs when the deleted logbook was the active
+    // one AND a new active logbook was found — its ValueNotifier<String?>
+    // write is what would otherwise trigger the list refresh via the
+    // listener. When it doesn't run (deleting a non-active logbook, or no
+    // new active logbook exists), nothing else will refresh the list, so
+    // onLogbooksChanged must be called explicitly in that case.
+    var reinitialized = false;
+    if (activeId == logbookId) {
+      final newActiveId = await LogbookService().getActiveLogbookId(uid);
+      if (context.mounted && newActiveId != null) {
+        await reinitFirestore(context, newActiveId);
+        reinitialized = true;
+      }
+    }
+    if (context.mounted) {
+      onGuestsCollapse();
+      if (!reinitialized) onLogbooksChanged();
     }
   } catch (e) {
     if (context.mounted) {
