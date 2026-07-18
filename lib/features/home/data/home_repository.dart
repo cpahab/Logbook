@@ -1100,7 +1100,7 @@ class HomeRepository extends ChangeNotifier {
   void saveRosterMember(CrewMember m) {
     m.id ??= _newId();
     _rosterBox.put(m.id!, m);
-    _syncRosterToFirestore();
+    unawaited(_syncRosterToFirestore());
     notifyListeners();
   }
 
@@ -1124,7 +1124,7 @@ class HomeRepository extends ChangeNotifier {
   /// Removes the roster member with [id] and pushes the roster to Firestore.
   void deleteRosterMember(String id) {
     _rosterBox.delete(id);
-    _syncRosterToFirestore();
+    unawaited(_syncRosterToFirestore());
     notifyListeners();
   }
 
@@ -1137,9 +1137,35 @@ class HomeRepository extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Pushes the full current roster to Firestore (best-effort).
-  void _syncRosterToFirestore() {
-    _firestore?.saveRoster(_rosterBox.values.toList()).catchError((_) {});
+  /// Pushes the full current roster to Firestore, retrying with backoff on
+  /// failure before giving up. Roster sync replaces the server's whole list
+  /// on every push (there's no per-member tombstone, unlike entries/tracks —
+  /// see [_pushPendingDelete]), so a push that silently failed would leave
+  /// the server holding a stale roster that could resurrect a just-deleted
+  /// member (or drop a just-saved edit) the next time [_applyRemoteRoster]
+  /// runs from the live [rosterChanges] listener.
+  Future<void> _syncRosterToFirestore() async {
+    final fs = _firestore;
+    if (fs == null) return;
+    const delays = [
+      Duration(milliseconds: 500),
+      Duration(seconds: 1),
+      Duration(seconds: 2),
+      Duration(seconds: 4),
+      Duration(seconds: 7),
+    ];
+    final members = _rosterBox.values.toList();
+    for (final delay in delays) {
+      try {
+        await fs.saveRoster(members);
+        return;
+      } catch (_) {
+        await Future.delayed(delay);
+      }
+    }
+    try {
+      await fs.saveRoster(members);
+    } catch (_) {}
   }
 
   /// Generates a random 32-hex-char id for a new roster member.
