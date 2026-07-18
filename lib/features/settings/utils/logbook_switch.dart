@@ -17,7 +17,13 @@ import '../domain/theme_provider.dart';
 /// fails — the same fetch-before-replace safety
 /// [HomeRepository.reattachAndSync] already uses for day entries.
 /// Requires connectivity for the same reason.
-Future<void> reinitFirestore(BuildContext context, String logbookId) async {
+///
+/// Returns `false` if the switch was aborted for any reason (offline, a
+/// fetch failure, or [HomeRepository.reattachAndSync] itself failing).
+/// Callers MUST check this and skip anything that "commits" to the new
+/// logbook being active (e.g. LogbookService.setActiveLogbook) on a false
+/// return — see createLogbook/joinLogbook's doc comments for why.
+Future<bool> reinitFirestore(BuildContext context, String logbookId) async {
   // Cache context-dependent objects before any await.
   final repo          = context.read<HomeRepository>();
   final themeProvider = context.read<ThemeProvider>();
@@ -34,9 +40,9 @@ Future<void> reinitFirestore(BuildContext context, String logbookId) async {
     if (context.mounted) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
     }
-    return;
+    return false;
   }
-  if (!context.mounted) return;
+  if (!context.mounted) return false;
 
   showProgressSnackBar(context, l10n.settingsSwitchLogbookInProgress);
 
@@ -58,7 +64,7 @@ Future<void> reinitFirestore(BuildContext context, String logbookId) async {
     if (context.mounted) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
     }
-    return;
+    return false;
   }
 
   // reattachAndSync can itself fail to download the new logbook's entries
@@ -74,7 +80,7 @@ Future<void> reinitFirestore(BuildContext context, String logbookId) async {
     if (context.mounted) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
     }
-    return;
+    return false;
   }
 
   await themeProvider.applySwitchedLogbookSettings(remoteSettings, firestore);
@@ -85,4 +91,5 @@ Future<void> reinitFirestore(BuildContext context, String logbookId) async {
   if (context.mounted) {
     messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookComplete)));
   }
+  return true;
 }

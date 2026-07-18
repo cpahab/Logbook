@@ -189,12 +189,18 @@ Future<void> showNewLogbookDialog(
   try {
     final newLogbookId = await LogbookService().createLogbook(uid, name);
     if (!context.mounted) return;
-    // reinitFirestore always runs here (unconditional on this success path)
-    // and its own ValueNotifier<String?> write already triggers the
-    // logbook-list refresh via the listener registered in initState — so,
-    // unlike the guest-panel reset, no separate "logbooks changed" callback
-    // is needed here.
-    await reinitFirestore(context, newLogbookId);
+    // reinitFirestore can fail (e.g. a momentary permission-check lag right
+    // after creating the logbook) — only commit newLogbookId as the active
+    // logbook once the local switch actually succeeded, otherwise the
+    // server would believe it's active while the app stays on the previous
+    // logbook locally, which is exactly how stale data used to leak into a
+    // "new" logbook on a later reattach. Its own ValueNotifier<String?>
+    // write (on success) already triggers the logbook-list refresh via the
+    // listener registered in initState — so, unlike the guest-panel reset,
+    // no separate "logbooks changed" callback is needed here.
+    final switched = await reinitFirestore(context, newLogbookId);
+    if (!switched) return;
+    await LogbookService().setActiveLogbook(uid, newLogbookId);
     if (context.mounted) {
       onGuestsCollapse();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -343,13 +349,18 @@ Future<void> switchLogbook(
 
   onSyncingChanged(true);
   try {
-    await LogbookService().setActiveLogbook(uid, logbookId);
-    if (!context.mounted) return;
-    // reinitFirestore always runs here (unconditional on this success
-    // path) and its own ValueNotifier<String?> write already triggers the
+    // reinitFirestore runs *before* setActiveLogbook — it can fail (network
+    // blip, a momentary permission-check lag), and only committing the
+    // server-side active-logbook pointer after a confirmed local switch
+    // stops the server and the app from disagreeing about which logbook is
+    // active (the same class of bug that used to let stale data leak into
+    // whichever logbook was switched to). reinitFirestore's own
+    // ValueNotifier<String?> write (on success) already triggers the
     // logbook-list refresh via the listener — see showNewLogbookDialog for
     // the same reasoning.
-    await reinitFirestore(context, logbookId);
+    final switched = await reinitFirestore(context, logbookId);
+    if (!switched) return;
+    await LogbookService().setActiveLogbook(uid, logbookId);
     if (context.mounted) {
       onGuestsCollapse();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -438,13 +449,17 @@ Future<void> joinLogbook(
 
   onSyncingChanged(true);
   try {
+    // Adds the membership doc (needed before reinitFirestore can read this
+    // logbook at all) but deliberately does not mark it active yet — see
+    // its doc comment. Only commit that once the local switch has actually
+    // succeeded, so the server and the app can't end up disagreeing about
+    // which logbook is active (the same class of bug that used to let
+    // stale data leak into whichever logbook was joined).
     await LogbookService().joinLogbook(resolvedId, user.uid);
     if (!context.mounted) return;
-    // reinitFirestore always runs here (unconditional on this success
-    // path) and its own ValueNotifier<String?> write already triggers the
-    // logbook-list refresh via the listener — see showNewLogbookDialog for
-    // the same reasoning.
-    await reinitFirestore(context, resolvedId);
+    final switched = await reinitFirestore(context, resolvedId);
+    if (!switched) return;
+    await LogbookService().setActiveLogbook(user.uid, resolvedId);
     if (context.mounted) {
       onGuestsCollapse();
       FocusScope.of(context).unfocus();

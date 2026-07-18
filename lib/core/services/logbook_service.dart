@@ -14,7 +14,15 @@ class LogbookService {
 
   // ── Create ─────────────────────────────────────────────────────────────────
 
-  /// Creates a new logbook for [uid] with the given [name].
+  /// Creates a new logbook for [uid] with the given [name]. Adds it to
+  /// [uid]'s logbook list but deliberately does NOT set it as their active
+  /// logbook — the caller must do that itself (via [setActiveLogbook]) only
+  /// after confirming the local switch actually succeeded
+  /// (HomeRepository.reattachAndSync can fail, e.g. right after creation
+  /// before Storage's membership check has propagated). Otherwise the
+  /// server would believe this new logbook is active while the app stays on
+  /// the previous one locally — exactly the inconsistency that let stale
+  /// data leak into a "new" logbook on a later reattach.
   /// Returns the new logbookId.
   Future<String> createLogbook(String uid, String name) async {
     final logbookRef = _db.collection('logbooks').doc();
@@ -44,10 +52,7 @@ class LogbookService {
     );
     batch.set(
       _db.collection('users').doc(uid),
-      {
-        'activeLogbookId': logbookId,
-        'logbooks': FieldValue.arrayUnion([logbookId]),
-      },
+      {'logbooks': FieldValue.arrayUnion([logbookId])},
       SetOptions(merge: true),
     );
     await batch.commit();
@@ -129,7 +134,10 @@ class LogbookService {
 
   // ── Join / Remove ──────────────────────────────────────────────────────────
 
-  /// Adds [uid] to [logbookId] as a guest and sets it as their active logbook.
+  /// Adds [uid] to [logbookId] as a guest. Deliberately does NOT set it as
+  /// their active logbook — see [createLogbook]'s doc comment for why the
+  /// caller must defer that (via [setActiveLogbook]) until after confirming
+  /// the local switch succeeded.
   Future<void> joinLogbook(String logbookId, String uid) async {
     final batch = _db.batch();
     batch.set(
@@ -142,10 +150,7 @@ class LogbookService {
     );
     batch.set(
       _db.collection('users').doc(uid),
-      {
-        'activeLogbookId': logbookId,
-        'logbooks': FieldValue.arrayUnion([logbookId]),
-      },
+      {'logbooks': FieldValue.arrayUnion([logbookId])},
       SetOptions(merge: true),
     );
     await batch.commit();
