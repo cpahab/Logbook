@@ -468,7 +468,7 @@ class HomeRepository extends ChangeNotifier {
           }
         }
       }
-      final cloudDates = await service.listTrackDates();
+      final cloudDates = await _listTrackDatesWithRetry(service);
       final missing = cloudDates
           .where((d) =>
               !dailyTracks.containsKey(d) && _entries[d]?.trackDeletedAt == null)
@@ -724,7 +724,7 @@ class HomeRepository extends ChangeNotifier {
     final st = _storage;
     if (st != null) {
       try {
-        final serverTrackDates = await st.listTrackDates();
+        final serverTrackDates = await _listTrackDatesWithRetry(st);
         for (final date in serverTrackDates) {
           if (dailyTracks.containsKey(date)) continue; // restored, keep it
           final entry = _entries[date];
@@ -915,7 +915,7 @@ class HomeRepository extends ChangeNotifier {
     // GPX tracks.
     final st = _storage;
     if (st != null) {
-      final cloudDates = await st.listTrackDates();
+      final cloudDates = await _listTrackDatesWithRetry(st);
       final missing = cloudDates
           .where((d) =>
               !dailyTracks.containsKey(d) && _entries[d]?.trackDeletedAt == null)
@@ -1062,12 +1062,14 @@ class HomeRepository extends ChangeNotifier {
   /// Lists [storageService]'s track dates, retrying with backoff on failure
   /// before giving up (returning `[]`) — Storage's listAll() has no offline
   /// cache and no built-in retry, unlike Firestore reads, so a single
-  /// transient hiccup (or the membership-propagation lag documented on the
-  /// [reattachAndSync] call site) would otherwise cost every track for a
-  /// switch that's already been decided to be best-effort here. The delay
-  /// this needs has proven variable in practice — a short retry window isn't
-  /// always enough — so this backs off further before giving up, up to
-  /// ~15 seconds total across all attempts.
+  /// transient hiccup (or a membership-propagation lag, e.g. right after
+  /// joining/creating a logbook) would otherwise cost every track for
+  /// whichever caller has already decided this is best-effort. Used by
+  /// [attachStorage], [forceSync], [reconcileCloudAfterRestore], and
+  /// [reattachAndSync]. The delay this needs has proven variable in
+  /// practice — a short retry window isn't always enough — so this backs
+  /// off further before giving up, up to ~15 seconds total across all
+  /// attempts.
   static Future<List<DateTime>> _listTrackDatesWithRetry(
       StorageService storageService) async {
     const delays = [
