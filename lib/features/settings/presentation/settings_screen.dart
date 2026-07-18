@@ -59,6 +59,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _localLogbooksExpanded = false;
   List<(String id, String name)> _localLogbooks = [];
   Future<List<Map<String, dynamic>>>? _guestsFuture;
+  /// Uids currently being removed — disables that row's button and shows a
+  /// spinner instead of leaving the tap with no visible feedback.
+  final Set<String> _removingGuestUids = {};
   late ValueNotifier<String?> _logbookIdNotifier;
   /// Guards [_refreshLogbooks]' auto-create fallback against firing twice
   /// concurrently (its own success re-triggers the notifier listener that
@@ -1908,17 +1911,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             padding: EdgeInsets.zero,
                             visualDensity: VisualDensity.compact,
                           ),
-                          onPressed: () async {
-                            await LogbookService()
-                                .removeMember(logbookId, memberUid);
-                            if (mounted) {
-                              setState(() {
-                                _guestsFuture =
-                                    LogbookService().listMembers(logbookId);
-                              });
-                            }
-                          },
-                          child: Text(l10n.remove),
+                          onPressed: _removingGuestUids.contains(memberUid)
+                              ? null
+                              : () async {
+                                  final confirmed = await showConfirmDialog(
+                                    context,
+                                    title: l10n.settingsRemoveGuestTitle,
+                                    body: l10n.settingsRemoveGuestConfirm(
+                                        label.isNotEmpty ? label : '…$shortId'),
+                                    confirmLabel: l10n.remove,
+                                    destructive: true,
+                                  );
+                                  if (!confirmed || !mounted) return;
+                                  setState(() => _removingGuestUids.add(memberUid));
+                                  var succeeded = true;
+                                  try {
+                                    await LogbookService()
+                                        .removeMember(logbookId, memberUid);
+                                  } catch (_) {
+                                    succeeded = false;
+                                  }
+                                  if (!mounted) return;
+                                  _removingGuestUids.remove(memberUid);
+                                  setState(() {
+                                    _guestsFuture =
+                                        LogbookService().listMembers(logbookId);
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(succeeded
+                                        ? l10n.settingsGuestRemoved
+                                        : l10n.settingsError)),
+                                  );
+                                },
+                          child: _removingGuestUids.contains(memberUid)
+                              ? SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: cs.error),
+                                )
+                              : Text(l10n.remove),
                         ),
                       ],
                     ),

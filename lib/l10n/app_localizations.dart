@@ -2126,6 +2126,24 @@ abstract class AppLocalizations {
   /// **'Keine Beitragenden'**
   String get settingsNoGuests;
 
+  /// No description provided for @settingsRemoveGuestTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Beitragende:n entfernen?'**
+  String get settingsRemoveGuestTitle;
+
+  /// No description provided for @settingsRemoveGuestConfirm.
+  ///
+  /// In de, this message translates to:
+  /// **'\"{name}\" hat danach keinen Zugriff mehr auf dieses Logbuch.'**
+  String settingsRemoveGuestConfirm(String name);
+
+  /// No description provided for @settingsGuestRemoved.
+  ///
+  /// In de, this message translates to:
+  /// **'Entfernt.'**
+  String get settingsGuestRemoved;
+
   /// No description provided for @settingsSwitchTo.
   ///
   /// In de, this message translates to:

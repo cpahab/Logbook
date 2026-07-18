@@ -1093,6 +1093,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsNoGuests => 'No contributors';
 
   @override
+  String get settingsRemoveGuestTitle => 'Remove contributor?';
+
+  @override
+  String settingsRemoveGuestConfirm(String name) {
+    return '\"$name\" will no longer have access to this logbook.';
+  }
+
+  @override
+  String get settingsGuestRemoved => 'Removed.';
+
+  @override
   String settingsSwitchTo(String name) {
     return 'Switch to \"$name\"?';
   }

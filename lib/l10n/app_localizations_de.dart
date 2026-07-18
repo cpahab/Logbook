@@ -1100,6 +1100,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsNoGuests => 'Keine Beitragenden';
 
   @override
+  String get settingsRemoveGuestTitle => 'Beitragende:n entfernen?';
+
+  @override
+  String settingsRemoveGuestConfirm(String name) {
+    return '\"$name\" hat danach keinen Zugriff mehr auf dieses Logbuch.';
+  }
+
+  @override
+  String get settingsGuestRemoved => 'Entfernt.';
+
+  @override
   String settingsSwitchTo(String name) {
     return 'Zu \"$name\" wechseln?';
   }
