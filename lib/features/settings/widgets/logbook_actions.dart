@@ -266,3 +266,56 @@ Future<void> showDeleteLogbookDialog(
     if (context.mounted) onSyncingChanged(false);
   }
 }
+
+/// Confirms, then removes [uid] as a guest member of the logbook and — if
+/// it was this device's active logbook — switches to whichever logbook is
+/// now active.
+Future<void> showLeaveLogbookDialog(
+  BuildContext context, {
+  required String logbookId,
+  required String name,
+  required String uid,
+  required ValueChanged<bool> onSyncingChanged,
+  required VoidCallback onGuestsCollapse,
+  required VoidCallback onLogbooksChanged,
+}) async {
+  final l10n = context.l10n;
+  final confirmed = await showConfirmDialog(
+    context,
+    title: l10n.settingsLeaveLogbook,
+    body: l10n.settingsLeaveLogbookConfirm(name),
+    confirmLabel: l10n.remove,
+    destructive: true,
+  );
+  if (!confirmed || !context.mounted) return;
+
+  onSyncingChanged(true);
+  try {
+    final activeId = context.read<ValueNotifier<String?>>().value;
+    await LogbookService().removeMember(logbookId, uid);
+    if (!context.mounted) return;
+    // Same conditional-refresh rule as showDeleteLogbookDialog — see its
+    // comment above for why onLogbooksChanged is only called when
+    // reinitFirestore did NOT run.
+    var reinitialized = false;
+    if (activeId == logbookId) {
+      final newActiveId = await LogbookService().getActiveLogbookId(uid);
+      if (context.mounted && newActiveId != null) {
+        await reinitFirestore(context, newActiveId);
+        reinitialized = true;
+      }
+    }
+    if (context.mounted) {
+      onGuestsCollapse();
+      if (!reinitialized) onLogbooksChanged();
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.settingsError}: $e')),
+      );
+    }
+  } finally {
+    if (context.mounted) onSyncingChanged(false);
+  }
+}

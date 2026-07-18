@@ -372,46 +372,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  /// Confirms, then removes [uid] as a guest member of the logbook and — if
-  /// it was this device's active logbook — switches to whichever logbook is
-  /// now active.
-  Future<void> _showLeaveLogbookDialog(
-      String logbookId, String name, String uid) async {
-    final l10n = context.l10n;
-    final confirmed = await showConfirmDialog(
-      context,
-      title: l10n.settingsLeaveLogbook,
-      body: l10n.settingsLeaveLogbookConfirm(name),
-      confirmLabel: l10n.remove,
-      destructive: true,
-    );
-    if (!confirmed || !mounted) return;
-
-    setState(() => _syncing = true);
-    try {
-      final activeId = context.read<ValueNotifier<String?>>().value;
-      await LogbookService().removeMember(logbookId, uid);
-      if (!mounted) return;
-      if (activeId == logbookId) {
-        final newActiveId = await LogbookService().getActiveLogbookId(uid);
-        if (mounted && newActiveId != null) {
-          await reinitFirestore(context, newActiveId);
-        }
-      }
-      if (mounted) {
-        _guestsExpanded = false;
-        _refreshLogbooks();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.settingsError}: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
 
   /// Opens the "connect to a logbook" bottom sheet (scan QR or type a code).
   void _showConnectSheet() {
@@ -1810,7 +1770,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         )
                       : showGuestOptionsSheet(
                           context,
-                          onLeave: () => _showLeaveLogbookDialog(logbookId, name, uid),
+                          onLeave: () => showLeaveLogbookDialog(
+                              context,
+                              logbookId: logbookId,
+                              name: name,
+                              uid: uid,
+                              onSyncingChanged: (v) => setState(() => _syncing = v),
+                              onGuestsCollapse: _onGuestsCollapse,
+                              onLogbooksChanged: _onLogbooksChanged),
                         ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
