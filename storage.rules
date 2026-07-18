@@ -14,17 +14,15 @@ service firebase.storage {
       allow read, write: if isMember(logbookId);
     }
 
-    // GPX track filenames (dates) only. Storage's `list` operation combined
-    // with a cross-service firestore.exists() check (as used by isMember
-    // above) is unreliable: confirmed that single-object get/put/delete on
-    // both tracks and photos work fine under the rule above, but listAll()
-    // on the tracks/ prefix persistently failed — every logbook switch
-    // silently lost every track, even across app relaunches, because the
-    // client could never learn which dates to download. Listing only
-    // reveals which dates have a track file, not the track's contents —
-    // actual track data stays gated by the strict isMember check above.
-    match /logbooks/{logbookId}/tracks/{allPaths=**} {
-      allow list: if request.auth != null;
-    }
+    // TEMPORARILY REVERTED for a controlled test (see git history /
+    // conversation): isolating whether the `list`-permission relaxation
+    // below was the actual fix for lost GPX tracks on logbook switch, or
+    // whether a slower debug build (extra time for eventual consistency)
+    // was doing the real work. Re-deploy this strict version, retest with
+    // the same debug logging in home_repository.dart, and check whether
+    // tracks are lost again:
+    //   match /logbooks/{logbookId}/tracks/{allPaths=**} {
+    //     allow list: if request.auth != null;
+    //   }
   }
 }
