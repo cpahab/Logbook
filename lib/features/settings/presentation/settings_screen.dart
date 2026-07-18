@@ -60,6 +60,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   List<(String id, String name)> _localLogbooks = [];
   Future<List<Map<String, dynamic>>>? _guestsFuture;
   late ValueNotifier<String?> _logbookIdNotifier;
+  /// Guards [_refreshLogbooks]' auto-create fallback against firing twice
+  /// concurrently (its own success re-triggers the notifier listener that
+  /// calls it again, right as the first call is still finishing up).
+  bool _autoCreatingLogbook = false;
   late final Future<PackageInfo> _packageInfoFuture;
   bool _isOffline = false;
   StreamSubscription<dynamic>? _connectivitySub;
@@ -95,7 +99,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (user == null || !mounted) return;
     setState(() => _loadingLogbooks = true);
     try {
-      final boats = await LogbookService().listLogbooks(user.uid);
+      var boats = await LogbookService().listLogbooks(user.uid);
+      if (boats.isEmpty && !_autoCreatingLogbook && mounted) {
+        boats = await _autoCreateLogbook(
+                user.uid, user.displayName, user.email) ??
+            boats;
+      }
       if (mounted) setState(() { _logbooks = boats; _loadingLogbooks = false; });
     } catch (_) {
       if (!mounted) return;
@@ -103,6 +112,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.l10n.authErrorGeneric)),
       );
+    }
+  }
+
+  /// A signed-in user with zero logbooks — e.g. just removed as the last
+  /// guest of their only one, or an owner who deleted their last one —
+  /// otherwise has no way back into the app: the logbooks list stays empty
+  /// and nothing else prompts them to create one. Auto-create a fresh
+  /// logbook instead, the same fallback main.dart's `_initFirestore` already
+  /// uses for a brand-new sign-in. Returns the refreshed logbook list, or
+  /// null if the create/switch didn't happen or didn't succeed (leaving
+  /// [_refreshLogbooks] to keep the empty list it already fetched).
+  Future<List<Map<String, dynamic>>?> _autoCreateLogbook(
+      String uid, String? displayName, String? email) async {
+    _autoCreatingLogbook = true;
+    try {
+      final newLogbookId = await LogbookService().createLogbook(
+          uid, 'My Logbook', displayName: displayName, email: email);
+      if (!mounted) return null;
+      final switched = await reinitFirestore(context, newLogbookId,
+          showCompleteSnackbar: false);
+      if (!switched) return null;
+      await LogbookService().setActiveLogbook(uid, newLogbookId);
+      return await LogbookService().listLogbooks(uid);
+    } finally {
+      _autoCreatingLogbook = false;
     }
   }
 

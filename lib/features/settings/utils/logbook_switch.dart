@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/utils/retry_with_backoff.dart';
 import '../../../core/widgets/progress_snackbar.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../emergency/data/emergency_repository.dart';
@@ -62,12 +63,17 @@ Future<bool> reinitFirestore(
   // Fetch the new logbook's vessel/VHF settings and emergency contacts
   // before clearing anything — a fetch failure here aborts the switch
   // instead of wiping local data with nothing confirmed to replace it.
+  // Retried with backoff: these are forced server reads (Source.server),
+  // so right after joining/creating a logbook, the security rule check for
+  // the membership doc just written can transiently lag behind it.
   final Map<String, String>? remoteSettings;
   final List<Map<String, String>>? remoteContacts;
   try {
-    final settingsResult = await firestore.fetchSettingsWithMeta();
+    final settingsResult =
+        await retryWithBackoff(firestore.fetchSettingsWithMeta);
     remoteSettings = settingsResult.data;
-    final contactsResult = await firestore.fetchContactsWithMeta();
+    final contactsResult =
+        await retryWithBackoff(firestore.fetchContactsWithMeta);
     remoteContacts = contactsResult.contacts;
   } catch (_) {
     messenger.hideCurrentSnackBar();

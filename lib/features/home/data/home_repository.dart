@@ -15,6 +15,7 @@ import '../domain/track_point.dart';
 import '../utils/gpx_parser.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/utils/retry_with_backoff.dart';
 
 /// Local (Hive) + cloud (Firestore/Storage) store for day entries, GPS
 /// tracks, and the crew roster — the app's central data repository. Local
@@ -975,10 +976,13 @@ class HomeRepository extends ChangeNotifier {
     // ── Step 1: download new logbook data before touching local state ──────────
     // The entry list must be fetched here, before anything local is cleared,
     // so a failure leaves existing local data intact instead of wiping it
-    // with nothing confirmed to replace it.
+    // with nothing confirmed to replace it. Retried with backoff: this is a
+    // forced server read (Source.server), so right after joining/creating a
+    // logbook, the security rule check for the membership doc just written
+    // can transiently lag behind it.
     List<DayEntry> newEntries;
     try {
-      newEntries = await firestoreService.fetchAllEntries();
+      newEntries = await retryWithBackoff(firestoreService.fetchAllEntries);
     } catch (_) {
       // Download failed — leave existing local data intact and abort. The
       // caller MUST check this false return and abort its own side of the

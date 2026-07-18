@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -79,6 +80,14 @@ class LogbookService {
 
   /// Returns the list of logbooks accessible to [uid] with metadata.
   /// Each map contains: logbookId, name, role, shareCode.
+  ///
+  /// Fetches each id independently (rather than one big `Future.wait` over
+  /// every id) so a single stale id — one this uid was removed from by its
+  /// owner, who has no permission to also clean up this uid's own
+  /// `logbooks` array (see [removeMember]'s doc comment) — can't take the
+  /// whole call down with a permission-denied. Any such stale ids found are
+  /// dropped from [uid]'s own array afterward: this *is* something the
+  /// current uid can write, unlike whoever removed them.
   Future<List<Map<String, dynamic>>> listLogbooks(String uid) async {
     final userDoc = await _db.collection('users').doc(uid).get();
     final logbookIds = List<String>.from(
@@ -86,35 +95,40 @@ class LogbookService {
 
     if (logbookIds.isEmpty) return [];
 
-    // Fetch all logbook docs and all member docs in two parallel batches
-    // instead of 2N sequential round-trips.
-    final logbookFutures = logbookIds
-        .map((id) => _db.collection('logbooks').doc(id).get());
-    final memberFutures = logbookIds
-        .map((id) => _db.collection('logbooks').doc(id).collection('members').doc(uid).get());
+    final fetched = await Future.wait(logbookIds.map((id) async {
+      try {
+        final logbookDoc = await _db.collection('logbooks').doc(id).get();
+        final memberDoc = await _db
+            .collection('logbooks')
+            .doc(id)
+            .collection('members')
+            .doc(uid)
+            .get();
+        if (!logbookDoc.exists || !memberDoc.exists) return null;
+        final data = logbookDoc.data()!;
+        return {
+          'logbookId': id,
+          'name': data['name'] as String? ?? '',
+          'role': memberDoc.data()?['role'] as String? ?? 'guest',
+          'shareCode': data['shareCode'] as String? ?? '',
+        };
+      } catch (_) {
+        return null;
+      }
+    }));
 
-    final results = await Future.wait([
-      Future.wait(logbookFutures),
-      Future.wait(memberFutures),
-    ]);
-
-    final logbookDocs = results[0];
-    final memberDocs  = results[1];
-
-    final result = <Map<String, dynamic>>[];
-    for (var i = 0; i < logbookIds.length; i++) {
-      final logbookDoc = logbookDocs[i];
-      if (!logbookDoc.exists) continue;
-      final data = logbookDoc.data()!;
-      final role = memberDocs[i].data()?['role'] as String? ?? 'guest';
-      result.add({
-        'logbookId': logbookIds[i],
-        'name': data['name'] as String? ?? '',
-        'role': role,
-        'shareCode': data['shareCode'] as String? ?? '',
-      });
+    final stale = [
+      for (var i = 0; i < logbookIds.length; i++)
+        if (fetched[i] == null) logbookIds[i]
+    ];
+    if (stale.isNotEmpty) {
+      unawaited(_db.collection('users').doc(uid).set(
+        {'logbooks': FieldValue.arrayRemove(stale)},
+        SetOptions(merge: true),
+      ).catchError((_) {}));
     }
-    return result;
+
+    return fetched.whereType<Map<String, dynamic>>().toList();
   }
 
   // ── Update ─────────────────────────────────────────────────────────────────
@@ -174,7 +188,18 @@ class LogbookService {
     await batch.commit();
   }
 
-  /// Removes [uid] from [logbookId]. Updates activeLogbookId if needed.
+  /// Removes [uid] from [logbookId]. Updates [uid]'s own `logbooks`
+  /// array/activeLogbookId if needed — but only when [uid] is the caller
+  /// themselves (leaving voluntarily): `users/{uid}` is only writable (and
+  /// readable) by that same uid under the security rules, so when an owner
+  /// removes a *different* member, this best-effort cleanup silently
+  /// fails and the removed member's own profile keeps the stale
+  /// logbookId. That's fine: [listLogbooks] self-heals it — the removed
+  /// member's own client, which *can* write its own profile, drops any
+  /// logbookId it's no longer actually a member of the next time it reads
+  /// its list. The member-doc deletion above (the actually load-bearing
+  /// effect) always succeeds regardless, since the owner does have
+  /// permission for that.
   Future<void> removeMember(String logbookId, String uid) async {
     await _db
         .collection('logbooks')
@@ -183,24 +208,26 @@ class LogbookService {
         .doc(uid)
         .delete();
 
-    final userDoc = await _db.collection('users').doc(uid).get();
-    final data = userDoc.data();
-    final remaining =
-        List<String>.from(data?['logbooks'] as List? ?? [])
-          ..remove(logbookId);
+    try {
+      final userDoc = await _db.collection('users').doc(uid).get();
+      final data = userDoc.data();
+      final remaining =
+          List<String>.from(data?['logbooks'] as List? ?? [])
+            ..remove(logbookId);
 
-    final Map<String, dynamic> update = {
-      'logbooks': FieldValue.arrayRemove([logbookId]),
-    };
-    if (data?['activeLogbookId'] == logbookId) {
-      update['activeLogbookId'] =
-          remaining.isNotEmpty ? remaining.first : null;
-    }
+      final Map<String, dynamic> update = {
+        'logbooks': FieldValue.arrayRemove([logbookId]),
+      };
+      if (data?['activeLogbookId'] == logbookId) {
+        update['activeLogbookId'] =
+            remaining.isNotEmpty ? remaining.first : null;
+      }
 
-    await _db
-        .collection('users')
-        .doc(uid)
-        .set(update, SetOptions(merge: true));
+      await _db
+          .collection('users')
+          .doc(uid)
+          .set(update, SetOptions(merge: true));
+    } catch (_) {}
   }
 
   // ── Code generation ────────────────────────────────────────────────────────
