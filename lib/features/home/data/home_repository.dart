@@ -957,10 +957,13 @@ class HomeRepository extends ChangeNotifier {
   }
 
   /// Switches to a different logbook: downloads the new logbook's data first,
-  /// then replaces local state only on success.  If the download fails, local
-  /// state is left intact — callers must be online before calling this (enforced
-  /// by the connectivity check in _reinitFirestore).
-  Future<void> reattachAndSync(
+  /// then replaces local state only on success. Returns `false` (leaving
+  /// local state, _firestore, and _storage all untouched) if the download
+  /// fails — callers MUST check this and abort the rest of the switch (not
+  /// point the rest of the app at the new logbook) rather than assuming
+  /// success, since a false return means this repository never actually
+  /// switched away from whichever logbook it was already on.
+  Future<bool> reattachAndSync(
       FirestoreService firestoreService, StorageService storageService) async {
     await _entrySub?.cancel();
     _entrySub = null;
@@ -982,8 +985,11 @@ class HomeRepository extends ChangeNotifier {
       newEntries = await firestoreService.fetchAllEntries();
       cloudTrackDates = await storageService.listTrackDates();
     } catch (_) {
-      // Download failed — leave existing local data intact and abort.
-      return;
+      // Download failed — leave existing local data intact and abort. The
+      // caller MUST check this false return and abort its own side of the
+      // switch too (see the doc comment above) — this repository is still
+      // pointed at whichever logbook it was already on.
+      return false;
     }
 
     // Give any delete pending from the logbook being left one last chance to
@@ -1038,6 +1044,8 @@ class HomeRepository extends ChangeNotifier {
         .rosterChanges()
         .asyncMap(_applyRemoteRoster)
         .listen((_) {}, onError: (_) {});
+
+    return true;
   }
 
   // ── Crew roster CRUD ───────────────────────────────────────────────────────

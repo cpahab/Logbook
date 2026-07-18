@@ -61,7 +61,22 @@ Future<void> reinitFirestore(BuildContext context, String logbookId) async {
     return;
   }
 
-  await repo.reattachAndSync(firestore, storage);
+  // reattachAndSync can itself fail to download the new logbook's entries
+  // (network blip, or a momentary permission-check lag right after
+  // joining/creating a logbook) and abort *without* switching anything —
+  // if we didn't check this, every other repo/provider below would still
+  // get pointed at the new logbook while HomeRepository silently stayed on
+  // the old one, which then reappears everywhere and — worse — gets
+  // pushed into the new logbook on the next successful reattach.
+  final entriesSwitched = await repo.reattachAndSync(firestore, storage);
+  if (!entriesSwitched) {
+    messenger.hideCurrentSnackBar();
+    if (context.mounted) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
+    }
+    return;
+  }
+
   await themeProvider.applySwitchedLogbookSettings(remoteSettings, firestore);
   await emergencyRepo.applySwitchedLogbookContacts(remoteContacts, firestore);
   if (context.mounted) notifier.value = logbookId;
