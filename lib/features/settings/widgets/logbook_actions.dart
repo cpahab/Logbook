@@ -6,7 +6,24 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/services/logbook_service.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../l10n/l10n_extension.dart';
+import '../../emergency/data/emergency_repository.dart';
+import '../../home/data/home_repository.dart';
+import '../domain/theme_provider.dart';
 import '../utils/logbook_switch.dart';
+
+/// If a reinit right after a delete/leave fails, this repository/provider
+/// set is still pointed at the just-removed logbook, which the server no
+/// longer considers active — clearing local state stops those stale
+/// entries from leaking into whichever logbook a later, successful
+/// reattach actually lands on (same precedent as [HomeRepository.clearLocalData]'s
+/// "different user signed in" use, applied to "different logbook now active").
+Future<void> _clearLocalStateAfterFailedReinit(BuildContext context) async {
+  await context.read<HomeRepository>().clearLocalData();
+  if (!context.mounted) return;
+  await context.read<EmergencyRepository>().clearLocalData();
+  if (!context.mounted) return;
+  await context.read<ThemeProvider>().clearVesselSettings();
+}
 
 /// Prompts for a new name and renames the logbook, then calls
 /// [onLogbooksChanged] (e.g. to refresh the caller's logbook list).
@@ -256,8 +273,16 @@ Future<void> showDeleteLogbookDialog(
     if (activeId == logbookId) {
       final newActiveId = await LogbookService().getActiveLogbookId(uid);
       if (context.mounted && newActiveId != null) {
-        await reinitFirestore(context, newActiveId);
-        reinitialized = true;
+        final switched = await reinitFirestore(context, newActiveId);
+        if (switched) {
+          reinitialized = true;
+        } else if (context.mounted) {
+          // The server already considers newActiveId active (deleteLogbook
+          // set that as a side effect) but this repo/provider set is still
+          // pointed at the just-deleted logbook — clear local state so
+          // nothing stale can leak into newActiveId on a later reattach.
+          await _clearLocalStateAfterFailedReinit(context);
+        }
       }
     }
     if (context.mounted) {
@@ -309,8 +334,16 @@ Future<void> showLeaveLogbookDialog(
     if (activeId == logbookId) {
       final newActiveId = await LogbookService().getActiveLogbookId(uid);
       if (context.mounted && newActiveId != null) {
-        await reinitFirestore(context, newActiveId);
-        reinitialized = true;
+        final switched = await reinitFirestore(context, newActiveId);
+        if (switched) {
+          reinitialized = true;
+        } else if (context.mounted) {
+          // See showDeleteLogbookDialog's comment on the same pattern —
+          // removeMember set newActiveId active server-side as a side
+          // effect, so a failed reinit here needs the same local-state
+          // wipe to stop stale data leaking into it on a later reattach.
+          await _clearLocalStateAfterFailedReinit(context);
+        }
       }
     }
     if (context.mounted) {
