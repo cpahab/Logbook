@@ -111,6 +111,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// _refreshLogbooks.
   void _onLogbooksChanged() => _refreshLogbooks();
 
+  /// Collapses the guest-management panel — called after any logbook
+  /// membership action (create/delete/leave/join/switch), matching the
+  /// original behaviour of resetting it whenever the active logbook or
+  /// logbook list may have changed underneath it.
+  void _onGuestsCollapse() => setState(() => _guestsExpanded = false);
+
   // ── Local logbooks (local mode only) ────────────────────────────────────────
 
   /// Reloads this device's list of local logbooks from the registry.
@@ -348,127 +354,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await LogbookService().setActiveLogbook(uid, logbookId);
       if (!mounted) return;
       await reinitFirestore(context, logbookId);
-      if (mounted) {
-        _guestsExpanded = false;
-        _refreshLogbooks();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.settingsConnected)),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.settingsError}: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
-
-  /// Prompts for a name, creates a new logbook owned by [uid], and switches
-  /// this device to it.
-  Future<void> _showNewLogbookDialog(String uid) async {
-    final l10n = context.l10n;
-    final ctrl = TextEditingController();
-    final name = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        final cs = Theme.of(ctx).colorScheme;
-        final cl = ctx.l10n;
-        return Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-          child: Container(
-            decoration: BoxDecoration(
-              color: cs.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: cs.outlineVariant,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  cl.settingsNewLogbookTitle,
-                  style: Theme.of(context).textTheme.dialogTitle.copyWith(fontSize: 20, color: cs.onSurface),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: ctrl,
-                  autofocus: true,
-                  textCapitalization: TextCapitalization.words,
-                  style: Theme.of(context).textTheme.bodyLarge!.copyWith(color: cs.onSurface),
-                  decoration: InputDecoration(
-                    hintText: cl.settingsNewLogbookHint,
-                    hintStyle: TextStyle(color: cs.onSurfaceVariant),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: cs.outlineVariant),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: cs.primary, width: 2),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
-                  ),
-                  onSubmitted: (v) {
-                    if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
-                  },
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: Text(cl.cancel),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: () {
-                          final v = ctrl.text.trim();
-                          if (v.isNotEmpty) Navigator.pop(ctx, v);
-                        },
-                        child: Text(cl.add),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    // Deferred to after this frame: the bottom sheet's exit animation may
-    // still be tearing down its TextField (and thus still touching ctrl)
-    // for a moment after this Future resolves — disposing synchronously
-    // here races that teardown and throws "used after being disposed".
-    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
-    if (name == null || name.isEmpty || !mounted) return;
-
-    setState(() => _syncing = true);
-    try {
-      final newLogbookId = await LogbookService().createLogbook(uid, name);
-      if (!mounted) return;
-      await reinitFirestore(context, newLogbookId);
       if (mounted) {
         _guestsExpanded = false;
         _refreshLogbooks();
@@ -1846,7 +1731,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton.icon(
-                      onPressed: _syncing ? null : () => _showNewLogbookDialog(uid),
+                      onPressed: _syncing ? null : () => showNewLogbookDialog(
+                          context,
+                          uid: uid,
+                          onSyncingChanged: (v) => setState(() => _syncing = v),
+                          onGuestsCollapse: _onGuestsCollapse),
                       style: TextButton.styleFrom(
                         foregroundColor: cs.secondary,
                         padding: const EdgeInsets.symmetric(horizontal: 4),
