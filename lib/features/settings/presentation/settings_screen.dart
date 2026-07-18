@@ -27,6 +27,7 @@ import '../widgets/connect_bottom_sheet.dart';
 import '../widgets/delete_account_dialog.dart';
 import '../widgets/equipment_slot_editor.dart';
 import '../widgets/local_logbook_dialogs.dart';
+import '../widgets/logbook_actions.dart';
 import '../widgets/vessel_section.dart';
 import '../widgets/logbook_dialogs.dart';
 
@@ -104,6 +105,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
     }
   }
+
+  /// Refreshes the logbook list. Exposed as a plain callback so the
+  /// extracted logbook_actions.dart flows don't need direct access to
+  /// _refreshLogbooks.
+  void _onLogbooksChanged() => _refreshLogbooks();
 
   // ── Local logbooks (local mode only) ────────────────────────────────────────
 
@@ -478,73 +484,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } finally {
       if (mounted) setState(() => _syncing = false);
-    }
-  }
-
-  /// Prompts for a new name and renames the logbook.
-  Future<void> _showRenameDialog(
-      String logbookId, String currentName, String uid) async {
-    final l10n = context.l10n;
-    final ctrl = TextEditingController(text: currentName);
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        final cl = ctx.l10n;
-        final dcs = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          backgroundColor: dcs.surface,
-          surfaceTintColor: Colors.transparent,
-          title: Text(cl.settingsRename, style: TextStyle(color: dcs.onSurface)),
-          content: TextField(
-            controller: ctrl,
-            autofocus: true,
-            textCapitalization: TextCapitalization.words,
-            style: TextStyle(color: dcs.onSurface),
-            decoration: InputDecoration(
-              hintText: cl.settingsNewLogbookHint,
-              hintStyle: TextStyle(color: dcs.onSurfaceVariant),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: dcs.outlineVariant),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: dcs.primary, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-            onSubmitted: (v) {
-              if (v.trim().isNotEmpty) Navigator.pop(ctx, v.trim());
-            },
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx), child: Text(cl.cancel)),
-            FilledButton(
-              onPressed: () {
-                final v = ctrl.text.trim();
-                if (v.isNotEmpty) Navigator.pop(ctx, v);
-              },
-              child: Text(cl.saveChanges),
-            ),
-          ],
-        );
-      },
-    );
-    // See _showNewLogbookDialog for why this is deferred rather than
-    // disposed immediately.
-    WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.dispose());
-    if (newName == null || newName == currentName || !mounted) return;
-
-    try {
-      await LogbookService().renameLogbook(logbookId, newName);
-      if (mounted) _refreshLogbooks();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.settingsError}: $e')),
-        );
-      }
     }
   }
 
@@ -2009,7 +1948,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   : () => isOwner
                       ? showLogbookOptionsSheet(
                           context,
-                          onRename: () => _showRenameDialog(logbookId, name, uid),
+                          onRename: () => showRenameLogbookDialog(
+                              context, logbookId: logbookId, currentName: name, onLogbooksChanged: _onLogbooksChanged),
                           onShare: () => showQrModal(context, logbook['shareCode'] as String? ?? ''),
                           onDelete: () => _showDeleteLogbookDialog(logbookId, name, uid),
                         )
