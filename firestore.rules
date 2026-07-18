@@ -63,6 +63,11 @@ service cloud.firestore {
         allow create: if isSignedIn()
                       && request.auth.uid == uid
                       && request.resource.data.role == 'guest';
+        // A member can remove themselves (leave voluntarily) even though
+        // only the owner can remove *other* members via the write rule
+        // above — without this, LogbookService.removeMember's self-leave
+        // path throws permission-denied for every non-owner.
+        allow delete: if isSignedIn() && request.auth.uid == uid;
         // Members can read the members list. A caller may also read only
         // their own membership document before joining, so the share-code
         // flow can check whether they are already connected.
