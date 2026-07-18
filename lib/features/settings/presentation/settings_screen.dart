@@ -588,9 +588,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        l10n.settingsAutoLogPositionLabel,
-                        style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
+                      Expanded(
+                        child: Text(
+                          l10n.settingsAutoLogPositionLabel,
+                          style: Theme.of(context).textTheme.fieldValueCompact.copyWith(color: cs.onSurface),
+                        ),
                       ),
                       Switch(
                         value: p.autoLogPositionEnabled,
