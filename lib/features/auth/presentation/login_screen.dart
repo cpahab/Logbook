@@ -65,6 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
           .signInWithEmail(_emailCtrl.text, _passwordCtrl.text);
     } on FirebaseAuthException catch (e) {
       _showError(_localizedError(e));
+    } catch (e) {
+      debugPrint('sign-in error: $e');
+      if (mounted) _showError(context.l10n.authErrorGeneric);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

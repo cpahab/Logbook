@@ -1147,10 +1147,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// path: registering/signing in from here pushes this device's local data
   /// into the new cloud logbook automatically (see `_initFirestore` in
   /// main.dart) and clears the local-mode flag once that completes.
+  /// Goes to the login screen (not register directly) since it already
+  /// covers both cases: sign-in for an already-registered user, plus a
+  /// "no account? register" link for a genuinely new one. Pushing register
+  /// straight from here instead would break that link's "already have an
+  /// account? sign in" back-navigation — it assumes login is already on the
+  /// stack beneath it, which it wouldn't be.
   Widget _buildCloudSyncCtaSection(ColorScheme cs) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => context.pushNamed(AppRoute.register),
+      onTap: () => context.pushNamed(AppRoute.login),
       child: CardShell(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
