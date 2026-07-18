@@ -179,6 +179,12 @@ void main() async {
   WidgetsBinding.instance.addObserver(_GpxResumeObserver(gpxShareService));
 
   final logbookIdNotifier = ValueNotifier<String?>(null);
+  // True while reinitFirestore (logbook_switch.dart) is downloading a new
+  // logbook's data — read by AppBottomNav to block navigating to another
+  // tab mid-switch, since that tab's screen would otherwise render against
+  // repositories that are mid-reattach (subscriptions cancelled, local
+  // state not yet replaced).
+  final logbookSwitchInProgressNotifier = ValueNotifier<bool>(false);
 
   // --- Firebase: best-effort. Any failure here leaves the app in offline
   // (Hive-only) mode rather than crashing, per the "must work with unstable
@@ -249,6 +255,7 @@ void main() async {
         ChangeNotifierProvider.value(value: emergencyRepo),
         ChangeNotifierProvider.value(value: authService),
         ChangeNotifierProvider.value(value: logbookIdNotifier),
+        ChangeNotifierProvider.value(value: logbookSwitchInProgressNotifier),
         Provider.value(value: gpxShareService),
         Provider(create: (_) => LocalLogbookService()),
       ],

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../app/theme/theme_extensions.dart';
 import '../../l10n/l10n_extension.dart';
@@ -71,6 +72,12 @@ class _AppBottomNavState extends State<AppBottomNav> {
     final safeBottom = MediaQuery.viewPaddingOf(context).bottom;
     final totalH = AppBottomNav._navHeight + safeBottom +
         (widget.showFab ? AppBottomNav._fabRise : 0);
+    // Blocks tapping to another tab while a logbook switch is downloading
+    // the new logbook's data — that other screen would otherwise render
+    // against repositories that are mid-reattach (subscriptions cancelled,
+    // local state not yet replaced). See logbook_switch.dart's
+    // reinitFirestore, the only writer of this notifier.
+    final switching = context.watch<ValueNotifier<bool>>().value;
 
     return SizedBox(
       height: totalH,
@@ -103,11 +110,11 @@ class _AppBottomNavState extends State<AppBottomNav> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.journal, Icons.auto_stories, context.l10n.navJournal))),
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, context.l10n.navTracks))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.journal, Icons.auto_stories, context.l10n.navJournal, switching))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.map, Icons.explore, context.l10n.navTracks, switching))),
                         const SizedBox(width: 64),
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, context.l10n.navSettings))),
-                        Expanded(child: Center(child: _tab(context, cs, NavTab.safety, Icons.health_and_safety, context.l10n.navSafety))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.settings, Icons.settings_outlined, context.l10n.navSettings, switching))),
+                        Expanded(child: Center(child: _tab(context, cs, NavTab.safety, Icons.health_and_safety, context.l10n.navSafety, switching))),
                       ],
                     ),
                   ),
@@ -159,7 +166,7 @@ class _AppBottomNavState extends State<AppBottomNav> {
                     label: context.l10n.add,
                     button: true,
                     child: GestureDetector(
-                      onTap: widget.onFabTap,
+                      onTap: switching ? null : widget.onFabTap,
                       child: Container(
                         width: 64, height: 64,
                         decoration: BoxDecoration(
@@ -188,16 +195,18 @@ class _AppBottomNavState extends State<AppBottomNav> {
   }
 
   /// One tab's icon + label, active state shown purely via gold coloring
-  /// (no background pill).
+  /// (no background pill). Disabled (dimmed, no tap) while [switching] a
+  /// logbook — see the notifier's doc comment in [build].
   Widget _tab(BuildContext context, ColorScheme cs, NavTab tab,
-      IconData icon, String label) {
+      IconData icon, String label, bool switching) {
     final isActive = widget.active == tab;
     // Active state reads purely from the gold icon/label — no pill. Uses the
     // paler secondaryContainer gold (matches the custom-range picker highlight).
-    final color = isActive ? cs.secondaryContainer : cs.onTertiaryContainer;
+    final color = (isActive ? cs.secondaryContainer : cs.onTertiaryContainer)
+        .withValues(alpha: switching ? 0.4 : 1);
 
     return InkWell(
-      onTap: () => widget.onSelect?.call(tab),
+      onTap: switching ? null : () => widget.onSelect?.call(tab),
       borderRadius: BorderRadius.circular(20),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
