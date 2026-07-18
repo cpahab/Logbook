@@ -235,7 +235,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: cs.onPrimary))
                         : Text(l10n.authSignIn,
-                            style: Theme.of(context).textTheme.fieldValueCompact),
+                            style: Theme.of(context).textTheme.fieldValueCompact
+                                .copyWith(color: cs.onPrimary)),
                   ),
                 ),
                 const SizedBox(height: 24),

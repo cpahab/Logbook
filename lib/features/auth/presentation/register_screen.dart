@@ -200,7 +200,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: cs.onPrimary))
                         : Text(l10n.authCreateAccount,
-                            style: Theme.of(context).textTheme.fieldValueCompact),
+                            style: Theme.of(context).textTheme.fieldValueCompact
+                                .copyWith(color: cs.onPrimary)),
                   ),
                 ),
                 const SizedBox(height: 24),

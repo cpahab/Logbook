@@ -95,7 +95,8 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: cs.onPrimary))
                     : Text(l10n.authVerifyEmailCheck,
-                        style: Theme.of(context).textTheme.fieldValueCompact),
+                        style: Theme.of(context).textTheme.fieldValueCompact
+                            .copyWith(color: cs.onPrimary)),
               ),
               const SizedBox(height: 12),
               OutlinedButton(

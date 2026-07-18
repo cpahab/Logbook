@@ -125,7 +125,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: cs.onPrimary))
                   : Text(l10n.authSendResetEmail,
-                      style: Theme.of(context).textTheme.fieldValueCompact),
+                      style: Theme.of(context).textTheme.fieldValueCompact
+                          .copyWith(color: cs.onPrimary)),
             ),
           ),
         ],
