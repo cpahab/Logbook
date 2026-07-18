@@ -10,8 +10,6 @@ import 'package:provider/provider.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/local_logbook_service.dart';
 import '../../../core/services/logbook_service.dart';
-import '../../../core/services/firestore_service.dart';
-import '../../../core/services/storage_service.dart';
 import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
 import '../../home/utils/filter_settings.dart';
@@ -23,6 +21,7 @@ import '../../../app/theme/theme_extensions.dart';
 import '../domain/theme_provider.dart';
 import '../../../app/route_names.dart';
 import '../../../l10n/l10n_extension.dart';
+import '../utils/logbook_switch.dart';
 import '../utils/settings_format_utils.dart';
 import '../widgets/connect_bottom_sheet.dart';
 import '../widgets/delete_account_dialog.dart';
@@ -37,7 +36,7 @@ import '../widgets/logbook_dialogs.dart';
 /// management via share code or QR), and account actions (sign out, delete
 /// account). Vessel/filter fields write straight through to [ThemeProvider]
 /// on every change; logbook membership actions go through [LogbookService]
-/// and re-point every repository at the new logbook via [_reinitFirestore].
+/// and re-point every repository at the new logbook via [reinitFirestore].
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -236,68 +235,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _switchLocalLogbook(id);
   }
 
-  /// Switches every repository/provider over to [logbookId]'s Firestore
-  /// backend. Downloads the new boat's vessel/VHF settings and emergency
-  /// contacts *before* touching any local state, and aborts the whole switch
-  /// (leaving the current logbook's data untouched) if either download
-  /// fails — the same fetch-before-replace safety
-  /// [HomeRepository.reattachAndSync] already uses for day entries.
-  /// Requires connectivity for the same reason.
-  Future<void> _reinitFirestore(String logbookId) async {
-    // Cache context-dependent objects before any await.
-    final repo          = context.read<HomeRepository>();
-    final themeProvider = context.read<ThemeProvider>();
-    final emergencyRepo = context.read<EmergencyRepository>();
-    final notifier      = context.read<ValueNotifier<String?>>();
-    final l10n          = context.l10n;
-    final messenger     = ScaffoldMessenger.of(context);
-
-    // Switching logbooks requires a live connection — we must download the new
-    // logbook's data before replacing local state.
-    final connectivity = await Connectivity().checkConnectivity();
-    final isOffline = connectivity.every((r) => r == ConnectivityResult.none);
-    if (isOffline) {
-      if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
-      }
-      return;
-    }
-    if (!mounted) return;
-
-    showProgressSnackBar(context, l10n.settingsSwitchLogbookInProgress);
-
-    final firestore = FirestoreService(logbookId: logbookId);
-    final storage = StorageService(logbookId: logbookId);
-
-    // Fetch the new logbook's vessel/VHF settings and emergency contacts
-    // before clearing anything — a fetch failure here aborts the switch
-    // instead of wiping local data with nothing confirmed to replace it.
-    final Map<String, String>? remoteSettings;
-    final List<Map<String, String>>? remoteContacts;
-    try {
-      final settingsResult = await firestore.fetchSettingsWithMeta();
-      remoteSettings = settingsResult.data;
-      final contactsResult = await firestore.fetchContactsWithMeta();
-      remoteContacts = contactsResult.contacts;
-    } catch (_) {
-      messenger.hideCurrentSnackBar();
-      if (mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
-      }
-      return;
-    }
-
-    await repo.reattachAndSync(firestore, storage);
-    await themeProvider.applySwitchedLogbookSettings(remoteSettings, firestore);
-    await emergencyRepo.applySwitchedLogbookContacts(remoteContacts, firestore);
-    if (mounted) notifier.value = logbookId;
-
-    messenger.hideCurrentSnackBar();
-    if (mounted) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookComplete)));
-    }
-  }
-
   /// Looks up [rawCode], confirms with the user, joins as a guest, and
   /// switches this device to the found logbook.
   Future<void> _joinLogbook(String rawCode) async {
@@ -366,7 +303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await LogbookService().joinLogbook(resolvedId, user.uid);
       if (!mounted) return;
-      await _reinitFirestore(resolvedId);
+      await reinitFirestore(context, resolvedId);
       if (mounted) {
         _guestsExpanded = false;
         _refreshLogbooks();
@@ -404,7 +341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await LogbookService().setActiveLogbook(uid, logbookId);
       if (!mounted) return;
-      await _reinitFirestore(logbookId);
+      await reinitFirestore(context, logbookId);
       if (mounted) {
         _guestsExpanded = false;
         _refreshLogbooks();
@@ -525,7 +462,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final newLogbookId = await LogbookService().createLogbook(uid, name);
       if (!mounted) return;
-      await _reinitFirestore(newLogbookId);
+      await reinitFirestore(context, newLogbookId);
       if (mounted) {
         _guestsExpanded = false;
         _refreshLogbooks();
@@ -634,7 +571,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (activeId == logbookId) {
         final newActiveId = await LogbookService().getActiveLogbookId(uid);
         if (mounted && newActiveId != null) {
-          await _reinitFirestore(newActiveId);
+          await reinitFirestore(context, newActiveId);
         }
       }
       if (mounted) {
@@ -675,7 +612,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (activeId == logbookId) {
         final newActiveId = await LogbookService().getActiveLogbookId(uid);
         if (mounted && newActiveId != null) {
-          await _reinitFirestore(newActiveId);
+          await reinitFirestore(context, newActiveId);
         }
       }
       if (mounted) {
