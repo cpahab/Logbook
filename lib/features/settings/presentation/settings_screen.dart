@@ -247,95 +247,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _switchLocalLogbook(id);
   }
 
-  /// Looks up [rawCode], confirms with the user, joins as a guest, and
-  /// switches this device to the found logbook.
-  Future<void> _joinLogbook(String rawCode) async {
-    final l10n = context.l10n;
-    final code = rawCode.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
-    if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsInvalidCode)),
-      );
-      return;
-    }
-    final user = context.read<AuthService>().currentUser;
-    if (user == null) return;
-
-    setState(() => _syncing = true);
-    String? foundLogbookId;
-    String? logbookName;
-    try {
-      foundLogbookId = await LogbookService().findByShareCode(code);
-      if (foundLogbookId != null) {
-        final alreadyMember =
-            await LogbookService().isMember(foundLogbookId, user.uid);
-        if (!mounted) return;
-        if (alreadyMember) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.settingsAlreadyConnected)),
-          );
-          return;
-        }
-        // The caller is not a member yet, so the logbook document is not
-        // readable at this point. The share-code lookup carries the display
-        // name specifically for this pre-join confirmation step.
-        logbookName = await LogbookService().getLogbookNameByShareCode(code) ?? code;
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.settingsError}: $e')),
-        );
-      }
-      return;
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-    if (!mounted) return;
-
-    if (foundLogbookId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.settingsCodeNotFound)),
-      );
-      return;
-    }
-
-    final resolvedName = logbookName ?? code;
-    final resolvedId = foundLogbookId;
-
-    final confirmed = await showConfirmDialog(
-      context,
-      title: context.l10n.settingsSwitchLogbookTitle,
-      body: context.l10n.settingsJoinContent(resolvedName),
-      confirmLabel: context.l10n.connect,
-    );
-    if (!confirmed || !mounted) return;
-
-    setState(() => _syncing = true);
-    try {
-      await LogbookService().joinLogbook(resolvedId, user.uid);
-      if (!mounted) return;
-      await reinitFirestore(context, resolvedId);
-      if (mounted) {
-        _guestsExpanded = false;
-        _refreshLogbooks();
-        FocusScope.of(context).unfocus();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.settingsJoinedLogbook(resolvedName))),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.settingsError}: $e')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
-
-
 
   /// Opens the "connect to a logbook" bottom sheet (scan QR or type a code).
   void _showConnectSheet() {
@@ -351,7 +262,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           borderRadius:
               const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: ConnectBottomSheet(onCode: _joinLogbook),
+        child: ConnectBottomSheet(onCode: (code) => joinLogbook(
+            context,
+            rawCode: code,
+            onSyncingChanged: (v) => setState(() => _syncing = v),
+            onGuestsCollapse: _onGuestsCollapse)),
       ),
     );
   }

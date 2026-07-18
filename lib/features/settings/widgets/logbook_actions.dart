@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../core/services/logbook_service.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -353,6 +354,102 @@ Future<void> switchLogbook(
       onGuestsCollapse();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.settingsConnected)),
+      );
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.settingsError}: $e')),
+      );
+    }
+  } finally {
+    if (context.mounted) onSyncingChanged(false);
+  }
+}
+
+/// Looks up [rawCode], confirms with the user, joins as a guest, and
+/// switches this device to the found logbook.
+Future<void> joinLogbook(
+  BuildContext context, {
+  required String rawCode,
+  required ValueChanged<bool> onSyncingChanged,
+  required VoidCallback onGuestsCollapse,
+}) async {
+  final l10n = context.l10n;
+  final code = rawCode.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+  if (code.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.settingsInvalidCode)),
+    );
+    return;
+  }
+  final user = context.read<AuthService>().currentUser;
+  if (user == null) return;
+
+  onSyncingChanged(true);
+  String? foundLogbookId;
+  String? logbookName;
+  try {
+    foundLogbookId = await LogbookService().findByShareCode(code);
+    if (foundLogbookId != null) {
+      final alreadyMember =
+          await LogbookService().isMember(foundLogbookId, user.uid);
+      if (!context.mounted) return;
+      if (alreadyMember) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsAlreadyConnected)),
+        );
+        return;
+      }
+      // The caller is not a member yet, so the logbook document is not
+      // readable at this point. The share-code lookup carries the display
+      // name specifically for this pre-join confirmation step.
+      logbookName = await LogbookService().getLogbookNameByShareCode(code) ?? code;
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${l10n.settingsError}: $e')),
+      );
+    }
+    return;
+  } finally {
+    if (context.mounted) onSyncingChanged(false);
+  }
+  if (!context.mounted) return;
+
+  if (foundLogbookId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.settingsCodeNotFound)),
+    );
+    return;
+  }
+
+  final resolvedName = logbookName ?? code;
+  final resolvedId = foundLogbookId;
+
+  final confirmed = await showConfirmDialog(
+    context,
+    title: l10n.settingsSwitchLogbookTitle,
+    body: l10n.settingsJoinContent(resolvedName),
+    confirmLabel: l10n.connect,
+  );
+  if (!confirmed || !context.mounted) return;
+
+  onSyncingChanged(true);
+  try {
+    await LogbookService().joinLogbook(resolvedId, user.uid);
+    if (!context.mounted) return;
+    // reinitFirestore always runs here (unconditional on this success
+    // path) and its own ValueNotifier<String?> write already triggers the
+    // logbook-list refresh via the listener — see showNewLogbookDialog for
+    // the same reasoning.
+    await reinitFirestore(context, resolvedId);
+    if (context.mounted) {
+      onGuestsCollapse();
+      FocusScope.of(context).unfocus();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.settingsJoinedLogbook(resolvedName))),
       );
     }
   } catch (e) {
