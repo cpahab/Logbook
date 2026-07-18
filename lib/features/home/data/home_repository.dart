@@ -973,23 +973,35 @@ class HomeRepository extends ChangeNotifier {
     _syncTimers.clear();
 
     // ── Step 1: download new logbook data before touching local state ──────────
-    // Both the entry list AND the track-date list must be fetched here, before
-    // anything local is cleared — otherwise a listTrackDates() failure (network
-    // blip, momentary permission-check lag right after joining/creating a
-    // logbook) would hit the old code path *after* dailyTracks was already
-    // wiped, permanently losing every GPX track for the newly-switched-to
-    // logbook instead of just failing to sync them this one time.
+    // The entry list must be fetched here, before anything local is cleared,
+    // so a failure leaves existing local data intact instead of wiping it
+    // with nothing confirmed to replace it.
     List<DayEntry> newEntries;
-    List<DateTime> cloudTrackDates;
     try {
       newEntries = await firestoreService.fetchAllEntries();
-      cloudTrackDates = await storageService.listTrackDates();
     } catch (_) {
       // Download failed — leave existing local data intact and abort. The
       // caller MUST check this false return and abort its own side of the
       // switch too (see the doc comment above) — this repository is still
       // pointed at whichever logbook it was already on.
       return false;
+    }
+
+    // The track-date list is fetched separately and treated as best-effort:
+    // Storage's security rules check Firestore membership via a cross-service
+    // firestore.exists(...) call, which can lag a moment behind the Firestore
+    // write that just created that membership (e.g. right after creating or
+    // joining a logbook) — a same-client Firestore read (fetchAllEntries
+    // above) doesn't have this gap, but a Storage rule reading *into*
+    // Firestore isn't guaranteed to see it instantly. Failing here shouldn't
+    // abort the whole switch over what's really a track-only timing issue;
+    // any tracks missed this way are picked up by the next attachStorage
+    // (next app launch) or forceSync, same as any other missed track.
+    List<DateTime> cloudTrackDates;
+    try {
+      cloudTrackDates = await storageService.listTrackDates();
+    } catch (_) {
+      cloudTrackDates = [];
     }
 
     // Give any delete pending from the logbook being left one last chance to
