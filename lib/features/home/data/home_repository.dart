@@ -1002,8 +1002,6 @@ class HomeRepository extends ChangeNotifier {
     // up by the next attachStorage (next app launch) or forceSync, same as
     // any other missed track.
     final cloudTrackDates = await _listTrackDatesWithRetry(storageService);
-    // ignore: avoid_print
-    debugPrint('[reattachAndSync] listTrackDates -> ${cloudTrackDates.length} dates: $cloudTrackDates');
 
     // Give any delete pending from the logbook being left one last chance to
     // push before its bookkeeping is wiped below.
@@ -1028,36 +1026,18 @@ class HomeRepository extends ChangeNotifier {
     _setLastSyncAt();
 
     for (final date in cloudTrackDates) {
-      if (_entries[date]?.trackDeletedAt != null) {
-        // ignore: avoid_print
-        debugPrint('[reattachAndSync] $date skipped: entry.trackDeletedAt = ${_entries[date]?.trackDeletedAt}');
-        continue;
-      }
+      if (_entries[date]?.trackDeletedAt != null) continue;
       try {
         final bytes = await storageService.downloadTrack(date);
-        if (bytes == null || bytes.isEmpty) {
-          // ignore: avoid_print
-          debugPrint('[reattachAndSync] $date downloadTrack returned ${bytes == null ? 'null' : 'empty bytes'}');
-          continue;
-        }
+        if (bytes == null || bytes.isEmpty) continue;
         final points = (await compute(parseGpxBytes, bytes)).points;
-        if (points.isEmpty) {
-          // ignore: avoid_print
-          debugPrint('[reattachAndSync] $date parseGpxBytes returned 0 points from ${bytes.length} bytes');
-          continue;
-        }
+        if (points.isEmpty) continue;
         await _saveTrack(date, '$date.gpx', points);
-        // ignore: avoid_print
-        debugPrint('[reattachAndSync] $date saved track with ${points.length} points');
-      } catch (e, st) {
+      } catch (_) {
         // One bad track (network hiccup, corrupt file) shouldn't cost every
         // other date's track — keep going instead of aborting the whole loop.
-        // ignore: avoid_print
-        debugPrint('[reattachAndSync] $date download/save failed: $e\n$st');
       }
     }
-    // ignore: avoid_print
-    debugPrint('[reattachAndSync] done — dailyTracks now has ${dailyTracks.length} entries');
 
     notifyListeners();
 
@@ -1079,29 +1059,34 @@ class HomeRepository extends ChangeNotifier {
     return true;
   }
 
-  /// Lists [storageService]'s track dates, retrying a couple of times on
-  /// failure before giving up (returning `[]`) — Storage's listAll() has no
-  /// offline cache and no built-in retry, unlike Firestore reads, so a
-  /// single transient hiccup (or the membership-propagation lag documented
-  /// on the [reattachAndSync] call site) would otherwise cost every track
-  /// for a switch that's already been decided to be best-effort here.
+  /// Lists [storageService]'s track dates, retrying with backoff on failure
+  /// before giving up (returning `[]`) — Storage's listAll() has no offline
+  /// cache and no built-in retry, unlike Firestore reads, so a single
+  /// transient hiccup (or the membership-propagation lag documented on the
+  /// [reattachAndSync] call site) would otherwise cost every track for a
+  /// switch that's already been decided to be best-effort here. The delay
+  /// this needs has proven variable in practice — a short retry window isn't
+  /// always enough — so this backs off further before giving up, up to
+  /// ~15 seconds total across all attempts.
   static Future<List<DateTime>> _listTrackDatesWithRetry(
       StorageService storageService) async {
-    const delays = [Duration(milliseconds: 400), Duration(milliseconds: 900)];
+    const delays = [
+      Duration(milliseconds: 500),
+      Duration(seconds: 1),
+      Duration(seconds: 2),
+      Duration(seconds: 4),
+      Duration(seconds: 7),
+    ];
     for (final delay in delays) {
       try {
         return await storageService.listTrackDates();
-      } catch (e, st) {
-        // ignore: avoid_print
-        debugPrint('[listTrackDatesWithRetry] attempt failed: $e\n$st');
+      } catch (_) {
         await Future.delayed(delay);
       }
     }
     try {
       return await storageService.listTrackDates();
-    } catch (e, st) {
-      // ignore: avoid_print
-      debugPrint('[listTrackDatesWithRetry] final attempt failed: $e\n$st');
+    } catch (_) {
       return [];
     }
   }
