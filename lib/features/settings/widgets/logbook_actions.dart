@@ -204,7 +204,9 @@ Future<void> showNewLogbookDialog(
 
   onSyncingChanged(true);
   try {
-    final newLogbookId = await LogbookService().createLogbook(uid, name);
+    final user = context.read<AuthService>().currentUser;
+    final newLogbookId = await LogbookService().createLogbook(uid, name,
+        displayName: user?.displayName, email: user?.email);
     if (!context.mounted) return;
     // reinitFirestore can fail (e.g. a momentary permission-check lag right
     // after creating the logbook) — only commit newLogbookId as the active
@@ -490,7 +492,8 @@ Future<void> joinLogbook(
     // succeeded, so the server and the app can't end up disagreeing about
     // which logbook is active (the same class of bug that used to let
     // stale data leak into whichever logbook was joined).
-    await LogbookService().joinLogbook(resolvedId, user.uid);
+    await LogbookService().joinLogbook(resolvedId, user.uid,
+        displayName: user.displayName, email: user.email);
     if (!context.mounted) return;
     final switched = await reinitFirestore(context, resolvedId,
         showCompleteSnackbar: false);

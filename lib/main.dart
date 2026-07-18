@@ -75,7 +75,8 @@ Future<void> _initFirestore(
 
     final logbookService = LogbookService();
     String? logbookId = await logbookService.getActiveLogbookId(user.uid);
-    logbookId ??= await logbookService.createLogbook(user.uid, 'My Logbook');
+    logbookId ??= await logbookService.createLogbook(user.uid, 'My Logbook',
+        displayName: user.displayName, email: user.email);
     final firestore = FirestoreService(logbookId: logbookId);
     final storage = StorageService(logbookId: logbookId);
     final initialSync = themeProvider.needsInitialSync;

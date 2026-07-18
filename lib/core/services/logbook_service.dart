@@ -23,8 +23,12 @@ class LogbookService {
   /// server would believe this new logbook is active while the app stays on
   /// the previous one locally — exactly the inconsistency that let stale
   /// data leak into a "new" logbook on a later reattach.
+  /// [displayName]/[email] (from the caller's own auth profile) are stored on
+  /// the member doc so the manage-guests list can show a name instead of a
+  /// truncated uid — see [joinLogbook].
   /// Returns the new logbookId.
-  Future<String> createLogbook(String uid, String name) async {
+  Future<String> createLogbook(String uid, String name,
+      {String? displayName, String? email}) async {
     final logbookRef = _db.collection('logbooks').doc();
     final logbookId = logbookRef.id;
     final shareCode = _generateShareCode();
@@ -48,7 +52,12 @@ class LogbookService {
     );
     batch.set(
       logbookRef.collection('members').doc(uid),
-      {'role': 'owner', 'joinedAt': FieldValue.serverTimestamp()},
+      {
+        'role': 'owner',
+        'joinedAt': FieldValue.serverTimestamp(),
+        if (displayName != null && displayName.isNotEmpty) 'displayName': displayName,
+        if (email != null && email.isNotEmpty) 'email': email,
+      },
     );
     batch.set(
       _db.collection('users').doc(uid),
@@ -138,7 +147,11 @@ class LogbookService {
   /// their active logbook — see [createLogbook]'s doc comment for why the
   /// caller must defer that (via [setActiveLogbook]) until after confirming
   /// the local switch succeeded.
-  Future<void> joinLogbook(String logbookId, String uid) async {
+  /// [displayName]/[email] (from the caller's own auth profile) are stored on
+  /// the member doc so the owner's manage-guests list can show a name
+  /// instead of a truncated uid.
+  Future<void> joinLogbook(String logbookId, String uid,
+      {String? displayName, String? email}) async {
     final batch = _db.batch();
     batch.set(
       _db
@@ -146,7 +159,12 @@ class LogbookService {
           .doc(logbookId)
           .collection('members')
           .doc(uid),
-      {'role': 'guest', 'joinedAt': FieldValue.serverTimestamp()},
+      {
+        'role': 'guest',
+        'joinedAt': FieldValue.serverTimestamp(),
+        if (displayName != null && displayName.isNotEmpty) 'displayName': displayName,
+        if (email != null && email.isNotEmpty) 'email': email,
+      },
     );
     batch.set(
       _db.collection('users').doc(uid),

@@ -1840,6 +1840,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   final shortId = memberUid.length > 8
                       ? memberUid.substring(0, 8)
                       : memberUid;
+                  // Members who joined before displayName/email were stored
+                  // on the member doc (or who never set a display name) fall
+                  // back to the truncated uid.
+                  final displayName = m['displayName'] as String?;
+                  final email = m['email'] as String?;
+                  final label = [
+                    if (displayName != null && displayName.isNotEmpty) displayName,
+                    if (email != null && email.isNotEmpty) email,
+                  ].join(' · ');
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Row(
@@ -1848,7 +1857,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             size: 16, color: cs.onSurfaceVariant),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text('…$shortId',
+                          child: Text(label.isNotEmpty ? label : '…$shortId',
+                              overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.bodySmall!.copyWith(
                                   color: cs.onSurface)),
                         ),
