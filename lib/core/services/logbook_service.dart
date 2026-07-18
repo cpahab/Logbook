@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/retry_with_backoff.dart';
 import 'storage_service.dart';
 
 /// Manages logbook identity and membership.
@@ -88,6 +89,15 @@ class LogbookService {
   /// whole call down with a permission-denied. Any such stale ids found are
   /// dropped from [uid]'s own array afterward: this *is* something the
   /// current uid can write, unlike whoever removed them.
+  ///
+  /// Each fetch is retried with backoff before being written off as stale —
+  /// the logbook doc's read rule requires the security rule's membership
+  /// check to see the member doc just written by [joinLogbook]/
+  /// [createLogbook], which can transiently lag right after. Without the
+  /// retry, that lag looked identical to "no longer a member": the
+  /// just-joined logbook would silently drop out of the list (and get
+  /// self-healed out of the array) until whatever later call happened to
+  /// land after the lag cleared.
   Future<List<Map<String, dynamic>>> listLogbooks(String uid) async {
     final userDoc = await _db.collection('users').doc(uid).get();
     final logbookIds = List<String>.from(
@@ -97,21 +107,30 @@ class LogbookService {
 
     final fetched = await Future.wait(logbookIds.map((id) async {
       try {
-        final logbookDoc = await _db.collection('logbooks').doc(id).get();
-        final memberDoc = await _db
-            .collection('logbooks')
-            .doc(id)
-            .collection('members')
-            .doc(uid)
-            .get();
-        if (!logbookDoc.exists || !memberDoc.exists) return null;
-        final data = logbookDoc.data()!;
-        return {
-          'logbookId': id,
-          'name': data['name'] as String? ?? '',
-          'role': memberDoc.data()?['role'] as String? ?? 'guest',
-          'shareCode': data['shareCode'] as String? ?? '',
-        };
+        final result = await retryWithBackoff(() async {
+          final logbookDoc = await _db.collection('logbooks').doc(id).get();
+          final memberDoc = await _db
+              .collection('logbooks')
+              .doc(id)
+              .collection('members')
+              .doc(uid)
+              .get();
+          if (!logbookDoc.exists || !memberDoc.exists) {
+            // Not a transient failure (no exception was thrown — this uid
+            // simply isn't a member), so retryWithBackoff won't retry it.
+            // Returned as a sentinel rather than null so it's still
+            // distinguishable from a genuine exception below.
+            return <String, dynamic>{};
+          }
+          final data = logbookDoc.data()!;
+          return {
+            'logbookId': id,
+            'name': data['name'] as String? ?? '',
+            'role': memberDoc.data()?['role'] as String? ?? 'guest',
+            'shareCode': data['shareCode'] as String? ?? '',
+          };
+        });
+        return result.isEmpty ? null : result;
       } catch (_) {
         return null;
       }
