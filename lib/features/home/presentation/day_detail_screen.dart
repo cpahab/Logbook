@@ -11,7 +11,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:printing/printing.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
@@ -36,6 +35,7 @@ import '../widgets/edit_text_dialog.dart';
 import '../widgets/edit_vessel_status_dialog.dart';
 import '../widgets/entry_tooltip.dart';
 import '../widgets/map_layers.dart';
+import '../widgets/map_render_helpers.dart';
 import 'day_map_fullscreen.dart';
 import 'positions_only_map_fullscreen.dart';
 import '../utils/filter_settings.dart';
@@ -2027,37 +2027,15 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     ];
 
     if (_droppedMarkerLatLng != null) {
-      markers.add(Marker(
-        point: _droppedMarkerLatLng!,
-        width: 20,
-        height: 20,
-        alignment: Alignment.center,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            _markerDismissTimer?.cancel();
-            setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; });
-          },
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 11, height: 11,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cs.surface,
-                  border: Border.all(color: cs.primary, width: 2.5),
-                ),
-              ),
-              if (_droppedMarkerLabel != null)
-                Positioned(
-                  left: 16, top: 3,
-                  child: IgnorePointer(child: trackLabel(context, _droppedMarkerLabel!, cs)),
-                ),
-            ],
-          ),
-        ),
+      markers.add(droppedMarker(
+        position: _droppedMarkerLatLng!,
+        label: _droppedMarkerLabel,
+        context: context,
+        cs: cs,
+        onDismiss: () {
+          _markerDismissTimer?.cancel();
+          setState(() { _droppedMarkerLatLng = null; _droppedMarkerLabel = null; });
+        },
       ));
     }
 
@@ -2081,62 +2059,13 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             },
           ),
           children: [
-            TileLayer(
-              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
-              userAgentPackageName: 'com.logbook.app',
-              // Keep more of the surrounding tile grid loaded across a
-              // pan/zoom transition so fewer tiles need a fresh fetch right
-              // when the gesture ends (default is 2).
-              keepBuffer: 4,
-              // Default is `.none`, which never retries a tile that failed
-              // once (transient network blip, tile-server rate limit) — it
-              // stays blank until this whole map widget is rebuilt. Evicting
-              // once it scrolls out of view lets it be re-fetched next time
-              // it's needed.
-              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
-              errorTileCallback: kDebugMode
-                  ? (tile, error, stackTrace) =>
-                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
-                  : null,
-              // Fade-in on arrival is TileLayer's default (tileDisplay:
-              // TileDisplay.fadeIn()); this only overrides the tile that
-              // failed to load, in place of a blank grey square.
-              tileBuilder: (context, tileWidget, tile) => tile.loadError
-                  ? Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      child: const Icon(Icons.map_outlined, size: 20),
-                    )
-                  : tileWidget,
-            ),
+            mapTileLayer(satelliteView: _satelliteView),
             ZoomAwareUncertaintyLayer(polygons: uncertaintyPolygons),
             ZoomAwareCircleLayer(circles: anchorCircles),
             PolylineLayer(polylines: trackPolylines, cullingMargin: null, simplificationTolerance: 0),
             if (showRawTrack) ZoomAwareRawTrackLayer(rawPoints: display.rawMovingPoints),
             MarkerLayer(markers: markers),
-            RichAttributionWidget(
-              attributions: [
-                // MapTiler version (temporarily disabled, see map_config.dart):
-                // TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-                //   final uri = Uri.parse(kBaseAttributionUrl);
-                //   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                // }),
-                // if (!_satelliteView)
-                //   TextSourceAttribution(kOsmAttributionLabel, onTap: () async {
-                //     final uri = Uri.parse(kOsmAttributionUrl);
-                //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                //   }),
-                if (_satelliteView)
-                  TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
-                    final uri = Uri.parse(kSatelliteAttributionUrl);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  })
-                else
-                  TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-                    final uri = Uri.parse(kBaseAttributionUrl);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }),
-              ],
-            ),
+            mapAttribution(satelliteView: _satelliteView),
           ],
         ),
         // Map controls — zoom + center on macOS, satellite always
@@ -2147,24 +2076,24 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (defaultTargetPlatform == TargetPlatform.macOS) ...[
-                _smallMapBtn(Icons.add, () => _mapController.move(
+                mapZoomButton(Icons.add, () => _mapController.move(
                   _mapController.camera.center,
                   _mapController.camera.zoom + 1,
-                )),
+                ), cs, heroTagPrefix: ''),
                 const SizedBox(height: 6),
-                _smallMapBtn(Icons.remove, () => _mapController.move(
+                mapZoomButton(Icons.remove, () => _mapController.move(
                   _mapController.camera.center,
                   _mapController.camera.zoom - 1,
-                )),
+                ), cs, heroTagPrefix: ''),
                 const SizedBox(height: 6),
-                _smallMapBtn(Icons.explore, () {
+                mapZoomButton(Icons.explore, () {
                   if (fitLatLngs.isNotEmpty) {
                     _mapController.fitCamera(CameraFit.bounds(
                       bounds: LatLngBounds.fromPoints(fitLatLngs),
                       padding: const EdgeInsets.all(32),
                     ));
                   }
-                }),
+                }, cs, heroTagPrefix: ''),
                 const SizedBox(height: 6),
               ],
               FloatingActionButton.small(
@@ -2257,42 +2186,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     ];
 
     if (_droppedMarkerLatLng != null) {
-      markers.add(Marker(
-        point: _droppedMarkerLatLng!,
-        width: 20,
-        height: 20,
-        alignment: Alignment.center,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            _markerDismissTimer?.cancel();
-            setState(() {
-              _droppedMarkerLatLng = null;
-              _droppedMarkerLabel = null;
-            });
-          },
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 11,
-                height: 11,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cs.surface,
-                  border: Border.all(color: cs.primary, width: 2.5),
-                ),
-              ),
-              if (_droppedMarkerLabel != null)
-                Positioned(
-                  left: 16,
-                  top: 3,
-                  child: IgnorePointer(child: trackLabel(context, _droppedMarkerLabel!, cs)),
-                ),
-            ],
-          ),
-        ),
+      markers.add(droppedMarker(
+        position: _droppedMarkerLatLng!,
+        label: _droppedMarkerLabel,
+        context: context,
+        cs: cs,
+        onDismiss: () {
+          _markerDismissTimer?.cancel();
+          setState(() {
+            _droppedMarkerLatLng = null;
+            _droppedMarkerLabel = null;
+          });
+        },
       ));
     }
 
@@ -2312,38 +2217,10 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 : null,
           ),
           children: [
-            TileLayer(
-              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
-              userAgentPackageName: 'com.logbook.app',
-              keepBuffer: 4,
-              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
-              errorTileCallback: kDebugMode
-                  ? (tile, error, stackTrace) =>
-                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
-                  : null,
-              tileBuilder: (context, tileWidget, tile) => tile.loadError
-                  ? Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      child: const Icon(Icons.map_outlined, size: 20),
-                    )
-                  : tileWidget,
-            ),
+            mapTileLayer(satelliteView: _satelliteView),
             PolylineLayer(polylines: positionsPolylines, cullingMargin: null, simplificationTolerance: 0),
             MarkerLayer(markers: markers),
-            RichAttributionWidget(
-              attributions: [
-                if (_satelliteView)
-                  TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
-                    final uri = Uri.parse(kSatelliteAttributionUrl);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  })
-                else
-                  TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-                    final uri = Uri.parse(kBaseAttributionUrl);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }),
-              ],
-            ),
+            mapAttribution(satelliteView: _satelliteView),
           ],
         ),
         // Map controls — zoom + center on macOS, satellite + fullscreen always.
@@ -2354,17 +2231,17 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (defaultTargetPlatform == TargetPlatform.macOS) ...[
-                _smallMapBtn(Icons.add, () => _mapController.move(
+                mapZoomButton(Icons.add, () => _mapController.move(
                   _mapController.camera.center,
                   _mapController.camera.zoom + 1,
-                )),
+                ), cs, heroTagPrefix: ''),
                 const SizedBox(height: 6),
-                _smallMapBtn(Icons.remove, () => _mapController.move(
+                mapZoomButton(Icons.remove, () => _mapController.move(
                   _mapController.camera.center,
                   _mapController.camera.zoom - 1,
-                )),
+                ), cs, heroTagPrefix: ''),
                 const SizedBox(height: 6),
-                _smallMapBtn(Icons.explore, () {
+                mapZoomButton(Icons.explore, () {
                   if (points.length >= 2) {
                     _mapController.fitCamera(CameraFit.bounds(
                       bounds: LatLngBounds.fromPoints(points),
@@ -2373,7 +2250,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                   } else if (points.isNotEmpty) {
                     _mapController.move(points.first, 13);
                   }
-                }),
+                }, cs, heroTagPrefix: ''),
                 const SizedBox(height: 6),
               ],
               FloatingActionButton.small(
@@ -3172,19 +3049,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       }
     }
     return nearest;
-  }
-
-  /// Small floating action button used for the desktop-only zoom/recenter map controls.
-  Widget _smallMapBtn(IconData icon, VoidCallback onTap) {
-    final cs = Theme.of(context).colorScheme;
-    return FloatingActionButton.small(
-      heroTag: icon.codePoint,
-      onPressed: onTap,
-      backgroundColor: cs.surfaceContainerLowest,
-      foregroundColor: cs.primary,
-      elevation: 2,
-      child: Icon(icon, size: 18),
-    );
   }
 
 }
