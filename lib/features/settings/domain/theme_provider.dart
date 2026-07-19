@@ -56,10 +56,15 @@ class ThemeProvider extends ChangeNotifier {
   // GPX track-filter tuning — cloud-synced, tied to the logbook (see the
   // "Synced filter setters" section below).
   static const _filterModeKey              = 'filter_stationary_mode';
+  static const _speedThresholdKnKey        = 'filter_speed_threshold_kn';
+  static const _spreadThresholdMKey        = 'filter_spread_threshold_m';
+  static const _windowKey                  = 'filter_window';
+  static const _smoothWindowKey            = 'filter_smooth_window';
   static const _minStopMinutesKey          = 'filter_min_stop_minutes';
   static const _maxStopSpreadMKey          = 'filter_max_stop_spread_m';
   static const _detectColdStartKey         = 'filter_detect_cold_start';
   static const _coldStartSettleFactorKey   = 'filter_cold_start_settle_factor';
+  static const _detectBadFirstFixKey       = 'filter_detect_bad_first_fix';
   static const _makingWayThresholdKnKey    = 'filter_making_way_threshold_kn';
   static const _topSpeedPercentileKey      = 'filter_top_speed_percentile';
   static const _maxSpeedKnKey              = 'filter_max_speed_kn';
@@ -101,10 +106,15 @@ class ThemeProvider extends ChangeNotifier {
   ThemeMode _mode = ThemeMode.system;
   Locale _locale = const Locale('de');
   StationaryMode _filterMode        = StationaryMode.speed;
+  double _speedThresholdKn          = 0.5;
+  double _spreadThresholdM          = 6.0;
+  int    _window                    = 5;
+  int    _smoothWindow              = 3;
   double _minStopMinutes            = 5.0;
   double _maxStopSpreadM            = 30.0;
   bool   _detectColdStart           = true;
   double _coldStartSettleFactor     = 3.0;
+  bool   _detectBadFirstFix         = true;
   double _makingWayThresholdKn      = 1.0;
   double _topSpeedPercentile        = 0.99;
   double _maxSpeedKn                = 12.0;
@@ -140,10 +150,15 @@ class ThemeProvider extends ChangeNotifier {
       ? const Locale('de', 'CH')
       : const Locale('en', 'GB');
   StationaryMode get filterMode         => _filterMode;
+  double get speedThresholdKn           => _speedThresholdKn;
+  double get spreadThresholdM           => _spreadThresholdM;
+  int    get window                     => _window;
+  int    get smoothWindow               => _smoothWindow;
   double get minStopMinutes             => _minStopMinutes;
   double get maxStopSpreadM             => _maxStopSpreadM;
   bool   get detectColdStart            => _detectColdStart;
   double get coldStartSettleFactor      => _coldStartSettleFactor;
+  bool   get detectBadFirstFix          => _detectBadFirstFix;
   double get makingWayThresholdKn       => _makingWayThresholdKn;
   double get topSpeedPercentile         => _topSpeedPercentile;
   double get maxSpeedKn                 => _maxSpeedKn;
@@ -151,10 +166,15 @@ class ThemeProvider extends ChangeNotifier {
   bool   get autoLogPositionEnabled     => _autoLogPosition;
   FilterSettings get filterSettings => FilterSettings(
     stationaryMode:        _filterMode,
+    speedThresholdKn:      _speedThresholdKn,
+    spreadThresholdM:      _spreadThresholdM,
+    window:                _window,
+    smoothWindow:          _smoothWindow,
     minStopMinutes:        _minStopMinutes,
     maxStopSpreadM:        _maxStopSpreadM,
     detectColdStart:       _detectColdStart,
     coldStartSettleFactor: _coldStartSettleFactor,
+    detectBadFirstFix:     _detectBadFirstFix,
     makingWayThresholdKn:  _makingWayThresholdKn,
     topSpeedPercentile:    _topSpeedPercentile,
     maxSpeedKn:            _maxSpeedKn,
@@ -349,10 +369,15 @@ class ThemeProvider extends ChangeNotifier {
   /// points at. Shared by [init] and [switchLocalLogbook].
   Future<void> _loadLogbookScopedFields() async {
     _filterMode            = _parseFilterMode(_box.get(_filterModeKey, defaultValue: 'speed')!);
+    _speedThresholdKn      = double.tryParse(_box.get(_speedThresholdKnKey,       defaultValue: '0.5')!)  ?? 0.5;
+    _spreadThresholdM      = double.tryParse(_box.get(_spreadThresholdMKey,       defaultValue: '6.0')!)  ?? 6.0;
+    _window                = int.tryParse(_box.get(_windowKey,                    defaultValue: '5')!)    ?? 5;
+    _smoothWindow          = int.tryParse(_box.get(_smoothWindowKey,              defaultValue: '3')!)    ?? 3;
     _minStopMinutes        = double.tryParse(_box.get(_minStopMinutesKey,         defaultValue: '5.0')!)  ?? 5.0;
     _maxStopSpreadM        = double.tryParse(_box.get(_maxStopSpreadMKey,         defaultValue: '30.0')!) ?? 30.0;
     _detectColdStart       = (_box.get(_detectColdStartKey,       defaultValue: 'true')!)  != 'false';
     _coldStartSettleFactor = double.tryParse(_box.get(_coldStartSettleFactorKey,  defaultValue: '3.0')!)  ?? 3.0;
+    _detectBadFirstFix     = (_box.get(_detectBadFirstFixKey,     defaultValue: 'true')!)  != 'false';
     _makingWayThresholdKn  = double.tryParse(_box.get(_makingWayThresholdKnKey,   defaultValue: '1.0')!)  ?? 1.0;
     _topSpeedPercentile    = double.tryParse(_box.get(_topSpeedPercentileKey,      defaultValue: '0.99')!) ?? 0.99;
     _maxSpeedKn            = double.tryParse(_box.get(_maxSpeedKnKey,              defaultValue: '12.0')!) ?? 12.0;
@@ -487,6 +512,38 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setSpeedThresholdKn(double v) {
+    if (_speedThresholdKn == v) return;
+    _speedThresholdKn = v;
+    _box.put(_speedThresholdKnKey, v.toString());
+    _pushSettingsDebounced();
+    notifyListeners();
+  }
+
+  void setSpreadThresholdM(double v) {
+    if (_spreadThresholdM == v) return;
+    _spreadThresholdM = v;
+    _box.put(_spreadThresholdMKey, v.toString());
+    _pushSettingsDebounced();
+    notifyListeners();
+  }
+
+  void setWindow(int v) {
+    if (_window == v) return;
+    _window = v;
+    _box.put(_windowKey, v.toString());
+    _pushSettings();
+    notifyListeners();
+  }
+
+  void setSmoothWindow(int v) {
+    if (_smoothWindow == v) return;
+    _smoothWindow = v;
+    _box.put(_smoothWindowKey, v.toString());
+    _pushSettings();
+    notifyListeners();
+  }
+
   void setMinStopMinutes(double v) {
     if (_minStopMinutes == v) return;
     _minStopMinutes = v;
@@ -519,6 +576,14 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setDetectBadFirstFix(bool v) {
+    if (_detectBadFirstFix == v) return;
+    _detectBadFirstFix = v;
+    _box.put(_detectBadFirstFixKey, v.toString());
+    _pushSettings();
+    notifyListeners();
+  }
+
   void setMakingWayThresholdKn(double v) {
     if (_makingWayThresholdKn == v) return;
     _makingWayThresholdKn = v;
@@ -546,19 +611,29 @@ class ThemeProvider extends ChangeNotifier {
   /// Restores every GPX track-filter tuning value to its factory default and pushes it.
   void resetFilterDefaults() {
     _filterMode           = StationaryMode.speed;
+    _speedThresholdKn     = 0.5;
+    _spreadThresholdM     = 6.0;
+    _window               = 5;
+    _smoothWindow         = 3;
     _minStopMinutes       = 5.0;
     _maxStopSpreadM       = 30.0;
     _detectColdStart      = true;
     _coldStartSettleFactor = 3.0;
+    _detectBadFirstFix    = true;
     _makingWayThresholdKn = 1.0;
     _topSpeedPercentile   = 0.99;
     _maxSpeedKn           = 12.0;
     _box
       ..put(_filterModeKey,            StationaryMode.speed.name)
+      ..put(_speedThresholdKnKey,      '0.5')
+      ..put(_spreadThresholdMKey,      '6.0')
+      ..put(_windowKey,                '5')
+      ..put(_smoothWindowKey,          '3')
       ..put(_minStopMinutesKey,        '5.0')
       ..put(_maxStopSpreadMKey,        '30.0')
       ..put(_detectColdStartKey,       'true')
       ..put(_coldStartSettleFactorKey, '3.0')
+      ..put(_detectBadFirstFixKey,     'true')
       ..put(_makingWayThresholdKnKey,  '1.0')
       ..put(_topSpeedPercentileKey,    '0.99')
       ..put(_maxSpeedKnKey,            '12.0');
@@ -906,10 +981,15 @@ class ThemeProvider extends ChangeNotifier {
         _vhf4LabelKey:       _vhf4Label,
         _vhf4DescKey:        _vhf4Desc,
         _filterModeKey:            _filterMode.name,
+        _speedThresholdKnKey:      _speedThresholdKn.toString(),
+        _spreadThresholdMKey:      _spreadThresholdM.toString(),
+        _windowKey:                _window.toString(),
+        _smoothWindowKey:          _smoothWindow.toString(),
         _minStopMinutesKey:        _minStopMinutes.toString(),
         _maxStopSpreadMKey:        _maxStopSpreadM.toString(),
         _detectColdStartKey:       _detectColdStart.toString(),
         _coldStartSettleFactorKey: _coldStartSettleFactor.toString(),
+        _detectBadFirstFixKey:     _detectBadFirstFix.toString(),
         _makingWayThresholdKnKey:  _makingWayThresholdKn.toString(),
         _topSpeedPercentileKey:    _topSpeedPercentile.toString(),
         _maxSpeedKnKey:            _maxSpeedKn.toString(),
@@ -982,6 +1062,22 @@ class ThemeProvider extends ChangeNotifier {
       _filterMode = _parseFilterMode(v);
       _box.put(_filterModeKey, v);
     });
+    apply(_speedThresholdKnKey, _speedThresholdKn.toString(), (v) {
+      _speedThresholdKn = double.tryParse(v) ?? _speedThresholdKn;
+      _box.put(_speedThresholdKnKey, v);
+    });
+    apply(_spreadThresholdMKey, _spreadThresholdM.toString(), (v) {
+      _spreadThresholdM = double.tryParse(v) ?? _spreadThresholdM;
+      _box.put(_spreadThresholdMKey, v);
+    });
+    apply(_windowKey, _window.toString(), (v) {
+      _window = int.tryParse(v) ?? _window;
+      _box.put(_windowKey, v);
+    });
+    apply(_smoothWindowKey, _smoothWindow.toString(), (v) {
+      _smoothWindow = int.tryParse(v) ?? _smoothWindow;
+      _box.put(_smoothWindowKey, v);
+    });
     apply(_minStopMinutesKey, _minStopMinutes.toString(), (v) {
       _minStopMinutes = double.tryParse(v) ?? _minStopMinutes;
       _box.put(_minStopMinutesKey, v);
@@ -997,6 +1093,10 @@ class ThemeProvider extends ChangeNotifier {
     apply(_coldStartSettleFactorKey, _coldStartSettleFactor.toString(), (v) {
       _coldStartSettleFactor = double.tryParse(v) ?? _coldStartSettleFactor;
       _box.put(_coldStartSettleFactorKey, v);
+    });
+    apply(_detectBadFirstFixKey, _detectBadFirstFix.toString(), (v) {
+      _detectBadFirstFix = v != 'false';
+      _box.put(_detectBadFirstFixKey, v);
     });
     apply(_makingWayThresholdKnKey, _makingWayThresholdKn.toString(), (v) {
       _makingWayThresholdKn = double.tryParse(v) ?? _makingWayThresholdKn;
