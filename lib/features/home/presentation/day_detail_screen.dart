@@ -1513,12 +1513,19 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             ),
           );
         } else {
-          // Strip tile: scale to height, natural width — no cropping
+          // Strip tile: scale to height, natural width — no cropping.
+          // cacheHeight makes the codec decode (and cache) at roughly the
+          // tile's actual physical pixel height instead of the photo's
+          // full ~1920px resolution — cacheWidth is left unset so Flutter
+          // derives it to preserve aspect ratio automatically.
+          final cacheH =
+              (h * MediaQuery.devicePixelRatioOf(context)).round();
           image = GestureDetector(
             onTap: () => _viewPhoto(file),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.file(file, height: h, fit: BoxFit.fitHeight),
+              child: Image.file(file,
+                  height: h, fit: BoxFit.fitHeight, cacheHeight: cacheH),
             ),
           );
         }
