@@ -56,15 +56,23 @@ void main() {
           greaterThan(8 * 60));
     });
 
-    test('03 May 2026 — estimated departure and arrival', () {
+    test('03 May 2026 — precise departure (walk-to-boat prefix trimmed), '
+        'estimated arrival', () {
       final points = GpxParser()
           .parseBytes(File('test/fixtures/gpx/Logbook-Idefix-03 May 2026.gpx')
               .readAsBytesSync())
           .points;
       final display = buildDisplayModel(points);
 
-      expect(display.departurePrecision, TimePrecision.estimated,
-          reason: 'no start stop was detected');
+      // The raw track's first ~2-3 min (07:12-07:15) is a brief walk/drive to
+      // the boat, not real vessel motion — _trimPreBoardingPrefix removes it,
+      // so the ~4.9 h stop that follows now correctly starts the track and
+      // is classified as a genuine "start" stop rather than "mid". Same
+      // departure moment as before, just correctly validated instead of a
+      // speed-signal estimate.
+      expect(display.departurePrecision, TimePrecision.precise,
+          reason: 'a start stop is now detected after trimming the '
+              'walk-to-boat prefix');
       expect(_toSecond(display.departureTime!.toUtc()),
           DateTime.utc(2026, 5, 3, 10, 15, 21));
 

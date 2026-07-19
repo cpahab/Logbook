@@ -51,13 +51,19 @@ void main() {
       expect(display.endPositionReliable, isTrue);
     });
 
-    test('03 May 2026 — a genuine ~5 h mid-voyage stop (33.6 m max spread, '
-        'just over the gate) is now caught, plus a shorter one', () {
+    test('03 May 2026 — a genuine ~5 h stop (33.6 m max spread, just over '
+        'the gate) is now caught, plus a shorter one', () {
       final display = _displayFor('03 May 2026');
+      // The ~5 h stop now starts the track (a brief walk/drive-to-boat
+      // prefix before it is trimmed by _trimPreBoardingPrefix — see
+      // departure_arrival_time_test.dart), so it's classified "start", not
+      // "mid" — this is the SAME wide-scatter acceptance this test was
+      // written for, just now correctly attributed to the right stop kind.
+      expect(display.startStop, isNotNull);
+      expect(display.startStop!.minutes, greaterThan(200),
+          reason: 'the long (~5h) genuine stop should be the start stop');
       final mids = display.stops.where((s) => s.kind == AnchorKind.mid).toList();
-      expect(mids.length, 2);
-      expect(mids.any((s) => s.minutes > 200), isTrue,
-          reason: 'the long (~5h) genuine stop should be among them');
+      expect(mids.length, 1);
       // Still no confirmed *end* stop for this file — the fix only expands
       // what counts as a stop candidate, it doesn't fabricate one where the
       // boat genuinely never settled at the very end of the log.

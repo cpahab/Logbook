@@ -543,35 +543,55 @@ class TrimResult {
       anchors.where((a) => a.kind == AnchorKind.end).firstOrNull;
 }
 
-// ── Pass 0 — cold device/GPS startup prefix ───────────────────────────────────
+// ── Pass 0 — pre-boarding prefix ──────────────────────────────────────────────
 
-/// Trimmed from the front of a track that didn't start at local midnight —
-/// see [_trimColdStartupPrefix].
-const _coldStartupTrimCount = 3;
+/// How soon after a track's first raw fix its first stop must begin to count
+/// as "getting to the boat" rather than a genuine early sailing stop — see
+/// [_trimPreBoardingPrefix].
+const _preBoardingWindowMinutes = 30;
 
-/// A day's track starting anywhere other than right around local midnight
-/// means the device/app was freshly started partway through the day, rather
-/// than continuing a passage that was already under way overnight (an
-/// overnight track's first fix is right after the previous day's midnight
-/// rollover, not a startup event at all). The first few fixes after a cold
-/// device/GPS start are typically imprecise — the receiver hasn't locked yet
-/// — and can otherwise be misread as real (if brief) movement right at the
-/// track start. Confirmed against real logs: three genuine overnight
-/// passages in the fixture corpus all begin within a minute of local
-/// midnight; a same-day start like 03 May 2026 or 18 Jul 2026 begins hours
-/// into the day and is unambiguously a fresh start.
+/// A day's track that starts moving immediately and only settles into its
+/// first stop a few minutes in is very likely recording the user's approach
+/// to the boat (walking from a car park/station, or driving there) rather
+/// than the vessel's own motion — a real device/app start mid-day, not a
+/// continuation of an overnight passage already under way (which instead
+/// begins already sitting at anchor, right at the previous day's midnight
+/// rollover). Confirmed against real logs: the 18 Jul 2026 Idefix log's
+/// track starts moving at walking-ish pace through a marina town and only
+/// reaches its actual berth (a genuine, later-classified "mid" stop) after
+/// ~6 minutes — rendering that lead-in as track data draws a long, straight,
+/// nonsensical line cutting across land before the boat's real position.
 ///
-/// Trims unconditionally (no attempt to judge whether the leading fixes are
-/// actually bad) — the trimmed count is small enough that losing a few
-/// genuine fixes at a real dock costs nothing, since dozens more typically
-/// follow before departure.
-List<TrackPoint> _trimColdStartupPrefix(List<TrackPoint> points) {
-  const midnightToleranceMinutes = 10;
-  if (points.length <= _coldStartupTrimCount) return points;
-  final first = points.first.time.toLocal();
-  final minutesSinceMidnight = first.hour * 60 + first.minute;
-  if (minutesSinceMidnight <= midnightToleranceMinutes) return points;
-  return points.sublist(_coldStartupTrimCount);
+/// Runs a throwaway trial pass of the full pipeline purely to locate the
+/// first stop (if any); only trims when that stop begins within
+/// [_preBoardingWindowMinutes] of the track's very first raw fix — a stop
+/// hours into a track (e.g. a mid-voyage lunch anchorage) is genuine sailing
+/// data and must never be discarded just because it happens to be the first
+/// stop found (see 03 May 2026: first stop is ~5 h in). A track whose first
+/// stop already begins at/near index 0 needs no trimming at all — it's
+/// already a normal "start" stop.
+List<TrackPoint> _trimPreBoardingPrefix(
+  List<TrackPoint> points,
+  FilterSettings settings,
+) {
+  if (points.length < 4) return points;
+
+  final fixes = points.map(_Fix.new).toList();
+  _annotate(fixes, settings.window);
+  _flagSpikes(fixes, settings.maxSpeedKn);
+  if (settings.detectBadFirstFix) _detectBadFirstFix(fixes);
+  _annotate(fixes, settings.window);
+  final stops = _findStationarySegments(fixes, settings);
+  if (stops.isEmpty) return points;
+
+  final first = stops.first;
+  if (first.startIdx == 0) return points;
+
+  final elapsedMinutes =
+      points[first.startIdx].time.difference(points.first.time).inSeconds / 60.0;
+  if (elapsedMinutes > _preBoardingWindowMinutes) return points;
+
+  return points.sublist(first.startIdx);
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -582,7 +602,7 @@ TrimResult trimTrackWithAnchors(
   List<TrackPoint> rawPoints, {
   FilterSettings settings = const FilterSettings(),
 }) {
-  final points = _trimColdStartupPrefix(rawPoints);
+  final points = _trimPreBoardingPrefix(rawPoints, settings);
   if (points.length < 4) return TrimResult(points: points);
 
   final fixes = points.map(_Fix.new).toList();
@@ -1141,7 +1161,7 @@ DisplayModel buildDisplayModel(
   List<TrackPoint> rawPoints, {
   FilterSettings settings = const FilterSettings(),
 }) {
-  final points = _trimColdStartupPrefix(rawPoints);
+  final points = _trimPreBoardingPrefix(rawPoints, settings);
   if (points.length < 4) return const DisplayModel();
 
   final fixes = points.map(_Fix.new).toList();
