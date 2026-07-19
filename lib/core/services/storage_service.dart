@@ -20,19 +20,25 @@ class StorageService {
   // Write
   // ------------------------------------------------------------------
 
-  /// Uploads (or overwrites) the raw GPX file for [date].
+  /// Uploads (or overwrites) the GPX file for [date], gzip-compressed —
+  /// GPX's per-point XML tags are verbose relative to the actual lat/lon/
+  /// time payload, so this meaningfully shrinks upload size (and every
+  /// subsequent download) for longer tracks.
   ///
-  /// Previously gzip-compressed with a `contentEncoding: 'gzip'` metadata
-  /// tag to shrink upload/download size, but that silently broke sync
-  /// entirely: newly imported tracks never reached Storage (uploads failed
-  /// quietly — every call site swallows errors via `.catchError`) and so
-  /// never appeared on other devices or survived a local reinstall. Reverted
-  /// to plain uploads until compression can be re-validated against a real
-  /// device/backend rather than reasoned about from code alone.
+  /// This was briefly reverted to plain uploads on suspicion of breaking
+  /// sync entirely, but that turned out to be a different bug: removeGpx()
+  /// sets a trackDeletedAt tombstone on the entry that no import path ever
+  /// cleared, so a re-imported track got deleted again by the very next
+  /// sync regardless of upload compression (see home_repository.dart's
+  /// _saveTrack). With that fixed and covered by a regression test,
+  /// compression is safe to restore.
   Future<void> uploadTrack(DateTime date, Uint8List bytes) =>
       _ref(date).putData(
-        bytes,
-        SettableMetadata(contentType: 'application/gpx+xml'),
+        Uint8List.fromList(gzip.encode(bytes)),
+        SettableMetadata(
+          contentType: 'application/gpx+xml',
+          contentEncoding: 'gzip',
+        ),
       );
 
   /// Deletes the GPX file for [date].
@@ -53,10 +59,11 @@ class StorageService {
         .toList();
   }
 
-  /// Downloads GPX bytes for [date]. Max 10 MB. Tries gunzipping first and
-  /// falls back to the raw bytes if that fails — uploads are plain again
-  /// (see [uploadTrack]), but this keeps reading correctly for any track
-  /// that was gzip-uploaded during the brief window compression was live.
+  /// Downloads GPX bytes for [date] and gunzips them. Max 10 MB compressed.
+  /// Falls back to the raw bytes if they aren't valid gzip — either an
+  /// older track uploaded before compression was (re-)added, or a download
+  /// path that already decoded the Content-Encoding transparently — so
+  /// this reads correctly regardless of how the bytes arrived.
   Future<Uint8List?> downloadTrack(DateTime date) async {
     final raw = await _ref(date).getData(10 * 1024 * 1024);
     if (raw == null) return null;
