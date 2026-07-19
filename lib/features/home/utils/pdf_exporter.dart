@@ -97,11 +97,9 @@ class PdfStrings {
   final String notes;
   final String date;
   final String distance;
-  final String avgSpeed;
   final String avgSpeedUnderway;
   final String max;
   final String duration;
-  final String stops;
   final String statistics;
   final String crew;
   final String skipper;
@@ -158,11 +156,9 @@ class PdfStrings {
     required this.notes,
     required this.date,
     required this.distance,
-    required this.avgSpeed,
     required this.avgSpeedUnderway,
     required this.max,
     required this.duration,
-    required this.stops,
     required this.statistics,
     required this.crew,
     required this.skipper,
@@ -744,19 +740,15 @@ pw.Widget _buildStats(DailyStats stats, pw.Font bold, pw.Font regular, PdfString
     return h > 0 ? '${h}h ${m}min' : '${m}min';
   }
 
-  // Each row pairs two stat cards; the right slot is null for a lone card.
+  // Each row pairs two stat cards.
   final rowPairs = [
     (
       (label: strings.distance, value: '${stats.distanceNm.toStringAsFixed(1)} nm'),
-      stats.nStops > 0 ? (label: strings.stops, value: '${stats.nStops}') : null,
-    ),
-    (
-      (label: strings.avgSpeed,          value: '${stats.avgOverGroundKn.toStringAsFixed(1)} kn'),
-      (label: strings.avgSpeedUnderway,  value: '${stats.avgMakingWayKn.toStringAsFixed(1)} kn'),
-    ),
-    (
-      (label: strings.max,      value: '${stats.maxSpeedKn.toStringAsFixed(1)} kn'),
       (label: strings.duration, value: dur(stats.movingDuration)),
+    ),
+    (
+      (label: strings.avgSpeedUnderway, value: '${stats.avgMakingWayKn.toStringAsFixed(1)} kn'),
+      (label: strings.max,              value: '${stats.maxSpeedKn.toStringAsFixed(1)} kn'),
     ),
   ];
 
@@ -768,11 +760,7 @@ pw.Widget _buildStats(DailyStats stats, pw.Font bold, pw.Font regular, PdfString
       children: [
         pw.Expanded(child: _statCard(left.label, left.value, bold, regular)),
         pw.SizedBox(width: 6),
-        pw.Expanded(
-          child: right != null
-              ? _statCard(right.label, right.value, bold, regular)
-              : pw.SizedBox(),
-        ),
+        pw.Expanded(child: _statCard(right.label, right.value, bold, regular)),
       ],
     ));
   }

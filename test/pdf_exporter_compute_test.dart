@@ -107,8 +107,8 @@ void main() {
 
     const strings = PdfStrings(
       voyageLog: 'VOYAGE LOG', notes: 'NOTES', date: 'DATE',
-      distance: 'DISTANCE', avgSpeed: 'AVG SPEED', avgSpeedUnderway: 'AVG UNDERWAY',
-      max: 'MAX', duration: 'DURATION', stops: 'STOPS', statistics: 'STATS',
+      distance: 'DISTANCE', avgSpeedUnderway: 'AVG UNDERWAY',
+      max: 'MAX', duration: 'DURATION', statistics: 'STATS',
       crew: 'CREW', skipper: 'SKIPPER', crewMember: 'CREW', logEntries: 'LOG',
       timeCol: 'Time', courseCol: 'Hdg', windCol: 'Wind', seaCol: 'Sea',
       positionCol: 'Position',
@@ -153,8 +153,8 @@ void main() {
 
     const strings = PdfStrings(
       voyageLog: 'VOYAGE LOG', notes: 'NOTES', date: 'DATE',
-      distance: 'DISTANCE', avgSpeed: 'AVG SPEED', avgSpeedUnderway: 'AVG UNDERWAY',
-      max: 'MAX', duration: 'DURATION', stops: 'STOPS', statistics: 'STATS',
+      distance: 'DISTANCE', avgSpeedUnderway: 'AVG UNDERWAY',
+      max: 'MAX', duration: 'DURATION', statistics: 'STATS',
       crew: 'CREW', skipper: 'SKIPPER', crewMember: 'CREW', logEntries: 'LOG',
       timeCol: 'Time', courseCol: 'Hdg', windCol: 'Wind', seaCol: 'Sea',
       positionCol: 'Position',
@@ -223,8 +223,8 @@ void main() {
 
     const strings = PdfStrings(
       voyageLog: 'VOYAGE LOG', notes: 'NOTES', date: 'DATE',
-      distance: 'DISTANCE', avgSpeed: 'AVG SPEED', avgSpeedUnderway: 'AVG UNDERWAY',
-      max: 'MAX', duration: 'DURATION', stops: 'STOPS', statistics: 'STATS',
+      distance: 'DISTANCE', avgSpeedUnderway: 'AVG UNDERWAY',
+      max: 'MAX', duration: 'DURATION', statistics: 'STATS',
       crew: 'CREW', skipper: 'SKIPPER', crewMember: 'CREW', logEntries: 'LOG',
       timeCol: 'Time', courseCol: 'Hdg', windCol: 'Wind', seaCol: 'Sea',
       positionCol: 'Position',

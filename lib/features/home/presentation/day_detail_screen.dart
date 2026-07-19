@@ -876,9 +876,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(12),
-                  child: statCell(
-                      context,
-                      context.l10n.statAvgSpeed, '${stats.avgOverGroundKn.toStringAsFixed(1)} kn', cs),
+                  child: statCell(context, context.l10n.statDuration,
+                      _formatDuration(stats.movingDuration), cs),
                 ),
               ),
             ],
@@ -903,31 +902,6 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                       child: statCell(
                       context,
                           context.l10n.statMax.toUpperCase(), '${stats.maxSpeedKn.toStringAsFixed(1)} kn', cs),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          // Same two stats the PDF export shows (UNDERWAY/STOPS), kept
-          // consistent with it — moving time excluding stops, plus how many.
-          if (stats.movingDuration > Duration.zero || stats.nStops > 0)
-            Container(
-              decoration: BoxDecoration(border: Border(top: div)),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(border: Border(right: div)),
-                      padding: const EdgeInsets.all(12),
-                      child: statCell(context, context.l10n.statDuration,
-                          _formatDuration(stats.movingDuration), cs),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: statCell(context, context.l10n.statStops,
-                          '${stats.nStops}', cs),
                     ),
                   ),
                 ],
@@ -2960,11 +2934,9 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         notes:         l10n.pdfNotes,
         date:          l10n.pdfDate,
         distance:         l10n.pdfDistance,
-        avgSpeed:         l10n.pdfAvgSpeed,
         avgSpeedUnderway: l10n.pdfAvgSpeedUnderway,
         max:              l10n.pdfMax,
         duration:      l10n.pdfDuration,
-        stops:         l10n.pdfStops,
         statistics:    l10n.pdfStatistics,
         crew:          l10n.pdfCrew,
         skipper:       l10n.pdfSkipper,

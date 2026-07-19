@@ -60,9 +60,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statDistance => 'Distance';
 
   @override
-  String get statAvgSpeed => 'Avg Speed';
-
-  @override
   String get statAvgSpeedUnderway => 'Avg Speed Underway';
 
   @override
@@ -70,9 +67,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get statDuration => 'Underway';
-
-  @override
-  String get statStops => 'Stops';
 
   @override
   String get homeNewDay => 'New Day';
@@ -1404,9 +1398,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pdfDistance => 'DISTANCE';
 
   @override
-  String get pdfAvgSpeed => 'AVG SPEED';
-
-  @override
   String get pdfAvgSpeedUnderway => 'AVG UNDERWAY';
 
   @override
@@ -1414,9 +1405,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pdfDuration => 'UNDERWAY';
-
-  @override
-  String get pdfStops => 'STOPS';
 
   @override
   String get pdfStatistics => 'STATISTICS';

@@ -60,9 +60,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get statDistance => 'Distanz';
 
   @override
-  String get statAvgSpeed => 'Ø Geschwindigkeit';
-
-  @override
   String get statAvgSpeedUnderway => 'Ø Geschwindigkeit in Fahrt';
 
   @override
@@ -70,9 +67,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get statDuration => 'Fahrzeit';
-
-  @override
-  String get statStops => 'Stopps';
 
   @override
   String get homeNewDay => 'Neuer Tag';
@@ -1413,9 +1407,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pdfDistance => 'DISTANZ';
 
   @override
-  String get pdfAvgSpeed => 'Ø FAHRT';
-
-  @override
   String get pdfAvgSpeedUnderway => 'Ø IN FAHRT';
 
   @override
@@ -1423,9 +1414,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get pdfDuration => 'FAHRZEIT';
-
-  @override
-  String get pdfStops => 'STOPPS';
 
   @override
   String get pdfStatistics => 'STATISTIK';

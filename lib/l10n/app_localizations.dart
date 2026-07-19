@@ -200,12 +200,6 @@ abstract class AppLocalizations {
   /// **'Distanz'**
   String get statDistance;
 
-  /// No description provided for @statAvgSpeed.
-  ///
-  /// In de, this message translates to:
-  /// **'Ø Geschwindigkeit'**
-  String get statAvgSpeed;
-
   /// No description provided for @statAvgSpeedUnderway.
   ///
   /// In de, this message translates to:
@@ -223,12 +217,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Fahrzeit'**
   String get statDuration;
-
-  /// No description provided for @statStops.
-  ///
-  /// In de, this message translates to:
-  /// **'Stopps'**
-  String get statStops;
 
   /// No description provided for @homeNewDay.
   ///
@@ -2690,12 +2678,6 @@ abstract class AppLocalizations {
   /// **'DISTANZ'**
   String get pdfDistance;
 
-  /// No description provided for @pdfAvgSpeed.
-  ///
-  /// In de, this message translates to:
-  /// **'Ø FAHRT'**
-  String get pdfAvgSpeed;
-
   /// No description provided for @pdfAvgSpeedUnderway.
   ///
   /// In de, this message translates to:
@@ -2713,12 +2695,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'FAHRZEIT'**
   String get pdfDuration;
-
-  /// No description provided for @pdfStops.
-  ///
-  /// In de, this message translates to:
-  /// **'STOPPS'**
-  String get pdfStops;
 
   /// No description provided for @pdfStatistics.
   ///

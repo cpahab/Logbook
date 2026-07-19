@@ -20,11 +20,9 @@
 
   "statSailingDays": "Tage",
   "statDistance": "Distanz",
-  "statAvgSpeed": "Ø Geschwindigkeit",
   "statAvgSpeedUnderway": "Ø Geschwindigkeit in Fahrt",
   "statMax": "Max",
   "statDuration": "Fahrzeit",
-  "statStops": "Stopps",
 
   "homeNewDay": "Neuer Tag",
   "homeAddEntry": "Eintrag hinzufügen",
@@ -514,11 +512,9 @@
   "pdfNotes": "NOTIZEN",
   "pdfDate": "DATUM",
   "pdfDistance": "DISTANZ",
-  "pdfAvgSpeed": "Ø FAHRT",
   "pdfAvgSpeedUnderway": "Ø IN FAHRT",
   "pdfMax": "MAX",
   "pdfDuration": "FAHRZEIT",
-  "pdfStops": "STOPPS",
   "pdfStatistics": "STATISTIK",
   "pdfCrew": "CREW",
   "pdfSkipper": "SKIPPER",
