@@ -28,6 +28,41 @@ class EmergencyManifestScreen extends StatefulWidget {
 
 class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
   bool _editMode = false;
+  late EmergencyRepository _emergencyRepo;
+  late ThemeProvider _vessel;
+
+  @override
+  void initState() {
+    super.initState();
+    // The live Firestore listeners alone aren't reliable enough here — their
+    // underlying stream can go stale while this device was backgrounded, so
+    // a change made on another device could otherwise sit unseen until a
+    // full app relaunch. Re-checking on every visit to this screen closes
+    // that gap without needing one.
+    context.read<EmergencyRepository>().refreshContacts();
+    context.read<ThemeProvider>().refreshVesselSettings();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _emergencyRepo = context.read<EmergencyRepository>();
+    _vessel = context.read<ThemeProvider>();
+  }
+
+  @override
+  void dispose() {
+    // Safety net: if the user navigates away while still in edit mode
+    // (e.g. via the bottom nav, without tapping the done checkmark), flush
+    // the deferred sync and resume the live listeners here instead — an
+    // edit session that never ends would otherwise defer its sync forever
+    // and leave both listeners permanently paused.
+    if (_editMode) {
+      _emergencyRepo.endEditingAndSync();
+      _vessel.endVesselSafetyEditingAndSync();
+    }
+    super.dispose();
+  }
 
   /// Shows the add-contact dialog and, if confirmed, saves the new contact.
   void _showAddContactDialog() {
@@ -89,7 +124,17 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
               color: _editMode ? cs.primary : cs.onSurfaceVariant,
             ),
             tooltip: _editMode ? l10n.emergencyManifestEditDoneTooltip : l10n.emergencyManifestEditPageTooltip,
-            onPressed: () => setState(() => _editMode = !_editMode),
+            onPressed: () {
+              final enteringEditMode = !_editMode;
+              setState(() => _editMode = enteringEditMode);
+              if (enteringEditMode) {
+                emergency.beginEditing();
+                vessel.beginVesselSafetyEditing();
+              } else {
+                emergency.endEditingAndSync();
+                vessel.endVesselSafetyEditingAndSync();
+              }
+            },
           ),
         ],
       ),

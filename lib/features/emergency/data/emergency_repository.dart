@@ -20,6 +20,14 @@ class EmergencyRepository extends ChangeNotifier {
   FirestoreService? _firestore;
   StreamSubscription<List<Map<String, String>>?>? _contactsSub;
 
+  /// True during an Emergency Manifest edit-mode session — see
+  /// [beginEditing]/[endEditingAndSync]. While true, mutations skip the
+  /// per-call Firestore push (deferred to a single push in
+  /// [endEditingAndSync]) and the live listener is paused, so a concurrent
+  /// edit from another device can't overwrite this device's in-progress,
+  /// not-yet-pushed local changes mid-session.
+  bool _editing = false;
+
   List<EmergencyContact> get contacts => _box.values.toList();
 
   // ── Init ───────────────────────────────────────────────────────────────────
@@ -83,6 +91,34 @@ class EmergencyRepository extends ChangeNotifier {
     await _contactsSub?.cancel();
     _contactsSub = null;
 
+    await _fetchAndReconcile(service, initialSync: initialSync);
+
+    // Real-time listener: apply remote changes while the app is running.
+    // asyncMap (not a raw .listen((remote) async {...})) so a second
+    // snapshot event can't start applying before the first has finished —
+    // Stream.listen does NOT wait for an async callback before delivering
+    // the next event, so two close-together events could otherwise run
+    // _replaceLocalContacts concurrently and race its clear-then-add-each
+    // sequence into duplicated entries. Matches HomeRepository's entries/
+    // roster listeners, which use the same asyncMap pattern.
+    _contactsSub = service.contactsChanges().asyncMap((remote) async {
+      if (_editing) return;
+      if (remote == null) return;
+      // Skip echo from our own push by comparing content.
+      if (_contactsEqual(remote)) return;
+      await _replaceLocalContacts(remote);
+    }).listen((_) {}, onError: (_) {});
+  }
+
+  /// One-shot fetch-and-reconcile against the server: whichever of local vs
+  /// remote is newer wins, exactly as [attachFirestore]'s own initial pull
+  /// does. Used there, and by [refreshContacts] as a fallback for when the
+  /// live listener's underlying stream has gone stale (e.g. the OS
+  /// suspended it while this device was backgrounded) — a real, observed
+  /// gap: a contact added on another device could sit unseen on this one
+  /// until a full app relaunch re-ran this same logic.
+  Future<void> _fetchAndReconcile(FirestoreService service,
+      {bool initialSync = false}) async {
     try {
       if (initialSync) {
         // Only push if this device has locally modified contacts.
@@ -115,14 +151,38 @@ class EmergencyRepository extends ChangeNotifier {
     } catch (_) {
       // Offline — continue with local data.
     }
+  }
 
-    // Real-time listener: apply remote changes while the app is running.
-    _contactsSub = service.contactsChanges().listen((remote) async {
-      if (remote == null) return;
-      // Skip echo from our own push by comparing content.
-      if (_contactsEqual(remote)) return;
-      await _replaceLocalContacts(remote);
-    }, onError: (_) {});
+  /// Re-runs the same fetch-and-reconcile [attachFirestore] does on its
+  /// initial pull, without touching the live listener subscription. Call
+  /// when the Emergency Manifest screen opens: the live listener alone
+  /// isn't reliable enough on its own — its underlying stream can go stale
+  /// while this device was backgrounded — so this gives every screen visit
+  /// a fresh, guaranteed-correct check instead of depending on it.
+  /// No-ops if Firestore isn't attached (offline/local mode).
+  Future<void> refreshContacts() async {
+    final service = _firestore;
+    if (service == null || _editing) return;
+    await _fetchAndReconcile(service);
+  }
+
+  /// Starts a local-only edit session (the Emergency Manifest's edit-mode
+  /// toggle): further add/remove/update calls skip their per-mutation
+  /// Firestore push, and the live listener ignores incoming remote changes,
+  /// until [endEditingAndSync] pushes the session's final result once and
+  /// resumes listening. Narrows the window for a concurrent edit from
+  /// another device to race with this device's in-progress changes down to
+  /// a single push instead of one per keystroke/add/remove.
+  void beginEditing() {
+    _editing = true;
+  }
+
+  /// Ends a session started by [beginEditing]: pushes the current local
+  /// list once and resumes applying remote changes.
+  Future<void> endEditingAndSync() async {
+    _editing = false;
+    _markModified();
+    _syncToFirestore();
   }
 
   /// Switches contacts to a different logbook. [remoteContacts] must already
@@ -152,20 +212,26 @@ class EmergencyRepository extends ChangeNotifier {
     }
     _markModified();
 
-    _contactsSub = service.contactsChanges().listen((remote) async {
+    // See attachFirestore's identical listener for why asyncMap (not a raw
+    // .listen((remote) async {...})) is required here.
+    _contactsSub = service.contactsChanges().asyncMap((remote) async {
+      if (_editing) return;
       if (remote == null) return;
       if (_contactsEqual(remote)) return;
       await _replaceLocalContacts(remote);
-    }, onError: (_) {});
+    }).listen((_) {}, onError: (_) {});
   }
 
   // ── Mutations ──────────────────────────────────────────────────────────────
+  // Each of these pushes to Firestore immediately UNLESS a [beginEditing]
+  // session is active, in which case the push is deferred to that session's
+  // single [endEditingAndSync] call — see its doc comment for why.
 
   /// Adds [contact] locally and pushes the updated list to Firestore.
   Future<void> addContact(EmergencyContact contact) async {
     await _box.add(contact);
     _markModified();
-    _syncToFirestore();
+    if (!_editing) _syncToFirestore();
     notifyListeners();
   }
 
@@ -173,7 +239,7 @@ class EmergencyRepository extends ChangeNotifier {
   Future<void> removeContact(EmergencyContact contact) async {
     await contact.delete();
     _markModified();
-    _syncToFirestore();
+    if (!_editing) _syncToFirestore();
     notifyListeners();
   }
 
@@ -182,7 +248,7 @@ class EmergencyRepository extends ChangeNotifier {
   Future<void> updateContact(int key, EmergencyContact updated) async {
     await _box.put(key, updated);
     _markModified();
-    _syncToFirestore();
+    if (!_editing) _syncToFirestore();
     notifyListeners();
   }
 
@@ -198,17 +264,31 @@ class EmergencyRepository extends ChangeNotifier {
         contacts.map((c) => {'name': c.name, 'role': c.role, 'phone': c.phone}).toList(),
       );
 
+  /// Serializes [_replaceLocalContacts] calls — its clear-then-add-each
+  /// sequence isn't atomic, so two independent call paths (the live
+  /// listener and [refreshContacts]'s one-shot fetch both apply remote
+  /// data) overlapping could otherwise interleave and duplicate entries the
+  /// same way two concurrent listener events could before that was fixed
+  /// with asyncMap. Chaining onto this Future — rather than a bool guard —
+  /// makes sure every call still eventually runs against fresh data instead
+  /// of being dropped while one is already in flight.
+  Future<void> _replaceChain = Future.value();
+
   /// Replaces the local Hive box content with [remote] contacts.
-  Future<void> _replaceLocalContacts(List<Map<String, String>> remote) async {
-    await _box.clear();
-    for (final c in remote) {
-      await _box.add(EmergencyContact(
-        name:  c['name']  ?? '',
-        role:  c['role']  ?? '',
-        phone: c['phone'] ?? '',
-      ));
-    }
-    notifyListeners();
+  Future<void> _replaceLocalContacts(List<Map<String, String>> remote) {
+    final next = _replaceChain.then((_) async {
+      await _box.clear();
+      for (final c in remote) {
+        await _box.add(EmergencyContact(
+          name:  c['name']  ?? '',
+          role:  c['role']  ?? '',
+          phone: c['phone'] ?? '',
+        ));
+      }
+      notifyListeners();
+    });
+    _replaceChain = next;
+    return next;
   }
 
   /// Replaces all local contacts with [parsed] (from a parsed backup

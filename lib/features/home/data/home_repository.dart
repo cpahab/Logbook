@@ -297,51 +297,37 @@ class HomeRepository extends ChangeNotifier {
     await _entrySub?.cancel();
     _entrySub = null;
 
-    try {
-      final lastSync = _lastSyncAt;
+    if (initialSync) {
+      try {
+        // ── Step 0: retry any deletes that never got confirmed pushed ────────
+        // Must run before Step 2's pull — otherwise a pull could re-fetch the
+        // still-undeleted server doc and resurrect it locally before this
+        // device's own tombstone has a chance to land.
+        for (final date in _pendingDeleteDates().toList()) {
+          await _pushPendingDelete(date);
+        }
 
-      // ── Step 0: retry any deletes that never got confirmed pushed ──────────
-      // Must run before Step 2's pull — otherwise a pull could re-fetch the
-      // still-undeleted server doc and resurrect it locally before this
-      // device's own tombstone has a chance to land.
-      for (final date in _pendingDeleteDates().toList()) {
-        await _pushPendingDelete(date);
-      }
-
-      // ── Step 1: push offline edits ────────────────────────────────────────
-      if (initialSync) {
+        // ── Step 1: push every local entry ───────────────────────────────────
         for (final e in _entries.values) {
           await service.saveEntry(e);
         }
-      } else {
-        for (final e in _entries.values) {
-          final editAt = _localEditTime(e.date);
-          if (editAt != null && editAt.isAfter(lastSync)) {
-            await service.saveEntry(e);
-          }
-        }
-      }
 
-      // ── Step 2: pull remote changes ───────────────────────────────────────
-      final List<DayEntry> remote;
-      if (initialSync) {
+        // ── Step 2: pull remote changes ──────────────────────────────────────
         // Conservative first sync: pull only entries absent locally to avoid
         // overwriting any data already present on this device.
-        remote = await service.fetchMissingEntries(_entries.keys.toSet());
-      } else {
-        // Incremental: only entries updated on the server since our last pull.
-        remote = await service.fetchEntriesUpdatedSince(lastSync);
-      }
+        final remote = await service.fetchMissingEntries(_entries.keys.toSet());
+        var changed = false;
+        for (final e in remote) {
+          if (await applyIncomingEntry(e)) changed = true;
+        }
+        if (changed) notifyListeners();
 
-      var changed = false;
-      for (final e in remote) {
-        if (await applyIncomingEntry(e)) changed = true;
+        _setLastSyncAt();
+      } catch (_) {
+        // Offline or timeout — local data remains available.
       }
-      if (changed) notifyListeners();
-
-      _setLastSyncAt();
-    } catch (_) {
-      // Offline or timeout — local data remains available.
+    } else {
+      await _refreshEntriesIncremental(service);
     }
 
     // ── Step 3: real-time listener ────────────────────────────────────────────
@@ -365,6 +351,55 @@ class HomeRepository extends ChangeNotifier {
         .rosterChanges()
         .asyncMap(_applyRemoteRoster)
         .listen((_) {}, onError: (_) {});
+  }
+
+  /// The incremental (non-initial-sync) push-then-pull [attachFirestore]
+  /// itself runs: push only entries locally edited since the last sync,
+  /// pull only entries the server says changed since then, apply, and stamp
+  /// the new sync time. Deliberately NOT [forceSync] — that unconditionally
+  /// pushes every local entry and re-downloads everything, which is the
+  /// right tool for a manual "something's wrong, force a full resync"
+  /// action but far too expensive to run on every screen visit.
+  Future<void> _refreshEntriesIncremental(FirestoreService service) async {
+    try {
+      final lastSync = _lastSyncAt;
+
+      for (final date in _pendingDeleteDates().toList()) {
+        await _pushPendingDelete(date);
+      }
+
+      for (final e in _entries.values) {
+        final editAt = _localEditTime(e.date);
+        if (editAt != null && editAt.isAfter(lastSync)) {
+          await service.saveEntry(e);
+        }
+      }
+
+      final remote = await service.fetchEntriesUpdatedSince(lastSync);
+      var changed = false;
+      for (final e in remote) {
+        if (await applyIncomingEntry(e)) changed = true;
+      }
+      if (changed) notifyListeners();
+
+      _setLastSyncAt();
+    } catch (_) {
+      // Offline or timeout — local data remains available.
+    }
+  }
+
+  /// Re-runs the same incremental push-then-pull [attachFirestore] does on
+  /// every non-initial sync, without touching the live listener
+  /// subscriptions. Call when the Home screen opens: the live listener
+  /// alone isn't reliable enough on its own — its underlying stream can go
+  /// stale while this device was backgrounded — so this gives every screen
+  /// visit a fresh, lightweight check instead of depending on it. Mirrors
+  /// EmergencyRepository.refreshContacts/ThemeProvider.refreshVesselSettings.
+  /// No-ops if Firestore isn't attached (offline/local mode).
+  Future<void> refreshEntries() async {
+    final service = _firestore;
+    if (service == null) return;
+    await _refreshEntriesIncremental(service);
   }
 
   /// Applies one incoming entry (from any fetch/pull path — initial sync,

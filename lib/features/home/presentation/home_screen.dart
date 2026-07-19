@@ -48,6 +48,12 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) GpsConsentService.requestIfNeeded(context);
     });
+    // The live entries listener alone isn't reliable enough on its own —
+    // its underlying stream can go stale while this device was
+    // backgrounded — so give every visit to this screen a fresh,
+    // lightweight incremental check too. Mirrors EmergencyRepository/
+    // ThemeProvider's identical refresh-on-screen-open methods.
+    context.read<HomeRepository>().refreshEntries();
   }
 
   @override

@@ -88,6 +88,16 @@ class ThemeProvider extends ChangeNotifier {
   StreamSubscription<Map<String, String>?>? _settingsSub;
   StreamSubscription<Map<String, bool>?>?   _uiSub;
 
+  /// True during the Emergency Manifest's edit-mode session — see
+  /// [beginVesselSafetyEditing]/[endVesselSafetyEditingAndSync]. While true,
+  /// every [_pushSettings]/[_pushSettingsDebounced] call is deferred to a
+  /// single push at the end of the session, and the live settings listener
+  /// ignores incoming remote changes — same rationale as
+  /// EmergencyRepository's identical `_editing` guard: narrows a concurrent
+  /// edit from another device racing this device's in-progress, not-yet-
+  /// pushed changes down to a single push instead of one per keystroke/field.
+  bool _editingVesselSafety = false;
+
   ThemeMode _mode = ThemeMode.system;
   Locale _locale = const Locale('de');
   StationaryMode _filterMode        = StationaryMode.speed;
@@ -719,6 +729,53 @@ class ThemeProvider extends ChangeNotifier {
     await _settingsSub?.cancel();
     _settingsSub = null;
 
+    await _fetchAndReconcileSettings(service, initialSync: initialSync);
+
+    // Real-time listener: apply remote changes while the app is running.
+    // Skip the echo that comes back from our own pushes by comparing values.
+    _settingsSub = service.settingsChanges().listen((remote) {
+      if (_editingVesselSafety) return;
+      if (remote == null) return;
+      if (_mapsEqual(_toSettingsMap(), remote)) return;
+      _applyRemoteSettings(remote);
+    }, onError: (_) {});
+
+    // ── UI state (month expansion) sync ───────────────────────────────────────
+    await _uiSub?.cancel();
+    _uiSub = null;
+    try {
+      final (:data, :updatedAt) = await service.fetchUiStateWithMeta();
+      if (data == null) {
+        final local = _monthExpandedMap;
+        if (local.isNotEmpty) await service.saveUiState(local);
+      } else {
+        final localMod = _uiModifiedAt;
+        final remoteIsNewer = localMod == null ||
+            (updatedAt != null && updatedAt.isAfter(localMod));
+        if (remoteIsNewer) {
+          _applyRemoteUiState(data);
+        } else {
+          await service.saveUiState(_monthExpandedMap);
+        }
+      }
+    } catch (_) {}
+
+    _uiSub = service.uiStateChanges().listen((remote) {
+      if (remote == null) return;
+      _applyRemoteUiState(remote);
+    }, onError: (_) {});
+  }
+
+  /// One-shot fetch-and-reconcile against the server: whichever of local vs
+  /// remote is newer wins, exactly as [attachFirestore]'s own initial pull
+  /// does. Used there, and by [refreshVesselSettings] as a fallback for when
+  /// the live listener's underlying stream has gone stale (e.g. the OS
+  /// suspended it while this device was backgrounded) — the same real,
+  /// observed gap EmergencyRepository's identical helper documents: a
+  /// change made on another device could sit unseen on this one until a
+  /// full app relaunch re-ran this same logic.
+  Future<void> _fetchAndReconcileSettings(FirestoreService service,
+      {bool initialSync = false}) async {
     try {
       if (initialSync) {
         // Only push if the user has actually modified settings on this device.
@@ -752,39 +809,20 @@ class ThemeProvider extends ChangeNotifier {
     } catch (_) {
       // Offline — continue with local data.
     }
+  }
 
-    // Real-time listener: apply remote changes while the app is running.
-    // Skip the echo that comes back from our own pushes by comparing values.
-    _settingsSub = service.settingsChanges().listen((remote) {
-      if (remote == null) return;
-      if (_mapsEqual(_toSettingsMap(), remote)) return;
-      _applyRemoteSettings(remote);
-    }, onError: (_) {});
-
-    // ── UI state (month expansion) sync ───────────────────────────────────────
-    await _uiSub?.cancel();
-    _uiSub = null;
-    try {
-      final (:data, :updatedAt) = await service.fetchUiStateWithMeta();
-      if (data == null) {
-        final local = _monthExpandedMap;
-        if (local.isNotEmpty) await service.saveUiState(local);
-      } else {
-        final localMod = _uiModifiedAt;
-        final remoteIsNewer = localMod == null ||
-            (updatedAt != null && updatedAt.isAfter(localMod));
-        if (remoteIsNewer) {
-          _applyRemoteUiState(data);
-        } else {
-          await service.saveUiState(_monthExpandedMap);
-        }
-      }
-    } catch (_) {}
-
-    _uiSub = service.uiStateChanges().listen((remote) {
-      if (remote == null) return;
-      _applyRemoteUiState(remote);
-    }, onError: (_) {});
+  /// Re-runs the same fetch-and-reconcile [attachFirestore] does on its
+  /// initial pull, without touching the live listener subscription. Call
+  /// when the Emergency Manifest screen opens: the live listener alone
+  /// isn't reliable enough on its own — its underlying stream can go stale
+  /// while this device was backgrounded — so this gives every screen visit
+  /// a fresh, guaranteed-correct check instead of depending on it.
+  /// No-ops if Firestore isn't attached (offline/local mode) or an edit
+  /// session is in progress.
+  Future<void> refreshVesselSettings() async {
+    final service = _firestore;
+    if (service == null || _editingVesselSafety) return;
+    await _fetchAndReconcileSettings(service);
   }
 
   /// Switches vessel/VHF settings to a different logbook. [remoteData] must
@@ -830,6 +868,7 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
 
     _settingsSub = service.settingsChanges().listen((remote) {
+      if (_editingVesselSafety) return;
       if (remote == null) return;
       if (_mapsEqual(_toSettingsMap(), remote)) return;
       _applyRemoteSettings(remote);
@@ -878,6 +917,7 @@ class ThemeProvider extends ChangeNotifier {
 
   void _pushSettings() {
     _markSettingsModified();
+    if (_editingVesselSafety) return;
     _firestore?.saveSettings(_toSettingsMap()).catchError((_) {});
   }
 
@@ -889,9 +929,26 @@ class ThemeProvider extends ChangeNotifier {
   // right away) but coalesces the network write.
   void _pushSettingsDebounced() {
     _markSettingsModified();
+    if (_editingVesselSafety) return;
     _settingsPushTimer?.cancel();
     _settingsPushTimer = Timer(const Duration(milliseconds: 800),
         () => _firestore?.saveSettings(_toSettingsMap()).catchError((_) {}));
+  }
+
+  /// Starts a local-only edit session for the Emergency Manifest's vessel-
+  /// safety-info/VHF-frequency cards — see [_editingVesselSafety]'s doc
+  /// comment. Call [endVesselSafetyEditingAndSync] to push the session's
+  /// final result once and resume listening.
+  void beginVesselSafetyEditing() {
+    _editingVesselSafety = true;
+  }
+
+  /// Ends a session started by [beginVesselSafetyEditing]: pushes the
+  /// current settings once and resumes applying remote changes.
+  void endVesselSafetyEditingAndSync() {
+    _editingVesselSafety = false;
+    _markSettingsModified();
+    _firestore?.saveSettings(_toSettingsMap()).catchError((_) {});
   }
 
   /// Applies a remote settings map [r] field-by-field, only touching fields
