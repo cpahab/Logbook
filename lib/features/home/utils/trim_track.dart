@@ -543,34 +543,39 @@ class TrimResult {
       anchors.where((a) => a.kind == AnchorKind.end).firstOrNull;
 }
 
-// ── Pass 0 — pre-boarding prefix ──────────────────────────────────────────────
+// ── Pass 0 — GPS cold-start drift prefix ──────────────────────────────────────
 
 /// How soon after a track's first raw fix its first stop must begin to count
-/// as "getting to the boat" rather than a genuine early sailing stop — see
-/// [_trimPreBoardingPrefix].
-const _preBoardingWindowMinutes = 30;
+/// as GPS cold-start drift rather than a genuine early sailing stop — see
+/// [_trimColdStartDriftPrefix].
+const _coldStartDriftWindowMinutes = 30;
 
-/// A day's track that starts moving immediately and only settles into its
-/// first stop a few minutes in is very likely recording the user's approach
-/// to the boat (walking from a car park/station, or driving there) rather
-/// than the vessel's own motion — a real device/app start mid-day, not a
-/// continuation of an overnight passage already under way (which instead
-/// begins already sitting at anchor, right at the previous day's midnight
-/// rollover). Confirmed against real logs: the 18 Jul 2026 Idefix log's
-/// track starts moving at walking-ish pace through a marina town and only
-/// reaches its actual berth (a genuine, later-classified "mid" stop) after
-/// ~6 minutes — rendering that lead-in as track data draws a long, straight,
-/// nonsensical line cutting across land before the boat's real position.
+/// The track is recorded by a boat-mounted GPS/sail data processor, not a
+/// phone carried to the boat — so a day's track that starts moving
+/// immediately and only settles into its first stop a few minutes in isn't
+/// recording anyone's approach to the boat. It's the receiver's own
+/// cold-start convergence: immediately after power-on, before it has
+/// acquired a solid satellite lock, a GPS receiver can output a coarse
+/// position that drifts — sometimes wandering hundreds of metres to
+/// kilometres off, occasionally crossing land entirely — before settling on
+/// the boat's true, stationary position. [_flagColdStart] already handles
+/// this pattern, but only for fixes already inside a detected stop; when the
+/// drifting fixes themselves get classified "moving" (as in the 18 Jul 2026
+/// Idefix log, whose track wanders across town for ~6 minutes before
+/// reaching its actual berth), no stop is found there at all and cold-start
+/// detection never gets a chance to run, so the drift renders as a long,
+/// straight, nonsensical line cutting across land before the boat's real
+/// position.
 ///
 /// Runs a throwaway trial pass of the full pipeline purely to locate the
 /// first stop (if any); only trims when that stop begins within
-/// [_preBoardingWindowMinutes] of the track's very first raw fix — a stop
+/// [_coldStartDriftWindowMinutes] of the track's very first raw fix — a stop
 /// hours into a track (e.g. a mid-voyage lunch anchorage) is genuine sailing
 /// data and must never be discarded just because it happens to be the first
 /// stop found (see 03 May 2026: first stop is ~5 h in). A track whose first
 /// stop already begins at/near index 0 needs no trimming at all — it's
 /// already a normal "start" stop.
-List<TrackPoint> _trimPreBoardingPrefix(
+List<TrackPoint> _trimColdStartDriftPrefix(
   List<TrackPoint> points,
   FilterSettings settings,
 ) {
@@ -589,7 +594,7 @@ List<TrackPoint> _trimPreBoardingPrefix(
 
   final elapsedMinutes =
       points[first.startIdx].time.difference(points.first.time).inSeconds / 60.0;
-  if (elapsedMinutes > _preBoardingWindowMinutes) return points;
+  if (elapsedMinutes > _coldStartDriftWindowMinutes) return points;
 
   return points.sublist(first.startIdx);
 }
@@ -602,7 +607,7 @@ TrimResult trimTrackWithAnchors(
   List<TrackPoint> rawPoints, {
   FilterSettings settings = const FilterSettings(),
 }) {
-  final points = _trimPreBoardingPrefix(rawPoints, settings);
+  final points = _trimColdStartDriftPrefix(rawPoints, settings);
   if (points.length < 4) return TrimResult(points: points);
 
   final fixes = points.map(_Fix.new).toList();
@@ -1161,7 +1166,7 @@ DisplayModel buildDisplayModel(
   List<TrackPoint> rawPoints, {
   FilterSettings settings = const FilterSettings(),
 }) {
-  final points = _trimPreBoardingPrefix(rawPoints, settings);
+  final points = _trimColdStartDriftPrefix(rawPoints, settings);
   if (points.length < 4) return const DisplayModel();
 
   final fixes = points.map(_Fix.new).toList();

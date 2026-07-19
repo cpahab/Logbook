@@ -54,8 +54,8 @@ void main() {
     test('03 May 2026 — a genuine ~5 h stop (33.6 m max spread, just over '
         'the gate) is now caught, plus a shorter one', () {
       final display = _displayFor('03 May 2026');
-      // The ~5 h stop now starts the track (a brief walk/drive-to-boat
-      // prefix before it is trimmed by _trimPreBoardingPrefix — see
+      // The ~5 h stop now starts the track (a brief GPS cold-start drift
+      // prefix before it is trimmed by _trimColdStartDriftPrefix — see
       // departure_arrival_time_test.dart), so it's classified "start", not
       // "mid" — this is the SAME wide-scatter acceptance this test was
       // written for, just now correctly attributed to the right stop kind.

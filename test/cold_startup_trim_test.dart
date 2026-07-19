@@ -1,17 +1,20 @@
-// Regression coverage for _trimPreBoardingPrefix (trim_track.dart): a day's
+// Regression coverage for _trimColdStartDriftPrefix (trim_track.dart): the
+// track is recorded by a boat-mounted GPS/sail data processor, so a day's
 // track that starts moving immediately and only settles into its first stop
-// a few minutes in is very likely recording the user's approach to the boat
-// (walking from a car park/station, or driving there), not the vessel's own
-// motion. That lead-in is trimmed whenever the first stop begins within
-// _preBoardingWindowMinutes of the track's first raw fix — turning what
-// would otherwise render as a long, nonsensical straight line cutting across
-// land into a properly classified "start" stop. A stop hours into a track
-// (a mid-voyage anchorage) is real sailing data and is never trimmed just
-// for being the first stop found — see the 03 May 2026 case below.
+// a few minutes in isn't recording anyone's approach to the boat — it's the
+// receiver's own cold-start convergence drift (a coarse position that
+// wanders, sometimes across land, before locking onto the boat's true,
+// stationary position). That lead-in is trimmed whenever the first stop
+// begins within _coldStartDriftWindowMinutes of the track's first raw fix —
+// turning what would otherwise render as a long, nonsensical straight line
+// cutting across land into a properly classified "start" stop. A stop hours
+// into a track (a mid-voyage anchorage) is real sailing data and is never
+// trimmed just for being the first stop found — see the 03 May 2026 case
+// below.
 //
 // An overnight continuation (starts at local midnight, already sitting at
 // anchor) needs no trimming at all: its first stop already begins at index
-// 0, so _trimPreBoardingPrefix is a no-op for it.
+// 0, so _trimColdStartDriftPrefix is a no-op for it.
 
 import 'dart:io';
 
@@ -20,9 +23,10 @@ import 'package:logbook/features/home/utils/gpx_parser.dart';
 import 'package:logbook/features/home/utils/trim_track.dart';
 
 void main() {
-  group('pre-boarding prefix trim', () {
-    test('18 Jul 2026 — same-day start: ~2 min walk-to-boat prefix trimmed, '
-        'the ~31 min dock stop that follows is now a validated start stop', () {
+  group('GPS cold-start drift prefix trim', () {
+    test('18 Jul 2026 — same-day start: ~2 min GPS cold-start drift prefix '
+        'trimmed, the ~31 min dock stop that follows is now a validated '
+        'start stop', () {
       final points = GpxParser()
           .parseBytes(File('test/fixtures/gpx/Logbook-Idefix-18 Jul 2026.gpx')
               .readAsBytesSync())
@@ -37,8 +41,8 @@ void main() {
               "longer masks the day's real shape");
     });
 
-    test('03 May 2026 — same-day start: ~2-3 min walk-to-boat prefix '
-        'trimmed, the ~4.9 h stop that follows is now the start stop '
+    test('03 May 2026 — same-day start: ~2-3 min GPS cold-start drift '
+        'prefix trimmed, the ~4.9 h stop that follows is now the start stop '
         '(was misclassified "mid" before this fix)', () {
       final points = GpxParser()
           .parseBytes(File('test/fixtures/gpx/Logbook-Idefix-03 May 2026.gpx')
@@ -58,7 +62,7 @@ void main() {
     // For these three, the meaningful signal that nothing was trimmed is the
     // exact departure time, unchanged from departure_arrival_time_test.dart's
     // already-validated results — their first stop already begins at index
-    // 0 (starts at local midnight), so _trimPreBoardingPrefix never engages.
+    // 0 (starts at local midnight), so _trimColdStartDriftPrefix never engages.
     test('26 Sep 2024 — overnight continuation (starts at local midnight): '
         'not trimmed at all', () {
       final points = GpxParser()
