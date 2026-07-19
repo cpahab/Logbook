@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -19,11 +20,17 @@ class StorageService {
   // Write
   // ------------------------------------------------------------------
 
-  /// Uploads (or overwrites) the raw GPX file for [date].
+  /// Uploads (or overwrites) the GPX file for [date], gzip-compressed —
+  /// GPX's per-point XML tags are verbose relative to the actual lat/lon/
+  /// time payload, so this meaningfully shrinks upload size (and every
+  /// subsequent download) for longer tracks.
   Future<void> uploadTrack(DateTime date, Uint8List bytes) =>
       _ref(date).putData(
-        bytes,
-        SettableMetadata(contentType: 'application/gpx+xml'),
+        Uint8List.fromList(gzip.encode(bytes)),
+        SettableMetadata(
+          contentType: 'application/gpx+xml',
+          contentEncoding: 'gzip',
+        ),
       );
 
   /// Deletes the GPX file for [date].
@@ -44,9 +51,20 @@ class StorageService {
         .toList();
   }
 
-  /// Downloads raw GPX bytes for [date]. Max 10 MB.
-  Future<Uint8List?> downloadTrack(DateTime date) =>
-      _ref(date).getData(10 * 1024 * 1024);
+  /// Downloads GPX bytes for [date] and gunzips them. Max 10 MB compressed.
+  /// Falls back to the raw bytes if they aren't valid gzip — either an
+  /// older track uploaded before compression was added, or a download
+  /// path that already decoded the Content-Encoding transparently — so
+  /// this reads correctly regardless of how the bytes arrived.
+  Future<Uint8List?> downloadTrack(DateTime date) async {
+    final raw = await _ref(date).getData(10 * 1024 * 1024);
+    if (raw == null) return null;
+    try {
+      return Uint8List.fromList(gzip.decode(raw));
+    } catch (_) {
+      return raw;
+    }
+  }
 
   // ------------------------------------------------------------------
   // Bulk delete
