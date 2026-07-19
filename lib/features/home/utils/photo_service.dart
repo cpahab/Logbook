@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -30,6 +31,36 @@ class PhotoService {
   static String _cacheFilename(String storagePath) =>
       storagePath.split('/').last;
 
+  /// Decodes just enough of [bytes] to read its pixel dimensions, without
+  /// pulling in a whole extra image-processing dependency for it.
+  static Future<(int width, int height)> _decodeDimensions(
+      Uint8List bytes) async {
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final size = (frame.image.width, frame.image.height);
+    frame.image.dispose();
+    codec.dispose();
+    return size;
+  }
+
+  /// [flutter_image_compress]'s `minWidth`/`minHeight` aren't a "max long
+  /// side" cap on their own: it scales down by
+  /// `max(1, min(srcW/minWidth, srcH/minHeight))`, so passing the same
+  /// value for both (as this used to) only bounds whichever side is
+  /// relatively shorter — for a 4:3 landscape photo, the long side actually
+  /// overshoots to ~1.33x [_maxSide] (~1.8x the intended pixel count).
+  /// Scaling [minWidth]/[minHeight] here to [srcW]/[srcH]'s own aspect
+  /// ratio makes both scale factors equal, so the long side lands on
+  /// exactly [_maxSide] and the short side scales proportionally — while
+  /// still leaving already-smaller images untouched, since the package
+  /// clamps to `max(1, ...)` regardless.
+  static (int minWidth, int minHeight) _targetSize(int srcW, int srcH) {
+    if (srcW >= srcH) {
+      return (_maxSide, (_maxSide * srcH / srcW).round());
+    }
+    return ((_maxSide * srcW / srcH).round(), _maxSide);
+  }
+
   /// Picks images, compresses them (max 1920 px, JPEG 85 %), caches locally
   /// and uploads to Firebase Storage under the logbook's namespace.
   /// Returns the Storage paths of successes.
@@ -58,10 +89,21 @@ class PhotoService {
       final id = '${DateTime.now().millisecondsSinceEpoch}';
       final storagePath = 'logbooks/$logbookId/photos/$dateStr/$id.jpg';
       try {
+        // Falls back to capping both dimensions at _maxSide directly (the
+        // previous, imprecise behavior) if the source can't be decoded for
+        // its dimensions — still produces a usable, just not perfectly
+        // long-side-capped, photo rather than losing it entirely.
+        var minWidth = _maxSide;
+        var minHeight = _maxSide;
+        try {
+          final (srcW, srcH) = await _decodeDimensions(srcBytes);
+          (minWidth, minHeight) = _targetSize(srcW, srcH);
+        } catch (_) {}
+
         final compressed = await FlutterImageCompress.compressWithList(
           srcBytes,
-          minWidth: _maxSide,
-          minHeight: _maxSide,
+          minWidth: minWidth,
+          minHeight: minHeight,
           quality: _jpegQuality,
           format: CompressFormat.jpeg,
           keepExif: false,
