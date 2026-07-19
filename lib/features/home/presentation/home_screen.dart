@@ -14,6 +14,7 @@ import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../utils/pdf_exporter.dart';
 import '../utils/photo_service.dart';
+import '../utils/trim_track.dart' show TimePrecision;
 import '../../tracks/utils/track_computation_cache.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/date_range_picker.dart';
@@ -302,6 +303,10 @@ class _HomeScreenState extends State<HomeScreen> {
           stats: stats,
           trackPoints: trackPoints,
           photoBytes: photoBytes,
+          departureTime:      cached?.display.departureTime,
+          departurePrecision: cached?.display.departurePrecision ?? TimePrecision.unknown,
+          arrivalTime:        cached?.display.arrivalTime,
+          arrivalPrecision:   cached?.display.arrivalPrecision ?? TimePrecision.unknown,
         ));
       }
 
@@ -336,9 +341,11 @@ class _HomeScreenState extends State<HomeScreen> {
         keelLabel:        l10n.entryDialogKeelLabel,
         keelDownLabel:    l10n.vesselKeelDown,
         keelUpLabel:      l10n.vesselKeelUp,
-        passageToTemplate:     l10n.pdfPassageTo('\u0000'),
-        departureFromTemplate: l10n.pdfDepartureFrom('\u0000'),
-        pageOfTemplate:        l10n.pdfPageOf(-1, -2),
+        passageToTemplate:       l10n.pdfPassageTo('\u0000'),
+        departureFromTemplate:   l10n.pdfDepartureFrom('\u0000'),
+        departureFromAtTemplate: l10n.pdfDepartureFromAt('\u0000', '\u0000'),
+        arrivalAtTemplate:       l10n.pdfArrivalAt('\u0000'),
+        pageOfTemplate:          l10n.pdfPageOf(-1, -2),
       );
 
       final bytes = await buildRangeVoyagePdf(

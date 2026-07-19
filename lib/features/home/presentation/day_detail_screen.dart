@@ -2942,13 +2942,14 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     showProgressSnackBar(context, l10n.dayExportPdfInProgress);
 
     try {
-      final filteredPoints = track != null
+      final display = track != null
           ? TrackComputationCache.get(
               day: track.day,
               sourcePoints: track.points,
               settings: p.filterSettings,
-            ).display.allPoints()
-          : const <TrackPoint>[];
+            ).display
+          : null;
+      final filteredPoints = display?.allPoints() ?? const <TrackPoint>[];
       final photoBytes = <Uint8List>[];
       for (final path in entry.photos) {
         final file = await PhotoService.localFile(path);
@@ -2985,18 +2986,24 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         keelLabel:     l10n.entryDialogKeelLabel,
         keelDownLabel: l10n.vesselKeelDown,
         keelUpLabel:   l10n.vesselKeelUp,
-        passageToTemplate:     l10n.pdfPassageTo('\u0000'),
-        departureFromTemplate: l10n.pdfDepartureFrom('\u0000'),
-        pageOfTemplate:        l10n.pdfPageOf(-1, -2),
+        passageToTemplate:       l10n.pdfPassageTo('\u0000'),
+        departureFromTemplate:   l10n.pdfDepartureFrom('\u0000'),
+        departureFromAtTemplate: l10n.pdfDepartureFromAt('\u0000', '\u0000'),
+        arrivalAtTemplate:       l10n.pdfArrivalAt('\u0000'),
+        pageOfTemplate:          l10n.pdfPageOf(-1, -2),
       );
       final bytes = await buildVoyagePdf(
-        entry:       entry,
-        stats:       stats,
-        vesselName:  p.vesselName,
-        strings:     pdfStrings,
-        equipment:   p.vesselEquipment,
-        trackPoints: filteredPoints,
-        photoBytes:  photoBytes,
+        entry:              entry,
+        stats:              stats,
+        vesselName:         p.vesselName,
+        strings:            pdfStrings,
+        equipment:          p.vesselEquipment,
+        trackPoints:        filteredPoints,
+        photoBytes:         photoBytes,
+        departureTime:      display?.departureTime,
+        departurePrecision: display?.departurePrecision ?? TimePrecision.unknown,
+        arrivalTime:        display?.arrivalTime,
+        arrivalPrecision:   display?.arrivalPrecision ?? TimePrecision.unknown,
       );
 
       messenger.hideCurrentSnackBar();

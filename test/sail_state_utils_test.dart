@@ -154,6 +154,8 @@ void main() {
           keelUpLabel:   'Up',
           passageToTemplate:     'Passage to \u0000',
           departureFromTemplate: 'Departure from \u0000',
+          departureFromAtTemplate: 'Departure from \u0000 at \u0000',
+          arrivalAtTemplate:     'Arrival at \u0000',
           pageOfTemplate:        'Page -1 of -2',
         );
 

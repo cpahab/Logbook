@@ -1479,6 +1479,16 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String pdfDepartureFromAt(String origin, String time) {
+    return 'Abfahrt von $origin um $time';
+  }
+
+  @override
+  String pdfArrivalAt(String time) {
+    return 'Ankunft um $time';
+  }
+
+  @override
   String get pdfLocale => 'de_CH';
 
   @override

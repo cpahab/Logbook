@@ -1470,6 +1470,16 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String pdfDepartureFromAt(String origin, String time) {
+    return 'Departure from $origin at $time';
+  }
+
+  @override
+  String pdfArrivalAt(String time) {
+    return 'Arrival at $time';
+  }
+
+  @override
   String get pdfLocale => 'en_GB';
 
   @override

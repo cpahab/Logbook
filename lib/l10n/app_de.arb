@@ -550,6 +550,19 @@
       "total": { "type": "int" }
     }
   },
+  "pdfDepartureFromAt": "Abfahrt von {origin} um {time}",
+  "@pdfDepartureFromAt": {
+    "placeholders": {
+      "origin": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "pdfArrivalAt": "Ankunft um {time}",
+  "@pdfArrivalAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
   "pdfLocale": "de_CH",
   "pdfGeneratedOn": "Erstellt am",
 

@@ -550,6 +550,19 @@
       "total": { "type": "int" }
     }
   },
+  "pdfDepartureFromAt": "Departure from {origin} at {time}",
+  "@pdfDepartureFromAt": {
+    "placeholders": {
+      "origin": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "pdfArrivalAt": "Arrival at {time}",
+  "@pdfArrivalAt": {
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
   "pdfLocale": "en_GB",
   "pdfGeneratedOn": "Generated on",
 

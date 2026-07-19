@@ -118,6 +118,8 @@ void main() {
       keelLabel: 'Keel', keelDownLabel: 'Down', keelUpLabel: 'Up',
       passageToTemplate: 'Fahrt nach \u0000',
       departureFromTemplate: 'Abfahrt von \u0000',
+      departureFromAtTemplate: 'Abfahrt von \u0000 um \u0000',
+      arrivalAtTemplate: 'Ankunft um \u0000',
       pageOfTemplate: 'Seite -1 von -2',
     );
 
@@ -160,8 +162,10 @@ void main() {
       crewNoteLabel: 'Crew', skipperLabel: 'Skipper',
       oilLabel: 'Engine oil', fuelLabel: 'Fuel',
       keelLabel: 'Keel', keelDownLabel: 'Down', keelUpLabel: 'Up',
-      passageToTemplate: 'Passage to  ',
-      departureFromTemplate: 'Departure from  ',
+      passageToTemplate: 'Passage to \u0000',
+      departureFromTemplate: 'Departure from \u0000',
+      departureFromAtTemplate: 'Departure from \u0000 at \u0000',
+      arrivalAtTemplate: 'Arrival at \u0000',
       pageOfTemplate: 'Page -1 of -2',
     );
 
@@ -228,8 +232,10 @@ void main() {
       crewNoteLabel: 'Crew', skipperLabel: 'Skipper',
       oilLabel: 'Engine oil', fuelLabel: 'Fuel',
       keelLabel: 'Keel', keelDownLabel: 'Down', keelUpLabel: 'Up',
-      passageToTemplate: 'Passage to  ',
-      departureFromTemplate: 'Departure from  ',
+      passageToTemplate: 'Passage to \u0000',
+      departureFromTemplate: 'Departure from \u0000',
+      departureFromAtTemplate: 'Departure from \u0000 at \u0000',
+      arrivalAtTemplate: 'Arrival at \u0000',
       pageOfTemplate: 'Page -1 of -2',
     );
 

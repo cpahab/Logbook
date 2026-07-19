@@ -2810,6 +2810,18 @@ abstract class AppLocalizations {
   /// **'Seite {page} von {total}'**
   String pdfPageOf(int page, int total);
 
+  /// No description provided for @pdfDepartureFromAt.
+  ///
+  /// In de, this message translates to:
+  /// **'Abfahrt von {origin} um {time}'**
+  String pdfDepartureFromAt(String origin, String time);
+
+  /// No description provided for @pdfArrivalAt.
+  ///
+  /// In de, this message translates to:
+  /// **'Ankunft um {time}'**
+  String pdfArrivalAt(String time);
+
   /// No description provided for @pdfLocale.
   ///
   /// In de, this message translates to:

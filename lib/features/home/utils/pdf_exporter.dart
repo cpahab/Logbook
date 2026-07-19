@@ -24,6 +24,7 @@ import '../domain/vessel_equipment.dart';
 import 'compute_daily_stats.dart';
 import 'sail_state_utils.dart';
 import 'track_correlation.dart';
+import 'trim_track.dart' show TimePrecision;
 
 /// Returns true for codepoints that NotoSans can't render but NotoEmoji can
 /// — used to split free-text (which may contain emoji) into runs so each
@@ -139,6 +140,13 @@ class PdfStrings {
   /// Same trick as [passageToTemplate] for "Departure from {origin}".
   final String departureFromTemplate;
 
+  /// Same trick as [pageOfTemplate] (two sentinel placeholders instead
+  /// of one) for "Departure from {origin} at {time}".
+  final String departureFromAtTemplate;
+
+  /// Same trick as [passageToTemplate] for "Arrival at {time}".
+  final String arrivalAtTemplate;
+
   /// Same trick as [passageToTemplate] for "Page {page} of {total}", built
   /// with sentinel values l10n.pdfPageOf(-1, -2) (real page/total are
   /// always positive, so -1/-2 can't collide) -- substitute with
@@ -178,6 +186,8 @@ class PdfStrings {
     required this.keelUpLabel,
     required this.passageToTemplate,
     required this.departureFromTemplate,
+    required this.departureFromAtTemplate,
+    required this.arrivalAtTemplate,
     required this.pageOfTemplate,
   });
 }
@@ -204,6 +214,10 @@ List<pw.Widget> _buildDaySections({
   Uint8List? trackImageBytes,
   List<Uint8List> photoBytes = const [],
   bool showHeader = true,
+  DateTime? departureTime,
+  TimePrecision departurePrecision = TimePrecision.unknown,
+  DateTime? arrivalTime,
+  TimePrecision arrivalPrecision = TimePrecision.unknown,
 }) {
   final sections = <pw.Widget>[];
 
@@ -218,7 +232,11 @@ List<pw.Widget> _buildDaySections({
   // (fromHarbor/toHarbor) to build a title from.
   final from = entry.fromHarbor?.trim() ?? '';
   final to   = entry.toHarbor?.trim()   ?? '';
-  sections.add(_buildRoute(from, to, entry.date, bold, regular, italic, emojiFont, strings));
+  sections.add(_buildRoute(from, to, entry.date, bold, regular, italic, emojiFont, strings,
+      departureTime: departureTime,
+      departurePrecision: departurePrecision,
+      arrivalTime: arrivalTime,
+      arrivalPrecision: arrivalPrecision));
   sections.add(pw.SizedBox(height: 16));
 
   final narrative = entry.notes?.trim()    ?? '';
@@ -311,6 +329,10 @@ typedef _VoyagePdfInput = ({
   pw.Font emojiFont,
   Uint8List? trackImageBytes,
   List<Uint8List> photoBytes,
+  DateTime? departureTime,
+  TimePrecision departurePrecision,
+  DateTime? arrivalTime,
+  TimePrecision arrivalPrecision,
 });
 
 /// Builds the single-day [pw.Document] and serializes it to PDF bytes.
@@ -345,6 +367,10 @@ Future<Uint8List> _buildVoyagePdfBytes(_VoyagePdfInput input) async {
         emojiFont:       input.emojiFont,
         trackImageBytes: input.trackImageBytes,
         photoBytes:      input.photoBytes,
+        departureTime:      input.departureTime,
+        departurePrecision: input.departurePrecision,
+        arrivalTime:        input.arrivalTime,
+        arrivalPrecision:   input.arrivalPrecision,
       ),
     ),
   );
@@ -364,6 +390,10 @@ Future<Uint8List> buildVoyagePdf({
   required VesselEquipmentConfig equipment,
   List<TrackPoint> trackPoints = const [],
   List<Uint8List> photoBytes = const [],
+  DateTime? departureTime,
+  TimePrecision departurePrecision = TimePrecision.unknown,
+  DateTime? arrivalTime,
+  TimePrecision arrivalPrecision = TimePrecision.unknown,
 }) async {
   final regular  = await PdfGoogleFonts.notoSansRegular();
   final bold     = await PdfGoogleFonts.notoSansBold();
@@ -398,6 +428,10 @@ Future<Uint8List> buildVoyagePdf({
     emojiFont:       emojiFont,
     trackImageBytes: trackImageBytes,
     photoBytes:      photoBytes,
+    departureTime:      departureTime,
+    departurePrecision: departurePrecision,
+    arrivalTime:        arrivalTime,
+    arrivalPrecision:   arrivalPrecision,
   ));
 }
 
@@ -410,12 +444,20 @@ class RangeDayInput {
   final DailyStats? stats;
   final List<TrackPoint> trackPoints;
   final List<Uint8List> photoBytes;
+  final DateTime? departureTime;
+  final TimePrecision departurePrecision;
+  final DateTime? arrivalTime;
+  final TimePrecision arrivalPrecision;
 
   const RangeDayInput({
     required this.entry,
     required this.stats,
     this.trackPoints = const [],
     this.photoBytes = const [],
+    this.departureTime,
+    this.departurePrecision = TimePrecision.unknown,
+    this.arrivalTime,
+    this.arrivalPrecision = TimePrecision.unknown,
   });
 }
 
@@ -475,6 +517,10 @@ Future<Uint8List> _buildRangeVoyagePdfBytes(_RangeVoyagePdfInput input) async {
             trackImageBytes: input.trackImages[i],
             photoBytes:      input.days[i].photoBytes,
             showHeader:      false,
+            departureTime:      input.days[i].departureTime,
+            departurePrecision: input.days[i].departurePrecision,
+            arrivalTime:        input.days[i].arrivalTime,
+            arrivalPrecision:   input.days[i].arrivalPrecision,
           ));
         }
         return widgets;
@@ -523,6 +569,10 @@ Future<Uint8List> buildRangeVoyagePdf({
         stats:       d.stats,
         trackPoints: d.trackPoints,
         photoBytes:  d.photoBytes,
+        departureTime:      d.departureTime,
+        departurePrecision: d.departurePrecision,
+        arrivalTime:        d.arrivalTime,
+        arrivalPrecision:   d.arrivalPrecision,
       ),
   ];
 
@@ -598,7 +648,12 @@ pw.Widget _buildHeader(String vesselName, pw.Font bold, pw.Font emoji) {
 // ── Route ─────────────────────────────────────────────────────────────────────
 
 pw.Widget _buildRoute(String from, String to, DateTime date,
-    pw.Font bold, pw.Font regular, pw.Font italic, pw.Font emoji, PdfStrings strings) {
+    pw.Font bold, pw.Font regular, pw.Font italic, pw.Font emoji, PdfStrings strings, {
+  DateTime? departureTime,
+  TimePrecision departurePrecision = TimePrecision.unknown,
+  DateTime? arrivalTime,
+  TimePrecision arrivalPrecision = TimePrecision.unknown,
+}) {
   final hasFrom  = from.isNotEmpty;
   final hasTo    = to.isNotEmpty;
   final hasRoute = hasFrom || hasTo;
@@ -627,6 +682,38 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
       ? strings.passageToTemplate.replaceFirst('\u0000', to)
       : strings.departureFromTemplate.replaceFirst('\u0000', from);
 
+  // Measured departure/arrival times ("HH:mm", or "~HH:mm" when only
+  // estimated from the speed signal rather than bounded by a detected
+  // stop) — omitted when there's no measured departure at all (a track
+  // already under way at its very start has no real departure in the
+  // data) or no track data for the day.
+  String? departureTimeStr;
+  if (departureTime != null && departurePrecision != TimePrecision.unknown) {
+    final t = DateFormat('HH:mm', strings.locale).format(departureTime.toLocal());
+    departureTimeStr = departurePrecision == TimePrecision.estimated ? '~$t' : t;
+  }
+  String? arrivalTimeStr;
+  if (arrivalTime != null) {
+    final t = DateFormat('HH:mm', strings.locale).format(arrivalTime.toLocal());
+    arrivalTimeStr = arrivalPrecision == TimePrecision.estimated ? '~$t' : t;
+  }
+
+  // Subtitle under the title, shown only alongside a full "from X to Y"
+  // route (matching the previous hasFrom && hasTo condition): "Departure
+  // from {from}[ at {time}][. Arrival at {time}.]" — enriched with the
+  // measured times when available, falling back to the plain harbor-name
+  // sentence otherwise.
+  String? subtitle;
+  if (hasFrom && hasTo) {
+    final departurePart = departureTimeStr != null
+        ? strings.departureFromAtTemplate
+            .replaceFirst('\u0000', from).replaceFirst('\u0000', departureTimeStr)
+        : strings.departureFromTemplate.replaceFirst('\u0000', from);
+    subtitle = arrivalTimeStr != null
+        ? '$departurePart. ${strings.arrivalAtTemplate.replaceFirst('\u0000', arrivalTimeStr)}.'
+        : departurePart;
+  }
+
   return pw.Row(
     crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
@@ -635,10 +722,9 @@ pw.Widget _buildRoute(String from, String to, DateTime date,
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             _richText(title, base: bold, emoji: emoji, size: 18, color: _navy),
-            if (hasFrom && hasTo) ...[
+            if (subtitle != null) ...[
               pw.SizedBox(height: 2),
-              _richText(strings.departureFromTemplate.replaceFirst('\u0000', from),
-                  base: italic, emoji: emoji, size: 10, color: _steel),
+              _richText(subtitle, base: italic, emoji: emoji, size: 10, color: _steel),
             ],
           ],
         ),
