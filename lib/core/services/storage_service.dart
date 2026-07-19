@@ -20,17 +20,19 @@ class StorageService {
   // Write
   // ------------------------------------------------------------------
 
-  /// Uploads (or overwrites) the GPX file for [date], gzip-compressed —
-  /// GPX's per-point XML tags are verbose relative to the actual lat/lon/
-  /// time payload, so this meaningfully shrinks upload size (and every
-  /// subsequent download) for longer tracks.
+  /// Uploads (or overwrites) the raw GPX file for [date].
+  ///
+  /// Previously gzip-compressed with a `contentEncoding: 'gzip'` metadata
+  /// tag to shrink upload/download size, but that silently broke sync
+  /// entirely: newly imported tracks never reached Storage (uploads failed
+  /// quietly — every call site swallows errors via `.catchError`) and so
+  /// never appeared on other devices or survived a local reinstall. Reverted
+  /// to plain uploads until compression can be re-validated against a real
+  /// device/backend rather than reasoned about from code alone.
   Future<void> uploadTrack(DateTime date, Uint8List bytes) =>
       _ref(date).putData(
-        Uint8List.fromList(gzip.encode(bytes)),
-        SettableMetadata(
-          contentType: 'application/gpx+xml',
-          contentEncoding: 'gzip',
-        ),
+        bytes,
+        SettableMetadata(contentType: 'application/gpx+xml'),
       );
 
   /// Deletes the GPX file for [date].
@@ -51,11 +53,10 @@ class StorageService {
         .toList();
   }
 
-  /// Downloads GPX bytes for [date] and gunzips them. Max 10 MB compressed.
-  /// Falls back to the raw bytes if they aren't valid gzip — either an
-  /// older track uploaded before compression was added, or a download
-  /// path that already decoded the Content-Encoding transparently — so
-  /// this reads correctly regardless of how the bytes arrived.
+  /// Downloads GPX bytes for [date]. Max 10 MB. Tries gunzipping first and
+  /// falls back to the raw bytes if that fails — uploads are plain again
+  /// (see [uploadTrack]), but this keeps reading correctly for any track
+  /// that was gzip-uploaded during the brief window compression was live.
   Future<Uint8List?> downloadTrack(DateTime date) async {
     final raw = await _ref(date).getData(10 * 1024 * 1024);
     if (raw == null) return null;

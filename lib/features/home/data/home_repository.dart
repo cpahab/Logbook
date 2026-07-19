@@ -672,7 +672,10 @@ class HomeRepository extends ChangeNotifier {
 
       if (_storage != null) {
         final bytes = _trackToGpxBytes(track);
-        _storage!.uploadTrack(newNorm, bytes).catchError((_) {});
+        _storage!.uploadTrack(newNorm, bytes).catchError((e, st) {
+          // ignore: avoid_print
+          debugPrint('[changeEntryDate] track upload $newNorm failed: $e\n$st');
+        });
       }
     }
 
@@ -898,7 +901,10 @@ class HomeRepository extends ChangeNotifier {
     final points = (await compute(parseGpxBytes, bytes)).points;
     if (points.isEmpty) return;
     await _saveTrack(normalized, file.uri.pathSegments.last, points);
-    _storage?.uploadTrack(normalized, bytes).catchError((_) {});
+    _storage?.uploadTrack(normalized, bytes).catchError((e, st) {
+      // ignore: avoid_print
+      debugPrint('[importGpx] track upload $normalized failed: $e\n$st');
+    });
   }
 
   /// Parses raw GPX [bytes] (e.g. from a share-sheet import) and saves the
@@ -909,7 +915,10 @@ class HomeRepository extends ChangeNotifier {
     final points = (await compute(parseGpxBytes, bytes)).points;
     if (points.isEmpty) return;
     await _saveTrack(normalized, fileName, points);
-    _storage?.uploadTrack(normalized, bytes).catchError((_) {});
+    _storage?.uploadTrack(normalized, bytes).catchError((e, st) {
+      // ignore: avoid_print
+      debugPrint('[importGpxFromBytes] track upload $normalized failed: $e\n$st');
+    });
   }
 
   /// Replaces a day's track with [points] (e.g. after a merge), re-uploads.
@@ -919,7 +928,10 @@ class HomeRepository extends ChangeNotifier {
     await _saveTrack(normalized, fileName, points);
     final track = dailyTracks[normalized];
     if (track != null) {
-      _storage?.uploadTrack(normalized, _trackToGpxBytes(track)).catchError((_) {});
+      _storage?.uploadTrack(normalized, _trackToGpxBytes(track)).catchError((e, st) {
+        // ignore: avoid_print
+        debugPrint('[replaceTrackPoints] track upload $normalized failed: $e\n$st');
+      });
     }
   }
 
