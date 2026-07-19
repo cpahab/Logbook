@@ -1589,7 +1589,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     final fresh = repo.getEntry(day) ?? entry;
     fresh.photos.remove(storagePath);
     repo.saveEntry(fresh, changedFields: {'photos'});
-    await PhotoService.delete(storagePath);
+    await repo.deletePhoto(storagePath);
     if (mounted) setState(() => _deletingPhotos.remove(storagePath));
   }
 

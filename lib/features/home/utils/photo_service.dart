@@ -161,14 +161,24 @@ class PhotoService {
     }
   }
 
-  /// Deletes the photo from Firebase Storage and removes the local cache file.
-  static Future<void> delete(String storagePath) async {
+  /// Deletes the photo from Firebase Storage and removes the local cache
+  /// file. Returns true if the Storage object is confirmed gone — deleted
+  /// just now, or already absent — false if the attempt should be retried
+  /// later (mirrors StorageService.deleteTrack's same distinction, used by
+  /// HomeRepository's pending-delete retry mechanism so a failed/offline
+  /// delete doesn't silently leave the blob orphaned in Storage forever).
+  static Future<bool> delete(String storagePath) async {
+    var storageOk = false;
     try {
       await FirebaseStorage.instance.ref(storagePath).delete();
+      storageOk = true;
+    } on FirebaseException catch (e) {
+      storageOk = e.code == 'object-not-found';
     } catch (_) {}
     final cache = await _cacheDir();
     final local = File('${cache.path}/${_cacheFilename(storagePath)}');
     if (await local.exists()) await local.delete();
+    return storageOk;
   }
 
 }

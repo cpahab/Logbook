@@ -13,6 +13,7 @@ import '../domain/timeline_entry.dart';
 import '../domain/daily_track.dart';
 import '../domain/track_point.dart';
 import '../utils/gpx_parser.dart';
+import '../utils/photo_service.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/utils/retry_with_backoff.dart';
@@ -188,6 +189,63 @@ class HomeRepository extends ChangeNotifier {
     if (entryOk && trackOk) _clearPendingDelete(date);
   }
 
+  static const _pendingPhotoDeletePrefix = 'pending_photo_delete_';
+  static String _pendingPhotoDeleteKey(String storagePath) =>
+      '$_pendingPhotoDeletePrefix$storagePath';
+
+  /// Marks [storagePath] as having a Storage delete that hasn't been
+  /// confirmed yet — see [_pushPendingPhotoDelete]. Keyed by the photo's own
+  /// Storage path (not a date, unlike [_recordPendingDelete]) since a day
+  /// can have several photos, each independently pending.
+  void _recordPendingPhotoDelete(String storagePath) =>
+      _syncStateBox.put(_pendingPhotoDeleteKey(storagePath), 1);
+
+  void _clearPendingPhotoDelete(String storagePath) =>
+      _syncStateBox.delete(_pendingPhotoDeleteKey(storagePath));
+
+  Iterable<String> _pendingPhotoDeletePaths() => _syncStateBox.keys
+      .where((k) => k.toString().startsWith(_pendingPhotoDeletePrefix))
+      .map((k) => k.toString().substring(_pendingPhotoDeletePrefix.length));
+
+  /// Test-only visibility into which photos still have an unconfirmed delete.
+  @visibleForTesting
+  Iterable<String> get pendingPhotoDeletePathsForTesting =>
+      _pendingPhotoDeletePaths();
+
+  /// Attempts to durably delete the photo at [storagePath] from Storage,
+  /// same durability pattern as [_pushPendingDelete] for entries/tracks:
+  /// recorded as pending first (by the caller), only cleared once Storage
+  /// confirms the object is gone. Safe to call repeatedly: retried on every
+  /// attachFirestore/forceSync/reattachAndSync until it succeeds.
+  Future<void> _pushPendingPhotoDelete(String storagePath) async {
+    if (await PhotoService.delete(storagePath)) {
+      _clearPendingPhotoDelete(storagePath);
+    }
+  }
+
+  /// Durably deletes a single photo: called both when an individual photo
+  /// is removed from an otherwise-untouched entry, and (with pre-recorded
+  /// markers) as part of [removeEntry] deleting a whole day's photos.
+  Future<void> deletePhoto(String storagePath) async {
+    _recordPendingPhotoDelete(storagePath);
+    await _pushPendingPhotoDelete(storagePath);
+  }
+
+  /// Retries every not-yet-confirmed entry/track delete and photo delete —
+  /// called at the start of every attachFirestore/forceSync/reattachAndSync,
+  /// same rationale as [_pushPendingDelete]'s own doc comment: a delete that
+  /// failed (offline, transient error) the first time is retried at the
+  /// next sync opportunity instead of leaving the deleted data (or, for
+  /// photos, the orphaned Storage blob) to resurrect or linger forever.
+  Future<void> _retryPendingDeletes() async {
+    for (final date in _pendingDeleteDates().toList()) {
+      await _pushPendingDelete(date);
+    }
+    for (final path in _pendingPhotoDeletePaths().toList()) {
+      await _pushPendingPhotoDelete(path);
+    }
+  }
+
   /// The timestamp of the last successful pull from Firestore.
   /// Defaults to the Unix epoch so the first incremental pull fetches everything.
   DateTime get _lastSyncAt {
@@ -303,9 +361,7 @@ class HomeRepository extends ChangeNotifier {
         // Must run before Step 2's pull — otherwise a pull could re-fetch the
         // still-undeleted server doc and resurrect it locally before this
         // device's own tombstone has a chance to land.
-        for (final date in _pendingDeleteDates().toList()) {
-          await _pushPendingDelete(date);
-        }
+        await _retryPendingDeletes();
 
         // ── Step 1: push every local entry ───────────────────────────────────
         for (final e in _entries.values) {
@@ -364,9 +420,7 @@ class HomeRepository extends ChangeNotifier {
     try {
       final lastSync = _lastSyncAt;
 
-      for (final date in _pendingDeleteDates().toList()) {
-        await _pushPendingDelete(date);
-      }
+      await _retryPendingDeletes();
 
       for (final e in _entries.values) {
         final editAt = _localEditTime(e.date);
@@ -634,14 +688,16 @@ class HomeRepository extends ChangeNotifier {
     return true;
   }
 
-  /// Deletes the entry for [date] (and its GPX track, if any) locally
-  /// immediately, then durably pushes the deletion to Firestore/Storage —
-  /// if that push fails or the app is offline, the date is marked pending
-  /// and retried on every future attachFirestore/forceSync/reattachAndSync
-  /// (see _pushPendingDelete), so the deleted data cannot resurrect on a
-  /// later sync the way a bare fire-and-forget delete could.
+  /// Deletes the entry for [date] (and its GPX track and photos, if any)
+  /// locally immediately, then durably pushes the deletion to
+  /// Firestore/Storage — if a push fails or the app is offline, it's marked
+  /// pending and retried on every future attachFirestore/forceSync/
+  /// reattachAndSync (see _pushPendingDelete/_pushPendingPhotoDelete), so
+  /// neither the deleted entry nor its photos can resurrect/linger the way
+  /// a bare fire-and-forget delete could.
   Future<void> removeEntry(DateTime date) async {
     final normalized = DateTime(date.year, date.month, date.day);
+    final photos = _entries[normalized]?.photos ?? const <String>[];
 
     _syncTimers[normalized]?.cancel();
     _syncTimers.remove(normalized);
@@ -656,8 +712,14 @@ class HomeRepository extends ChangeNotifier {
     }
 
     _recordPendingDelete(normalized);
+    for (final path in photos) {
+      _recordPendingPhotoDelete(path);
+    }
     notifyListeners();
     await _pushPendingDelete(normalized);
+    for (final path in photos) {
+      await _pushPendingPhotoDelete(path);
+    }
   }
 
   // ── Save ───────────────────────────────────────────────────────────────────
@@ -928,9 +990,7 @@ class HomeRepository extends ChangeNotifier {
     // Retry any deletes that never got confirmed pushed, before pulling —
     // otherwise the pull below could re-fetch the still-undeleted server
     // doc and resurrect it locally.
-    for (final date in _pendingDeleteDates().toList()) {
-      await _pushPendingDelete(date);
-    }
+    await _retryPendingDeletes();
 
     // Push all local entries.
     for (final e in _entries.values) {
@@ -1044,9 +1104,7 @@ class HomeRepository extends ChangeNotifier {
 
     // Give any delete pending from the logbook being left one last chance to
     // push before its bookkeeping is wiped below.
-    for (final date in _pendingDeleteDates().toList()) {
-      await _pushPendingDelete(date);
-    }
+    await _retryPendingDeletes();
 
     // ── Step 2: download complete, now safe to replace local state ─────────────
     await _dayBox.clear();
