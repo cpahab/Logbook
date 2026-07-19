@@ -936,11 +936,30 @@ class HomeRepository extends ChangeNotifier {
   }
 
   /// Writes [points] as [day]'s track to Hive and the in-memory cache.
+  ///
+  /// Also clears the entry's `trackDeletedAt` tombstone if it's set, and
+  /// pushes that clear to Firestore. Without this, re-importing a track for
+  /// a day whose track was previously removed (removeGpx) would render
+  /// fine locally but get deleted again — both locally and in Storage — the
+  /// moment the next sync (the live entry listener, or a routine
+  /// incremental refresh on screen navigation) pulled the entry back down
+  /// and saw the still-set tombstone from the earlier removal, since
+  /// [applyIncomingEntry] unconditionally removes any local track when
+  /// `trackDeletedAt != null`.
   Future<void> _saveTrack(
       DateTime normalized, String fileName, List<TrackPoint> points) async {
     final track = DailyTrack(day: normalized, fileName: fileName, points: points);
     dailyTracks[normalized] = track;
     await _trackBox.put(normalized.toIso8601String(), track);
+
+    final entry = _entries[normalized];
+    if (entry != null && entry.trackDeletedAt != null) {
+      entry.trackDeletedAt = null;
+      await _dayBox.put(normalized.toIso8601String(), entry);
+      _recordLocalEdit(normalized);
+      _syncToFirestore(entry, {'trackDeletedAt'});
+    }
+
     notifyListeners();
   }
 

@@ -1,9 +1,18 @@
 // Regression coverage for a reported bug: a freshly imported GPX track
-// rendered fine but disappeared after restarting the app (and never
-// appeared on other devices). Simulates a restart by dropping the
-// HomeRepository instance that performed the import and creating a brand
-// new one against the SAME on-disk Hive boxes, exactly like a real app
-// relaunch would.
+// rendered fine but disappeared minutes later (noticed on the next app
+// restart), and never appeared on other devices. Two things are covered:
+//
+// 1. Plain local persistence survives a simulated restart (dropping the
+//    HomeRepository instance and opening a fresh one against the same
+//    on-disk Hive boxes) — ruling out a plain storage bug.
+// 2. The actual root cause: removeGpx() sets the entry's trackDeletedAt
+//    tombstone, but no import path ever cleared it back. Re-importing a
+//    track for a day whose track was previously removed rendered fine
+//    immediately, but the next sync (the live entry listener, or a routine
+//    incremental refresh on screen navigation) pulled the entry back down,
+//    saw the still-set tombstone, and applyIncomingEntry unconditionally
+//    deleted the track again — both locally and in Storage. _saveTrack now
+//    clears trackDeletedAt whenever a track is (re)saved.
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -106,5 +115,44 @@ void main() {
     expect(second.dailyTracks[date], isNotNull,
         reason: 'a realistically large imported track must survive a restart');
     expect(second.dailyTracks[date]!.points.length, 1000);
+  });
+
+  test('re-importing a track after removeGpx clears the stale '
+      'trackDeletedAt tombstone, so the next sync does not delete it again',
+      () async {
+    final date = DateTime(2026, 8, 3);
+    final repo = HomeRepository();
+    await repo.init();
+    repo.addEntry(date);
+
+    await repo.importGpxFromBytes(
+      date,
+      Uint8List.fromList(_sampleGpx.codeUnits),
+      'test.gpx',
+    );
+    expect(repo.dailyTracks[date], isNotNull);
+
+    // Mirrors what the user actually did: remove the track, then re-import it.
+    await repo.removeGpx(date);
+    expect(repo.dailyTracks[date], isNull);
+    expect(repo.getEntry(date)!.trackDeletedAt, isNotNull);
+
+    await repo.importGpxFromBytes(
+      date,
+      Uint8List.fromList(_sampleGpx.codeUnits),
+      'test.gpx',
+    );
+    expect(repo.dailyTracks[date], isNotNull);
+    expect(repo.getEntry(date)!.trackDeletedAt, isNull,
+        reason: 're-saving a track must clear the stale tombstone, or the '
+            'next sync will delete the track right back out again');
+
+    // Simulate the next sync (live listener / incremental refresh) pulling
+    // this same entry back down — before the fix, its still-set
+    // trackDeletedAt would make this delete the just-restored track again.
+    await repo.applyIncomingEntry(repo.getEntry(date)!, respectLocalEdit: false);
+    expect(repo.dailyTracks[date], isNotNull,
+        reason: 'a sync applying the (now-cleared) entry must not delete '
+            'the freshly re-imported track');
   });
 }
