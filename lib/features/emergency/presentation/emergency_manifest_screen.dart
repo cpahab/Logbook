@@ -479,7 +479,10 @@ class _ContactRow extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.w600, color: cs.primary),
                 ),
                 Text(
-                  '${contact.role} · ${contact.phone}',
+                  [
+                    if (contact.role.isNotEmpty) contact.role,
+                    if (contact.phone.isNotEmpty) contact.phone,
+                  ].join(' · '),
                   style: Theme.of(context).textTheme.bodySmall!.copyWith(
                     color: cs.onSurfaceVariant,
                   ),
@@ -523,6 +526,12 @@ class _AddContactDialogState extends State<_AddContactDialog> {
   final _nameCtrl = TextEditingController();
   final _roleCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  /// Guards against a duplicated tap on the Add button — observed after
+  /// backgrounding the app (e.g. to check a phone number in another app)
+  /// with this dialog still open, then returning and tapping Add: a single
+  /// logical tap could otherwise still fire onPressed more than once and
+  /// add the same contact repeatedly.
+  bool _submitted = false;
 
   @override
   void dispose() {
@@ -538,6 +547,12 @@ class _AddContactDialogState extends State<_AddContactDialog> {
     return AlertDialog(
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
+      // Wraps title+content together in a properly height-bounded
+      // SingleChildScrollView (unlike wrapping content alone, which isn't
+      // given a bounded height to scroll within and just overflows) — needed
+      // so the fields stay reachable once the keyboard leaves too little
+      // room for all three on a small screen.
+      scrollable: true,
       title: Text(context.l10n.emergencyAddContactTitle,
           style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface)),
       content: Column(
@@ -572,7 +587,8 @@ class _AddContactDialogState extends State<_AddContactDialog> {
         ),
         FilledButton.icon(
           onPressed: () {
-            if (_nameCtrl.text.trim().isEmpty) return;
+            if (_submitted || _nameCtrl.text.trim().isEmpty) return;
+            _submitted = true;
             Navigator.pop(
               context,
               EmergencyContact(
@@ -605,6 +621,8 @@ class _EditContactDialogState extends State<_EditContactDialog> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _roleCtrl;
   late final TextEditingController _phoneCtrl;
+  /// See _AddContactDialogState's identically-named field.
+  bool _submitted = false;
 
   @override
   void initState() {
@@ -628,6 +646,8 @@ class _EditContactDialogState extends State<_EditContactDialog> {
     return AlertDialog(
       backgroundColor: cs.surface,
       surfaceTintColor: Colors.transparent,
+      // See _AddContactDialog's comment on this flag.
+      scrollable: true,
       title: Text(context.l10n.emergencyEditContactTitle,
           style: Theme.of(context).textTheme.fieldValueProse.copyWith(color: cs.onSurface)),
       content: Column(
@@ -659,6 +679,8 @@ class _EditContactDialogState extends State<_EditContactDialog> {
       actions: [
         TextButton(
           onPressed: () {
+            if (_submitted) return;
+            _submitted = true;
             Navigator.pop(context);
             widget.onDelete();
           },
@@ -682,7 +704,8 @@ class _EditContactDialogState extends State<_EditContactDialog> {
             const SizedBox(width: 4),
             FilledButton(
               onPressed: () {
-                if (_nameCtrl.text.trim().isEmpty) return;
+                if (_submitted || _nameCtrl.text.trim().isEmpty) return;
+                _submitted = true;
                 Navigator.pop(
                   context,
                   EmergencyContact(
