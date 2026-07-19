@@ -23,6 +23,8 @@
   "statAvgSpeed": "Ø Geschwindigkeit",
   "statAvgSpeedUnderway": "Ø Geschwindigkeit in Fahrt",
   "statMax": "Max",
+  "statDuration": "Fahrzeit",
+  "statStops": "Stopps",
 
   "homeNewDay": "Neuer Tag",
   "homeAddEntry": "Eintrag hinzufügen",

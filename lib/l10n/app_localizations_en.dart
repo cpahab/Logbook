@@ -69,6 +69,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statMax => 'Max';
 
   @override
+  String get statDuration => 'Underway';
+
+  @override
+  String get statStops => 'Stops';
+
+  @override
   String get homeNewDay => 'New Day';
 
   @override

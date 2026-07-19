@@ -908,9 +908,43 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
                 ],
               ),
             ),
+          // Same two stats the PDF export shows (UNDERWAY/STOPS), kept
+          // consistent with it — moving time excluding stops, plus how many.
+          if (stats.movingDuration > Duration.zero || stats.nStops > 0)
+            Container(
+              decoration: BoxDecoration(border: Border(top: div)),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(border: Border(right: div)),
+                      padding: const EdgeInsets.all(12),
+                      child: statCell(context, context.l10n.statDuration,
+                          _formatDuration(stats.movingDuration), cs),
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: statCell(context, context.l10n.statStops,
+                          '${stats.nStops}', cs),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
+  }
+
+  /// Formats a [Duration] as "Xh Ymin" (or just "Ymin" under an hour) —
+  /// matches pdf_exporter.dart's identical local `dur()` helper, kept in
+  /// sync so the in-app stat and the PDF read the same way.
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes.remainder(60);
+    return h > 0 ? '${h}h ${m}min' : '${m}min';
   }
 
 

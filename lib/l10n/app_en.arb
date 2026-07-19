@@ -23,6 +23,8 @@
   "statAvgSpeed": "Avg Speed",
   "statAvgSpeedUnderway": "Avg Speed Underway",
   "statMax": "Max",
+  "statDuration": "Underway",
+  "statStops": "Stops",
 
   "homeNewDay": "New Day",
   "homeAddEntry": "Add Entry",

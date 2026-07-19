@@ -218,6 +218,18 @@ abstract class AppLocalizations {
   /// **'Max'**
   String get statMax;
 
+  /// No description provided for @statDuration.
+  ///
+  /// In de, this message translates to:
+  /// **'Fahrzeit'**
+  String get statDuration;
+
+  /// No description provided for @statStops.
+  ///
+  /// In de, this message translates to:
+  /// **'Stopps'**
+  String get statStops;
+
   /// No description provided for @homeNewDay.
   ///
   /// In de, this message translates to:

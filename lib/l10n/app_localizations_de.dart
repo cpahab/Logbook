@@ -69,6 +69,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get statMax => 'Max';
 
   @override
+  String get statDuration => 'Fahrzeit';
+
+  @override
+  String get statStops => 'Stopps';
+
+  @override
   String get homeNewDay => 'Neuer Tag';
 
   @override

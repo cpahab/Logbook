@@ -110,7 +110,6 @@ DailyStats computeDailyStats(
   final maxSpeedPercentile   = settings.topSpeedPercentile.clamp(0.0, 1.0);
 
   double distanceM    = 0;
-  double movingTimeS  = 0;
   double makewayDistM = 0;
   double makewayTimeS = 0;
 
@@ -123,14 +122,28 @@ DailyStats computeDailyStats(
     final d       = _haversineM(p1.lat, p1.lon, p2.lat, p2.lon);
     final speedKn = d / dt * mpsToKn;
 
-    distanceM   += d;
-    movingTimeS += dt;
+    // Distance is summed across every consecutive pair in `pts`, including
+    // the one pair bracketing a stop trimTrackWithAnchors excised (its own
+    // points removed) — left as-is since a stop's position barely moves
+    // (anchor swing/GPS drift only), so that pair's distance contribution
+    // is negligible either way.
+    distanceM += d;
 
     if (speedKn >= makingWayThresholdKn) {
       makewayDistM += d;
       makewayTimeS += dt;
     }
   }
+
+  // Moving time is "the rest" after subtracting stationary time from the
+  // total elapsed span (see file header) — NOT the sum of consecutive-fix
+  // deltas in `pts` the way distance above is. trimTrackWithAnchors removes
+  // each stop's own points from `pts` entirely, so the one delta bracketing
+  // an excised stop would otherwise still count that whole stop's duration
+  // as "moving" — in practice making movingTimeS come out close to
+  // totalDuration for any track with a real stop in it.
+  final movingTimeS =
+      (totalDuration.inSeconds.toDouble() - stationaryS).clamp(0.0, double.infinity);
 
   // Use pre-computed moving instantaneous speeds from the pipeline (v5).
   // These are derived before smoothing, so they reflect real GPS velocity.
