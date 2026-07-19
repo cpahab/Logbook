@@ -543,14 +543,46 @@ class TrimResult {
       anchors.where((a) => a.kind == AnchorKind.end).firstOrNull;
 }
 
+// ── Pass 0 — cold device/GPS startup prefix ───────────────────────────────────
+
+/// Trimmed from the front of a track that didn't start at local midnight —
+/// see [_trimColdStartupPrefix].
+const _coldStartupTrimCount = 3;
+
+/// A day's track starting anywhere other than right around local midnight
+/// means the device/app was freshly started partway through the day, rather
+/// than continuing a passage that was already under way overnight (an
+/// overnight track's first fix is right after the previous day's midnight
+/// rollover, not a startup event at all). The first few fixes after a cold
+/// device/GPS start are typically imprecise — the receiver hasn't locked yet
+/// — and can otherwise be misread as real (if brief) movement right at the
+/// track start. Confirmed against real logs: three genuine overnight
+/// passages in the fixture corpus all begin within a minute of local
+/// midnight; a same-day start like 03 May 2026 or 18 Jul 2026 begins hours
+/// into the day and is unambiguously a fresh start.
+///
+/// Trims unconditionally (no attempt to judge whether the leading fixes are
+/// actually bad) — the trimmed count is small enough that losing a few
+/// genuine fixes at a real dock costs nothing, since dozens more typically
+/// follow before departure.
+List<TrackPoint> _trimColdStartupPrefix(List<TrackPoint> points) {
+  const midnightToleranceMinutes = 10;
+  if (points.length <= _coldStartupTrimCount) return points;
+  final first = points.first.time.toLocal();
+  final minutesSinceMidnight = first.hour * 60 + first.minute;
+  if (minutesSinceMidnight <= midnightToleranceMinutes) return points;
+  return points.sublist(_coldStartupTrimCount);
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /// Full four-pass pipeline.  Returns a [TrimResult] with cleaned points, all
 /// stop anchors, and the spike count.
 TrimResult trimTrackWithAnchors(
-  List<TrackPoint> points, {
+  List<TrackPoint> rawPoints, {
   FilterSettings settings = const FilterSettings(),
 }) {
+  final points = _trimColdStartupPrefix(rawPoints);
   if (points.length < 4) return TrimResult(points: points);
 
   final fixes = points.map(_Fix.new).toList();
@@ -1106,9 +1138,10 @@ String _connType(double? dBefore, double? dAfter, bool hasSpike) {
 /// into moving runs, stop connectors, and teleport breaks — ready for
 /// multi-style map rendering.
 DisplayModel buildDisplayModel(
-  List<TrackPoint> points, {
+  List<TrackPoint> rawPoints, {
   FilterSettings settings = const FilterSettings(),
 }) {
+  final points = _trimColdStartupPrefix(rawPoints);
   if (points.length < 4) return const DisplayModel();
 
   final fixes = points.map(_Fix.new).toList();
