@@ -43,7 +43,7 @@ final ThemeData darkTheme = ThemeData(
     onPrimary: _onPrimary, // Text/icon on a primary-filled surface
     primaryContainer: Color(0xFF4C7FD9), // FAB background
     onPrimaryContainer: _ink, // Text/icon on primaryContainer
-    inversePrimary: Color(0xFF002B6A), // Not referenced directly in app code — Material's own default (e.g. SnackBar action color)
+    inversePrimary: Color(0xFF002B6A), // Not referenced directly in app code, but live: default SnackBar's action-button/close-icon color (no custom snackBarTheme is set, and SnackBars are shown throughout the app without per-instance color overrides)
     // ── Secondary — Captain's Gold ───────────────────────────────────
     // One gold everywhere: secondary/secondaryContainer/secondaryFixed/
     // secondaryFixedDim all share the same brightest value (_secondary)
@@ -69,11 +69,9 @@ final ThemeData darkTheme = ThemeData(
     surfaceContainerHighest: Color(0xFF1C3254), // Alternate divider/highlight surface (e.g. day-detail stat-grid dividers)
     outline: _outline, // Input borders, dividers
     outlineVariant: Color(0xFF343D4B), // Card borders (dividerColor derives from this)
-    inverseSurface: Color(0xFFF2F0F1), // Not referenced directly in app code — Material's own default (e.g. SnackBar background)
-    onInverseSurface: Color(0xFF1B1C1D), // Not referenced directly in app code — pairs with inverseSurface
-    scrim: Color(0xFF000000), // Not referenced directly in app code — Material's own default modal-barrier color
-    shadow: Color(0xFF000000), // Ad hoc box-shadow tint outside the standard cardShadowColor token (e.g. Settings rows, timeline entry dialog)
-    surfaceTint: _lightBlue, // Neutralized in practice — dialogs/cards set surfaceTintColor: Colors.transparent to disable M3's elevation tint overlay
+    inverseSurface: Color(0xFFF2F0F1), // Not referenced directly in app code, but live: default SnackBar background, and Slider/RangeSlider's drag value-indicator bubble fill (both used in Settings/vessel-status editing)
+    onInverseSurface: Color(0xFF1B1C1D), // Not referenced directly in app code, but live: default SnackBar text/close-icon, Slider/RangeSlider value-indicator text
+    surfaceTint: _lightBlue, // Consulted by AppBar's elevation-tint overlay, but inert in practice — elevation/scrolledUnderElevation are pinned to 0 on every app bar, so the tint always renders at 0% opacity; the other stock widgets that read this (Card, BottomAppBar, SearchAnchor) aren't used in this app
   ).copyWith(
     // ── Surface tonal ─────────────────────────────────────────────
     surfaceDim: const Color(0xFF080E17), // Not referenced directly in app code — required tonal step
