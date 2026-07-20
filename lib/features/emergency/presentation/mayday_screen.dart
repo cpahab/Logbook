@@ -244,10 +244,10 @@ class _StepDsc extends StatelessWidget {
           children: [
             Positioned(
               left: 0, top: 0, bottom: 0,
-              child: Container(width: 6, color: em.criticalColor),
+              child: Container(width: 4, color: em.criticalColor),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 16, 16, 16),
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -387,10 +387,10 @@ class _StepSignal extends StatelessWidget {
           children: [
             Positioned(
               left: 0, top: 0, bottom: 0,
-              child: Container(width: 6, color: em.criticalColor),
+              child: Container(width: 4, color: em.criticalColor),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 16, 16, 16),
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
               child: Row(
                 children: [
                   Container(
@@ -668,10 +668,10 @@ class _StepDistress extends StatelessWidget {
           children: [
             Positioned(
               left: 0, top: 0, bottom: 0,
-              child: Container(width: 6, color: em.criticalColor),
+              child: Container(width: 4, color: em.criticalColor),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 16, 16, 16),
+              padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
