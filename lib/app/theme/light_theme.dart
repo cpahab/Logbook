@@ -35,7 +35,7 @@ final ThemeData lightTheme = ThemeData(
     onPrimary:          Color(0xFFFFFFFF), // Text/icon on a primary-filled surface
     primaryContainer:   Color(0xFF1A3A5C), // FAB background
     onPrimaryContainer: Color(0xFF87A4CC), // Text/icon on primaryContainer
-    inversePrimary:     Color(0xFFABC9F2), // Not referenced directly in app code, but live: default SnackBar's action-button/close-icon color (no custom snackBarTheme is set, and SnackBars are shown throughout the app without per-instance color overrides)
+    inversePrimary:     Color(0xFFABC9F2), // No app code reads this directly, but Flutter's stock SnackBar does — it's the default action-button/close-icon color (no custom snackBarTheme is set, and SnackBars are shown throughout the app without per-instance color overrides)
     // ── Secondary — Captain's Gold ──────────────────────────────────
     // Text/icon-safe gold, same ~45° hue family as secondaryContainer's pale
     // yellow (they're already near-identical in hue — the visual difference
@@ -67,13 +67,13 @@ final ThemeData lightTheme = ThemeData(
     surfaceContainerHighest: Color(0xFFE3E2E3), // Alternate divider/highlight surface (e.g. day-detail stat-grid dividers)
     outline:            _outline, // Input borders, dividers
     outlineVariant:     Color(0xFFC3C6CF), // Card borders (dividerColor derives from this)
-    inverseSurface:     Color(0xFF303031), // Not referenced directly in app code, but live: default SnackBar background, and Slider/RangeSlider's drag value-indicator bubble fill (both used in Settings/vessel-status editing)
-    onInverseSurface:   Color(0xFFF2F0F1), // Not referenced directly in app code, but live: default SnackBar text/close-icon, Slider/RangeSlider value-indicator text
+    inverseSurface:     Color(0xFF303031), // No app code reads this directly, but Flutter's stock SnackBar/Slider/RangeSlider do — default SnackBar background, and the drag value-indicator bubble fill (both used in Settings/vessel-status editing)
+    onInverseSurface:   Color(0xFFF2F0F1), // No app code reads this directly, but Flutter's stock SnackBar/Slider/RangeSlider do — default SnackBar text/close-icon, value-indicator text
     surfaceTint:        Color(0xFF436084), // Consulted by AppBar's elevation-tint overlay, but inert in practice — elevation/scrolledUnderElevation are pinned to 0 on every app bar, so the tint always renders at 0% opacity; the other stock widgets that read this (Card, BottomAppBar, SearchAnchor) aren't used in this app
   ).copyWith(
     // ── Surface tonal ─────────────────────────────────────────────
-    surfaceDim:              const Color(0xFFDBDADB), // Not referenced directly in app code — required tonal step
-    surfaceBright:           const Color(0xFFFAF9FA), // Not referenced directly in app code — required tonal step
+    surfaceDim:              const Color(0xFFDBDADB), // Unused — no app code or Flutter widget reads this (required tonal step)
+    surfaceBright:           const Color(0xFFFAF9FA), // Unused — no app code or Flutter widget reads this (required tonal step)
     // ── Surface containers ─────────────────────────────────────────
     surfaceContainerLowest: const Color(0xFFFFFFFF), // Card fill — the default "card on background" surface
     surfaceContainerLow:    const Color(0xFFF5F3F4), // Secondary card fill, input fill
@@ -81,20 +81,20 @@ final ThemeData lightTheme = ThemeData(
     surfaceContainerHigh:   const Color(0xFFE9E8E9), // Nested "card on a card" fill (e.g. stat sub-cards)
     surfaceContainerHighest:const Color(0xFFE3E2E3), // See surfaceContainerHighest above (duplicate role, both tiers share one value)
     // ── Primary fixed ──────────────────────────────────────────────
-    primaryFixed:           const Color(0xFFD2E4FF), // Not referenced directly in app code — required by ColorScheme's fixed-color API
-    primaryFixedDim:        const Color(0xFFABC9F2), // Not referenced directly in app code
-    onPrimaryFixed:         const Color(0xFF001C37), // Not referenced directly in app code
-    onPrimaryFixedVariant:  const Color(0xFF2A486B), // Not referenced directly in app code
+    primaryFixed:           const Color(0xFFD2E4FF), // Unused — no app code or Flutter widget reads this (required by ColorScheme's fixed-color API)
+    primaryFixedDim:        const Color(0xFFABC9F2), // Unused — no app code or Flutter widget reads this
+    onPrimaryFixed:         const Color(0xFF001C37), // Unused — no app code or Flutter widget reads this
+    onPrimaryFixedVariant:  const Color(0xFF2A486B), // Unused — no app code or Flutter widget reads this
     // ── Secondary fixed (gold) ─────────────────────────────────────
     secondaryFixed:         const Color(0xFFFFE088), // Map track/position color in satellite view (reads gold against photo imagery instead of navy)
-    secondaryFixedDim:      const Color(0xFFE1C46F), // Not referenced directly in app code
-    onSecondaryFixed:       const Color(0xFF241A00), // Not referenced directly in app code
-    onSecondaryFixedVariant:const Color(0xFF574500), // Not referenced directly in app code
+    secondaryFixedDim:      const Color(0xFFE1C46F), // Unused — no app code or Flutter widget reads this
+    onSecondaryFixed:       const Color(0xFF241A00), // Unused — no app code or Flutter widget reads this
+    onSecondaryFixedVariant:const Color(0xFF574500), // Unused — no app code or Flutter widget reads this
     // ── Tertiary fixed (seafoam) ────────────────────────────────────
-    tertiaryFixed:          const Color(0xFFD3E4FB), // Not referenced directly in app code
-    tertiaryFixedDim:       _seafoam, // Not referenced directly in app code — defined for a future seafoam accent, dormant today
-    onTertiaryFixed:        const Color(0xFF0B1D2D), // Not referenced directly in app code
-    onTertiaryFixedVariant: const Color(0xFF38485A), // Not referenced directly in app code
+    tertiaryFixed:          const Color(0xFFD3E4FB), // Unused — no app code or Flutter widget reads this
+    tertiaryFixedDim:       _seafoam, // Unused — no app code or Flutter widget reads this (defined for a future seafoam accent, dormant today)
+    onTertiaryFixed:        const Color(0xFF0B1D2D), // Unused — no app code or Flutter widget reads this
+    onTertiaryFixedVariant: const Color(0xFF38485A), // Unused — no app code or Flutter widget reads this
   ),
   textTheme: _buildTextTheme(),
   // Full-screen dialogs (add/edit timeline entry, add/edit crew): white card, 16px corners.

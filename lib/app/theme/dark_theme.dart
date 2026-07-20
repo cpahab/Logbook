@@ -43,7 +43,7 @@ final ThemeData darkTheme = ThemeData(
     onPrimary: _onPrimary, // Text/icon on a primary-filled surface
     primaryContainer: Color(0xFF4C7FD9), // FAB background
     onPrimaryContainer: _ink, // Text/icon on primaryContainer
-    inversePrimary: Color(0xFF002B6A), // Not referenced directly in app code, but live: default SnackBar's action-button/close-icon color (no custom snackBarTheme is set, and SnackBars are shown throughout the app without per-instance color overrides)
+    inversePrimary: Color(0xFF002B6A), // No app code reads this directly, but Flutter's stock SnackBar does — it's the default action-button/close-icon color (no custom snackBarTheme is set, and SnackBars are shown throughout the app without per-instance color overrides)
     // ── Secondary — Captain's Gold ───────────────────────────────────
     // One gold everywhere: secondary/secondaryContainer/secondaryFixed/
     // secondaryFixedDim all share the same brightest value (_secondary)
@@ -69,13 +69,13 @@ final ThemeData darkTheme = ThemeData(
     surfaceContainerHighest: Color(0xFF1C3254), // Alternate divider/highlight surface (e.g. day-detail stat-grid dividers)
     outline: _outline, // Input borders, dividers
     outlineVariant: Color(0xFF343D4B), // Card borders (dividerColor derives from this)
-    inverseSurface: Color(0xFFF2F0F1), // Not referenced directly in app code, but live: default SnackBar background, and Slider/RangeSlider's drag value-indicator bubble fill (both used in Settings/vessel-status editing)
-    onInverseSurface: Color(0xFF1B1C1D), // Not referenced directly in app code, but live: default SnackBar text/close-icon, Slider/RangeSlider value-indicator text
+    inverseSurface: Color(0xFFF2F0F1), // No app code reads this directly, but Flutter's stock SnackBar/Slider/RangeSlider do — default SnackBar background, and the drag value-indicator bubble fill (both used in Settings/vessel-status editing)
+    onInverseSurface: Color(0xFF1B1C1D), // No app code reads this directly, but Flutter's stock SnackBar/Slider/RangeSlider do — default SnackBar text/close-icon, value-indicator text
     surfaceTint: _lightBlue, // Consulted by AppBar's elevation-tint overlay, but inert in practice — elevation/scrolledUnderElevation are pinned to 0 on every app bar, so the tint always renders at 0% opacity; the other stock widgets that read this (Card, BottomAppBar, SearchAnchor) aren't used in this app
   ).copyWith(
     // ── Surface tonal ─────────────────────────────────────────────
-    surfaceDim: const Color(0xFF080E17), // Not referenced directly in app code — required tonal step
-    surfaceBright: const Color(0xFF1A2E4D), // Not referenced directly in app code — required tonal step
+    surfaceDim: const Color(0xFF080E17), // Unused — no app code or Flutter widget reads this (required tonal step)
+    surfaceBright: const Color(0xFF1A2E4D), // Unused — no app code or Flutter widget reads this (required tonal step)
     // ── Surface containers ─────────────────────────────────────────
     surfaceContainerLowest: const Color(0xFF060A11), // Card fill — the default "card on background" surface
     surfaceContainerLow: const Color(0xFF09101B), // Secondary card fill, input fill
@@ -83,24 +83,24 @@ final ThemeData darkTheme = ThemeData(
     surfaceContainerHigh: const Color(0xFF14253D), // Nested "card on a card" fill (e.g. stat sub-cards)
     surfaceContainerHighest: const Color(0xFF1C3254), // See surfaceContainerHighest above (duplicate role, both tiers share one value)
     // ── Primary fixed ──────────────────────────────────────────────
-    primaryFixed: const Color(0xFFD2E4FF), // Not referenced directly in app code — required by ColorScheme's fixed-color API
-    primaryFixedDim: const Color(0xFFABC9F2), // Not referenced directly in app code
-    onPrimaryFixed: _ink, // Not referenced directly in app code
-    onPrimaryFixedVariant: const Color(0xFF2A486B), // Not referenced directly in app code
+    primaryFixed: const Color(0xFFD2E4FF), // Unused — no app code or Flutter widget reads this (required by ColorScheme's fixed-color API)
+    primaryFixedDim: const Color(0xFFABC9F2), // Unused — no app code or Flutter widget reads this
+    onPrimaryFixed: _ink, // Unused — no app code or Flutter widget reads this
+    onPrimaryFixedVariant: const Color(0xFF2A486B), // Unused — no app code or Flutter widget reads this
     // ── Secondary fixed (gold) ──────────────────────────────────────
     // "Fixed" roles are meant to stay the same across brightness (that's
     // the point). secondaryFixedDim used to be a dimmed step down from
     // secondaryFixed — now the same brightest gold as every other gold
     // role in this theme.
     secondaryFixed: _secondary, // Map track/position color in satellite view (reads gold against photo imagery instead of navy)
-    secondaryFixedDim: _secondary, // Not referenced directly in app code
-    onSecondaryFixed: const Color(0xFF241A00), // Not referenced directly in app code
-    onSecondaryFixedVariant: const Color(0xFF574500), // Not referenced directly in app code
+    secondaryFixedDim: _secondary, // Unused — no app code or Flutter widget reads this
+    onSecondaryFixed: const Color(0xFF241A00), // Unused — no app code or Flutter widget reads this
+    onSecondaryFixedVariant: const Color(0xFF574500), // Unused — no app code or Flutter widget reads this
     // ── Tertiary fixed (dark navy) ──────────────────────────────────
-    tertiaryFixed: const Color(0xFFD3E4FB), // Not referenced directly in app code
-    tertiaryFixedDim: const Color(0xFFB7C8DE), // Not referenced directly in app code — dormant seafoam accent, mirrors light theme's _seafoam
-    onTertiaryFixed: _ink, // Not referenced directly in app code
-    onTertiaryFixedVariant: const Color(0xFF38485A), // Not referenced directly in app code
+    tertiaryFixed: const Color(0xFFD3E4FB), // Unused — no app code or Flutter widget reads this
+    tertiaryFixedDim: const Color(0xFFB7C8DE), // Unused — no app code or Flutter widget reads this (dormant seafoam accent, mirrors light theme's _seafoam)
+    onTertiaryFixed: _ink, // Unused — no app code or Flutter widget reads this
+    onTertiaryFixedVariant: const Color(0xFF38485A), // Unused — no app code or Flutter widget reads this
   ),
   textTheme: _buildDarkTextTheme(),
   // Full-screen dialogs: dark surfaceContainer card, 16px corners.
