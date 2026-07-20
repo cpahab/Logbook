@@ -1315,7 +1315,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get emergencyNoSafetyData => 'Noch keine Sicherheitsdaten erfasst.';
 
   @override
-  String get emergencyFrequenciesSection => 'KÜSTENWACHE-FREQUENZEN';
+  String get emergencyFrequenciesSection => 'FUNKFREQUENZEN';
 
   @override
   String get emergencyCrewMedicalSection => 'MEDIZINISCHE BESATZUNGSÜBERSICHT';

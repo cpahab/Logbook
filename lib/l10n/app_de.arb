@@ -479,7 +479,7 @@
   "emergencyContactsSection": "NOTFALLKONTAKTE",
   "emergencyVesselSafetySection": "SICHERHEITSINFO SCHIFF",
   "emergencyNoSafetyData": "Noch keine Sicherheitsdaten erfasst.",
-  "emergencyFrequenciesSection": "KÜSTENWACHE-FREQUENZEN",
+  "emergencyFrequenciesSection": "FUNKFREQUENZEN",
   "emergencyCrewMedicalSection": "MEDIZINISCHE BESATZUNGSÜBERSICHT",
   "emergencyCrewAutoNote": "Automatisch aus dem aktuellsten Logeintrag übernommen.\nBesatzungsdaten werden im Logbuch gepflegt.",
   "emergencyNoContacts": "Keine Notfallkontakte hinzugefügt.",

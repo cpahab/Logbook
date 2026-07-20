@@ -827,8 +827,9 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
+        color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: widget.editMode ? _buildEditView(cs) : _buildReadView(cs),
     );
@@ -885,7 +886,6 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
   /// Read-only summary: identity fields (MMSI/call sign) side-by-side on wide
   /// layouts or stacked on narrow ones, then a list of populated safety items.
   Widget _buildReadView(ColorScheme cs) {
-    final em = cs;
     final l10n = context.l10n;
     final v = widget.vessel;
 
@@ -899,14 +899,14 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
       if (v.lifeRaftInfo.isNotEmpty)
         _SafetyItem(
           icon: Icons.water,
-          iconColor: em.criticalColor,
+          urgent: true,
           title: l10n.emergencyLifeRaft,
           detail: v.lifeRaftInfo,
         ),
       if (v.epirbInfo.isNotEmpty)
         _SafetyItem(
           icon: Icons.sensors,
-          iconColor: cs.secondary,
+          urgent: false,
           // EPIRB is an international maritime acronym — kept in English
           title: 'EPIRB Location',
           detail: v.epirbInfo,
@@ -914,7 +914,7 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
       if (v.fireSuppInfo.isNotEmpty)
         _SafetyItem(
           icon: Icons.fire_extinguisher,
-          iconColor: em.criticalColor,
+          urgent: true,
           title: l10n.emergencyFireSuppression,
           detail: v.fireSuppInfo,
         ),
@@ -956,7 +956,10 @@ class _VesselSafetyCardState extends State<_VesselSafetyCard> {
               ),
             if (idFields.isNotEmpty && safetyItems.isNotEmpty)
               const SizedBox(height: 16),
-            ...safetyItems,
+            for (int i = 0; i < safetyItems.length; i++) ...[
+              if (i > 0) const SizedBox(height: 8),
+              safetyItems[i],
+            ],
             if (idFields.isEmpty && safetyItems.isEmpty)
               Text(
                 l10n.emergencyNoSafetyData,
@@ -1049,36 +1052,47 @@ class _InfoField extends StatelessWidget {
   }
 }
 
-/// Icon + title/detail row for one populated safety item (life raft, EPIRB,
-/// fire suppression) in [_VesselSafetyCard]'s read view.
+/// Icon + title/detail card for one populated safety item (life raft, EPIRB,
+/// fire suppression) in [_VesselSafetyCard]'s read view — same left-accent
+/// card styling as [_FrequencyRow], so the two sections read consistently.
 class _SafetyItem extends StatelessWidget {
   final IconData icon;
-  final Color iconColor;
+  final bool urgent;
   final String title;
   final String detail;
   const _SafetyItem(
-      {required this.icon, required this.iconColor,
+      {required this.icon, required this.urgent,
        required this.title, required this.detail});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+    final em = cs;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: urgent ? em.criticalBgColor : cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: urgent ? em.criticalColor : cs.primary, width: 4),
+        ),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 20),
+          Icon(icon, color: urgent ? em.criticalColor : cs.primary, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface)),
+                    style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: urgent ? em.criticalColor : cs.onSurface)),
                 Text(detail,
                     style: Theme.of(context).textTheme.bodySmall!.copyWith(
-                        color: cs.onSurfaceVariant)),
+                        color: urgent ? cs.onErrorContainer : cs.onSurfaceVariant)),
               ],
             ),
           ),
@@ -1397,7 +1411,9 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
 // ─── Crew Medical Overview Card ───────────────────────────────────────────────
 /// Tappable summary card for one crew member: name, blood-type badge, and
 /// personal EPIRB note if set. Tapping opens [_CrewDetailSheet] with the
-/// full medical record (allergies, conditions, remarks).
+/// full medical record (allergies, conditions, remarks). Same left-accent
+/// card styling as [_FrequencyRow]/[_SafetyItem], so all three sections read
+/// consistently.
 class _CrewMedicalCard extends StatelessWidget {
   final CrewMember member;
   const _CrewMedicalCard({required this.member});
@@ -1412,88 +1428,55 @@ class _CrewMedicalCard extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         onTap: () => _showCrewDetail(context, member),
         child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: cs.surfaceContainerLowest,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cs.outlineVariant),
-            boxShadow: [
-              BoxShadow(
-                color: em.cardShadowColor,
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(8),
+            border: Border(left: BorderSide(color: cs.primary, width: 4)),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 6,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [cs.tertiary, cs.primaryContainer],
-                        stops: const [0.5, 0.5],
-                        tileMode: TileMode.repeated,
-                      ),
+                  Expanded(
+                    child: Text(
+                      member.name,
+                      style: Theme.of(context).textTheme.titleLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w500, color: cs.primary),
                     ),
                   ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
+                  if (bloodType.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: em.criticalBgColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  member.name,
-                                  style: Theme.of(context).textTheme.titleLarge!.copyWith(fontSize: 20, fontWeight: FontWeight.w500, color: cs.primary),
-                                ),
-                              ),
-                              if (bloodType.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: em.criticalBgColor,
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(context.l10n.emergencyBloodBadge,
-                                          style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 8, letterSpacing: 0, color: cs.onErrorContainer)),
-                                      Text(bloodType,
-                                          style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onErrorContainer)),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                          if (personalEpirb.isNotEmpty)
-                            const SizedBox(height: 10),
-                          if (personalEpirb.isNotEmpty)
-                            _MedicalRow(
-                                icon: Icons.sensors,
-                                color: cs.secondary,
-                                text: personalEpirb),
+                          Text(context.l10n.emergencyBloodBadge,
+                              style: Theme.of(context).textTheme.labelSmall!.copyWith(fontSize: 8, letterSpacing: 0, color: cs.onErrorContainer)),
+                          Text(bloodType,
+                              style: Theme.of(context).textTheme.bodyLarge!.copyWith(fontSize: 18, fontWeight: FontWeight.w700, color: cs.onErrorContainer)),
                         ],
                       ),
                     ),
-                  ),
                 ],
               ),
-            ),
+              if (personalEpirb.isNotEmpty)
+                const SizedBox(height: 10),
+              if (personalEpirb.isNotEmpty)
+                _MedicalRow(
+                    icon: Icons.sensors,
+                    color: cs.secondary,
+                    text: personalEpirb),
+            ],
           ),
         ),
       ),

@@ -2501,7 +2501,7 @@ abstract class AppLocalizations {
   /// No description provided for @emergencyFrequenciesSection.
   ///
   /// In de, this message translates to:
-  /// **'KÜSTENWACHE-FREQUENZEN'**
+  /// **'FUNKFREQUENZEN'**
   String get emergencyFrequenciesSection;
 
   /// No description provided for @emergencyCrewMedicalSection.

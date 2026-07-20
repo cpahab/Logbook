@@ -479,7 +479,7 @@
   "emergencyContactsSection": "EMERGENCY CONTACTS",
   "emergencyVesselSafetySection": "VESSEL SAFETY INFO",
   "emergencyNoSafetyData": "No safety data recorded.",
-  "emergencyFrequenciesSection": "COAST GUARD FREQUENCIES",
+  "emergencyFrequenciesSection": "RADIO FREQUENCIES",
   "emergencyCrewMedicalSection": "CREW MEDICAL OVERVIEW",
   "emergencyCrewAutoNote": "Automatically taken from the most recent log entry.\nCrew data is managed in the logbook.",
   "emergencyNoContacts": "No emergency contacts added.",
