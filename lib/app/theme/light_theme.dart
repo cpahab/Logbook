@@ -31,11 +31,11 @@ final ThemeData lightTheme = ThemeData(
   colorScheme: const ColorScheme(
     brightness: Brightness.light,
     // ── Primary — Deep Navy ─────────────────────────────────────────
-    primary:            _primary,
-    onPrimary:          Color(0xFFFFFFFF),
-    primaryContainer:   Color(0xFF1A3A5C),
-    onPrimaryContainer: Color(0xFF87A4CC),
-    inversePrimary:     Color(0xFFABC9F2),
+    primary:            _primary, // App bar text/icons, primary buttons, links, borders on emphasis elements, non-satellite map track color
+    onPrimary:          Color(0xFFFFFFFF), // Text/icon on a primary-filled surface
+    primaryContainer:   Color(0xFF1A3A5C), // FAB background
+    onPrimaryContainer: Color(0xFF87A4CC), // Text/icon on primaryContainer
+    inversePrimary:     Color(0xFFABC9F2), // Not referenced directly in app code — Material's own default (e.g. SnackBar action color)
     // ── Secondary — Captain's Gold ──────────────────────────────────
     // Text/icon-safe gold, same ~45° hue family as secondaryContainer's pale
     // yellow (they're already near-identical in hue — the visual difference
@@ -46,57 +46,57 @@ final ThemeData lightTheme = ThemeData(
     // too bright for legible white text on top of it. onSecondaryContainer
     // deliberately mirrors secondary — one consistent gold used everywhere,
     // by design.
-    secondary:            Color(0xFFA77E01),
-    onSecondary:          Color(0xFF241A00),
-    secondaryContainer:   Color(0xFFFFE088),
-    onSecondaryContainer: Color(0xFFA77E01),
+    secondary:            Color(0xFFA77E01), // Section-header eyebrow labels, active bottom-nav label, icon accents, badge text
+    onSecondary:          Color(0xFF241A00), // Text on a secondary-filled surface
+    secondaryContainer:   Color.fromARGB(255, 253, 210, 91), // Pale gold fill: active bottom-nav icon, most-recent-day journal card's left accent
+    onSecondaryContainer: Color(0xFFA77E01), // Mirrors secondary deliberately — one consistent gold everywhere
     // ── Tertiary — Seafoam / Dark Navy ─────────────────────────────
-    tertiary:            Color(0xFF142435),
-    onTertiary:          Color(0xFFFFFFFF),
-    tertiaryContainer:   Color(0xFF2A3A4C),
-    onTertiaryContainer: Color(0xFF93A4B9),
+    tertiary:            Color(0xFF142435), // Dark navy accent surface, e.g. vessel-status card fill; also the Settings "logbook-scoped" left accent
+    onTertiary:          Color(0xFFFFFFFF), // Text/icon on a tertiary-filled surface
+    tertiaryContainer:   Color(0xFF2A3A4C), // Bottom-nav bar background
+    onTertiaryContainer: Color(0xFF93A4B9), // Inactive bottom-nav icon/label
     // ── Error ───────────────────────────────────────────────────────
-    error:            Color(0xFFBA1A1A),
-    onError:          Color(0xFFFFFFFF),
-    errorContainer:   Color(0xFFFFDAD6),
-    onErrorContainer: Color(0xFF93000A),
+    error:            Color(0xFFBA1A1A), // Destructive actions, critical/urgent emergency accents (criticalColor)
+    onError:          Color(0xFFFFFFFF), // Text/icon on an error-filled surface
+    errorContainer:   Color(0xFFFFDAD6), // Critical/urgent card background (criticalBgColor), blood-type badge fill
+    onErrorContainer: Color(0xFF93000A), // Text on errorContainer, blood-type badge text
     // ── Neutrals ───────────────────────────────────────────────────
-    surface:            _surface,
-    onSurface:          Color(0xFF1B1C1D),
-    onSurfaceVariant:   _onSurfaceVariant,
-    surfaceContainerHighest: Color(0xFFE3E2E3),
-    outline:            _outline,
-    outlineVariant:     Color(0xFFC3C6CF),
-    inverseSurface:     Color(0xFF303031),
-    onInverseSurface:   Color(0xFFF2F0F1),
-    scrim:              Color(0xFF000000),
-    shadow:             Color(0xFF000000),
-    surfaceTint:        Color(0xFF436084),
+    surface:            _surface, // Screen background
+    onSurface:          Color(0xFF1B1C1D), // Primary body text
+    onSurfaceVariant:   _onSurfaceVariant, // Secondary/caption body text (mutedLabel derives from this)
+    surfaceContainerHighest: Color(0xFFE3E2E3), // Alternate divider/highlight surface (e.g. day-detail stat-grid dividers)
+    outline:            _outline, // Input borders, dividers
+    outlineVariant:     Color(0xFFC3C6CF), // Card borders (dividerColor derives from this)
+    inverseSurface:     Color(0xFF303031), // Not referenced directly in app code — Material's own default (e.g. SnackBar background)
+    onInverseSurface:   Color(0xFFF2F0F1), // Not referenced directly in app code — pairs with inverseSurface
+    scrim:              Color(0xFF000000), // Not referenced directly in app code — Material's own default modal-barrier color
+    shadow:             Color(0xFF000000), // Ad hoc box-shadow tint outside the standard cardShadowColor token (e.g. Settings rows, timeline entry dialog)
+    surfaceTint:        Color(0xFF436084), // Neutralized in practice — dialogs/cards set surfaceTintColor: Colors.transparent to disable M3's elevation tint overlay
   ).copyWith(
     // ── Surface tonal ─────────────────────────────────────────────
-    surfaceDim:              const Color(0xFFDBDADB),
-    surfaceBright:           const Color(0xFFFAF9FA),
+    surfaceDim:              const Color(0xFFDBDADB), // Not referenced directly in app code — required tonal step
+    surfaceBright:           const Color(0xFFFAF9FA), // Not referenced directly in app code — required tonal step
     // ── Surface containers ─────────────────────────────────────────
-    surfaceContainerLowest: const Color(0xFFFFFFFF),
-    surfaceContainerLow:    const Color(0xFFF5F3F4),
-    surfaceContainer:       _container,
-    surfaceContainerHigh:   const Color(0xFFE9E8E9),
-    surfaceContainerHighest:const Color(0xFFE3E2E3),
+    surfaceContainerLowest: const Color(0xFFFFFFFF), // Card fill — the default "card on background" surface
+    surfaceContainerLow:    const Color(0xFFF5F3F4), // Secondary card fill, input fill
+    surfaceContainer:       _container, // Base container tier — chip/pill unselected fill
+    surfaceContainerHigh:   const Color(0xFFE9E8E9), // Nested "card on a card" fill (e.g. stat sub-cards)
+    surfaceContainerHighest:const Color(0xFFE3E2E3), // See surfaceContainerHighest above (duplicate role, both tiers share one value)
     // ── Primary fixed ──────────────────────────────────────────────
-    primaryFixed:           const Color(0xFFD2E4FF),
-    primaryFixedDim:        const Color(0xFFABC9F2),
-    onPrimaryFixed:         const Color(0xFF001C37),
-    onPrimaryFixedVariant:  const Color(0xFF2A486B),
+    primaryFixed:           const Color(0xFFD2E4FF), // Not referenced directly in app code — required by ColorScheme's fixed-color API
+    primaryFixedDim:        const Color(0xFFABC9F2), // Not referenced directly in app code
+    onPrimaryFixed:         const Color(0xFF001C37), // Not referenced directly in app code
+    onPrimaryFixedVariant:  const Color(0xFF2A486B), // Not referenced directly in app code
     // ── Secondary fixed (gold) ─────────────────────────────────────
-    secondaryFixed:         const Color(0xFFFFE088),
-    secondaryFixedDim:      const Color(0xFFE1C46F),
-    onSecondaryFixed:       const Color(0xFF241A00),
-    onSecondaryFixedVariant:const Color(0xFF574500),
+    secondaryFixed:         const Color(0xFFFFE088), // Map track/position color in satellite view (reads gold against photo imagery instead of navy)
+    secondaryFixedDim:      const Color(0xFFE1C46F), // Not referenced directly in app code
+    onSecondaryFixed:       const Color(0xFF241A00), // Not referenced directly in app code
+    onSecondaryFixedVariant:const Color(0xFF574500), // Not referenced directly in app code
     // ── Tertiary fixed (seafoam) ────────────────────────────────────
-    tertiaryFixed:          const Color(0xFFD3E4FB),
-    tertiaryFixedDim:       _seafoam,
-    onTertiaryFixed:        const Color(0xFF0B1D2D),
-    onTertiaryFixedVariant: const Color(0xFF38485A),
+    tertiaryFixed:          const Color(0xFFD3E4FB), // Not referenced directly in app code
+    tertiaryFixedDim:       _seafoam, // Not referenced directly in app code — defined for a future seafoam accent, dormant today
+    onTertiaryFixed:        const Color(0xFF0B1D2D), // Not referenced directly in app code
+    onTertiaryFixedVariant: const Color(0xFF38485A), // Not referenced directly in app code
   ),
   textTheme: _buildTextTheme(),
   // Full-screen dialogs (add/edit timeline entry, add/edit crew): white card, 16px corners.
