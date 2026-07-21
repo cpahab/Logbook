@@ -46,7 +46,7 @@ final ThemeData lightTheme = ThemeData(
     // too bright for legible white text on top of it. onSecondaryContainer
     // deliberately mirrors secondary — one consistent gold used everywhere,
     // by design.
-    secondary:            Color.fromARGB(255, 235, 179, 13), // Section-header eyebrow labels, active bottom-nav label, icon accents, badge text
+    secondary:            Color.fromARGB(255, 189, 142, 3), // Section-header eyebrow labels, active bottom-nav label, icon accents, badge text
     onSecondary:          Color(0xFF241A00), // Text on a secondary-filled surface
     secondaryContainer:   Color.fromARGB(255, 235, 179, 13), // Pale gold fill: active bottom-nav icon, most-recent-day journal card's left accent
     onSecondaryContainer: Color.fromARGB(255, 235, 179, 13), // Mirrors secondary deliberately — one consistent gold everywhere

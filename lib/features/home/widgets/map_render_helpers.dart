@@ -42,27 +42,28 @@ TileLayer mapTileLayer({required bool satelliteView}) => TileLayer(
 /// The attribution widget shared by every map in the day-detail feature.
 RichAttributionWidget mapAttribution({required bool satelliteView}) =>
     RichAttributionWidget(attributions: [
-      // MapTiler version (temporarily disabled, see map_config.dart):
-      // TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-      //   final uri = Uri.parse(kBaseAttributionUrl);
-      //   if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-      // }),
-      // if (!satelliteView)
-      //   TextSourceAttribution(kOsmAttributionLabel, onTap: () async {
-      //     final uri = Uri.parse(kOsmAttributionUrl);
-      //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-      //   }),
-      if (satelliteView)
-        TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
-          final uri = Uri.parse(kSatelliteAttributionUrl);
-          if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-        })
-      else
-        TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-          final uri = Uri.parse(kBaseAttributionUrl);
+      TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
+        final uri = Uri.parse(kBaseAttributionUrl);
+        if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }),
+      if (!satelliteView)
+        TextSourceAttribution(kOsmAttributionLabel, onTap: () async {
+          final uri = Uri.parse(kOsmAttributionUrl);
           if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
         }),
-    ]);
+      // OpenStreetMap/Esri version (temporarily disabled, see map_config.dart):
+      // if (satelliteView)
+      //   TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
+      //     final uri = Uri.parse(kSatelliteAttributionUrl);
+      //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+      //   })
+      // else
+      //   TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
+      //     final uri = Uri.parse(kBaseAttributionUrl);
+      //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+      //   }),
+    ],
+    showFlutterMapAttribution: false,);
 
 /// The tap-to-inspect marker every day-detail map drops at [position],
 /// showing [label] (if set) in a pill beside it, dismissed via [onDismiss].
