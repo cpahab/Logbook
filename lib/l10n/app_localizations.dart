@@ -110,6 +110,12 @@ abstract class AppLocalizations {
   /// **'Abbrechen'**
   String get cancel;
 
+  /// No description provided for @mapLoadRetry.
+  ///
+  /// In de, this message translates to:
+  /// **'Erneut versuchen'**
+  String get mapLoadRetry;
+
   /// No description provided for @delete.
   ///
   /// In de, this message translates to:

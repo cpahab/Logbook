@@ -10,6 +10,7 @@ import '../../../app/theme/theme_extensions.dart';
 import '../data/home_repository.dart';
 import '../domain/day_entry.dart';
 import '../domain/track_point.dart';
+import '../widgets/map_capture.dart';
 import '../utils/compute_daily_stats.dart';
 import '../utils/filter_settings.dart';
 import '../utils/pdf_exporter.dart';
@@ -298,10 +299,22 @@ class _HomeScreenState extends State<HomeScreen> {
           final file = await PhotoService.localFile(path);
           if (file != null) photoBytes.add(await file.readAsBytes());
         }
+        if (!mounted) return;
+        // Captured sequentially, one day at a time (not in parallel like the
+        // old per-tile network fetches): each capture mounts its own
+        // offscreen map widget, and running several concurrently risks tile-
+        // fetch contention and murkier settle timing for little benefit in
+        // a personal-logbook export that isn't latency-critical.
+        final trackImageBytes = trackPoints.length >= 2
+            ? await captureTrackMapImage(context,
+                points: trackPoints.map((p) => (lat: p.lat, lon: p.lon)).toList(),
+                entryPositions: entryMarkerPositions(entry, trackPoints))
+            : await capturePositionsMapImage(context, positionedFixes(entry));
+        if (!mounted) return;
         days.add(RangeDayInput(
           entry: entry,
           stats: stats,
-          trackPoints: trackPoints,
+          trackImageBytes: trackImageBytes,
           photoBytes: photoBytes,
           departureTime:      cached?.display.departureTime,
           departurePrecision: cached?.display.departurePrecision ?? TimePrecision.unknown,

@@ -37,6 +37,16 @@ dependencies:
   file_picker: ^11.0.2
   gpx: ^2.3.0
   flutter_map: ^8.0.0
+  # Pinned exactly, not a caret range: pre-release identifiers don't float
+  # reliably under pub's caret semantics, and this is the first version
+  # compatible with flutter_map 8.x (earlier 9.x betas need flutter_map
+  # ^7.0.2; 10.x betas need Flutter's dev/main channel, not stable). See
+  # map_render_helpers.dart's BaseVectorMapLayer for why vector tiles at all.
+  vector_map_tiles: 9.0.0-beta.9
+  # Transitive dep of vector_map_tiles, but Dart requires a direct pubspec
+  # entry for anything map_render_helpers.dart imports directly (its Logger
+  # type, used to silence/enable StyleReader's debug logging).
+  vector_tile_renderer: ^6.1.0
   latlong2: ^0.9.1
   provider: ^6.1.2
   hive_flutter: ^1.1.0

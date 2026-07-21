@@ -1,11 +1,8 @@
-import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart' show DateTimeRange;
-import 'package:flutter_map/flutter_map.dart'
-    show BuiltInMapCachingProvider, CachedMapTile, CachedMapTileMetadata;
 
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
@@ -13,7 +10,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
-import '../../../core/constants/map_config.dart';
 import '../../../core/services/backup_mapper.dart';
 import '../../../core/utils/coordinate_format.dart';
 import '../domain/crew_member.dart';
@@ -384,7 +380,7 @@ Future<Uint8List> buildVoyagePdf({
   required String vesselName,
   required PdfStrings strings,
   required VesselEquipmentConfig equipment,
-  List<TrackPoint> trackPoints = const [],
+  Uint8List? trackImageBytes,
   List<Uint8List> photoBytes = const [],
   DateTime? departureTime,
   TimePrecision departurePrecision = TimePrecision.unknown,
@@ -395,16 +391,6 @@ Future<Uint8List> buildVoyagePdf({
   final bold     = await PdfGoogleFonts.notoSansBold();
   final italic   = await PdfGoogleFonts.notoSansItalic();
   final emojiFont = await PdfGoogleFonts.notoEmojiRegular();
-
-  // Falls back to per-entry logged positions (no connecting line) when
-  // there's no continuous GPS track, so a hand-logged day still gets a map.
-  // When there IS a track, every logbook entry gets marked on it (own
-  // captured fix, or time-correlated onto the track — see _renderTrackImage
-  // and _entryMarkerPositions).
-  final Uint8List? trackImageBytes = trackPoints.length >= 2
-      ? await _renderTrackImage(trackPoints,
-          entryPositions: _entryMarkerPositions(entry, trackPoints))
-      : await _renderPositionsImage(_positionedFixes(entry));
 
   // entry as loaded from HomeRepository is a live HiveObject bound to its
   // Hive box (which holds a StreamController with listener closures) —
@@ -438,7 +424,7 @@ Future<Uint8List> buildVoyagePdf({
 class RangeDayInput {
   final DayEntry entry;
   final DailyStats? stats;
-  final List<TrackPoint> trackPoints;
+  final Uint8List? trackImageBytes;
   final List<Uint8List> photoBytes;
   final DateTime? departureTime;
   final TimePrecision departurePrecision;
@@ -448,7 +434,7 @@ class RangeDayInput {
   const RangeDayInput({
     required this.entry,
     required this.stats,
-    this.trackPoints = const [],
+    this.trackImageBytes,
     this.photoBytes = const [],
     this.departureTime,
     this.departurePrecision = TimePrecision.unknown,
@@ -474,7 +460,6 @@ typedef _RangeVoyagePdfInput = ({
   pw.Font bold,
   pw.Font italic,
   pw.Font emojiFont,
-  List<Uint8List?> trackImages,
 });
 
 /// Builds the multi-day [pw.Document] and serializes it to PDF bytes.
@@ -510,7 +495,7 @@ Future<Uint8List> _buildRangeVoyagePdfBytes(_RangeVoyagePdfInput input) async {
             bold:            input.bold,
             italic:          input.italic,
             emojiFont:       input.emojiFont,
-            trackImageBytes: input.trackImages[i],
+            trackImageBytes: input.days[i].trackImageBytes,
             photoBytes:      input.days[i].photoBytes,
             showHeader:      false,
             departureTime:      input.days[i].departureTime,
@@ -542,29 +527,15 @@ Future<Uint8List> buildRangeVoyagePdf({
   final italic    = await PdfGoogleFonts.notoSansItalic();
   final emojiFont = await PdfGoogleFonts.notoEmojiRegular();
 
-  // Render every day's track image in parallel — each is an independent
-  // network-bound tile fetch, so there's no benefit to doing them serially.
-  // Falls back to per-entry logged positions (no connecting line) when a
-  // day has no continuous GPS track, so a hand-logged day still gets a map.
-  // When there IS a track, every logbook entry gets marked on it (own
-  // captured fix, or time-correlated onto the track).
-  final trackImages = await Future.wait([
-    for (final d in days)
-      d.trackPoints.length >= 2
-          ? _renderTrackImage(d.trackPoints,
-              entryPositions: _entryMarkerPositions(d.entry, d.trackPoints))
-          : _renderPositionsImage(_positionedFixes(d.entry)),
-  ]);
-
   // Same detachment as buildVoyagePdf — each day's entry is a live,
   // box-attached HiveObject until round-tripped through the JSON mapper.
   final detachedDays = [
     for (final d in days)
       RangeDayInput(
-        entry:       dayEntryFromJson(dayEntryToJson(d.entry)).entry,
-        stats:       d.stats,
-        trackPoints: d.trackPoints,
-        photoBytes:  d.photoBytes,
+        entry:           dayEntryFromJson(dayEntryToJson(d.entry)).entry,
+        stats:           d.stats,
+        trackImageBytes: d.trackImageBytes,
+        photoBytes:      d.photoBytes,
         departureTime:      d.departureTime,
         departurePrecision: d.departurePrecision,
         arrivalTime:        d.arrivalTime,
@@ -583,7 +554,6 @@ Future<Uint8List> buildRangeVoyagePdf({
     bold:        bold,
     italic:      italic,
     emojiFont:   emojiFont,
-    trackImages: trackImages,
   ));
 }
 
@@ -1109,297 +1079,20 @@ pw.Widget _buildTrackMap(Uint8List imageBytes, pw.Font bold, pw.Font regular, Pd
   );
 }
 
-// ── Tile-map rendering ────────────────────────────────────────────────────────
-// Renders a static track-map image for the PDF by manually fetching and
-// compositing map tiles onto a canvas (there's no live flutter_map widget
-// available in a headless PDF-generation context).
-
-/// Web Mercator pixel X coordinate (origin = top-left of world at zoom [z]).
-double _mercX(double lon, int z) =>
-    (lon + 180) / 360 * math.pow(2, z) * 256;
-
-/// Web Mercator pixel Y coordinate (origin = top-left of world at zoom [z]).
-double _mercY(double lat, int z) {
-  final r = lat * math.pi / 180;
-  return (1 - math.log(math.tan(r) + 1 / math.cos(r)) / math.pi) /
-      2 *
-      math.pow(2, z) *
-      256;
-}
-
-/// The (x, y) tile-grid indices containing (lon, lat) at zoom [z].
-(int, int) _tile(double lon, double lat, int z) {
-  final n = math.pow(2, z).toInt();
-  return (
-    (_mercX(lon, z) / 256).floor().clamp(0, n - 1),
-    (_mercY(lat, z) / 256).floor().clamp(0, n - 1),
-  );
-}
-
-/// Highest zoom where the track's bounding box (+ 1-tile padding each side)
-/// still fits within a 5 × 4 tile grid — keeps the rendered image a fixed,
-/// bounded size regardless of how long the day's track is.
-int _chooseZoom(double minLat, double maxLat, double minLon, double maxLon) {
-  for (int z = 17; z >= 1; z--) {
-    final (x0, y0) = _tile(minLon, maxLat, z); // NW
-    final (x1, y1) = _tile(maxLon, minLat, z); // SE
-    if (x1 - x0 + 3 <= 5 && y1 - y0 + 3 <= 4) return z;
-  }
-  return 1;
-}
-
-/// Output size (in 256px map tiles) every rendered PDF map image is padded
-/// out to, regardless of how large or small the day's own content actually
-/// is. Without this, a tightly-clustered day (a few nearby positions) and a
-/// widely-spread one (a long track) naturally fit different tile-grid
-/// shapes — e.g. 4×4 tiles vs. 5×3 — and since every map gets scaled into
-/// the *same* fixed-size PDF container with `BoxFit.cover`, a different
-/// source canvas resolution means the exact same pixel-width polyline or
-/// marker ends up rendered at a visibly different physical size on the
-/// page. Locking every map to one constant canvas size keeps line weight
-/// and dot size identical across all of them.
-const int _kMapTilesWide = 5;
-const int _kMapTilesTall = 4;
-
-/// Expands the inclusive tile range [lo]..[hi] symmetrically until it spans
-/// exactly [target] tiles, clamped to the valid `[0, maxIdx]` index range.
-(int, int) _expandTileRange(int lo, int hi, int maxIdx, int target) {
-  while (hi - lo + 1 < target) {
-    final canGrowLo = lo > 0;
-    final canGrowHi = hi < maxIdx;
-    if (!canGrowLo && !canGrowHi) break;
-    if (canGrowLo) lo--;
-    if (hi - lo + 1 >= target) break;
-    if (canGrowHi) hi++;
-  }
-  return (lo, hi);
-}
-
-/// Decodes raw image bytes (a downloaded/cached tile) into a drawable [ui.Image].
-Future<ui.Image?> _decodeBytes(Uint8List bytes) async {
-  final codec = await ui.instantiateImageCodec(bytes);
-  return (await codec.getNextFrame()).image;
-}
-
-// Shares the on-disk tile cache that flutter_map's map screens already use
-// (the same MapTiler tiles are frequently re-requested here for PDF export),
-// so exporting doesn't re-download tiles the map has already cached.
-Future<ui.Image?> _fetchTile(int z, int tx, int ty, String base) async {
-  // Supports both template URLs ({z}/{x}/{y} with optional query string)
-  // and plain base URLs (base/$z/$tx/$ty.png for OpenSeaMap-style servers).
-  final url = base.contains('{z}')
-      ? base
-          .replaceAll('{z}', '$z')
-          .replaceAll('{x}', '$tx')
-          .replaceAll('{y}', '$ty')
-      : '$base/$z/$tx/$ty.png';
-
-  final cache = BuiltInMapCachingProvider.getOrCreateInstance();
-  CachedMapTile? cached;
-  if (cache.isSupported) {
-    try {
-      cached = await cache.getTile(url);
-    } catch (_) {
-      cached = null;
-    }
-  }
-  if (cached != null && !cached.metadata.isStale) {
-    try {
-      return await _decodeBytes(cached.bytes);
-    } catch (_) {
-      // Corrupt cache entry - fall through and re-fetch from the network.
-    }
-  }
-
-  HttpClient? client;
-  try {
-    client = HttpClient()..userAgent = 'Logbuch/1.0 sailing logbook app';
-    final req = await client
-        .getUrl(Uri.parse(url))
-        .timeout(const Duration(seconds: 8));
-    if (cached != null) {
-      final lastModified = cached.metadata.lastModified;
-      final etag = cached.metadata.etag;
-      if (lastModified != null) {
-        req.headers.set(
-          HttpHeaders.ifModifiedSinceHeader,
-          HttpDate.format(lastModified),
-        );
-      }
-      if (etag != null) req.headers.set(HttpHeaders.ifNoneMatchHeader, etag);
-    }
-    final res = await req.close().timeout(const Duration(seconds: 8));
-
-    final headers = <String, String>{};
-    res.headers.forEach(
-      (name, values) => headers[name.toLowerCase()] = values.join(', '),
-    );
-
-    if (res.statusCode == HttpStatus.notModified && cached != null) {
-      if (cache.isSupported) {
-        try {
-          await cache.putTile(
-            url: url,
-            metadata: CachedMapTileMetadata.fromHttpHeaders(headers),
-          );
-        } catch (_) {}
-      }
-      return await _decodeBytes(cached.bytes);
-    }
-
-    if (res.statusCode != 200) return null;
-    final chunks = <List<int>>[];
-    await for (final c in res) { chunks.add(c); }
-    final bytes = Uint8List.fromList(chunks.expand((c) => c).toList());
-
-    if (cache.isSupported) {
-      try {
-        await cache.putTile(
-          url: url,
-          metadata: CachedMapTileMetadata.fromHttpHeaders(headers),
-          bytes: bytes,
-        );
-      } catch (_) {}
-    }
-
-    return await _decodeBytes(bytes);
-  } catch (e) {
-    if (kDebugMode) debugPrint('_fetchTile: $e');
-    return null;
-  } finally {
-    client?.close();
-  }
-}
-
-/// Renders [points] onto a composited basemap-tile image (with start/end
-/// markers, a small dot per [entryPositions] fix, and a north indicator)
-/// and returns it as PNG bytes, or null if there are too few points to
-/// draw a track.
-Future<Uint8List?> _renderTrackImage(
-  List<TrackPoint> points, {
-  List<(double, double)> entryPositions = const [],
-}) async {
-  if (points.length < 2) return null;
-
-  var minLat = points.first.lat, maxLat = minLat;
-  var minLon = points.first.lon, maxLon = minLon;
-  for (final p in points) {
-    if (p.lat < minLat) minLat = p.lat;
-    if (p.lat > maxLat) maxLat = p.lat;
-    if (p.lon < minLon) minLon = p.lon;
-    if (p.lon > maxLon) maxLon = p.lon;
-  }
-  // Widen the bounds to fit every logged entry position too, in case one
-  // falls outside the track itself (GPS drift, a fix logged just off the
-  // route) — otherwise its marker would be drawn outside the canvas.
-  for (final (lat, lon) in entryPositions) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lon < minLon) minLon = lon;
-    if (lon > maxLon) maxLon = lon;
-  }
-
-  final zoom   = _chooseZoom(minLat, maxLat, minLon, maxLon);
-  final maxIdx = math.pow(2, zoom).toInt() - 1;
-
-  final (nx0, ny0) = _tile(minLon, maxLat, zoom); // NW tile
-  final (nx1, ny1) = _tile(maxLon, minLat, zoom); // SE tile
-  var tx0 = (nx0 - 1).clamp(0, maxIdx);
-  var ty0 = (ny0 - 1).clamp(0, maxIdx);
-  var tx1 = (nx1 + 1).clamp(0, maxIdx);
-  var ty1 = (ny1 + 1).clamp(0, maxIdx);
-  (tx0, tx1) = _expandTileRange(tx0, tx1, maxIdx, _kMapTilesWide);
-  (ty0, ty1) = _expandTileRange(ty0, ty1, maxIdx, _kMapTilesTall);
-
-  final canvasW = (tx1 - tx0 + 1) * 256.0;
-  final canvasH = (ty1 - ty0 + 1) * 256.0;
-
-  // Fetch MapTiler tiles (same style as the daily map screen)
-  final coords = [
-    for (int tx = tx0; tx <= tx1; tx++)
-      for (int ty = ty0; ty <= ty1; ty++) (tx, ty),
-  ];
-
-  final tileImages = await Future.wait([
-    for (final (tx, ty) in coords) _fetchTile(zoom, tx, ty, kBaseTileUrl),
-  ]);
-
-  final recorder = ui.PictureRecorder();
-  final canvas   = ui.Canvas(recorder);
-
-  // Fallback background if tiles are missing
-  canvas.drawRect(
-    ui.Rect.fromLTWH(0, 0, canvasW, canvasH),
-    ui.Paint()..color = const ui.Color(0xFFD8E8F0),
-  );
-
-  // Draw MapTiler tiles
-  for (int i = 0; i < coords.length; i++) {
-    final (tx, ty) = coords[i];
-    final img = tileImages[i];
-    if (img != null) {
-      canvas.drawImage(
-        img,
-        ui.Offset((tx - tx0) * 256.0, (ty - ty0) * 256.0),
-        ui.Paint(),
-      );
-    }
-  }
-
-  // Project track points via Web Mercator offset by tile-grid origin
-  double toX(double lon) => _mercX(lon, zoom) - tx0 * 256;
-  double toY(double lat) => _mercY(lat, zoom) - ty0 * 256;
-
-  // Track polyline — white halo + navy line for visibility on any basemap
-  final trackPath = ui.Path();
-  bool first = true;
-  for (final p in points) {
-    final x = toX(p.lon);
-    final y = toY(p.lat);
-    if (first) { trackPath.moveTo(x, y); first = false; }
-    else        { trackPath.lineTo(x, y); }
-  }
-  canvas.drawPath(trackPath, ui.Paint()
-    ..color      = const ui.Color(0xCCFFFFFF)
-    ..strokeWidth = 6.0
-    ..style      = ui.PaintingStyle.stroke
-    ..strokeCap  = ui.StrokeCap.round
-    ..strokeJoin = ui.StrokeJoin.round);
-  canvas.drawPath(trackPath, ui.Paint()
-    ..color      = const ui.Color(0xDD003366)
-    ..strokeWidth = 3.0
-    ..style      = ui.PaintingStyle.stroke
-    ..strokeCap  = ui.StrokeCap.round
-    ..strokeJoin = ui.StrokeJoin.round);
-
-  // Dots for logbook entries — same solid navy, same radius as the
-  // positions-only map's own dots, for full visual consistency between the
-  // two. Drawn *before* the start/end markers so that when an entry's
-  // position coincides with the track's own start or end (e.g. an
-  // "arrived" entry logged at the final track point), the bold green/red
-  // coloring always wins on top instead of being obscured by the entry dot.
-  for (final (lat, lon) in entryPositions) {
-    _drawMarker(canvas, toX(lon), toY(lat), const ui.Color(0xFF003366));
-  }
-  _drawMarker(canvas, toX(points.first.lon), toY(points.first.lat),
-      const ui.Color(0xFF2E7D32));
-  _drawMarker(canvas, toX(points.last.lon),  toY(points.last.lat),
-      const ui.Color(0xFFC62828));
-  _drawNorthIndicator(canvas, canvasW - 32, 34);
-
-  final picture  = recorder.endRecording();
-  final image    = await picture.toImage(canvasW.toInt(), canvasH.toInt());
-  final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-  return byteData?.buffer.asUint8List();
-}
+// ── Track-map data helpers ──────────────────────────────────────────────────────
+// The actual map image is rendered by the caller (see map_capture.dart's
+// captureTrackMapImage/capturePositionsMapImage, using the same live
+// BaseVectorMapLayer the on-screen maps use) and passed in as
+// trackImageBytes below. These two just derive the (lat, lon) marker
+// positions callers need to pass alongside the track/position points.
 
 /// The (lat, lon) marker position for every logbook entry on a tracked day —
 /// an entry's own captured GPS fix if it has one, otherwise the track's
 /// nearest-in-time point, via the same [correlateTimelineWithTrack] the
-/// in-app day-detail map already uses. Unlike [_positionedFixes], this
+/// in-app day-detail map already uses. Unlike [positionedFixes], this
 /// covers every entry (a course change, an equipment note, ...), not just
 /// ones that logged their own position.
-List<(double, double)> _entryMarkerPositions(
+List<(double, double)> entryMarkerPositions(
   DayEntry entry,
   List<TrackPoint> trackPoints,
 ) {
@@ -1422,167 +1115,10 @@ List<(double, double)> _entryMarkerPositions(
 /// chronological order — used as a fallback map when the day has no
 /// continuous GPS track (e.g. logged entirely by hand, or the track wasn't
 /// imported) but at least one log entry still has a position.
-List<(double, double)> _positionedFixes(DayEntry entry) {
+List<(double, double)> positionedFixes(DayEntry entry) {
   final positioned = entry.timeline
       .where((t) => t.latitude != null && t.longitude != null)
       .toList()
     ..sort((a, b) => a.time.compareTo(b.time));
   return [for (final t in positioned) (t.latitude!, t.longitude!)];
-}
-
-/// Renders discrete [positions] (per-entry GPS fixes, not a continuous
-/// track) onto a composited basemap-tile image — connected by a polyline
-/// (styled like a real track's) once there are 2+ of them, styled with a
-/// dot per position either way. Returns PNG bytes, or null if there are no
-/// positions.
-Future<Uint8List?> _renderPositionsImage(List<(double, double)> positions) async {
-  if (positions.isEmpty) return null;
-
-  var minLat = positions.first.$1, maxLat = minLat;
-  var minLon = positions.first.$2, maxLon = minLon;
-  for (final (lat, lon) in positions) {
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-    if (lon < minLon) minLon = lon;
-    if (lon > maxLon) maxLon = lon;
-  }
-
-  final zoom   = _chooseZoom(minLat, maxLat, minLon, maxLon);
-  final maxIdx = math.pow(2, zoom).toInt() - 1;
-
-  final (nx0, ny0) = _tile(minLon, maxLat, zoom); // NW tile
-  final (nx1, ny1) = _tile(maxLon, minLat, zoom); // SE tile
-  var tx0 = (nx0 - 1).clamp(0, maxIdx);
-  var ty0 = (ny0 - 1).clamp(0, maxIdx);
-  var tx1 = (nx1 + 1).clamp(0, maxIdx);
-  var ty1 = (ny1 + 1).clamp(0, maxIdx);
-  (tx0, tx1) = _expandTileRange(tx0, tx1, maxIdx, _kMapTilesWide);
-  (ty0, ty1) = _expandTileRange(ty0, ty1, maxIdx, _kMapTilesTall);
-
-  final canvasW = (tx1 - tx0 + 1) * 256.0;
-  final canvasH = (ty1 - ty0 + 1) * 256.0;
-
-  final coords = [
-    for (int tx = tx0; tx <= tx1; tx++)
-      for (int ty = ty0; ty <= ty1; ty++) (tx, ty),
-  ];
-
-  final tileImages = await Future.wait([
-    for (final (tx, ty) in coords) _fetchTile(zoom, tx, ty, kBaseTileUrl),
-  ]);
-
-  final recorder = ui.PictureRecorder();
-  final canvas   = ui.Canvas(recorder);
-
-  canvas.drawRect(
-    ui.Rect.fromLTWH(0, 0, canvasW, canvasH),
-    ui.Paint()..color = const ui.Color(0xFFD8E8F0),
-  );
-
-  for (int i = 0; i < coords.length; i++) {
-    final (tx, ty) = coords[i];
-    final img = tileImages[i];
-    if (img != null) {
-      canvas.drawImage(
-        img,
-        ui.Offset((tx - tx0) * 256.0, (ty - ty0) * 256.0),
-        ui.Paint(),
-      );
-    }
-  }
-
-  double toX(double lon) => _mercX(lon, zoom) - tx0 * 256;
-  double toY(double lat) => _mercY(lat, zoom) - ty0 * 256;
-
-  // Connecting polyline — same white-halo + navy-line style as a real
-  // track's, so a hand-logged day reads the same way once there are
-  // enough fixes to draw a line between.
-  if (positions.length >= 2) {
-    final path = ui.Path();
-    bool first = true;
-    for (final (lat, lon) in positions) {
-      final x = toX(lon);
-      final y = toY(lat);
-      if (first) { path.moveTo(x, y); first = false; }
-      else        { path.lineTo(x, y); }
-    }
-    canvas.drawPath(path, ui.Paint()
-      ..color      = const ui.Color(0xCCFFFFFF)
-      ..strokeWidth = 6.0
-      ..style      = ui.PaintingStyle.stroke
-      ..strokeCap  = ui.StrokeCap.round
-      ..strokeJoin = ui.StrokeJoin.round);
-    canvas.drawPath(path, ui.Paint()
-      ..color      = const ui.Color(0xDD003366)
-      ..strokeWidth = 3.0
-      ..style      = ui.PaintingStyle.stroke
-      ..strokeCap  = ui.StrokeCap.round
-      ..strokeJoin = ui.StrokeJoin.round);
-  }
-
-  // First/last position colored green/red, same convention as a real
-  // track's start/end markers — only meaningful once there are 2+ (a lone
-  // position has no distinct start vs. end, so it stays neutral navy).
-  for (int i = 0; i < positions.length; i++) {
-    final (lat, lon) = positions[i];
-    final color = positions.length >= 2 && i == 0
-        ? const ui.Color(0xFF2E7D32)
-        : positions.length >= 2 && i == positions.length - 1
-            ? const ui.Color(0xFFC62828)
-            : const ui.Color(0xFF003366);
-    _drawMarker(canvas, toX(lon), toY(lat), color);
-  }
-  _drawNorthIndicator(canvas, canvasW - 32, 34);
-
-  final picture  = recorder.endRecording();
-  final image    = await picture.toImage(canvasW.toInt(), canvasH.toInt());
-  final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-  return byteData?.buffer.asUint8List();
-}
-
-/// Draws a filled, ringed dot at (x, y) — used for the track's start
-/// (green) and end (red) markers, and (with the fill/ring colors swapped)
-/// for entry-position markers on top of a track.
-void _drawMarker(ui.Canvas canvas, double x, double y, ui.Color color,
-    {double radius = 7, ui.Color ringColor = const ui.Color(0xFFFFFFFF)}) {
-  final ringWidth = radius * 2 / 7; // keeps the default's 7px-radius/2px-ring proportion
-  canvas.drawCircle(ui.Offset(x, y), radius, ui.Paint()..color = color);
-  canvas.drawCircle(ui.Offset(x, y), radius,
-    ui.Paint()
-      ..color      = ringColor
-      ..style      = ui.PaintingStyle.stroke
-      ..strokeWidth = ringWidth);
-}
-
-/// Draws a small "N" compass badge in the map image's top-right corner.
-void _drawNorthIndicator(ui.Canvas canvas, double cx, double cy) {
-  const r = 16.0;
-  canvas.drawCircle(ui.Offset(cx, cy), r,
-      ui.Paint()..color = const ui.Color(0xCCE8EEF4));
-  canvas.drawCircle(ui.Offset(cx, cy), r,
-    ui.Paint()
-      ..color      = const ui.Color(0xFF8FA8BF)
-      ..style      = ui.PaintingStyle.stroke
-      ..strokeWidth = 1);
-  // North arrow
-  canvas.drawPath(
-    ui.Path()
-      ..moveTo(cx, cy - r + 5)
-      ..lineTo(cx - 5.5, cy + 5)
-      ..lineTo(cx + 5.5, cy + 5)
-      ..close(),
-    ui.Paint()..color = const ui.Color(0xFF003366));
-  canvas.drawLine(ui.Offset(cx, cy + 5), ui.Offset(cx, cy + r - 4),
-    ui.Paint()
-      ..color      = const ui.Color(0xFF8FA8BF)
-      ..strokeWidth = 2);
-  final para = (ui.ParagraphBuilder(
-      ui.ParagraphStyle(fontSize: 10, textAlign: ui.TextAlign.center))
-    ..pushStyle(ui.TextStyle(
-        color: const ui.Color(0xFF003366),
-        fontSize: 10,
-        fontWeight: ui.FontWeight.bold))
-    ..addText('N'))
-      .build()..layout(const ui.ParagraphConstraints(width: 20));
-  canvas.drawParagraph(para, ui.Offset(cx - 10, cy - r - 14));
 }

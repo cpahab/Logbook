@@ -15,6 +15,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancel => 'Cancel';
 
   @override
+  String get mapLoadRetry => 'Retry';
+
+  @override
   String get delete => 'Delete';
 
   @override

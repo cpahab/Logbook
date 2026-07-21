@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:logbook/core/services/backup_mapper.dart';
@@ -44,16 +43,6 @@ void main() {
     if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(DailyTrackAdapter());
     if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(TrackPointAdapter());
     if (!Hive.isAdapterRegistered(12)) Hive.registerAdapter(CrewMemberAdapter());
-
-    // _renderPositionsImage/_renderTrackImage use flutter_map's built-in tile
-    // cache, which asks path_provider for a cache directory — mock that
-    // platform channel so it resolves instead of throwing (no real platform
-    // bindings exist in a unit test).
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      const MethodChannel('plugins.flutter.io/path_provider'),
-      (call) async => tempDir.path,
-    );
   });
 
   tearDown(() async {
@@ -134,8 +123,19 @@ void main() {
     expect(bytes, isNotEmpty);
   });
 
-  test('buildVoyagePdf falls back to a positions-only map when a day has no '
-      'continuous GPS track but a timeline entry logged a position', () async {
+  // The two tests below used to go all the way through buildVoyagePdf and
+  // compare embedded-map PDF byte sizes, back when buildVoyagePdf rendered
+  // the map tiles itself. Map rendering has since moved to the caller (see
+  // captureTrackMapImage/capturePositionsMapImage in map_capture.dart, which
+  // need a live, mounted BuildContext and so aren't reachable from this
+  // isolate-only test harness) — buildVoyagePdf now just embeds whatever
+  // trackImageBytes it's handed. What's still worth covering at this level
+  // is the pure data-shaping those render calls are built on: positionedFixes
+  // (which days get a fallback map at all) and entryMarkerPositions (which
+  // positions get marked on it) — both still plain, widget-free functions.
+
+  test('positionedFixes returns a day\'s logged GPS fixes, empty when there are none',
+      () async {
     final home = HomeRepository();
     await home.init();
     final date = DateTime(2024, 1, 1);
@@ -151,56 +151,23 @@ void main() {
     home.saveEntry(entry, changedFields: {'timeline'});
     final withPosition = home.getEntry(date)!;
 
-    const strings = PdfStrings(
-      voyageLog: 'VOYAGE LOG', notes: 'NOTES', date: 'DATE',
-      distance: 'DISTANCE', avgSpeedUnderway: 'AVG UNDERWAY',
-      max: 'MAX', duration: 'DURATION', statistics: 'STATS',
-      crew: 'CREW', skipper: 'SKIPPER', crewMember: 'CREW', logEntries: 'LOG',
-      timeCol: 'Time', courseCol: 'Hdg', windCol: 'Wind', seaCol: 'Sea',
-      positionCol: 'Position',
-      remarksCol: 'Remarks', trackMap: 'MAP', locale: 'en_GB', generatedOn: 'GEN',
-      crewNoteLabel: 'Crew', skipperLabel: 'Skipper',
-      oilLabel: 'Engine oil', fuelLabel: 'Fuel',
-      keelLabel: 'Keel', keelDownLabel: 'Down', keelUpLabel: 'Up',
-      passageToTemplate: 'Passage to \u0000',
-      departureFromTemplate: 'Departure from \u0000',
-      departureFromAtTemplate: 'Departure from \u0000 at \u0000',
-      arrivalAtTemplate: 'Arrival at \u0000',
-      pageOfTemplate: 'Page -1 of -2',
-    );
+    expect(positionedFixes(withPosition), [(39.5696, 2.6502)]);
 
-    final withPositionBytes = await buildVoyagePdf(
-      entry: withPosition,
-      stats: null,
-      vesselName: 'Test Vessel',
-      strings: strings,
-      equipment: VesselEquipmentConfig.defaultForLocale('en'),
-    );
-
-    // No track and no logged position at all -> no map to embed, so the
-    // positions-only map above should make the PDF noticeably larger.
     final date2 = DateTime(2024, 1, 2);
     home.addEntry(date2);
     final withoutPosition = home.getEntry(date2)!;
-    final withoutPositionBytes = await buildVoyagePdf(
-      entry: withoutPosition,
-      stats: null,
-      vesselName: 'Test Vessel',
-      strings: strings,
-      equipment: VesselEquipmentConfig.defaultForLocale('en'),
-    );
 
-    expect(withPositionBytes.length, greaterThan(withoutPositionBytes.length));
+    expect(positionedFixes(withoutPosition), isEmpty);
   });
 
-  test('buildVoyagePdf marks a timeline entry\'s own position on the map '
-      'even when the day also has a continuous GPS track', () async {
+  test('entryMarkerPositions includes a timeline entry\'s own position even '
+      'when it falls outside the day\'s GPS track bounds', () async {
     final home = HomeRepository();
     await home.init();
     final date = DateTime(2024, 1, 1);
     home.addEntry(date);
 
-    // A real track a marker could be drawn on top of.
+    // A real track the entry's own position could be checked against.
     await home.replaceTrackPoints(date, [
       TrackPoint(lat: 39.50, lon: 2.60, time: DateTime(2024, 1, 1, 9, 0)),
       TrackPoint(lat: 39.55, lon: 2.63, time: DateTime(2024, 1, 1, 10, 0)),
@@ -208,8 +175,9 @@ void main() {
     ]);
 
     final entry = home.getEntry(date)!;
-    // Deliberately outside the track's own bounds, to exercise the bounds
-    // widening that keeps this marker from being clipped off the image.
+    // Deliberately outside the track's own bounds, to exercise the fallback
+    // to the entry's own logged position rather than only ever correlating
+    // onto the nearest track point.
     entry.timeline = [
       TimelineEntry(
         time: DateTime(2024, 1, 1, 9, 30),
@@ -221,33 +189,6 @@ void main() {
     final liveEntry = home.getEntry(date)!;
     final track = home.dailyTracks[date]!;
 
-    const strings = PdfStrings(
-      voyageLog: 'VOYAGE LOG', notes: 'NOTES', date: 'DATE',
-      distance: 'DISTANCE', avgSpeedUnderway: 'AVG UNDERWAY',
-      max: 'MAX', duration: 'DURATION', statistics: 'STATS',
-      crew: 'CREW', skipper: 'SKIPPER', crewMember: 'CREW', logEntries: 'LOG',
-      timeCol: 'Time', courseCol: 'Hdg', windCol: 'Wind', seaCol: 'Sea',
-      positionCol: 'Position',
-      remarksCol: 'Remarks', trackMap: 'MAP', locale: 'en_GB', generatedOn: 'GEN',
-      crewNoteLabel: 'Crew', skipperLabel: 'Skipper',
-      oilLabel: 'Engine oil', fuelLabel: 'Fuel',
-      keelLabel: 'Keel', keelDownLabel: 'Down', keelUpLabel: 'Up',
-      passageToTemplate: 'Passage to \u0000',
-      departureFromTemplate: 'Departure from \u0000',
-      departureFromAtTemplate: 'Departure from \u0000 at \u0000',
-      arrivalAtTemplate: 'Arrival at \u0000',
-      pageOfTemplate: 'Page -1 of -2',
-    );
-
-    final bytes = await buildVoyagePdf(
-      entry: liveEntry,
-      stats: null,
-      vesselName: 'Test Vessel',
-      strings: strings,
-      equipment: VesselEquipmentConfig.defaultForLocale('en'),
-      trackPoints: track.points,
-    );
-
-    expect(bytes, isNotEmpty);
+    expect(entryMarkerPositions(liveEntry, track.points), [(39.80, 2.80)]);
   });
 }

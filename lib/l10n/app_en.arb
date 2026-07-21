@@ -4,6 +4,7 @@
   "appTitle": "Logbook",
 
   "cancel": "Cancel",
+  "mapLoadRetry": "Retry",
   "delete": "Delete",
   "edit": "Edit",
   "add": "Add",

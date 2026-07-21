@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
@@ -16,6 +15,7 @@ import '../../home/domain/day_entry.dart';
 import '../../home/domain/timeline_entry.dart';
 import '../../home/utils/compute_daily_stats.dart';
 import '../../home/domain/track_point.dart';
+import '../../home/widgets/map_render_helpers.dart' show mapTileLayer, mapAttribution;
 import '../../home/utils/trim_track.dart'
     show trimStationaryEnds, DisplayModel, SegmentKind,
         splitTrackSegments;
@@ -516,33 +516,7 @@ class _TracksScreenState extends State<TracksScreen> {
                 : null,
           ),
           children: [
-            TileLayer(
-              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
-              userAgentPackageName: 'com.logbook.app',
-              // Keep more of the surrounding tile grid loaded across a
-              // pan/zoom transition so fewer tiles need a fresh fetch right
-              // when the gesture ends (default is 2).
-              keepBuffer: 4,
-              // Default is `.none`, which never retries a tile that failed
-              // once (transient network blip, tile-server rate limit) — it
-              // stays blank until this whole map widget is rebuilt. Evicting
-              // once it scrolls out of view lets it be re-fetched next time
-              // it's needed.
-              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
-              errorTileCallback: kDebugMode
-                  ? (tile, error, stackTrace) =>
-                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
-                  : null,
-              // Fade-in on arrival is TileLayer's default (tileDisplay:
-              // TileDisplay.fadeIn()); this only overrides the tile that
-              // failed to load, in place of a blank grey square.
-              tileBuilder: (context, tileWidget, tile) => tile.loadError
-                  ? Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      child: const Icon(Icons.map_outlined, size: 20),
-                    )
-                  : tileWidget,
-            ),
+            mapTileLayer(satelliteView: _satelliteView),
             Builder(builder: (ctx) {
               if (MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
               return PolygonLayer(polygons: uncertaintyPolygons);
@@ -571,31 +545,7 @@ class _TracksScreenState extends State<TracksScreen> {
               );
             }),
             MarkerLayer(markers: arrowMarkers),
-            RichAttributionWidget(
-              attributions: [
-                TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-                  final uri = Uri.parse(kBaseAttributionUrl);
-                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }),
-                if (!_satelliteView)
-                  TextSourceAttribution(kOsmAttributionLabel, onTap: () async {
-                    final uri = Uri.parse(kOsmAttributionUrl);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }),
-                // OpenStreetMap/Esri version (temporarily disabled, see map_config.dart):
-                // if (_satelliteView)
-                //   TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
-                //     final uri = Uri.parse(kSatelliteAttributionUrl);
-                //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                //   })
-                // else
-                //   TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-                //     final uri = Uri.parse(kBaseAttributionUrl);
-                //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                //   }),
-              ],
-              showFlutterMapAttribution: false,
-            ),
+            mapAttribution(satelliteView: _satelliteView),
           ],
         ),
         // Map controls — bottom-right (zoom + center on macOS, satellite always)
@@ -1308,33 +1258,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
                 : null,
           ),
           children: [
-            TileLayer(
-              urlTemplate: _satelliteView ? kSatelliteUrl : kBaseTileUrl,
-              userAgentPackageName: 'com.logbook.app',
-              // Keep more of the surrounding tile grid loaded across a
-              // pan/zoom transition so fewer tiles need a fresh fetch right
-              // when the gesture ends (default is 2).
-              keepBuffer: 4,
-              // Default is `.none`, which never retries a tile that failed
-              // once (transient network blip, tile-server rate limit) — it
-              // stays blank until this whole map widget is rebuilt. Evicting
-              // once it scrolls out of view lets it be re-fetched next time
-              // it's needed.
-              evictErrorTileStrategy: EvictErrorTileStrategy.notVisibleRespectMargin,
-              errorTileCallback: kDebugMode
-                  ? (tile, error, stackTrace) =>
-                      debugPrint('[Map] tile ${tile.coordinates} failed to load: $error')
-                  : null,
-              // Fade-in on arrival is TileLayer's default (tileDisplay:
-              // TileDisplay.fadeIn()); this only overrides the tile that
-              // failed to load, in place of a blank grey square.
-              tileBuilder: (context, tileWidget, tile) => tile.loadError
-                  ? Container(
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                      child: const Icon(Icons.map_outlined, size: 20),
-                    )
-                  : tileWidget,
-            ),
+            mapTileLayer(satelliteView: _satelliteView),
             Builder(builder: (ctx) {
               if (MapCamera.of(ctx).zoom <= 15) return const SizedBox.shrink();
               return PolygonLayer(polygons: fsUncertaintyPolygons);
@@ -1363,28 +1287,7 @@ class _TracksMapFullScreenState extends State<_TracksMapFullScreen> {
               );
             }),
             MarkerLayer(markers: arrowMarkers),
-            RichAttributionWidget(attributions: [
-              TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-                final uri = Uri.parse(kBaseAttributionUrl);
-                if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-              }),
-              if (!_satelliteView)
-                TextSourceAttribution(kOsmAttributionLabel, onTap: () async {
-                  final uri = Uri.parse(kOsmAttributionUrl);
-                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }),
-              // OpenStreetMap/Esri version (temporarily disabled, see map_config.dart):
-              // if (_satelliteView)
-              //   TextSourceAttribution(kSatelliteAttributionLabel, onTap: () async {
-              //     final uri = Uri.parse(kSatelliteAttributionUrl);
-              //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-              //   })
-              // else
-              //   TextSourceAttribution(kBaseAttributionLabel, onTap: () async {
-              //     final uri = Uri.parse(kBaseAttributionUrl);
-              //     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-              //   }),
-            ]),
+            mapAttribution(satelliteView: _satelliteView),
           ],
         ),
         Positioned(

@@ -35,6 +35,7 @@ import '../widgets/edit_text_dialog.dart';
 import '../widgets/edit_vessel_status_dialog.dart';
 import '../widgets/entry_tooltip.dart';
 import '../widgets/map_layers.dart';
+import '../widgets/map_capture.dart';
 import '../widgets/map_render_helpers.dart';
 import 'day_map_fullscreen.dart';
 import 'positions_only_map_fullscreen.dart';
@@ -2964,13 +2965,21 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
         arrivalAtTemplate:       l10n.pdfArrivalAt('\u0000'),
         pageOfTemplate:          l10n.pdfPageOf(-1, -2),
       );
+      if (!mounted) return;
+      final trackImageBytes = filteredPoints.length >= 2
+          ? await captureTrackMapImage(context,
+              points: filteredPoints.map((p) => (lat: p.lat, lon: p.lon)).toList(),
+              entryPositions: entryMarkerPositions(entry, filteredPoints))
+          : await capturePositionsMapImage(context, positionedFixes(entry));
+      if (!mounted) return;
+
       final bytes = await buildVoyagePdf(
         entry:              entry,
         stats:              stats,
         vesselName:         p.vesselName,
         strings:            pdfStrings,
         equipment:          p.vesselEquipment,
-        trackPoints:        filteredPoints,
+        trackImageBytes:    trackImageBytes,
         photoBytes:         photoBytes,
         departureTime:      display?.departureTime,
         departurePrecision: display?.departurePrecision ?? TimePrecision.unknown,
