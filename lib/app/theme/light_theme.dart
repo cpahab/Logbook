@@ -49,7 +49,7 @@ final ThemeData lightTheme = ThemeData(
     secondary:            Color.fromARGB(255, 189, 142, 3), // Section-header eyebrow labels, active bottom-nav label, icon accents, badge text
     onSecondary:          Color(0xFF241A00), // Text on a secondary-filled surface
     secondaryContainer:   Color.fromARGB(255, 235, 179, 13), // Pale gold fill: active bottom-nav icon, most-recent-day journal card's left accent
-    onSecondaryContainer: Color.fromARGB(255, 235, 179, 13), // Mirrors secondary deliberately — one consistent gold everywhere
+    onSecondaryContainer: Color(0xFF3A2E00), // Mirrors secondary deliberately — one consistent gold everywhere
     // ── Tertiary — Seafoam / Dark Navy ─────────────────────────────
     tertiary:            Color(0xFF142435), // Dark navy accent surface, e.g. vessel-status card fill; also the Settings "logbook-scoped" left accent
     onTertiary:          Color(0xFFFFFFFF), // Text/icon on a tertiary-filled surface

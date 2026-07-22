@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:hive/hive.dart';
 
+import 'logbook_key_store.dart';
+
 /// Manages the on-device registry of local (device-only, no cloud) logbooks
 /// — the local-mode analogue of [LogbookService], but Hive-based since local
 /// logbooks have no Firestore document.
@@ -17,7 +19,10 @@ import 'package:hive/hive.dart';
 class LocalLogbookService {
   static const _registryBoxName = 'local_logbooks_registry';
 
-  Future<Box<String>> _registry() => Hive.openBox<String>(_registryBoxName);
+  Future<Box<String>> _registry() async => Hive.openBox<String>(
+        _registryBoxName,
+        encryptionCipher: await DeviceHiveKeyStore.getOrCreateCipher(),
+      );
 
   /// Every local logbook on this device as (id, name) pairs.
   Future<List<(String id, String name)>> listLogbooks() async {

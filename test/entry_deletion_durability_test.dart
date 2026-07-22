@@ -25,10 +25,14 @@ import 'package:logbook/features/home/domain/timeline_amendment.dart';
 import 'package:logbook/features/home/domain/timeline_entry.dart';
 import 'package:logbook/features/home/domain/track_point.dart';
 
+import 'test_helpers/secure_storage_mock.dart';
+
 void main() {
   late Directory tempDir;
 
   setUp(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    mockSecureStorage();
     tempDir = await Directory.systemTemp.createTemp('entry_deletion_durability_test_');
     Hive.init(tempDir.path);
     if (!Hive.isAdapterRegistered(11)) Hive.registerAdapter(DayEntryAdapter());

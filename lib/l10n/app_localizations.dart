@@ -170,12 +170,6 @@ abstract class AppLocalizations {
   /// **'Zurücksetzen'**
   String get reset;
 
-  /// No description provided for @copy.
-  ///
-  /// In de, this message translates to:
-  /// **'Kopieren'**
-  String get copy;
-
   /// No description provided for @change.
   ///
   /// In de, this message translates to:
@@ -950,6 +944,18 @@ abstract class AppLocalizations {
   /// **'Zustand hinzufügen (z.B. 1. Reff)'**
   String get settingsEquipmentStateLabel;
 
+  /// No description provided for @settingsEquipmentStateLabelMotor.
+  ///
+  /// In de, this message translates to:
+  /// **'Zustand hinzufügen (z.B. An)'**
+  String get settingsEquipmentStateLabelMotor;
+
+  /// No description provided for @settingsEquipmentStateLabelKeel.
+  ///
+  /// In de, this message translates to:
+  /// **'Zustand hinzufügen (z.B. Unten)'**
+  String get settingsEquipmentStateLabelKeel;
+
   /// No description provided for @settingsEquipmentAddState.
   ///
   /// In de, this message translates to:
@@ -1256,12 +1262,6 @@ abstract class AppLocalizations {
   /// **'Gib diesen Code auf einem anderen Gerät ein, um dasselbe Logbuch zu teilen.'**
   String get settingsLogbookCodeDesc;
 
-  /// No description provided for @settingsCodeCopied.
-  ///
-  /// In de, this message translates to:
-  /// **'Code kopiert.'**
-  String get settingsCodeCopied;
-
   /// No description provided for @settingsLogbookSyncLabel.
   ///
   /// In de, this message translates to:
@@ -1328,12 +1328,6 @@ abstract class AppLocalizations {
   /// **'Teile diesen Code mit einem Crewmitglied, um Zugang zu diesem Logbuch zu gewähren.'**
   String get settingsInviteCodeDesc;
 
-  /// No description provided for @settingsEnterInviteCode.
-  ///
-  /// In de, this message translates to:
-  /// **'Einladungscode eingeben'**
-  String get settingsEnterInviteCode;
-
   /// No description provided for @settingsConnectButton.
   ///
   /// In de, this message translates to:
@@ -1391,7 +1385,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsScanQr.
   ///
   /// In de, this message translates to:
-  /// **'QR-Code scannen'**
+  /// **'QR scannen'**
   String get settingsScanQr;
 
   /// No description provided for @settingsScanTitle.
@@ -2113,12 +2107,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'QR-Code anzeigen'**
   String get settingsShowQrCode;
-
-  /// No description provided for @settingsScanOrEnterCode.
-  ///
-  /// In de, this message translates to:
-  /// **'QR scannen / Code eingeben'**
-  String get settingsScanOrEnterCode;
 
   /// No description provided for @settingsManageGuests.
   ///

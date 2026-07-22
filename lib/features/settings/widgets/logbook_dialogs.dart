@@ -3,7 +3,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../app/theme/theme_extensions.dart';
 import '../../../l10n/l10n_extension.dart';
-import '../utils/settings_format_utils.dart';
 
 /// Owner-only actions sheet for a cloud logbook: rename, share (QR), delete.
 /// Each action is a caller-supplied callback since the actual rename/
@@ -85,9 +84,21 @@ void showGuestOptionsSheet(
   );
 }
 
-/// Shows [shareCode] as a scannable QR code (`logbook://join/{code}`) for
-/// another device to join this logbook.
-void showQrModal(BuildContext context, String shareCode) {
+/// Shows [shareCode] as a scannable QR code (`logbook://join/{code}`, plus a
+/// `?key=` query param carrying this device's base64 logbook encryption key
+/// when [keyBase64] is available) for another device to join this logbook.
+/// A scanning device gets both the membership code and decryption access in
+/// one step; manual code entry can't practically carry a 256-bit key, so
+/// that path only grants membership — see connect_bottom_sheet.dart and
+/// logbook_actions.dart's joinLogbook.
+///
+/// [logbookName] is shown under the QR instead of the raw code — the code
+/// itself is meaningless to read since nothing lets you type it in anymore.
+void showQrModal(BuildContext context, String shareCode, String logbookName,
+    {String? keyBase64}) {
+  final qrData = keyBase64 == null
+      ? 'logbook://join/$shareCode'
+      : 'logbook://join/$shareCode?key=${Uri.encodeComponent(keyBase64)}';
   showDialog(
     context: context,
     builder: (ctx) {
@@ -112,7 +123,7 @@ void showQrModal(BuildContext context, String shareCode) {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12)),
                 child: QrImageView(
-                  data: 'logbook://join/$shareCode',
+                  data: qrData,
                   version: QrVersions.auto,
                   size: 200,
                   backgroundColor: Colors.white,
@@ -120,7 +131,7 @@ void showQrModal(BuildContext context, String shareCode) {
               ),
               const SizedBox(height: 12),
               Text(
-                formatCode(shareCode),
+                logbookName,
                 style: Theme.of(ctx).textTheme.shareCode.copyWith(color: cs.onSurface),
               ),
               const SizedBox(height: 16),

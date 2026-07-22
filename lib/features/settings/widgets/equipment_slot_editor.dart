@@ -15,8 +15,12 @@ class EquipmentSlotEditor extends StatefulWidget {
   /// used to phrase the add/delete affordances by what they actually do
   /// ("Segel hinzufügen") instead of a generic "Slot 3".
   final String typeLabel;
+  /// Placeholder for the "add state" field, e.g. "Add state (e.g. 1st reef)"
+  /// for a sail slot vs. "(e.g. On)" for the motor slot — sail's own example
+  /// doesn't fit the motor/keel slots, which have their own hint per category.
+  final String stateHint;
   final ValueChanged<EquipmentSlot> onChanged;
-  const EquipmentSlotEditor({super.key, required this.slot, required this.typeLabel, required this.onChanged});
+  const EquipmentSlotEditor({super.key, required this.slot, required this.typeLabel, required this.stateHint, required this.onChanged});
 
   @override
   State<EquipmentSlotEditor> createState() => _EquipmentSlotEditorState();
@@ -176,7 +180,7 @@ class _EquipmentSlotEditorState extends State<EquipmentSlotEditor> {
                             style: Theme.of(context).textTheme.bodyMedium,
                             decoration: InputDecoration(
                               isDense: true,
-                              hintText: l10n.settingsEquipmentStateLabel,
+                              hintText: widget.stateHint,
                               border: const OutlineInputBorder(),
                             ),
                             onSubmitted: (_) => _addState(),

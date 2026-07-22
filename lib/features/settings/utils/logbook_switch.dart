@@ -58,8 +58,8 @@ Future<bool> reinitFirestore(
 
   showProgressSnackBar(context, l10n.settingsSwitchLogbookInProgress);
 
-  final firestore = FirestoreService(logbookId: logbookId);
-  final storage = StorageService(logbookId: logbookId);
+  final firestore = await FirestoreService.create(logbookId);
+  final storage = await StorageService.create(logbookId);
 
   // Set for the rest of this function — read by AppBottomNav to block
   // navigating to another tab while this repository is mid-reattach
@@ -116,6 +116,17 @@ Future<bool> reinitFirestore(
       messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookComplete)));
     }
     return true;
+  } catch (_) {
+    // None of the steps above (unlike the settings/contacts fetch further up)
+    // have their own catch — without one here, an exception from any of them
+    // would propagate to the caller with this progress snackbar still on
+    // screen (its 2-minute duration far outlasting the caller's own error
+    // snackbar), looking like a sync that never finishes.
+    messenger.hideCurrentSnackBar();
+    if (context.mounted) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
+    }
+    return false;
   } finally {
     switchInProgress.value = false;
   }

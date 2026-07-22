@@ -8,9 +8,20 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../core/services/logbook_key_store.dart';
+
 /// Picks, compresses, uploads, and locally caches day-entry photos, backed
 /// by Firebase Storage with a documents-directory disk cache so a photo
 /// already downloaded once doesn't need re-fetching.
+///
+/// Bytes are AES-256-GCM encrypted before every Storage upload and decrypted
+/// after every download, using the owning logbook's shared key (see
+/// `CryptoService`/`LogbookKeyStore`) — extracted from [storagePath] itself
+/// (its first segment, `logbooks/{logbookId}/...`) rather than threaded
+/// through every caller's signature. The local disk cache deliberately
+/// stays plaintext after that first decrypt (matches the app's existing
+/// cache behavior) — only the Storage-side blob and in-transit bytes are
+/// encrypted.
 class PhotoService {
   // Max long-side dimension for uploaded photos.
   // Covers Retina screen display and 4-up PDF thumbnails at 300 dpi.
@@ -25,6 +36,12 @@ class PhotoService {
     if (!await dir.exists()) await dir.create(recursive: true);
     return dir;
   }
+
+  /// The logbook id embedded as [storagePath]'s second segment
+  /// (`logbooks/{logbookId}/photos/...`), for resolving that logbook's
+  /// encryption key without requiring every caller to pass it separately.
+  static String _logbookIdFromPath(String storagePath) =>
+      storagePath.split('/')[1];
 
   /// The local cache filename for a Firebase Storage [storagePath] — just
   /// its last path segment.
@@ -108,9 +125,11 @@ class PhotoService {
           format: CompressFormat.jpeg,
           keepExif: false,
         );
+        final plainBytes = compressed.isNotEmpty ? compressed : srcBytes;
         final cache = await _cacheDir();
         final local = File('${cache.path}/$id.jpg');
-        await local.writeAsBytes(compressed.isNotEmpty ? compressed : srcBytes);
+        // Cache stays plaintext — only the Storage-side copy is encrypted.
+        await local.writeAsBytes(plainBytes);
         // The local cache write above is what makes the photo usable (see
         // localFile, which checks the cache before ever touching Storage),
         // so it counts as success on its own — the Storage upload is
@@ -119,7 +138,12 @@ class PhotoService {
         // lose every photo they add.
         uploaded.add(storagePath);
         try {
-          await FirebaseStorage.instance.ref(storagePath).putFile(local);
+          final crypto = await LogbookKeyStore.getCryptoService(logbookId);
+          final encrypted = await crypto.encryptBytes(Uint8List.fromList(plainBytes));
+          await FirebaseStorage.instance.ref(storagePath).putData(
+                encrypted,
+                SettableMetadata(contentType: 'application/octet-stream'),
+              );
         } catch (_) {
           // Expected for local-mode/offline users (no authenticated Storage
           // access) — same silent, best-effort treatment as restorePhoto.
@@ -131,30 +155,43 @@ class PhotoService {
     return uploaded;
   }
 
-  /// Writes [bytes] to the local cache for [storagePath] and re-uploads them
-  /// to Firebase Storage at that exact path — used when restoring a photo
-  /// from a backup archive, where both the cache and the remote blob need
-  /// to exist again after a wipe.
+  /// Writes [bytes] (plaintext, from a backup archive — backups themselves
+  /// stay unencrypted by design) to the local cache for [storagePath] and
+  /// re-uploads them, encrypted, to Firebase Storage at that exact path —
+  /// used when restoring a photo from a backup, where both the cache and
+  /// the remote blob need to exist again after a wipe.
   static Future<void> restorePhoto(String storagePath, List<int> bytes) async {
     final cache = await _cacheDir();
     final local = File('${cache.path}/${_cacheFilename(storagePath)}');
     await local.writeAsBytes(bytes);
     try {
-      await FirebaseStorage.instance.ref(storagePath).putFile(local);
+      final crypto = await LogbookKeyStore.getCryptoService(_logbookIdFromPath(storagePath));
+      final encrypted = await crypto.encryptBytes(Uint8List.fromList(bytes));
+      await FirebaseStorage.instance.ref(storagePath).putData(
+            encrypted,
+            SettableMetadata(contentType: 'application/octet-stream'),
+          );
     } catch (_) {
       // Best-effort: the local cache is restored either way, so the photo
       // still displays even if the Storage re-upload fails (e.g. offline).
     }
   }
 
-  /// Returns the locally cached [File] for [storagePath], downloading from
-  /// Firebase Storage if not yet cached.  Returns null on failure.
+  /// Returns the locally cached [File] for [storagePath], downloading and
+  /// decrypting from Firebase Storage if not yet cached (the cache itself
+  /// stays plaintext once written). Returns null on failure.
   static Future<File?> localFile(String storagePath) async {
     final cache = await _cacheDir();
     final local = File('${cache.path}/${_cacheFilename(storagePath)}');
     if (await local.exists()) return local;
     try {
-      await FirebaseStorage.instance.ref(storagePath).writeToFile(local);
+      final encrypted = await FirebaseStorage.instance.ref(storagePath).getData(
+            10 * 1024 * 1024, // 10 MB — generous for a single compressed photo.
+          );
+      if (encrypted == null) return null;
+      final crypto = await LogbookKeyStore.getCryptoService(_logbookIdFromPath(storagePath));
+      final decrypted = await crypto.decryptBytes(encrypted);
+      await local.writeAsBytes(decrypted);
       return local;
     } catch (_) {
       return null;

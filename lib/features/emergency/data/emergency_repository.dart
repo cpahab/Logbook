@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 import '../../../core/services/firestore_service.dart';
+import '../../../core/services/logbook_key_store.dart';
 import '../domain/emergency_contact.dart';
 
 /// Local (Hive) + cloud (Firestore) store for the emergency contacts list
@@ -37,8 +38,9 @@ class EmergencyRepository extends ChangeNotifier {
   /// [HomeRepository.init] for the identical convention.
   Future<void> init({String? datasetSuffix}) async {
     final s = datasetSuffix == null ? '' : '_$datasetSuffix';
-    _box     = await Hive.openBox<EmergencyContact>('emergency_contacts$s');
-    _metaBox = await Hive.openBox<int>('emergency_contacts_meta$s');
+    final cipher = await DeviceHiveKeyStore.getOrCreateCipher();
+    _box     = await Hive.openBox<EmergencyContact>('emergency_contacts$s', encryptionCipher: cipher);
+    _metaBox = await Hive.openBox<int>('emergency_contacts_meta$s', encryptionCipher: cipher);
     notifyListeners();
   }
 
@@ -55,8 +57,9 @@ class EmergencyRepository extends ChangeNotifier {
     final oldMetaBox = _metaBox;
 
     final s = newLogbookId.isEmpty ? '' : '_$newLogbookId';
-    _box     = await Hive.openBox<EmergencyContact>('emergency_contacts$s');
-    _metaBox = await Hive.openBox<int>('emergency_contacts_meta$s');
+    final cipher = await DeviceHiveKeyStore.getOrCreateCipher();
+    _box     = await Hive.openBox<EmergencyContact>('emergency_contacts$s', encryptionCipher: cipher);
+    _metaBox = await Hive.openBox<int>('emergency_contacts_meta$s', encryptionCipher: cipher);
     notifyListeners();
 
     await oldBox.close();

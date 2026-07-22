@@ -14,6 +14,8 @@ import 'package:logbook/features/home/domain/track_point.dart';
 import 'package:logbook/features/home/domain/vessel_equipment.dart';
 import 'package:logbook/features/home/utils/pdf_exporter.dart';
 
+import 'test_helpers/secure_storage_mock.dart';
+
 // Regression coverage for two bugs where PDF export silently failed after
 // moving PDF generation into compute():
 //   1. A DayEntry loaded from HomeRepository is a live HiveObject bound to
@@ -35,6 +37,7 @@ void main() {
   });
 
   setUp(() async {
+    mockSecureStorage();
     tempDir = await Directory.systemTemp.createTemp('pdf_exporter_compute_test_');
     Hive.init(tempDir.path);
     if (!Hive.isAdapterRegistered(11)) Hive.registerAdapter(DayEntryAdapter());
