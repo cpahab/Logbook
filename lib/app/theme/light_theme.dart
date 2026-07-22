@@ -44,12 +44,12 @@ final ThemeData lightTheme = ThemeData(
     // the surface, comfortably above the 3:1 UI-component floor used for
     // this label/icon role. onSecondary flipped to a dark ink since this is
     // too bright for legible white text on top of it. onSecondaryContainer
-    // deliberately mirrors secondary — one consistent gold used everywhere,
-    // by design.
+    // is a dark brown ink for the same reason — secondaryContainer's pale
+    // gold is too light for legible white/light text on top of it.
     secondary:            Color.fromARGB(255, 189, 142, 3), // Section-header eyebrow labels, active bottom-nav label, icon accents, badge text
     onSecondary:          Color(0xFF241A00), // Text on a secondary-filled surface
     secondaryContainer:   Color.fromARGB(255, 235, 179, 13), // Pale gold fill: active bottom-nav icon, most-recent-day journal card's left accent
-    onSecondaryContainer: Color(0xFF3A2E00), // Mirrors secondary deliberately — one consistent gold everywhere
+    onSecondaryContainer: Color(0xFF3A2E00), // Dark ink for legible text/icons on the pale-gold secondaryContainer fill (e.g. collapsed-month day-count badge)
     // ── Tertiary — Seafoam / Dark Navy ─────────────────────────────
     tertiary:            Color(0xFF142435), // Dark navy accent surface, e.g. vessel-status card fill; also the Settings "logbook-scoped" left accent
     onTertiary:          Color(0xFFFFFFFF), // Text/icon on a tertiary-filled surface
