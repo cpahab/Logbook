@@ -45,9 +45,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get reset => 'Zurücksetzen';
 
   @override
-  String get copy => 'Kopieren';
-
-  @override
   String get change => 'Ändern';
 
   @override
@@ -623,9 +620,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Gib diesen Code auf einem anderen Gerät ein, um dasselbe Logbuch zu teilen.';
 
   @override
-  String get settingsCodeCopied => 'Code kopiert.';
-
-  @override
   String get settingsLogbookSyncLabel => 'Logbook Sync';
 
   @override
@@ -663,9 +657,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Teile diesen Code mit einem Crewmitglied, um Zugang zu diesem Logbuch zu gewähren.';
 
   @override
-  String get settingsEnterInviteCode => 'Einladungscode eingeben';
-
-  @override
   String get settingsConnectButton => 'Mit Logbuch verbinden';
 
   @override
@@ -695,7 +686,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsSwitchLogbookComplete => 'Logbuch gewechselt.';
 
   @override
-  String get settingsScanQr => 'QR-Code scannen';
+  String get settingsScanQr => 'QR scannen';
 
   @override
   String get settingsScanTitle => 'Logbuch-QR-Code scannen';
@@ -1092,9 +1083,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsShowQrCode => 'QR-Code anzeigen';
-
-  @override
-  String get settingsScanOrEnterCode => 'QR scannen / Code eingeben';
 
   @override
   String get settingsManageGuests => 'Beitragende verwalten';

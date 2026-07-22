@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/logbook_key_store.dart';
 import '../../../core/services/logbook_service.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../l10n/l10n_extension.dart';
@@ -264,6 +265,10 @@ Future<void> showDeleteLogbookDialog(
   try {
     final activeId = context.read<ValueNotifier<String?>>().value;
     await LogbookService().deleteLogbook(logbookId, uid);
+    // Hygiene cleanup, not a security measure: only removes the key from
+    // *this* device's secure storage. Doesn't (and can't) revoke it from
+    // any other member's device — see LogbookKeyStore's own doc comment.
+    await LogbookKeyStore.forgetKey(logbookId);
     if (!context.mounted) return;
     // reinitFirestore only runs when the deleted logbook was the active
     // one AND a new active logbook was found — its ValueNotifier<String?>
@@ -328,6 +333,8 @@ Future<void> showLeaveLogbookDialog(
   try {
     final activeId = context.read<ValueNotifier<String?>>().value;
     await LogbookService().removeMember(logbookId, uid);
+    // Same hygiene-only cleanup as showDeleteLogbookDialog — see its comment.
+    await LogbookKeyStore.forgetKey(logbookId);
     if (!context.mounted) return;
     // Same conditional-refresh rule as showDeleteLogbookDialog — see its
     // comment above for why onLogbooksChanged is only called when
@@ -416,10 +423,15 @@ Future<void> switchLogbook(
 }
 
 /// Looks up [rawCode], confirms with the user, joins as a guest, and
-/// switches this device to the found logbook.
+/// switches this device to the found logbook. If [keyBase64] is given (only
+/// ever true for a QR-scanned code — see connect_bottom_sheet.dart), it's
+/// imported as this device's copy of the logbook's shared encryption key
+/// once the join succeeds, so this device can decrypt existing content
+/// immediately rather than only gaining bare membership.
 Future<void> joinLogbook(
   BuildContext context, {
   required String rawCode,
+  String? keyBase64,
   required ValueChanged<bool> onSyncingChanged,
   required VoidCallback onGuestsCollapse,
 }) async {
@@ -494,6 +506,13 @@ Future<void> joinLogbook(
     // stale data leak into whichever logbook was joined).
     await LogbookService().joinLogbook(resolvedId, user.uid,
         displayName: user.displayName, email: user.email);
+    // Import the shared key (if the QR scan carried one) before syncing
+    // this logbook's data below, so entries decrypt correctly from the
+    // very first fetch rather than needing a second sync pass once the
+    // key arrives.
+    if (keyBase64 != null) {
+      await LogbookKeyStore.importKeyBase64(resolvedId, keyBase64);
+    }
     if (!context.mounted) return;
     final switched = await reinitFirestore(context, resolvedId,
         showCompleteSnackbar: false);

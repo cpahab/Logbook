@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/local_logbook_service.dart';
+import '../../../core/services/logbook_key_store.dart';
 import '../../../core/services/logbook_service.dart';
 import '../../emergency/data/emergency_repository.dart';
 import '../../home/data/home_repository.dart';
@@ -22,7 +22,6 @@ import '../domain/theme_provider.dart';
 import '../../../app/route_names.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../utils/logbook_switch.dart';
-import '../utils/settings_format_utils.dart';
 import '../widgets/connect_bottom_sheet.dart';
 import '../widgets/delete_account_dialog.dart';
 import '../widgets/equipment_slot_editor.dart';
@@ -299,9 +298,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           borderRadius:
               const BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        child: ConnectBottomSheet(onCode: (code) => joinLogbook(
+        child: ConnectBottomSheet(onCode: (code, {keyBase64}) => joinLogbook(
             context,
             rawCode: code,
+            keyBase64: keyBase64,
             onSyncingChanged: (v) => setState(() => _syncing = v),
             onGuestsCollapse: _onGuestsCollapse)),
       ),
@@ -1687,7 +1687,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           context,
                           onRename: () => showRenameLogbookDialog(
                               context, logbookId: logbookId, currentName: name, onLogbooksChanged: _onLogbooksChanged),
-                          onShare: () => showQrModal(context, logbook['shareCode'] as String? ?? ''),
+                          onShare: () async {
+                            final keyBase64 = await LogbookKeyStore.exportKeyBase64(logbookId);
+                            if (!mounted) return;
+                            showQrModal(context, logbook['shareCode'] as String? ?? '', name, keyBase64: keyBase64);
+                          },
                           onDelete: () => showDeleteLogbookDialog(
                               context,
                               logbookId: logbookId,
@@ -1751,39 +1755,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Row(
           children: [
             Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  formatCode(shareCode),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.shareCode.copyWith(color: cs.onPrimaryContainer),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton.filled(
-              onPressed: () {
-                Clipboard.setData(
-                    ClipboardData(text: formatCode(shareCode)));
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.settingsCodeCopied)));
-              },
-              icon: const Icon(Icons.copy_outlined),
-              tooltip: l10n.copy,
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => showQrModal(context, shareCode),
+                onPressed: () async {
+                  final keyBase64 = await LogbookKeyStore.exportKeyBase64(logbookId);
+                  if (!mounted) return;
+                  showQrModal(context, shareCode, logbookName, keyBase64: keyBase64);
+                },
                 icon: const Icon(Icons.qr_code, size: 18),
                 label: Text(l10n.settingsShowQrCode),
                 style: OutlinedButton.styleFrom(
@@ -1799,7 +1776,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: OutlinedButton.icon(
                 onPressed: _syncing ? null : _showConnectSheet,
                 icon: const Icon(Icons.qr_code_scanner, size: 18),
-                label: Text(l10n.settingsScanOrEnterCode),
+                label: Text(l10n.settingsScanQr),
                 style: OutlinedButton.styleFrom(
                   side: BorderSide(color: cs.outlineVariant),
                   shape: RoundedRectangleBorder(

@@ -69,6 +69,11 @@ dependencies:
   mobile_scanner: ^7.0.0
   connectivity_plus: ^6.0.0
   package_info_plus: ^8.3.0
+  # AES-GCM for encrypting notes/crew/timeline fields, photos, and GPS
+  # tracks; flutter_secure_storage holds the logbook encryption key in the
+  # OS Keychain/Keystore (see lib/core/services/crypto_service.dart).
+  cryptography: ^2.7.0
+  flutter_secure_storage: ^9.2.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

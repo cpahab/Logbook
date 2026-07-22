@@ -15,6 +15,7 @@ import '../domain/track_point.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/photo_service.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/services/logbook_key_store.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/utils/retry_with_backoff.dart';
 
@@ -288,11 +289,16 @@ class HomeRepository extends ChangeNotifier {
         Box<int> syncStateBox
       })> _openBoxes(String? datasetSuffix) async {
     final s = datasetSuffix == null ? '' : '_$datasetSuffix';
+    // Device-local at-rest encryption — same cipher for every box regardless
+    // of which logbook's data currently sits inside it. See
+    // DeviceHiveKeyStore's doc comment for why this is a device key, not a
+    // per-logbook one.
+    final cipher = await DeviceHiveKeyStore.getOrCreateCipher();
     return (
-      dayBox:       await Hive.openBox<DayEntry>('daily_entries$s'),
-      trackBox:     await Hive.openBox<DailyTrack>('daily_tracks$s'),
-      rosterBox:    await Hive.openBox<CrewMember>('crew_roster$s'),
-      syncStateBox: await Hive.openBox<int>('entry_sync_state$s'),
+      dayBox:       await Hive.openBox<DayEntry>('daily_entries$s', encryptionCipher: cipher),
+      trackBox:     await Hive.openBox<DailyTrack>('daily_tracks$s', encryptionCipher: cipher),
+      rosterBox:    await Hive.openBox<CrewMember>('crew_roster$s', encryptionCipher: cipher),
+      syncStateBox: await Hive.openBox<int>('entry_sync_state$s', encryptionCipher: cipher),
     );
   }
 

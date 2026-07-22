@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 import '../../../core/services/firestore_service.dart';
+import '../../../core/services/logbook_key_store.dart';
 import '../../home/domain/vessel_equipment.dart';
 import '../../home/utils/filter_settings.dart';
 
@@ -325,8 +326,9 @@ class ThemeProvider extends ChangeNotifier {
   /// local logbook) also resolves to `'settings'`, so it needs no box of
   /// its own either.
   Future<void> init() async {
-    _deviceBox = await Hive.openBox<String>(_deviceBoxName);
-    final legacyBox = await Hive.openBox<String>(_boxName);
+    final cipher = await DeviceHiveKeyStore.getOrCreateCipher();
+    _deviceBox = await Hive.openBox<String>(_deviceBoxName, encryptionCipher: cipher);
+    final legacyBox = await Hive.openBox<String>(_boxName, encryptionCipher: cipher);
     _migrateDeviceKeysIfNeeded(legacyBox);
 
     _mode          = _fromString(_deviceBox.get(_themeKey, defaultValue: 'system')!);
@@ -338,7 +340,7 @@ class ThemeProvider extends ChangeNotifier {
 
     final activeId = _localMode ? _activeLocalLogbookId : null;
     if (activeId != null && activeId.isNotEmpty) {
-      _box = await Hive.openBox<String>('settings_local_$activeId');
+      _box = await Hive.openBox<String>('settings_local_$activeId', encryptionCipher: cipher);
       await legacyBox.close();
     } else {
       _box = legacyBox;
@@ -421,9 +423,10 @@ class ThemeProvider extends ChangeNotifier {
     _uiSub = null;
 
     final oldBox = _box;
+    final cipher = await DeviceHiveKeyStore.getOrCreateCipher();
     _box = newLogbookId.isEmpty
-        ? await Hive.openBox<String>(_boxName)
-        : await Hive.openBox<String>('settings_local_$newLogbookId');
+        ? await Hive.openBox<String>(_boxName, encryptionCipher: cipher)
+        : await Hive.openBox<String>('settings_local_$newLogbookId', encryptionCipher: cipher);
 
     await _loadLogbookScopedFields();
 
