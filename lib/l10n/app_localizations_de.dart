@@ -438,6 +438,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsEquipmentStateLabel => 'Zustand hinzufügen (z.B. 1. Reff)';
 
   @override
+  String get settingsEquipmentStateLabelMotor => 'Zustand hinzufügen (z.B. An)';
+
+  @override
+  String get settingsEquipmentStateLabelKeel =>
+      'Zustand hinzufügen (z.B. Unten)';
+
+  @override
   String get settingsEquipmentAddState => 'Hinzufügen';
 
   @override

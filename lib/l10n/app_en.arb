@@ -159,6 +159,8 @@
   "settingsEquipmentInfo": "Configure which sail, motor, and keel states can be used for logbook entries.",
   "settingsEquipmentSlotLabel": "Name (e.g. Mainsail)",
   "settingsEquipmentStateLabel": "Add state (e.g. 1st reef)",
+  "settingsEquipmentStateLabelMotor": "Add state (e.g. On)",
+  "settingsEquipmentStateLabelKeel": "Add state (e.g. Down)",
   "settingsEquipmentAddState": "Add",
   "settingsEquipmentTypeSail": "Sail",
   "settingsEquipmentAddType": "Add {type}",

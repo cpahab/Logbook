@@ -944,6 +944,18 @@ abstract class AppLocalizations {
   /// **'Zustand hinzufügen (z.B. 1. Reff)'**
   String get settingsEquipmentStateLabel;
 
+  /// No description provided for @settingsEquipmentStateLabelMotor.
+  ///
+  /// In de, this message translates to:
+  /// **'Zustand hinzufügen (z.B. An)'**
+  String get settingsEquipmentStateLabelMotor;
+
+  /// No description provided for @settingsEquipmentStateLabelKeel.
+  ///
+  /// In de, this message translates to:
+  /// **'Zustand hinzufügen (z.B. Unten)'**
+  String get settingsEquipmentStateLabelKeel;
+
   /// No description provided for @settingsEquipmentAddState.
   ///
   /// In de, this message translates to:

@@ -438,6 +438,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsEquipmentStateLabel => 'Add state (e.g. 1st reef)';
 
   @override
+  String get settingsEquipmentStateLabelMotor => 'Add state (e.g. On)';
+
+  @override
+  String get settingsEquipmentStateLabelKeel => 'Add state (e.g. Down)';
+
+  @override
   String get settingsEquipmentAddState => 'Add';
 
   @override
