@@ -1,6 +1,8 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart' show BuiltInMapCachingProvider;
 import 'package:hive_flutter/hive_flutter.dart';
@@ -195,6 +197,16 @@ void main() async {
 
     // Configure offline persistence immediately after init, before any reads.
     FirestoreService.configure();
+
+    // Crash/error reporting — see docs/ci_and_crashlytics.md. Disabled in
+    // debug builds so routine `flutter run` sessions and testing don't
+    // pollute the Firebase console with noise from in-progress work.
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
 
     final initialUser = FirebaseAuth.instance.currentUser;
     if (initialUser != null) {

@@ -1,0 +1,36 @@
+name: CI
+
+# Runs static analysis and the test suite on every push and pull request, so
+# a regression is caught automatically even if `flutter analyze`/`flutter
+# test` weren't run locally before pushing. See docs/ci_and_crashlytics.md
+# for the full rationale and how to read/act on a failure.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Pinned to the exact version used for local development (see `flutter
+      # --version`) so CI failures reflect real code issues, not a version
+      # drift between CI and whoever last ran this locally. Bump deliberately
+      # alongside a local Flutter upgrade, not automatically.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.1'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test

@@ -108,6 +108,18 @@ flutter test
 
 ---
 
+## 🤖 CI & Crash Reporting
+
+Every push/PR to `main` runs `flutter analyze` + `flutter test` via
+[GitHub Actions](.github/workflows/ci.yml). Real-device errors (uncaught
+Dart exceptions, native crashes) are reported to Firebase Crashlytics —
+disabled in debug builds, so a normal `flutter run` session stays quiet.
+See [`docs/ci_and_crashlytics.md`](docs/ci_and_crashlytics.md) for what
+each one catches, how to view a Crashlytics report, and how to reproduce
+a CI failure locally.
+
+---
+
 ## 📦 Building Release Versions
 
 ### Android
