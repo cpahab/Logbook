@@ -10,6 +10,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
 import 'core/services/auth_service.dart';
+import 'core/services/crash_reporter.dart';
 import 'core/services/gpx_share_service.dart';
 import 'features/home/data/home_repository.dart';
 import 'features/home/domain/day_entry.dart';
@@ -97,8 +98,7 @@ Future<void> _initFirestore(
     // above via initialSync.
     if (themeProvider.localModeEnabled) themeProvider.disableLocalMode();
   } catch (e, st) {
-    // ignore: avoid_print
-    print('[initFirestore] failed: $e\n$st');
+    reportNonFatal(e, st, reason: '_initFirestore failed');
   }
 }
 

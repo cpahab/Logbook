@@ -14,6 +14,7 @@ import '../domain/daily_track.dart';
 import '../domain/track_point.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/photo_service.dart';
+import '../../../core/services/crash_reporter.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/logbook_key_store.dart';
 import '../../../core/services/storage_service.dart';
@@ -406,7 +407,9 @@ class HomeRepository extends ChangeNotifier {
       if (remote.isNotEmpty) {
         await _applyRemoteRoster(remote);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      reportNonFatal(e, st, reason: 'attachFirestore roster fetch failed');
+    }
 
     await _rosterSub?.cancel();
     _rosterSub = service
@@ -1183,7 +1186,9 @@ class HomeRepository extends ChangeNotifier {
     try {
       final remoteRoster = await firestoreService.fetchRoster();
       if (remoteRoster.isNotEmpty) await _applyRemoteRoster(remoteRoster);
-    } catch (_) {}
+    } catch (e, st) {
+      reportNonFatal(e, st, reason: 'reattachAndSync roster fetch failed');
+    }
 
     _rosterSub = firestoreService
         .rosterChanges()
@@ -1299,7 +1304,14 @@ class HomeRepository extends ChangeNotifier {
     }
     try {
       await fs.saveRoster(members);
-    } catch (_) {}
+    } catch (e, st) {
+      // See this function's doc comment: a silent failure here means the
+      // server keeps a stale roster that could resurrect a deleted member
+      // or drop an edit — worth knowing about even though there's nothing
+      // more to retry with here (the next _syncRosterToFirestore call, from
+      // any future roster edit, will try again).
+      reportNonFatal(e, st, reason: '_syncRosterToFirestore failed after all retries');
+    }
   }
 
   /// Generates a random 32-hex-char id for a new roster member.

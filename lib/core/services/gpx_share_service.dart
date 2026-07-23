@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
 
+import 'crash_reporter.dart';
+
 /// Bridges the native "Open with Logbook" GPX file association (registered
 /// on iOS/Android for `.gpx` files) into a Dart stream, so the app can react
 /// to a shared file the same way whether it arrived at cold start, while
@@ -32,7 +34,9 @@ class GpxShareService {
     try {
       final result = await _channel.invokeMethod<String>('getPendingGpxPath');
       if (result != null && result.isNotEmpty) _controller.add(result);
-    } catch (_) {}
+    } catch (e, st) {
+      reportNonFatal(e, st, reason: 'GpxShareService.checkPendingFile failed');
+    }
   }
 
   void dispose() {
