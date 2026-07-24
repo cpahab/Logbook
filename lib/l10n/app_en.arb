@@ -255,6 +255,7 @@
   "settingsSwitchLogbookTitle": "Switch logbook?",
   "settingsSwitchLogbookContent": "Your local data will be replaced with the data from the connected logbook.",
   "settingsSwitchLogbookOffline": "Switching logbooks requires an internet connection.",
+  "settingsSwitchLogbookError": "Couldn't switch logbook. Please try again.",
   "settingsSwitchLogbookInProgress": "Switching logbook…",
   "settingsSwitchLogbookComplete": "Logbook switched.",
   "settingsScanQr": "Scan QR",

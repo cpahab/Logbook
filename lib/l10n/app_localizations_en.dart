@@ -690,6 +690,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Switching logbooks requires an internet connection.';
 
   @override
+  String get settingsSwitchLogbookError =>
+      'Couldn\'t switch logbook. Please try again.';
+
+  @override
   String get settingsSwitchLogbookInProgress => 'Switching logbook…';
 
   @override

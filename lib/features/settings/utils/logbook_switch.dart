@@ -84,9 +84,13 @@ Future<bool> reinitFirestore(
           await retryWithBackoff(firestore.fetchContactsWithMeta);
       remoteContacts = contactsResult.contacts;
     } catch (_) {
+      // Connectivity was already confirmed above, so a failure here (after
+      // retrying) is something else — a permission-check lag right after
+      // joining/creating a logbook, or a genuine server error — never
+      // "offline", which would be actively misleading to show.
       messenger.hideCurrentSnackBar();
       if (context.mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookError)));
       }
       return false;
     }
@@ -102,7 +106,7 @@ Future<bool> reinitFirestore(
     if (!entriesSwitched) {
       messenger.hideCurrentSnackBar();
       if (context.mounted) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookError)));
       }
       return false;
     }
@@ -124,7 +128,7 @@ Future<bool> reinitFirestore(
     // snackbar), looking like a sync that never finishes.
     messenger.hideCurrentSnackBar();
     if (context.mounted) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookOffline)));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookError)));
     }
     return false;
   } finally {

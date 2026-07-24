@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/crash_reporter.dart';
 import 'core/services/gpx_share_service.dart';
+import 'core/utils/retry_with_backoff.dart';
 import 'features/home/data/home_repository.dart';
 import 'features/home/domain/day_entry.dart';
 import 'features/home/domain/timeline_entry.dart';
@@ -77,9 +78,32 @@ Future<void> _initFirestore(
     }
 
     final logbookService = LogbookService();
-    String? logbookId = await logbookService.getActiveLogbookId(user.uid);
-    logbookId ??= await logbookService.createLogbook(user.uid, 'My Logbook',
-        displayName: user.displayName, email: user.email);
+    // Retried: this read happens the instant after an auth state transition
+    // (fresh sign-in, or right after switching accounts), when the ID token
+    // backing it can still be settling — the same class of transient
+    // failure retryWithBackoff already guards elsewhere in this app right
+    // after an auth/logbook change (see LogbookService.listLogbooks and
+    // logbook_switch.dart's reinitFirestore). Without this, a single
+    // transient failure here aborts _initFirestore before anything is
+    // attached, and since this function is fire-and-forget with no
+    // user-facing error and no retry trigger other than a genuine
+    // connectivity *change* event, the account can be left indefinitely
+    // with no active logbook set — even though it was online the whole time.
+    String? logbookId =
+        await retryWithBackoff(() => logbookService.getActiveLogbookId(user.uid));
+    if (logbookId == null) {
+      logbookId = await logbookService.createLogbook(user.uid, 'My Logbook',
+          displayName: user.displayName, email: user.email);
+      // createLogbook deliberately never marks itself active (see its own
+      // doc comment) — every other caller sets it explicitly only after
+      // confirming a local switch succeeded. This *is* that confirmation:
+      // this whole logbook was just created for this account, so there's
+      // nothing to lose by making it active immediately. Skipping this
+      // would leave the server thinking the account still has no active
+      // logbook, so the next fresh sign-in (new device, reinstall) would
+      // hit this same branch again and create yet another blank logbook.
+      await logbookService.setActiveLogbook(user.uid, logbookId);
+    }
     final firestore = await FirestoreService.create(logbookId);
     final storage = await StorageService.create(logbookId);
     final initialSync = themeProvider.needsInitialSync;
