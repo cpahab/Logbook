@@ -600,15 +600,57 @@
 
   "backupExportTitle": "Alle Daten exportieren",
   "backupExportDescription": "Sichert alle Tageseinträge, GPS-Tracks, die Besatzungsliste, Notfallkontakte und Fotos dieses Logbuchs in einer einzigen Datei.",
-  "backupExportButton": "Alle Daten exportieren",
+  "backupExportButton": "Exportieren",
+  "backupExportRangeAll": "Alle Einträge",
+  "backupExportRangeCustom": "Zeitraum…",
   "backupExportInProgress": "Backup wird vorbereitet…",
   "backupExportSuccess": "Backup bereit zum Teilen.",
   "backupExportError": "Backup-Export fehlgeschlagen. Bitte erneut versuchen.",
   "backupRestoreTitle": "Aus Datei wiederherstellen",
-  "backupRestoreDescription": "Stellt ein zuvor exportiertes Backup wieder her. Dabei werden alle vorhandenen Daten in diesem Logbuch ersetzt, nicht zusammengeführt.",
+  "backupRestoreDescription": "Stellt ein zuvor exportiertes Backup wieder her.",
   "backupRestoreButton": "Aus Datei wiederherstellen",
+  "backupImportModeReplace": "Ersetzen",
+  "backupImportModeReplaceDesc": "Löscht alles in diesem Logbuch und ersetzt es exakt durch dieses Backup — auch Besatzungsliste, Kontakte und Schiffsdaten.",
+  "backupImportModeUpdate": "Aktualisieren",
+  "backupImportModeUpdateDesc": "Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts und lässt Besatzungsliste, Kontakte und Schiffsdaten unberührt.",
   "backupRestoreConfirmTitle": "Alle Daten ersetzen?",
   "backupRestoreConfirmBody": "Beim Wiederherstellen dieses Backups werden alle Tageseinträge, Tracks, Besatzungsmitglieder und Notfallkontakte in diesem Logbuch dauerhaft ersetzt. Dies kann nicht rückgängig gemacht werden.",
+  "backupUpdateConfirmTitle": "Backup importieren?",
+  "backupUpdateConfirmBody": "Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht; Besatzungsliste, Kontakte und Schiffsdaten bleiben unberührt.",
+  "backupConflictsTitle": "{count, plural, one{1 widersprüchlicher Tag} other{{count} widersprüchliche Tage}}",
+  "@backupConflictsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "backupConflictsIntro": "Diese Tage existieren sowohl in deinem Logbuch als auch im Backup. Wähle für jeden Tag, welche Version behalten werden soll — nichts wird übernommen, bevor du auf Übernehmen tippst.",
+  "backupConflictsKeepMineAll": "Meine für alle behalten",
+  "backupConflictsUseBackupAll": "Backup für alle verwenden",
+  "backupConflictsUseSuggestedAll": "Vorschlag für alle verwenden",
+  "backupConflictsMine": "Meine",
+  "backupConflictsBackup": "Backup",
+  "backupConflictsApply": "Übernehmen",
+  "backupConflictsCancel": "Abbrechen",
+  "backupConflictsTimelineLabel": "Zeitleiste",
+  "backupConflictsEntriesSelected": "{selected} von {total} ausgewählt",
+  "@backupConflictsEntriesSelected": {
+    "placeholders": {
+      "selected": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "backupConflictsMineSummary": "Meine: aktualisiert {date} · {count, plural, one{1 Eintrag} other{{count} Einträge}}",
+  "@backupConflictsMineSummary": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "backupConflictsBackupSummary": "Backup: aktualisiert {date} · {count, plural, one{1 Eintrag} other{{count} Einträge}}",
+  "@backupConflictsBackupSummary": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
   "backupRestoreInProgress": "Backup wird wiederhergestellt…",
   "backupRestoreSuccess": "Backup wiederhergestellt.",
   "backupRestoreInvalidFile": "Diese Datei ist kein gültiges Logbook-Backup.",

@@ -1279,7 +1279,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final match = _localLogbooks.where((lb) => lb.$1 == activeId);
       return match.isEmpty ? '' : match.first.$2;
     } else {
-      final activeId = context.watch<ValueNotifier<String?>>().value;
+      // read, not watch: this method is also called from onTap handlers
+      // (_buildBackupSection), where `watch` throws ("tried to listen to a
+      // value... outside of the widget tree"). Safe to not watch here —
+      // _buildLogbooksSection already watches this same notifier during
+      // build, so the screen still rebuilds (and this returns the current
+      // value fresh either way) whenever the active logbook changes.
+      final activeId = context.read<ValueNotifier<String?>>().value;
       final match = _logbooks.where((b) => b['logbookId'] == activeId);
       return match.isEmpty ? '' : (match.first['name'] as String? ?? '');
     }

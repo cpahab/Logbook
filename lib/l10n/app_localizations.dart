@@ -2897,8 +2897,20 @@ abstract class AppLocalizations {
   /// No description provided for @backupExportButton.
   ///
   /// In de, this message translates to:
-  /// **'Alle Daten exportieren'**
+  /// **'Exportieren'**
   String get backupExportButton;
+
+  /// No description provided for @backupExportRangeAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle Einträge'**
+  String get backupExportRangeAll;
+
+  /// No description provided for @backupExportRangeCustom.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeitraum…'**
+  String get backupExportRangeCustom;
 
   /// No description provided for @backupExportInProgress.
   ///
@@ -2927,7 +2939,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupRestoreDescription.
   ///
   /// In de, this message translates to:
-  /// **'Stellt ein zuvor exportiertes Backup wieder her. Dabei werden alle vorhandenen Daten in diesem Logbuch ersetzt, nicht zusammengeführt.'**
+  /// **'Stellt ein zuvor exportiertes Backup wieder her.'**
   String get backupRestoreDescription;
 
   /// No description provided for @backupRestoreButton.
@@ -2935,6 +2947,30 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Aus Datei wiederherstellen'**
   String get backupRestoreButton;
+
+  /// No description provided for @backupImportModeReplace.
+  ///
+  /// In de, this message translates to:
+  /// **'Ersetzen'**
+  String get backupImportModeReplace;
+
+  /// No description provided for @backupImportModeReplaceDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Löscht alles in diesem Logbuch und ersetzt es exakt durch dieses Backup — auch Besatzungsliste, Kontakte und Schiffsdaten.'**
+  String get backupImportModeReplaceDesc;
+
+  /// No description provided for @backupImportModeUpdate.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktualisieren'**
+  String get backupImportModeUpdate;
+
+  /// No description provided for @backupImportModeUpdateDesc.
+  ///
+  /// In de, this message translates to:
+  /// **'Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts und lässt Besatzungsliste, Kontakte und Schiffsdaten unberührt.'**
+  String get backupImportModeUpdateDesc;
 
   /// No description provided for @backupRestoreConfirmTitle.
   ///
@@ -2947,6 +2983,96 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Beim Wiederherstellen dieses Backups werden alle Tageseinträge, Tracks, Besatzungsmitglieder und Notfallkontakte in diesem Logbuch dauerhaft ersetzt. Dies kann nicht rückgängig gemacht werden.'**
   String get backupRestoreConfirmBody;
+
+  /// No description provided for @backupUpdateConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup importieren?'**
+  String get backupUpdateConfirmTitle;
+
+  /// No description provided for @backupUpdateConfirmBody.
+  ///
+  /// In de, this message translates to:
+  /// **'Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht; Besatzungsliste, Kontakte und Schiffsdaten bleiben unberührt.'**
+  String get backupUpdateConfirmBody;
+
+  /// No description provided for @backupConflictsTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'{count, plural, one{1 widersprüchlicher Tag} other{{count} widersprüchliche Tage}}'**
+  String backupConflictsTitle(int count);
+
+  /// No description provided for @backupConflictsIntro.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Tage existieren sowohl in deinem Logbuch als auch im Backup. Wähle für jeden Tag, welche Version behalten werden soll — nichts wird übernommen, bevor du auf Übernehmen tippst.'**
+  String get backupConflictsIntro;
+
+  /// No description provided for @backupConflictsKeepMineAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Meine für alle behalten'**
+  String get backupConflictsKeepMineAll;
+
+  /// No description provided for @backupConflictsUseBackupAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup für alle verwenden'**
+  String get backupConflictsUseBackupAll;
+
+  /// No description provided for @backupConflictsUseSuggestedAll.
+  ///
+  /// In de, this message translates to:
+  /// **'Vorschlag für alle verwenden'**
+  String get backupConflictsUseSuggestedAll;
+
+  /// No description provided for @backupConflictsMine.
+  ///
+  /// In de, this message translates to:
+  /// **'Meine'**
+  String get backupConflictsMine;
+
+  /// No description provided for @backupConflictsBackup.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup'**
+  String get backupConflictsBackup;
+
+  /// No description provided for @backupConflictsApply.
+  ///
+  /// In de, this message translates to:
+  /// **'Übernehmen'**
+  String get backupConflictsApply;
+
+  /// No description provided for @backupConflictsCancel.
+  ///
+  /// In de, this message translates to:
+  /// **'Abbrechen'**
+  String get backupConflictsCancel;
+
+  /// No description provided for @backupConflictsTimelineLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Zeitleiste'**
+  String get backupConflictsTimelineLabel;
+
+  /// No description provided for @backupConflictsEntriesSelected.
+  ///
+  /// In de, this message translates to:
+  /// **'{selected} von {total} ausgewählt'**
+  String backupConflictsEntriesSelected(int selected, int total);
+
+  /// No description provided for @backupConflictsMineSummary.
+  ///
+  /// In de, this message translates to:
+  /// **'Meine: aktualisiert {date} · {count, plural, one{1 Eintrag} other{{count} Einträge}}'**
+  String backupConflictsMineSummary(String date, int count);
+
+  /// No description provided for @backupConflictsBackupSummary.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup: aktualisiert {date} · {count, plural, one{1 Eintrag} other{{count} Einträge}}'**
+  String backupConflictsBackupSummary(String date, int count);
 
   /// No description provided for @backupRestoreInProgress.
   ///

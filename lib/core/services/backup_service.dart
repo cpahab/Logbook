@@ -3,11 +3,14 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/material.dart' show DateTimeRange;
 
 import '../../features/emergency/data/emergency_repository.dart';
 import '../../features/emergency/domain/emergency_contact.dart';
 import '../../features/home/data/home_repository.dart';
 import '../../features/home/domain/crew_member.dart';
+import '../../features/home/domain/day_entry.dart';
+import '../../features/home/domain/timeline_entry.dart';
 import '../../features/home/utils/photo_service.dart';
 import '../../features/settings/domain/theme_provider.dart';
 import 'backup_mapper.dart';
@@ -22,6 +25,18 @@ class BackupFormatException implements Exception {
   @override
   String toString() => message;
 }
+
+/// How [BackupService.restoreBackup] applies a backup:
+/// - [replace]: today's original, unchanged behavior — wipes all local
+///   data (entries, roster, contacts, vessel/VHF info) and repopulates
+///   from the backup exactly, then tombstones any cloud day/track absent
+///   from the restored set (scoped to the backup's own export range, if
+///   it was a partial one — see HomeRepository.datesToTombstone).
+/// - [update]: touches *only* day entries — additions and
+///   newer-wins overwrites (see HomeRepository.backupEntryWins), never
+///   deletions. Roster, emergency contacts, and vessel/VHF info are left
+///   completely untouched — neither merged nor replaced.
+enum BackupImportMode { replace, update }
 
 /// Inputs to [_buildBackupZip] — plain, isolate-sendable data only (no
 /// repository/provider references), so archive+zip building (the CPU-heavy
@@ -66,6 +81,11 @@ typedef _ParsedBackup = ({
   List<EmergencyContact> contacts,
   Map<String, dynamic>? vessel,
   Map<String, List<int>> photoBytesByFilename,
+  // Null for a full (unranged) export. Set for a partial/date-ranged one —
+  // threaded into reconcileCloudAfterRestore's restrictTo so "replace"-mode
+  // restoring a partial backup only tombstones cloud dates inside this
+  // range, never the days outside it that were never meant to be touched.
+  DateTimeRange? exportRange,
 });
 
 /// Decodes and parses a backup archive into plain data — no repository/
@@ -120,6 +140,21 @@ _ParsedBackup _parseBackupArchive(Uint8List zipBytes) {
   // Optional: absent in a backup made before vessel info was included.
   final vessel = data['vessel'] as Map<String, dynamic>?;
 
+  // Absent for a full export (the common case) — present only for a
+  // partial/date-ranged one (see BackupService.exportBackup's dateRange
+  // param). Defensive parsing (a malformed/partial range is treated as "no
+  // range known") matches this file's existing tolerance for older/odd
+  // backups rather than failing the whole restore over one optional field.
+  final exportRangeJson = manifest['exportRange'] as Map<String, dynamic>?;
+  DateTimeRange? exportRange;
+  if (exportRangeJson != null) {
+    final start = DateTime.tryParse(exportRangeJson['start'] as String? ?? '');
+    final end = DateTime.tryParse(exportRangeJson['end'] as String? ?? '');
+    if (start != null && end != null) {
+      exportRange = DateTimeRange(start: start, end: end);
+    }
+  }
+
   final photoBytesByFilename = <String, List<int>>{
     for (final f in archive.files)
       if (f.isFile && f.name.startsWith('photos/'))
@@ -132,6 +167,7 @@ _ParsedBackup _parseBackupArchive(Uint8List zipBytes) {
     contacts: contacts,
     vessel: vessel,
     photoBytesByFilename: photoBytesByFilename,
+    exportRange: exportRange,
   );
 }
 
@@ -147,8 +183,22 @@ class BackupService {
     required String logbookId,
     required String logbookName,
     required String appVersion,
+    // Null (the default) exports every entry, exactly as before this
+    // parameter existed. When set, only entries within [start, end]
+    // (inclusive) are exported — roster/emergencyContacts/vessel are
+    // still always included in full regardless, since they aren't
+    // date-scoped and a partial safety-document list would be actively
+    // dangerous. The range itself is recorded in manifest.json so a
+    // restore of this backup knows it was partial — see
+    // HomeRepository.datesToTombstone's restrictTo parameter for why
+    // that matters.
+    DateTimeRange? dateRange,
   }) async {
-    final entries = home.entries;
+    final allEntries = home.entries;
+    final entries = dateRange == null
+        ? allEntries
+        : allEntries.where((e) =>
+            !e.date.isBefore(dateRange.start) && !e.date.isAfter(dateRange.end));
     final vesselName = theme.vesselName;
     final exportedAt = DateTime.now().toUtc().toIso8601String();
 
@@ -159,6 +209,11 @@ class BackupService {
       'logbookName': logbookName,
       'vesselName': vesselName,
       'appVersion': appVersion,
+      if (dateRange != null)
+        'exportRange': {
+          'start': dateRange.start.toIso8601String(),
+          'end': dateRange.end.toIso8601String(),
+        },
     };
 
     final entriesJson = <Map<String, dynamic>>[];
@@ -195,6 +250,7 @@ class BackupService {
       entryCount: entries.length,
       photosIncluded: photosIncluded,
       photosTotal: photoPaths.length,
+      dateRange: dateRange,
     );
 
     return compute(_buildBackupZip, (
@@ -212,12 +268,18 @@ class BackupService {
     required int entryCount,
     required int photosIncluded,
     required int photosTotal,
+    DateTimeRange? dateRange,
   }) {
     final missing = photosTotal - photosIncluded;
     final photosLine = photosTotal == 0
         ? 'none attached'
         : '$photosIncluded of $photosTotal included'
             '${missing > 0 ? ' ($missing could not be reached at export time)' : ''}';
+    final rangeLine = dateRange == null
+        ? 'All entries'
+        : '${dateRange.start.toIso8601String().substring(0, 10)} to '
+            '${dateRange.end.toIso8601String().substring(0, 10)} only — '
+            'this is a partial export, not the full logbook';
 
     return '''
 Logbook Backup
@@ -226,6 +288,7 @@ Logbook Backup
 Logbook:      $logbookName
 Vessel:       $vesselName
 Exported:     $exportedAt
+Range:        $rangeLine
 Day entries:  $entryCount
 Photos:       $photosLine
 
@@ -242,9 +305,12 @@ photos/         Photos attached to day entries, named by their original
 Restoring
 ---------
 Restore this archive from within the Logbook app, under
-Settings > Backup & Restore > Restore from File. Restoring REPLACES all
-data in whichever logbook is active in the app at the time — it does not
-merge with data already there.
+Settings > Backup & Restore > Restore from File. Two modes are offered:
+"Replace" wipes all data in whichever logbook is active in the app and
+repopulates it exactly from this archive (roster, contacts, and vessel
+info too). "Update" only adds or updates day entries found here — it
+never deletes anything, and never touches the roster, contacts, or
+vessel info.
 ''';
   }
 
@@ -267,11 +333,17 @@ merge with data already there.
     required HomeRepository home,
     required EmergencyRepository emergency,
     required ThemeProvider theme,
+    required BackupImportMode mode,
   }) async {
     // Archive decode + JSON parsing is pure computation on the zip bytes
     // alone — runs off the UI isolate. A malformed archive throws from
     // inside compute() before anything below touches local data.
     final parsed = await compute(_parseBackupArchive, zipBytes);
+
+    if (mode == BackupImportMode.update) {
+      await _mergeBackup(parsed, home: home);
+      return;
+    }
 
     await home.clearLocalData();
     await emergency.clearLocalData();
@@ -290,8 +362,11 @@ merge with data already there.
     // cloud but absent from this restored state (created after the backup
     // was taken, or on another device) must be told to go away too, or it
     // reappears on the next sync. Restore is documented as a full replace,
-    // not a merge, so this is the intended behavior.
-    await home.reconcileCloudAfterRestore();
+    // not a merge, so this is the intended behavior. restrictTo scopes
+    // that tombstoning to the backup's own export range (null for a full
+    // export) — otherwise restoring a partial/date-ranged backup would
+    // wipe every day outside that range too.
+    await home.reconcileCloudAfterRestore(restrictTo: parsed.exportRange);
     await emergency.restoreContacts(parsed.contacts);
 
     final vessel = parsed.vessel;
@@ -322,4 +397,159 @@ merge with data already there.
       }
     }
   }
+
+  /// "Update" mode's whole flow: per the [BackupImportMode.update] doc
+  /// comment, this only ever touches day entries (additions and
+  /// newer-wins overwrites via [HomeRepository.mergeEntryFromBackup]) —
+  /// roster/contacts/vessel are never read from [parsed] here at all, and
+  /// nothing is ever deleted, so there's no clearLocalData and no
+  /// reconcileCloudAfterRestore call (that method's whole job is
+  /// tombstoning what's absent, which "update" mode must never do).
+  static Future<void> _mergeBackup(
+    _ParsedBackup parsed, {
+    required HomeRepository home,
+  }) async {
+    for (final p in parsed.entries) {
+      final applied = await home.mergeEntryFromBackup(p.entry);
+      if (!applied) continue;
+
+      final track = p.track;
+      if (track != null) {
+        await home.replaceTrackPoints(p.entry.date, track.points);
+      }
+      for (final path in p.entry.photos) {
+        final bytes = parsed.photoBytesByFilename[path.split('/').last];
+        if (bytes != null) await PhotoService.restorePhoto(path, bytes);
+      }
+    }
+  }
+
+  /// Parses [zipBytes] and splits its entries into pure additions (no
+  /// local conflict at all — `home.getEntry(date)` is null) and genuine
+  /// conflicts (a date present in both) — used to show
+  /// ImportConflictsScreen *before* applying anything for "update" mode,
+  /// so the resolution is always visible and confirmed by the user, never
+  /// silent. Nothing is written to local state or Firestore by this call.
+  static Future<UpdatePreview> previewUpdate({
+    required Uint8List zipBytes,
+    required HomeRepository home,
+    // Null (the default) previews every entry in the backup. When set, only
+    // entries within [start, end] (inclusive) are considered at all — the
+    // rest are neither added nor shown as conflicts, letting the user work
+    // through a large backup's ambiguities in smaller batches rather than
+    // reviewing every conflicting day at once.
+    DateTimeRange? dateRange,
+  }) async {
+    final parsed = await compute(_parseBackupArchive, zipBytes);
+    final additions = <ParsedDayEntry>[];
+    final conflicts = <UpdateConflict>[];
+    for (final p in parsed.entries) {
+      if (dateRange != null &&
+          (p.entry.date.isBefore(dateRange.start) || p.entry.date.isAfter(dateRange.end))) {
+        continue;
+      }
+      final normalized = DateTime(p.entry.date.year, p.entry.date.month, p.entry.date.day);
+      final current = home.getEntry(normalized);
+      if (current == null) {
+        additions.add(p);
+      } else {
+        conflicts.add(UpdateConflict(
+          current: current,
+          backup: p,
+          backupWinsByDefault: HomeRepository.backupEntryWins(current, p.entry),
+        ));
+      }
+    }
+    return (
+      additions: additions,
+      conflicts: conflicts,
+      photoBytesByFilename: parsed.photoBytesByFilename,
+    );
+  }
+
+  /// Applies a [previewUpdate] result: every addition is applied
+  /// unconditionally (nothing to decide there), and each conflict is
+  /// applied per its matching entry in [resolutions] — the user's own
+  /// decision from ImportConflictsScreen (whether per-day, per-entry, or
+  /// via one of its bulk actions), never an automatic silent one.
+  /// [resolutions] must have the same length and order as [conflicts].
+  static Future<void> applyUpdate({
+    required HomeRepository home,
+    required List<ParsedDayEntry> additions,
+    required List<UpdateConflict> conflicts,
+    required List<ConflictResolution> resolutions,
+    required Map<String, List<int>> photoBytesByFilename,
+  }) async {
+    assert(resolutions.length == conflicts.length);
+
+    Future<void> restorePhotos(List<String> photos) async {
+      for (final path in photos) {
+        final bytes = photoBytesByFilename[path.split('/').last];
+        if (bytes != null) await PhotoService.restorePhoto(path, bytes);
+      }
+    }
+
+    for (final p in additions) {
+      await home.applyEntryFromBackup(p.entry);
+      final track = p.track;
+      if (track != null) await home.replaceTrackPoints(p.entry.date, track.points);
+      await restorePhotos(p.entry.photos);
+    }
+
+    for (var i = 0; i < conflicts.length; i++) {
+      final conflict = conflicts[i];
+      final resolution = resolutions[i];
+      // Whichever side wins the non-timeline fields (notes, crew, harbor,
+      // stats, photos) also supplies the DayEntry object that gets saved —
+      // its timeline is then overwritten with the (possibly hand-merged
+      // from both sides) list the user actually chose.
+      final entry = resolution.useBackupFields ? conflict.backup.entry : conflict.current;
+      entry.timeline = resolution.timeline;
+      await home.applyEntryFromBackup(entry);
+      if (resolution.useBackupFields) {
+        final track = conflict.backup.track;
+        if (track != null) await home.replaceTrackPoints(entry.date, track.points);
+      }
+      await restorePhotos(entry.photos);
+    }
+  }
+}
+
+/// One day present in both current local data and a backup being imported
+/// in "update" mode — a genuine conflict needing a decision, shown on
+/// ImportConflictsScreen rather than resolved silently.
+class UpdateConflict {
+  final DayEntry current;
+  final ParsedDayEntry backup;
+  /// What [HomeRepository.backupEntryWins] would decide automatically —
+  /// shown as the pre-selected choice on the conflict screen, never
+  /// applied on its own without the user seeing/confirming it.
+  final bool backupWinsByDefault;
+
+  UpdateConflict({
+    required this.current,
+    required this.backup,
+    required this.backupWinsByDefault,
+  });
+}
+
+/// Result of [BackupService.previewUpdate].
+typedef UpdatePreview = ({
+  List<ParsedDayEntry> additions,
+  List<UpdateConflict> conflicts,
+  Map<String, List<int>> photoBytesByFilename,
+});
+
+/// The user's resolution for one [UpdateConflict], produced by
+/// ImportConflictsScreen. [useBackupFields] decides whose non-timeline
+/// fields (notes, crew, harbor, stats, photos, track) win, while [timeline]
+/// is the exact list of timeline entries to save for that day — not
+/// necessarily identical to either side's original timeline, since the
+/// screen lets entries be picked individually from both "mine" and
+/// "backup" (e.g. two systems logging the same day) rather than forcing an
+/// all-or-nothing choice per day.
+class ConflictResolution {
+  final bool useBackupFields;
+  final List<TimelineEntry> timeline;
+  const ConflictResolution({required this.useBackupFields, required this.timeline});
 }

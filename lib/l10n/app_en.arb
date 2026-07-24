@@ -600,15 +600,57 @@
 
   "backupExportTitle": "Export all data",
   "backupExportDescription": "Save every day entry, GPS track, crew roster, emergency contact and photo in this logbook as a single file you control.",
-  "backupExportButton": "Export all data",
+  "backupExportButton": "Export",
+  "backupExportRangeAll": "All entries",
+  "backupExportRangeCustom": "Date range…",
   "backupExportInProgress": "Preparing backup…",
   "backupExportSuccess": "Backup ready to share.",
   "backupExportError": "Backup export failed. Please try again.",
   "backupRestoreTitle": "Restore from file",
-  "backupRestoreDescription": "Restore a previously exported backup. This replaces all data in this logbook — it does not merge with what's already there.",
+  "backupRestoreDescription": "Restore a previously exported backup.",
   "backupRestoreButton": "Restore from file",
+  "backupImportModeReplace": "Replace",
+  "backupImportModeReplaceDesc": "Wipes everything in this logbook and replaces it exactly with this backup — roster, contacts, and vessel info too.",
+  "backupImportModeUpdate": "Update",
+  "backupImportModeUpdateDesc": "Only adds or updates day entries found in the backup. Never deletes anything, and never touches the roster, contacts, or vessel info.",
   "backupRestoreConfirmTitle": "Replace all data?",
   "backupRestoreConfirmBody": "Restoring this backup will permanently replace every day entry, track, crew member and emergency contact currently in this logbook. This cannot be undone.",
+  "backupUpdateConfirmTitle": "Import backup?",
+  "backupUpdateConfirmBody": "This adds any new day entries from the backup and updates existing ones only if the backup's version is newer. Nothing will be deleted, and your roster, contacts, and vessel info are untouched.",
+  "backupConflictsTitle": "{count, plural, one{1 conflicting day} other{{count} conflicting days}}",
+  "@backupConflictsTitle": {
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "backupConflictsIntro": "These days exist in both your logbook and the backup. Choose which version to keep for each — nothing is applied until you tap Apply.",
+  "backupConflictsKeepMineAll": "Keep mine for all",
+  "backupConflictsUseBackupAll": "Use backup for all",
+  "backupConflictsUseSuggestedAll": "Use suggested for all",
+  "backupConflictsMine": "Mine",
+  "backupConflictsBackup": "Backup",
+  "backupConflictsApply": "Apply",
+  "backupConflictsCancel": "Cancel",
+  "backupConflictsTimelineLabel": "Timeline",
+  "backupConflictsEntriesSelected": "{selected} of {total} selected",
+  "@backupConflictsEntriesSelected": {
+    "placeholders": {
+      "selected": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "backupConflictsMineSummary": "Mine: updated {date} · {count, plural, one{1 entry} other{{count} entries}}",
+  "@backupConflictsMineSummary": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
+  "backupConflictsBackupSummary": "Backup: updated {date} · {count, plural, one{1 entry} other{{count} entries}}",
+  "@backupConflictsBackupSummary": {
+    "placeholders": {
+      "date": { "type": "String" },
+      "count": { "type": "int" }
+    }
+  },
   "backupRestoreInProgress": "Restoring backup…",
   "backupRestoreSuccess": "Backup restored.",
   "backupRestoreInvalidFile": "This file isn't a valid Logbook backup.",
