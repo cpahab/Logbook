@@ -9,7 +9,11 @@ import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
+import '../../../core/widgets/add_icon_button.dart';
+import '../../../core/widgets/danger_outlined_button.dart';
 import '../../../core/widgets/nav_bar.dart';
+import '../../../core/widgets/reorderable_list_card.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../data/emergency_repository.dart';
 import '../domain/emergency_contact.dart';
 
@@ -192,7 +196,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
             children: [
               _SectionHeader(icon: Icons.contact_emergency, label: l10n.emergencyContactsSection),
               if (_editMode)
-                _AddIconButton(onTap: _showAddContactDialog),
+                AddIconButton(onTap: _showAddContactDialog),
             ],
           ),
           const SizedBox(height: 8),
@@ -213,7 +217,7 @@ class _EmergencyManifestScreenState extends State<EmergencyManifestScreen> {
             children: [
               _SectionHeader(icon: Icons.settings_input_antenna, label: l10n.emergencyFrequenciesSection),
               if (_editMode && canAddFrequency)
-                _AddIconButton(onTap: _showAddFrequencyDialog),
+                AddIconButton(onTap: _showAddFrequencyDialog),
             ],
           ),
           const SizedBox(height: 8),
@@ -363,32 +367,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Small circular "+" button shown next to a section header while in edit mode.
-class _AddIconButton extends StatelessWidget {
-  final VoidCallback onTap;
-  const _AddIconButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Tooltip(
-      message: context.l10n.add,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: cs.primaryContainer,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.add, size: 16, color: cs.onPrimaryContainer),
-        ),
-      ),
-    );
-  }
-}
-
 /// Small "EDIT" text+icon button shown on a row while in edit mode (contacts,
 /// frequencies).
 class _EditButton extends StatelessWidget {
@@ -452,16 +430,36 @@ class _ContactsCard extends StatelessWidget {
                 ),
               ),
             )
-          : Column(
-              children: contacts
-                  .map((c) => _ContactRow(
-                        contact: c,
-                        editMode: editMode,
-                        onCall: () => _call(c.phone),
-                        onEdit: () => _showEditContactDialog(context, c),
-                      ))
-                  .toList(),
-            ),
+          : editMode
+              ? ReorderableListCard<EmergencyContact>(
+                  items: contacts,
+                  padding: EdgeInsets.zero,
+                  keyOf: (c) => ValueKey(c.key),
+                  onReorder: (oldIndex, newIndex) {
+                    final newOrder = List.of(contacts);
+                    final c = newOrder.removeAt(oldIndex);
+                    newOrder.insert(newIndex, c);
+                    context.read<EmergencyRepository>().reorderContacts(newOrder);
+                  },
+                  itemBuilder: (context, c, i) => _ContactRow(
+                    contact: c,
+                    editMode: editMode,
+                    reordering: true,
+                    index: i,
+                    onCall: () => _call(c.phone),
+                    onEdit: () => _showEditContactDialog(context, c),
+                  ),
+                )
+              : Column(
+                  children: contacts
+                      .map((c) => _ContactRow(
+                            contact: c,
+                            editMode: editMode,
+                            onCall: () => _call(c.phone),
+                            onEdit: () => _showEditContactDialog(context, c),
+                          ))
+                      .toList(),
+                ),
     );
   }
 
@@ -472,7 +470,14 @@ class _ContactsCard extends StatelessWidget {
       context: context,
       builder: (_) => _EditContactDialog(
         contact: contact,
-        onDelete: () => repo.removeContact(contact),
+        onDelete: () {
+          repo.removeContact(contact);
+          showUndoDeleteSnackBar(
+            context,
+            message: context.l10n.emergencyContactDeleted(contact.name),
+            onUndo: () => repo.addContact(contact),
+          );
+        },
       ),
     ).then((updated) {
       if (updated != null) repo.updateContact(contact.key as int, updated);
@@ -485,11 +490,15 @@ class _ContactsCard extends StatelessWidget {
 class _ContactRow extends StatelessWidget {
   final EmergencyContact contact;
   final bool editMode;
+  final bool reordering;
+  final int index;
   final VoidCallback onCall;
   final VoidCallback onEdit;
   const _ContactRow({
     required this.contact,
     required this.editMode,
+    this.reordering = false,
+    this.index = 0,
     required this.onCall,
     required this.onEdit,
   });
@@ -551,6 +560,13 @@ class _ContactRow extends StatelessWidget {
           if (editMode) ...[
             const SizedBox(width: 10),
             _EditButton(onTap: onEdit),
+          ],
+          if (reordering) ...[
+            const SizedBox(width: 10),
+            ReorderableDragStartListener(
+              index: index,
+              child: Icon(Icons.drag_handle, color: cs.outline.withValues(alpha: 0.4)),
+            ),
           ],
         ],
       ),
@@ -720,47 +736,45 @@ class _EditContactDialogState extends State<_EditContactDialog> {
           ),
         ],
       ),
-      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
-        TextButton(
-          onPressed: () {
-            if (_submitted) return;
-            _submitted = true;
-            Navigator.pop(context);
-            widget.onDelete();
-          },
-          style: TextButton.styleFrom(foregroundColor: cs.error),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.delete_outline, size: 16, color: cs.error),
-              const SizedBox(width: 4),
-              Text(context.l10n.delete),
-            ],
-          ),
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(context.l10n.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(context.l10n.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
+                ),
+                const SizedBox(width: 4),
+                FilledButton(
+                  onPressed: () {
+                    if (_submitted || _nameCtrl.text.trim().isEmpty) return;
+                    _submitted = true;
+                    Navigator.pop(
+                      context,
+                      EmergencyContact(
+                        name: _nameCtrl.text.trim(),
+                        role: _roleCtrl.text.trim(),
+                        phone: _phoneCtrl.text.trim(),
+                      ),
+                    );
+                  },
+                  child: Text(context.l10n.save),
+                ),
+              ],
             ),
-            const SizedBox(width: 4),
-            FilledButton(
+            const SizedBox(height: 16),
+            DangerOutlinedButton(
+              icon: Icons.delete_outline,
+              label: context.l10n.delete,
               onPressed: () {
-                if (_submitted || _nameCtrl.text.trim().isEmpty) return;
+                if (_submitted) return;
                 _submitted = true;
-                Navigator.pop(
-                  context,
-                  EmergencyContact(
-                    name: _nameCtrl.text.trim(),
-                    role: _roleCtrl.text.trim(),
-                    phone: _phoneCtrl.text.trim(),
-                  ),
-                );
+                Navigator.pop(context);
+                widget.onDelete();
               },
-              child: Text(context.l10n.save),
             ),
           ],
         ),
@@ -1167,7 +1181,7 @@ class _FrequenciesCard extends StatelessWidget {
       builder: (_) => _EditFrequencyDialog(
         initialLabel: labels[slot - 1],
         initialDesc: descs[slot - 1],
-        onDelete: () => _deleteFrequency(v, slot),
+        onDelete: () => _deleteFrequency(context, v, slot),
       ),
     ).then((result) {
       if (result != null) v.setVhfEntry(slot, result.label, result.desc);
@@ -1175,10 +1189,14 @@ class _FrequenciesCard extends StatelessWidget {
   }
 
   /// Removes the preset in [slot], shifting later slots down so there's no
-  /// gap (there's no per-slot "empty" concept beyond an empty label string).
-  void _deleteFrequency(ThemeProvider v, int slot) {
+  /// gap (there's no per-slot "empty" concept beyond an empty label string),
+  /// offering an "undo" snackbar action that re-inserts it at the same slot
+  /// (shifting later slots back down to make room).
+  void _deleteFrequency(BuildContext context, ThemeProvider v, int slot) {
     final labels = [v.vhf1Label, v.vhf2Label, v.vhf3Label, v.vhf4Label];
     final descs = [v.vhf1Desc, v.vhf2Desc, v.vhf3Desc, v.vhf4Desc];
+    final removedLabel = labels[slot - 1];
+    final removedDesc = descs[slot - 1];
     labels.removeAt(slot - 1);
     descs.removeAt(slot - 1);
     labels.add('');
@@ -1186,6 +1204,21 @@ class _FrequenciesCard extends StatelessWidget {
     for (int i = 0; i < 4; i++) {
       v.setVhfEntry(i + 1, labels[i], descs[i]);
     }
+    showUndoDeleteSnackBar(
+      context,
+      message: context.l10n.emergencyFrequencyDeleted(removedLabel),
+      onUndo: () {
+        final labels = [v.vhf1Label, v.vhf2Label, v.vhf3Label, v.vhf4Label];
+        final descs = [v.vhf1Desc, v.vhf2Desc, v.vhf3Desc, v.vhf4Desc];
+        labels.insert(slot - 1, removedLabel);
+        descs.insert(slot - 1, removedDesc);
+        // Only the first 4 are written back — this naturally drops the
+        // trailing slot the delete above appended, undoing the shift.
+        for (int i = 0; i < 4; i++) {
+          v.setVhfEntry(i + 1, labels[i], descs[i]);
+        }
+      },
+    );
   }
 }
 
@@ -1369,37 +1402,35 @@ class _EditFrequencyDialogState extends State<_EditFrequencyDialog> {
           ),
         ],
       ),
-      actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-            widget.onDelete();
-          },
-          style: TextButton.styleFrom(foregroundColor: cs.error),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.delete_outline, size: 16, color: cs.error),
-              const SizedBox(width: 4),
-              Text(context.l10n.delete),
-            ],
-          ),
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(context.l10n.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(context.l10n.cancel, style: TextStyle(color: cs.onSurfaceVariant)),
+                ),
+                const SizedBox(width: 4),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.pop(context,
+                        (label: _labelCtrl.text.trim(), desc: _descCtrl.text.trim()));
+                  },
+                  child: Text(context.l10n.save),
+                ),
+              ],
             ),
-            const SizedBox(width: 4),
-            FilledButton(
+            const SizedBox(height: 16),
+            DangerOutlinedButton(
+              icon: Icons.delete_outline,
+              label: context.l10n.delete,
               onPressed: () {
-                Navigator.pop(context,
-                    (label: _labelCtrl.text.trim(), desc: _descCtrl.text.trim()));
+                Navigator.pop(context);
+                widget.onDelete();
               },
-              child: Text(context.l10n.save),
             ),
           ],
         ),

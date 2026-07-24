@@ -489,7 +489,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           EquipmentSlotEditor(
                             slot: config.slots[i],
                             typeLabel: l10n.settingsEquipmentTypeSail,
-                            stateHint: l10n.settingsEquipmentStateLabel,
                             onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
                           ),
                         const SizedBox(height: 12),
@@ -500,7 +499,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         EquipmentSlotEditor(
                           slot: config.slots[10],
                           typeLabel: l10n.entryDialogMotorLabel,
-                          stateHint: l10n.settingsEquipmentStateLabelMotor,
                           onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
                         ),
                         const SizedBox(height: 12),
@@ -511,7 +509,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         EquipmentSlotEditor(
                           slot: config.slots[11],
                           typeLabel: l10n.entryDialogKeelLabel,
-                          stateHint: l10n.settingsEquipmentStateLabelKeel,
                           onChanged: (updated) => p.setVesselEquipment(config.copyWithSlot(updated)),
                         ),
                       ],

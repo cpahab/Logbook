@@ -255,6 +255,21 @@ class EmergencyRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Persists [newOrder] as the contacts' explicit display order (a drag
+  /// reorder on the Emergency Manifest screen) and pushes it to Firestore.
+  /// Clears and re-adds rather than reusing existing keys — Hive's
+  /// iteration order follows insertion order, not key order — mirroring
+  /// the same pattern [HomeRepository.reorderRoster] uses for the roster.
+  Future<void> reorderContacts(List<EmergencyContact> newOrder) async {
+    await _box.clear();
+    for (final c in newOrder) {
+      await _box.add(c);
+    }
+    _markModified();
+    if (!_editing) _syncToFirestore();
+    notifyListeners();
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
 
   void _syncToFirestore() {

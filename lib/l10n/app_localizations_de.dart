@@ -30,6 +30,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get remove => 'Entfernen';
 
   @override
+  String get undo => 'Rückgängig';
+
+  @override
   String get saveChanges => 'Änderungen speichern';
 
   @override
@@ -358,14 +361,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get crewButtonRemoveFromCrew => 'Besatzung entfernen';
 
   @override
+  String get crewButtonRemoveFromDay => 'Von diesem Tag entfernen';
+
+  @override
   String get crewPickerTitle => 'Besatzung wählen';
-
-  @override
-  String get crewPickerRemoveTitle => 'Aus Besatzungsliste entfernen?';
-
-  @override
-  String get crewPickerRemoveContent =>
-      'wird dauerhaft aus der Liste gelöscht.';
 
   @override
   String get crewPickerNewPerson => 'Neue Person…';
@@ -383,11 +382,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String get crewRosterNewPerson => 'Neue Person';
 
   @override
-  String get crewRosterRemoveTitle => 'Person entfernen?';
+  String get crewRosterReorderTooltip => 'Sortieren';
 
   @override
-  String crewRosterRemoveContent(String name) {
-    return '$name wird dauerhaft aus der Besatzungsliste gelöscht.';
+  String get crewRosterReorderDoneTooltip => 'Fertig';
+
+  @override
+  String crewRosterMemberDeleted(String name) {
+    return '$name entfernt.';
   }
 
   @override
@@ -432,20 +434,18 @@ class AppLocalizationsDe extends AppLocalizations {
       'Lege fest, welche Segel-, Motor- und Kielzustände für Logbucheinträge verwendet werden können.';
 
   @override
-  String get settingsEquipmentSlotLabel => 'Bezeichnung (z.B. Grosssegel)';
+  String get settingsEquipmentSlotLabel => 'Bezeichnung';
 
   @override
-  String get settingsEquipmentStateLabel => 'Zustand hinzufügen (z.B. 1. Reff)';
-
-  @override
-  String get settingsEquipmentStateLabelMotor => 'Zustand hinzufügen (z.B. An)';
-
-  @override
-  String get settingsEquipmentStateLabelKeel =>
-      'Zustand hinzufügen (z.B. Unten)';
+  String get settingsEquipmentStateLabel => 'Zustand';
 
   @override
   String get settingsEquipmentAddState => 'Hinzufügen';
+
+  @override
+  String settingsEquipmentStateDeleted(String state) {
+    return '$state entfernt.';
+  }
 
   @override
   String get settingsEquipmentTypeSail => 'Segel';
@@ -458,6 +458,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String settingsEquipmentDeleteType(String type) {
     return '$type löschen';
+  }
+
+  @override
+  String settingsEquipmentTypeDeleted(String type) {
+    return '$type entfernt.';
   }
 
   @override
@@ -806,9 +811,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get dayEntryUpdated => 'Logeintrag aktualisiert.';
-
-  @override
-  String get dayUndo => 'Rückgängig';
 
   @override
   String get dayFreeTextHint => 'Freie Notizen für diesen Tag…';
@@ -1338,6 +1340,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get emergencyContactPhoneLabel => 'Telefonnummer';
 
   @override
+  String emergencyContactDeleted(String name) {
+    return '$name entfernt.';
+  }
+
+  @override
   String get emergencyEditContactTitle => 'Kontakt bearbeiten';
 
   @override
@@ -1357,6 +1364,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get emergencyFrequencyDescLabel => 'Beschreibung';
+
+  @override
+  String emergencyFrequencyDeleted(String channel) {
+    return '$channel entfernt.';
+  }
 
   @override
   String get emergencyNoCrewHint =>

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
-import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/reorderable_list_card.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../data/home_repository.dart';
 import '../domain/crew_member.dart';
 import '../widgets/add_crew_member_dialog.dart';
@@ -12,12 +13,20 @@ import '../../../l10n/l10n_extension.dart';
 /// ever sailed on this boat, distinct from any single day's crew list. Add,
 /// edit, and remove members here; adding a day's crew from the roster
 /// (crew_picker_sheet.dart) copies from these records.
-class CrewRosterScreen extends StatelessWidget {
+class CrewRosterScreen extends StatefulWidget {
   const CrewRosterScreen({super.key});
+
+  @override
+  State<CrewRosterScreen> createState() => _CrewRosterScreenState();
+}
+
+class _CrewRosterScreenState extends State<CrewRosterScreen> {
+  bool _reordering = false;
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -28,18 +37,29 @@ class CrewRosterScreen extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          context.l10n.crewRosterTitle,
+          l10n.crewRosterTitle,
           style: Theme.of(context).textTheme.dialogTitle.copyWith(
             color: cs.primary,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _reordering ? Icons.check_rounded : Icons.swap_vert,
+              color: _reordering ? cs.primary : cs.onSurfaceVariant,
+            ),
+            tooltip: _reordering
+                ? l10n.crewRosterReorderDoneTooltip
+                : l10n.crewRosterReorderTooltip,
+            onPressed: () => setState(() => _reordering = !_reordering),
+          ),
+        ],
       ),
       body: Consumer<HomeRepository>(
         builder: (context, repo, _) {
           final roster = repo.roster;
 
           if (roster.isEmpty) {
-            final l10n = context.l10n;
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -59,6 +79,27 @@ class CrewRosterScreen extends StatelessWidget {
                         color: cs.mutedLabel),
                   ),
                 ],
+              ),
+            );
+          }
+
+          if (_reordering) {
+            return ReorderableListCard<CrewMember>(
+              items: roster,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              dividerColor: cs.outlineVariant,
+              keyOf: (m) => ValueKey(m.id),
+              onReorder: (oldIndex, newIndex) {
+                final newOrder = List.of(roster);
+                final m = newOrder.removeAt(oldIndex);
+                newOrder.insert(newIndex, m);
+                repo.reorderRoster(newOrder);
+              },
+              itemBuilder: (context, member, i) => _RosterListTile(
+                member: member,
+                repo: repo,
+                reordering: true,
+                index: i,
               ),
             );
           }
@@ -94,12 +135,19 @@ class CrewRosterScreen extends StatelessWidget {
 }
 
 /// One roster member's row: avatar, name, blood-type/allergies/conditions
-/// preview line, tap to edit.
+/// preview line, tap to edit. Shows a drag handle when [reordering].
 class _RosterListTile extends StatelessWidget {
   final CrewMember member;
   final HomeRepository repo;
+  final bool reordering;
+  final int index;
 
-  const _RosterListTile({required this.member, required this.repo});
+  const _RosterListTile({
+    required this.member,
+    required this.repo,
+    this.reordering = false,
+    this.index = 0,
+  });
 
   /// Blood type / allergies / conditions preview line, joined with " · ".
   String _subtitle(BuildContext context) {
@@ -116,7 +164,7 @@ class _RosterListTile extends StatelessWidget {
       context: context,
       builder: (_) => AddCrewMemberDialog(
         initialMember: member,
-        onDelete: () => _confirmDelete(context),
+        onDelete: () => _delete(context),
       ),
     );
     if (!context.mounted || updated == null) return;
@@ -124,19 +172,19 @@ class _RosterListTile extends StatelessWidget {
     repo.saveEditedRosterMember(updated);
   }
 
-  /// Confirms, then permanently removes this person from the roster.
-  /// Returns whether the deletion actually happened.
-  Future<bool> _confirmDelete(BuildContext context) async {
-    final l10n = context.l10n;
-    final confirmed = await showConfirmDialog(
-      context,
-      title: l10n.crewRosterRemoveTitle,
-      body: l10n.crewRosterRemoveContent(member.name),
-      confirmLabel: l10n.remove,
-      destructive: true,
-    );
-    if (!context.mounted || !confirmed) return false;
+  /// Removes this person from the roster immediately, offering an "undo"
+  /// snackbar action instead of a blocking confirm dialog — same policy as
+  /// every other list's delete (see undo_delete_snackbar.dart). Returns
+  /// true always, since the deletion always happens now.
+  Future<bool> _delete(BuildContext context) async {
     repo.deleteRosterMember(member.id!);
+    if (context.mounted) {
+      showUndoDeleteSnackBar(
+        context,
+        message: context.l10n.crewRosterMemberDeleted(member.name),
+        onUndo: () => repo.saveRosterMember(member),
+      );
+    }
     return true;
   }
 
@@ -170,8 +218,13 @@ class _RosterListTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             )
           : null,
-      trailing: Icon(Icons.chevron_right, color: cs.outlineVariant),
-      onTap: () => _edit(context),
+      trailing: reordering
+          ? ReorderableDragStartListener(
+              index: index,
+              child: Icon(Icons.drag_handle, color: cs.outline.withValues(alpha: 0.4)),
+            )
+          : Icon(Icons.chevron_right, color: cs.outlineVariant),
+      onTap: reordering ? null : () => _edit(context),
     );
   }
 }

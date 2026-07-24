@@ -9,6 +9,7 @@
   "edit": "Edit",
   "add": "Add",
   "remove": "Remove",
+  "undo": "Undo",
   "saveChanges": "Save changes",
   "apply": "Apply",
   "connect": "Connect",
@@ -126,19 +127,19 @@
   "crewButtonAddToCrew": "Add to crew",
   "crewDetailNoInfo": "No additional information recorded for this person.",
   "crewButtonRemoveFromCrew": "Remove from crew",
+  "crewButtonRemoveFromDay": "Remove from this day",
 
   "crewPickerTitle": "Choose crew",
-  "crewPickerRemoveTitle": "Remove from crew list?",
-  "crewPickerRemoveContent": "will be permanently removed from the list.",
   "crewPickerNewPerson": "New person…",
 
   "crewRosterTitle": "Crew roster",
   "crewRosterEmpty": "No crew members yet",
   "crewRosterEmptyHint": "Tap + to add a person.",
   "crewRosterNewPerson": "New person",
-  "crewRosterRemoveTitle": "Remove person?",
-  "crewRosterRemoveContent": "{name} will be permanently removed from the crew roster.",
-  "@crewRosterRemoveContent": {
+  "crewRosterReorderTooltip": "Reorder",
+  "crewRosterReorderDoneTooltip": "Done",
+  "crewRosterMemberDeleted": "{name} removed.",
+  "@crewRosterMemberDeleted": {
     "placeholders": {
       "name": { "type": "String" }
     }
@@ -157,11 +158,15 @@
   "settingsFieldFireSuppHint": "e.g. Galley, engine room",
   "settingsEquipmentSection": "Vessel configuration",
   "settingsEquipmentInfo": "Configure which sail, motor, and keel states can be used for logbook entries.",
-  "settingsEquipmentSlotLabel": "Name (e.g. Mainsail)",
-  "settingsEquipmentStateLabel": "Add state (e.g. 1st reef)",
-  "settingsEquipmentStateLabelMotor": "Add state (e.g. On)",
-  "settingsEquipmentStateLabelKeel": "Add state (e.g. Down)",
+  "settingsEquipmentSlotLabel": "Name",
+  "settingsEquipmentStateLabel": "State",
   "settingsEquipmentAddState": "Add",
+  "settingsEquipmentStateDeleted": "{state} removed.",
+  "@settingsEquipmentStateDeleted": {
+    "placeholders": {
+      "state": { "type": "String" }
+    }
+  },
   "settingsEquipmentTypeSail": "Sail",
   "settingsEquipmentAddType": "Add {type}",
   "@settingsEquipmentAddType": {
@@ -169,6 +174,10 @@
   },
   "settingsEquipmentDeleteType": "Delete {type}",
   "@settingsEquipmentDeleteType": {
+    "placeholders": { "type": { "type": "String" } }
+  },
+  "settingsEquipmentTypeDeleted": "{type} removed.",
+  "@settingsEquipmentTypeDeleted": {
     "placeholders": { "type": { "type": "String" } }
   },
   "settingsAppearanceSection": "Appearance & Location",
@@ -306,7 +315,6 @@
   },
   "dayEntryDeleted": "Log entry deleted.",
   "dayEntryUpdated": "Log entry updated.",
-  "dayUndo": "Undo",
   "dayFreeTextHint": "Free notes for this day…",
   "dayDiaryHint": "Diary entry for this day…",
   "vesselStatusTitle": "Vessel status",
@@ -486,6 +494,12 @@
   "emergencyContactNameLabel": "Name",
   "emergencyContactRoleHint": "Role (e.g. Spouse, Doctor)",
   "emergencyContactPhoneLabel": "Phone number",
+  "emergencyContactDeleted": "{name} removed.",
+  "@emergencyContactDeleted": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
   "emergencyEditContactTitle": "Edit contact",
   "emergencyBloodBadge": "BLOOD",
   "emergencyNoFrequencies": "No frequencies configured.",
@@ -493,6 +507,12 @@
   "emergencyEditFrequencyTitle": "Edit Frequency",
   "emergencyFrequencyChannelLabel": "Channel",
   "emergencyFrequencyDescLabel": "Description",
+  "emergencyFrequencyDeleted": "{channel} removed.",
+  "@emergencyFrequencyDeleted": {
+    "placeholders": {
+      "channel": { "type": "String" }
+    }
+  },
   "emergencyNoCrewHint": "No crew members added for today.",
   "emergencyOpenDayEntry": "Open day entry",
 
