@@ -6,4 +6,4 @@
 // The verification email is always sent on registration regardless of this flag.
 // To activate: set to true, then enforce the rule in Firebase Console →
 // Authentication → Settings → Email enumeration protection (optional).
-const bool kEnforceEmailVerification = false;
+const bool kEnforceEmailVerification = true;
