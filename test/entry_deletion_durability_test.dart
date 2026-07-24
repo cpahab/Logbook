@@ -15,6 +15,7 @@
 
 import 'dart:io';
 
+import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:logbook/features/home/data/home_repository.dart';
@@ -213,6 +214,43 @@ void main() {
       );
       expect(result, isEmpty);
     });
+
+    test('restrictTo: a server date outside a partial export\'s range is '
+        'never tombstoned, even though it\'s absent from the restored set '
+        '(restoring a date-ranged export must not wipe days outside that '
+        'range)', () {
+      final outsideRange = DateTime(2024, 1, 1);
+      final insideRangeRestored = DateTime(2024, 6, 15);
+      final result = HomeRepository.datesToTombstone(
+        [DayEntry(date: outsideRange), DayEntry(date: insideRangeRestored)],
+        {insideRangeRestored},
+        restrictTo: DateTimeRange(
+            start: DateTime(2024, 6, 1), end: DateTime(2024, 6, 30)),
+      );
+      expect(result, isEmpty);
+    });
+
+    test('restrictTo: a server date inside the range and absent from the '
+        'restored set is still tombstoned', () {
+      final insideRangeMissing = DateTime(2024, 6, 10);
+      final result = HomeRepository.datesToTombstone(
+        [DayEntry(date: insideRangeMissing)],
+        <DateTime>{},
+        restrictTo: DateTimeRange(
+            start: DateTime(2024, 6, 1), end: DateTime(2024, 6, 30)),
+      );
+      expect(result, {insideRangeMissing});
+    });
+
+    test('restrictTo: null (a full, unranged export) tombstones exactly as '
+        'before this parameter existed', () {
+      final serverOnly = DateTime(2024, 1, 1);
+      final result = HomeRepository.datesToTombstone(
+        [DayEntry(date: serverOnly)],
+        <DateTime>{},
+      );
+      expect(result, {serverOnly});
+    });
   });
 
   group('reconcileCloudAfterRestore (unattached)', () {
@@ -228,6 +266,111 @@ void main() {
 
       expect(home.getEntry(date), isNotNull);
       expect(home.pendingDeleteDatesForTesting, isEmpty);
+    });
+  });
+
+  group('backupEntryWins ("update" mode import merge decision)', () {
+    test('backup wins when its updatedAt is strictly newer', () {
+      final current = DayEntry(date: DateTime(2024, 1, 1), updatedAt: DateTime(2024, 1, 1, 10));
+      final backup = DayEntry(date: DateTime(2024, 1, 1), updatedAt: DateTime(2024, 1, 1, 12));
+      expect(HomeRepository.backupEntryWins(current, backup), isTrue);
+    });
+
+    test('current wins when the backup is not newer', () {
+      final current = DayEntry(date: DateTime(2024, 1, 1), updatedAt: DateTime(2024, 1, 1, 12));
+      final backup = DayEntry(date: DateTime(2024, 1, 1), updatedAt: DateTime(2024, 1, 1, 10));
+      expect(HomeRepository.backupEntryWins(current, backup), isFalse);
+    });
+
+    test('current wins when the backup has no updatedAt at all (no signal '
+        'to prefer it over the current version)', () {
+      final current = DayEntry(date: DateTime(2024, 1, 1), updatedAt: DateTime(2024, 1, 1, 10));
+      final backup = DayEntry(date: DateTime(2024, 1, 1));
+      expect(HomeRepository.backupEntryWins(current, backup), isFalse);
+    });
+
+    test('backup wins when current has no updatedAt but the backup does', () {
+      final current = DayEntry(date: DateTime(2024, 1, 1));
+      final backup = DayEntry(date: DateTime(2024, 1, 1), updatedAt: DateTime(2024, 1, 1, 10));
+      expect(HomeRepository.backupEntryWins(current, backup), isTrue);
+    });
+  });
+
+  group('mergeEntryFromBackup ("update" mode import — never deletes, only '
+      'adds or overwrites-if-newer)', () {
+    test('a date not present locally is added as a pure addition', () async {
+      final home = HomeRepository();
+      await home.init();
+      final date = DateTime(2024, 3, 1);
+      final backupEntry = DayEntry(date: date, notes: 'from backup');
+
+      final applied = await home.mergeEntryFromBackup(backupEntry);
+
+      expect(applied, isTrue);
+      expect(home.getEntry(date)?.notes, 'from backup');
+    });
+
+    test('a date present locally with a newer local edit is left untouched '
+        '(current wins)', () async {
+      final home = HomeRepository();
+      await home.init();
+      final date = DateTime(2024, 3, 1);
+      home.addEntry(date);
+      final local = home.getEntry(date)!;
+      local.notes = 'current notes';
+      home.saveEntry(local, changedFields: {'notes'});
+      // saveEntry sets updatedAt to DateTime.now() — give the backup's
+      // timestamp a moment in the past so it's unambiguously older.
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      final backupEntry = DayEntry(
+        date: date,
+        notes: 'stale backup notes',
+        updatedAt: DateTime.now().subtract(const Duration(days: 1)),
+      );
+      final applied = await home.mergeEntryFromBackup(backupEntry);
+
+      expect(applied, isFalse);
+      expect(home.getEntry(date)!.notes, 'current notes');
+    });
+
+    test('a date present locally with a genuinely newer backup version is '
+        'overwritten', () async {
+      final home = HomeRepository();
+      await home.init();
+      final date = DateTime(2024, 3, 1);
+      home.addEntry(date);
+      final local = home.getEntry(date)!;
+      local.notes = 'stale current notes';
+      home.saveEntry(local, changedFields: {'notes'});
+      // saveEntry set updatedAt to DateTime.now() — give the backup's own
+      // timestamp a moment in the future so it's unambiguously newer.
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      final backupEntry = DayEntry(
+        date: date,
+        notes: 'newer backup notes',
+        updatedAt: DateTime.now(),
+      );
+      final applied = await home.mergeEntryFromBackup(backupEntry);
+
+      expect(applied, isTrue);
+      expect(home.getEntry(date)!.notes, 'newer backup notes');
+    });
+
+    test('a date only present in current local data (not in the backup) is '
+        'never touched by mergeEntryFromBackup — it simply is never called '
+        'for that date, which is the caller\'s job to ensure', () async {
+      final home = HomeRepository();
+      await home.init();
+      final untouchedDate = DateTime(2024, 4, 1);
+      home.addEntry(untouchedDate);
+
+      // Merging a completely different date must not affect this one.
+      await home.mergeEntryFromBackup(
+          DayEntry(date: DateTime(2024, 4, 2), notes: 'unrelated'));
+
+      expect(home.getEntry(untouchedDate), isNotNull);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:gpx/gpx.dart';
 import 'package:hive/hive.dart';
 
@@ -824,6 +825,59 @@ class HomeRepository extends ChangeNotifier {
     _syncRosterToFirestore();
   }
 
+  /// Decides, for a date present in both current local data and a backup
+  /// being imported in "update" mode, whether the backup's version should
+  /// replace the current one: only if the backup's `updatedAt` is
+  /// genuinely newer. A whole-day decision (not a field-by-field merge) —
+  /// a day's notes/crew/timeline/track tell one consistent story, so
+  /// splicing fields from two different versions could produce an
+  /// inconsistent one. Pure decision logic, directly unit-testable, same
+  /// pattern as [datesToTombstone]. Also the source of the pre-selected
+  /// default shown on ImportConflictsScreen (BackupService.previewUpdate)
+  /// — real production code, not just tests, hence no
+  /// `@visibleForTesting` despite the similar shape to that pattern.
+  static bool backupEntryWins(DayEntry current, DayEntry backup) {
+    final backupUpdated = backup.updatedAt;
+    if (backupUpdated == null) return false;
+    final currentUpdated = current.updatedAt;
+    if (currentUpdated == null) return true;
+    return backupUpdated.isAfter(currentUpdated);
+  }
+
+  /// Unconditionally writes [entry] to local state (and pushes it to
+  /// Firestore) as part of a backup import — no decision-making of its
+  /// own. Used both by [mergeEntryFromBackup]'s automatic path (once it
+  /// has decided the backup should win) and by the interactive "update"
+  /// mode conflict screen, once the user has already made that decision
+  /// for a specific date. Unlike [restoreFromBackup], this doesn't assume
+  /// local data was cleared first, and only pushes this one entry to
+  /// Firestore — not every entry in the repository.
+  Future<void> applyEntryFromBackup(DayEntry entry) async {
+    final normalized = DateTime(entry.date.year, entry.date.month, entry.date.day);
+    _entries[normalized] = entry;
+    await _dayBox.put(normalized.toIso8601String(), entry);
+    _recordLocalEdit(normalized);
+    notifyListeners();
+
+    final fs = _firestore;
+    if (fs != null) await fs.saveEntry(entry);
+  }
+
+  /// Merges one backup entry into current local state for "update" mode
+  /// import's non-interactive path (see BackupService.restoreBackup) —
+  /// never deletes anything: a date not yet present locally is a pure
+  /// addition; a date present in both is only overwritten if
+  /// [backupEntryWins]. Returns whether the backup's entry was applied, so
+  /// the caller knows whether to also apply its track/photos.
+  Future<bool> mergeEntryFromBackup(DayEntry entry) async {
+    final normalized = DateTime(entry.date.year, entry.date.month, entry.date.day);
+    final current = _entries[normalized];
+    if (current != null && !backupEntryWins(current, entry)) return false;
+
+    await applyEntryFromBackup(entry);
+    return true;
+  }
+
   /// Deletes (tombstones) any cloud entry/track whose date isn't part of
   /// the current local state — call this once a restore has fully
   /// repopulated both entries ([restoreFromBackup]) *and* tracks
@@ -848,22 +902,38 @@ class HomeRepository extends ChangeNotifier {
   /// are absent from [restoredDates] — these are the dates that must be
   /// tombstoned so they don't reappear. Separated out from the actual
   /// Firestore/Storage calls so it's directly unit-testable.
+  ///
+  /// [restrictTo] scopes tombstoning to a date range — required for a
+  /// restore from a date-ranged (partial) export: without it, every server
+  /// date *outside* the exported range would look "absent from
+  /// restoredDates" and get deleted, even though it was never meant to be
+  /// touched. `null` (a full, unranged export/backup) tombstones
+  /// unconditionally, exactly as before this parameter existed.
   @visibleForTesting
   static Set<DateTime> datesToTombstone(
     Iterable<DayEntry> serverEntries,
-    Set<DateTime> restoredDates,
-  ) =>
+    Set<DateTime> restoredDates, {
+    DateTimeRange? restrictTo,
+  }) =>
       {
         for (final e in serverEntries)
-          if (e.deletedAt == null && !restoredDates.contains(e.date)) e.date,
+          if (e.deletedAt == null &&
+              !restoredDates.contains(e.date) &&
+              (restrictTo == null ||
+                  (!e.date.isBefore(restrictTo.start) &&
+                      !e.date.isAfter(restrictTo.end))))
+            e.date,
       };
 
-  Future<void> reconcileCloudAfterRestore() async {
+  /// [restrictTo]: see [datesToTombstone] — pass the export's own date
+  /// range (from the backup's manifest) when restoring a partial export,
+  /// so only server dates inside that range are eligible for tombstoning.
+  Future<void> reconcileCloudAfterRestore({DateTimeRange? restrictTo}) async {
     final fs = _firestore;
     if (fs != null) {
       try {
         final serverEntries = await fs.fetchAllEntries();
-        for (final date in datesToTombstone(serverEntries, _entries.keys.toSet())) {
+        for (final date in datesToTombstone(serverEntries, _entries.keys.toSet(), restrictTo: restrictTo)) {
           _recordPendingDelete(date);
           await _pushPendingDelete(date);
         }
@@ -875,6 +945,10 @@ class HomeRepository extends ChangeNotifier {
       try {
         final serverTrackDates = await _listTrackDatesWithRetry(st);
         for (final date in serverTrackDates) {
+          if (restrictTo != null &&
+              (date.isBefore(restrictTo.start) || date.isAfter(restrictTo.end))) {
+            continue; // outside the exported range — never touch it
+          }
           if (dailyTracks.containsKey(date)) continue; // restored, keep it
           final entry = _entries[date];
           if (entry != null && entry.deletedAt == null) {

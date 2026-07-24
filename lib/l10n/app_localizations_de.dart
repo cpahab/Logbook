@@ -1542,7 +1542,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Sichert alle Tageseinträge, GPS-Tracks, die Besatzungsliste, Notfallkontakte und Fotos dieses Logbuchs in einer einzigen Datei.';
 
   @override
-  String get backupExportButton => 'Alle Daten exportieren';
+  String get backupExportButton => 'Exportieren';
+
+  @override
+  String get backupExportRangeAll => 'Alle Einträge';
+
+  @override
+  String get backupExportRangeCustom => 'Zeitraum…';
 
   @override
   String get backupExportInProgress => 'Backup wird vorbereitet…';
@@ -1559,10 +1565,24 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupRestoreDescription =>
-      'Stellt ein zuvor exportiertes Backup wieder her. Dabei werden alle vorhandenen Daten in diesem Logbuch ersetzt, nicht zusammengeführt.';
+      'Stellt ein zuvor exportiertes Backup wieder her.';
 
   @override
   String get backupRestoreButton => 'Aus Datei wiederherstellen';
+
+  @override
+  String get backupImportModeReplace => 'Ersetzen';
+
+  @override
+  String get backupImportModeReplaceDesc =>
+      'Löscht alles in diesem Logbuch und ersetzt es exakt durch dieses Backup — auch Besatzungsliste, Kontakte und Schiffsdaten.';
+
+  @override
+  String get backupImportModeUpdate => 'Aktualisieren';
+
+  @override
+  String get backupImportModeUpdateDesc =>
+      'Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts und lässt Besatzungsliste, Kontakte und Schiffsdaten unberührt.';
 
   @override
   String get backupRestoreConfirmTitle => 'Alle Daten ersetzen?';
@@ -1570,6 +1590,79 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get backupRestoreConfirmBody =>
       'Beim Wiederherstellen dieses Backups werden alle Tageseinträge, Tracks, Besatzungsmitglieder und Notfallkontakte in diesem Logbuch dauerhaft ersetzt. Dies kann nicht rückgängig gemacht werden.';
+
+  @override
+  String get backupUpdateConfirmTitle => 'Backup importieren?';
+
+  @override
+  String get backupUpdateConfirmBody =>
+      'Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht; Besatzungsliste, Kontakte und Schiffsdaten bleiben unberührt.';
+
+  @override
+  String backupConflictsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count widersprüchliche Tage',
+      one: '1 widersprüchlicher Tag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get backupConflictsIntro =>
+      'Diese Tage existieren sowohl in deinem Logbuch als auch im Backup. Wähle für jeden Tag, welche Version behalten werden soll — nichts wird übernommen, bevor du auf Übernehmen tippst.';
+
+  @override
+  String get backupConflictsKeepMineAll => 'Meine für alle behalten';
+
+  @override
+  String get backupConflictsUseBackupAll => 'Backup für alle verwenden';
+
+  @override
+  String get backupConflictsUseSuggestedAll => 'Vorschlag für alle verwenden';
+
+  @override
+  String get backupConflictsMine => 'Meine';
+
+  @override
+  String get backupConflictsBackup => 'Backup';
+
+  @override
+  String get backupConflictsApply => 'Übernehmen';
+
+  @override
+  String get backupConflictsCancel => 'Abbrechen';
+
+  @override
+  String get backupConflictsTimelineLabel => 'Zeitleiste';
+
+  @override
+  String backupConflictsEntriesSelected(int selected, int total) {
+    return '$selected von $total ausgewählt';
+  }
+
+  @override
+  String backupConflictsMineSummary(String date, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Einträge',
+      one: '1 Eintrag',
+    );
+    return 'Meine: aktualisiert $date · $_temp0';
+  }
+
+  @override
+  String backupConflictsBackupSummary(String date, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Einträge',
+      one: '1 Eintrag',
+    );
+    return 'Backup: aktualisiert $date · $_temp0';
+  }
 
   @override
   String get backupRestoreInProgress => 'Backup wird wiederhergestellt…';

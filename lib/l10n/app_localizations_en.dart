@@ -1531,7 +1531,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Save every day entry, GPS track, crew roster, emergency contact and photo in this logbook as a single file you control.';
 
   @override
-  String get backupExportButton => 'Export all data';
+  String get backupExportButton => 'Export';
+
+  @override
+  String get backupExportRangeAll => 'All entries';
+
+  @override
+  String get backupExportRangeCustom => 'Date range…';
 
   @override
   String get backupExportInProgress => 'Preparing backup…';
@@ -1547,10 +1553,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupRestoreDescription =>
-      'Restore a previously exported backup. This replaces all data in this logbook — it does not merge with what\'s already there.';
+      'Restore a previously exported backup.';
 
   @override
   String get backupRestoreButton => 'Restore from file';
+
+  @override
+  String get backupImportModeReplace => 'Replace';
+
+  @override
+  String get backupImportModeReplaceDesc =>
+      'Wipes everything in this logbook and replaces it exactly with this backup — roster, contacts, and vessel info too.';
+
+  @override
+  String get backupImportModeUpdate => 'Update';
+
+  @override
+  String get backupImportModeUpdateDesc =>
+      'Only adds or updates day entries found in the backup. Never deletes anything, and never touches the roster, contacts, or vessel info.';
 
   @override
   String get backupRestoreConfirmTitle => 'Replace all data?';
@@ -1558,6 +1578,79 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backupRestoreConfirmBody =>
       'Restoring this backup will permanently replace every day entry, track, crew member and emergency contact currently in this logbook. This cannot be undone.';
+
+  @override
+  String get backupUpdateConfirmTitle => 'Import backup?';
+
+  @override
+  String get backupUpdateConfirmBody =>
+      'This adds any new day entries from the backup and updates existing ones only if the backup\'s version is newer. Nothing will be deleted, and your roster, contacts, and vessel info are untouched.';
+
+  @override
+  String backupConflictsTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count conflicting days',
+      one: '1 conflicting day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get backupConflictsIntro =>
+      'These days exist in both your logbook and the backup. Choose which version to keep for each — nothing is applied until you tap Apply.';
+
+  @override
+  String get backupConflictsKeepMineAll => 'Keep mine for all';
+
+  @override
+  String get backupConflictsUseBackupAll => 'Use backup for all';
+
+  @override
+  String get backupConflictsUseSuggestedAll => 'Use suggested for all';
+
+  @override
+  String get backupConflictsMine => 'Mine';
+
+  @override
+  String get backupConflictsBackup => 'Backup';
+
+  @override
+  String get backupConflictsApply => 'Apply';
+
+  @override
+  String get backupConflictsCancel => 'Cancel';
+
+  @override
+  String get backupConflictsTimelineLabel => 'Timeline';
+
+  @override
+  String backupConflictsEntriesSelected(int selected, int total) {
+    return '$selected of $total selected';
+  }
+
+  @override
+  String backupConflictsMineSummary(String date, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count entries',
+      one: '1 entry',
+    );
+    return 'Mine: updated $date · $_temp0';
+  }
+
+  @override
+  String backupConflictsBackupSummary(String date, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count entries',
+      one: '1 entry',
+    );
+    return 'Backup: updated $date · $_temp0';
+  }
 
   @override
   String get backupRestoreInProgress => 'Restoring backup…';

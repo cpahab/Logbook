@@ -69,14 +69,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _createNewEntry() async {
     final repo = context.read<HomeRepository>();
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
     final existing = repo.entries
         .map((e) => DateTime(e.date.year, e.date.month, e.date.day))
         .toSet();
 
+    // showDatePicker requires initialDate to itself satisfy
+    // selectableDayPredicate — it throws on open otherwise. Today already
+    // having an entry (the common case once you've logged today) doesn't
+    // mean there's no valid initial date to show, so search forward for
+    // the next selectable day instead of just handing it `now` blindly.
+    var initialDate = today;
+    while (existing.contains(initialDate) && initialDate.year < 2100) {
+      initialDate = initialDate.add(const Duration(days: 1));
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: now,
+      initialDate: initialDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
       selectableDayPredicate: (date) =>
