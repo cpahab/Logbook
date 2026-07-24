@@ -140,6 +140,12 @@ abstract class AppLocalizations {
   /// **'Entfernen'**
   String get remove;
 
+  /// No description provided for @undo.
+  ///
+  /// In de, this message translates to:
+  /// **'Rückgängig'**
+  String get undo;
+
   /// No description provided for @saveChanges.
   ///
   /// In de, this message translates to:
@@ -794,23 +800,17 @@ abstract class AppLocalizations {
   /// **'Besatzung entfernen'**
   String get crewButtonRemoveFromCrew;
 
+  /// No description provided for @crewButtonRemoveFromDay.
+  ///
+  /// In de, this message translates to:
+  /// **'Von diesem Tag entfernen'**
+  String get crewButtonRemoveFromDay;
+
   /// No description provided for @crewPickerTitle.
   ///
   /// In de, this message translates to:
   /// **'Besatzung wählen'**
   String get crewPickerTitle;
-
-  /// No description provided for @crewPickerRemoveTitle.
-  ///
-  /// In de, this message translates to:
-  /// **'Aus Besatzungsliste entfernen?'**
-  String get crewPickerRemoveTitle;
-
-  /// No description provided for @crewPickerRemoveContent.
-  ///
-  /// In de, this message translates to:
-  /// **'wird dauerhaft aus der Liste gelöscht.'**
-  String get crewPickerRemoveContent;
 
   /// No description provided for @crewPickerNewPerson.
   ///
@@ -842,17 +842,23 @@ abstract class AppLocalizations {
   /// **'Neue Person'**
   String get crewRosterNewPerson;
 
-  /// No description provided for @crewRosterRemoveTitle.
+  /// No description provided for @crewRosterReorderTooltip.
   ///
   /// In de, this message translates to:
-  /// **'Person entfernen?'**
-  String get crewRosterRemoveTitle;
+  /// **'Sortieren'**
+  String get crewRosterReorderTooltip;
 
-  /// No description provided for @crewRosterRemoveContent.
+  /// No description provided for @crewRosterReorderDoneTooltip.
   ///
   /// In de, this message translates to:
-  /// **'{name} wird dauerhaft aus der Besatzungsliste gelöscht.'**
-  String crewRosterRemoveContent(String name);
+  /// **'Fertig'**
+  String get crewRosterReorderDoneTooltip;
+
+  /// No description provided for @crewRosterMemberDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} entfernt.'**
+  String crewRosterMemberDeleted(String name);
 
   /// No description provided for @settingsTitle.
   ///
@@ -935,32 +941,26 @@ abstract class AppLocalizations {
   /// No description provided for @settingsEquipmentSlotLabel.
   ///
   /// In de, this message translates to:
-  /// **'Bezeichnung (z.B. Grosssegel)'**
+  /// **'Bezeichnung'**
   String get settingsEquipmentSlotLabel;
 
   /// No description provided for @settingsEquipmentStateLabel.
   ///
   /// In de, this message translates to:
-  /// **'Zustand hinzufügen (z.B. 1. Reff)'**
+  /// **'Zustand'**
   String get settingsEquipmentStateLabel;
-
-  /// No description provided for @settingsEquipmentStateLabelMotor.
-  ///
-  /// In de, this message translates to:
-  /// **'Zustand hinzufügen (z.B. An)'**
-  String get settingsEquipmentStateLabelMotor;
-
-  /// No description provided for @settingsEquipmentStateLabelKeel.
-  ///
-  /// In de, this message translates to:
-  /// **'Zustand hinzufügen (z.B. Unten)'**
-  String get settingsEquipmentStateLabelKeel;
 
   /// No description provided for @settingsEquipmentAddState.
   ///
   /// In de, this message translates to:
   /// **'Hinzufügen'**
   String get settingsEquipmentAddState;
+
+  /// No description provided for @settingsEquipmentStateDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'{state} entfernt.'**
+  String settingsEquipmentStateDeleted(String state);
 
   /// No description provided for @settingsEquipmentTypeSail.
   ///
@@ -979,6 +979,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'{type} löschen'**
   String settingsEquipmentDeleteType(String type);
+
+  /// No description provided for @settingsEquipmentTypeDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'{type} entfernt.'**
+  String settingsEquipmentTypeDeleted(String type);
 
   /// No description provided for @settingsAppearanceSection.
   ///
@@ -1585,12 +1591,6 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Logeintrag aktualisiert.'**
   String get dayEntryUpdated;
-
-  /// No description provided for @dayUndo.
-  ///
-  /// In de, this message translates to:
-  /// **'Rückgängig'**
-  String get dayUndo;
 
   /// No description provided for @dayFreeTextHint.
   ///
@@ -2540,6 +2540,12 @@ abstract class AppLocalizations {
   /// **'Telefonnummer'**
   String get emergencyContactPhoneLabel;
 
+  /// No description provided for @emergencyContactDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'{name} entfernt.'**
+  String emergencyContactDeleted(String name);
+
   /// No description provided for @emergencyEditContactTitle.
   ///
   /// In de, this message translates to:
@@ -2581,6 +2587,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Beschreibung'**
   String get emergencyFrequencyDescLabel;
+
+  /// No description provided for @emergencyFrequencyDeleted.
+  ///
+  /// In de, this message translates to:
+  /// **'{channel} entfernt.'**
+  String emergencyFrequencyDeleted(String channel);
 
   /// No description provided for @emergencyNoCrewHint.
   ///

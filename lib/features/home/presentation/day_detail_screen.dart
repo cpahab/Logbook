@@ -28,6 +28,8 @@ import '../../../core/services/gps_consent_service.dart';
 import '../../../core/utils/coordinate_format.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/nav_bar.dart';
+import '../../../core/widgets/reorderable_list_card.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../utils/bearing_utils.dart';
 import '../utils/compute_daily_stats.dart';
 import '../widgets/day_detail_display_helpers.dart';
@@ -534,43 +536,20 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
               ],
             ),
             child: _crewEditing
-                ? ReorderableListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    buildDefaultDragHandles: false,
-                    padding: const EdgeInsets.all(12),
-                    onReorderItem: _reorderPending,
-                    proxyDecorator: (child, index, animation) => Material(
-                      elevation: 4,
-                      color: cs.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(8),
-                      child: child,
+                ? ReorderableListCard<CrewMember>(
+                    items: displayCrew,
+                    onReorder: _reorderPending,
+                    dividerColor: tl.dividerColor,
+                    keyOf: (member) => ValueKey(member.name),
+                    itemBuilder: (context, member, i) => buildCrewRow(
+                      context,
+                      member: member,
+                      isFirst: i == 0,
+                      cs: cs,
+                      editing: true,
+                      index: i,
+                      onTap: () => _editPendingMember(i),
                     ),
-                    itemCount: displayCrew.length,
-                    itemBuilder: (context, i) {
-                      final member = displayCrew[i];
-                      final isFirst = i == 0;
-                      final isLast = i == displayCrew.length - 1;
-                      return Column(
-                        key: ValueKey(member.name),
-                        children: [
-                          buildCrewRow(
-                            context,
-                            member: member,
-                            isFirst: isFirst,
-                            cs: cs,
-                            editing: true,
-                            index: i,
-                            onTap: () => _editPendingMember(i),
-                          ),
-                          if (!isLast)
-                            Divider(
-                              color: tl.dividerColor,
-                              height: 16,
-                            ),
-                        ],
-                      );
-                    },
                   )
                 : Padding(
                     padding: const EdgeInsets.all(12),
@@ -2582,6 +2561,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       context: context,
       builder: (_) => AddCrewMemberDialog(
         initialMember: member,
+        deleteLabel: context.l10n.crewButtonRemoveFromDay,
         onDelete: () => _removePendingMember(member),
       ),
     );
@@ -2702,35 +2682,24 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       current.timeline.removeAt(index);
       repo.saveEntry(current, changedFields: {'timeline'});
     });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(context.l10n.dayEntryDeleted),
-      // Longer than the default 4s: this snackbar carries an undo action, so
-      // it needs enough time to notice, read, and react — still well within
-      // Material's own guidance of 4-10s for actionable snackbars.
-      duration: const Duration(seconds: 10),
-      // SnackBar defaults `persist` to true whenever `action` is set (see
-      // its own doc comment), which makes it ignore `duration` entirely and
-      // stay open until manually dismissed. Without this, the 10s above is
-      // a no-op — the snackbar just... never times out.
-      persist: false,
-      action: SnackBarAction(
-        label: context.l10n.dayUndo,
-        onPressed: () {
-          if (!mounted) return;
-          final repo = context.read<HomeRepository>();
-          // Same staleness risk as above, now certain: the 10s snackbar
-          // window is always longer than the 2s debounce, so the echo has
-          // essentially always already landed by the time this fires.
-          final current = repo.getEntry(date);
-          if (current == null) return;
-          setState(() {
-            current.timeline.insert(index.clamp(0, current.timeline.length), t);
-            current.timeline.sort((a, b) => a.time.compareTo(b.time));
-            repo.saveEntry(current, changedFields: {'timeline'});
-          });
-        },
-      ),
-    ));
+    showUndoDeleteSnackBar(
+      context,
+      message: context.l10n.dayEntryDeleted,
+      onUndo: () {
+        if (!mounted) return;
+        final repo = context.read<HomeRepository>();
+        // Staleness risk as noted above, now certain: the 10s snackbar
+        // window is always longer than the 2s debounce, so the echo has
+        // essentially already landed by the time this fires.
+        final current = repo.getEntry(date);
+        if (current == null) return;
+        setState(() {
+          current.timeline.insert(index.clamp(0, current.timeline.length), t);
+          current.timeline.sort((a, b) => a.time.compareTo(b.time));
+          repo.saveEntry(current, changedFields: {'timeline'});
+        });
+      },
+    );
   }
 
   /// Opens the edit dialog for [t]; if this is a past day (not today), the

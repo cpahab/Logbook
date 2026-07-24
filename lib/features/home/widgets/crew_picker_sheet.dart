@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/theme_extensions.dart';
-import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../data/home_repository.dart';
 import '../domain/crew_member.dart';
 import 'add_crew_member_dialog.dart';
@@ -106,18 +106,15 @@ class _RosterTile extends StatelessWidget {
     repo.saveEditedRosterMember(updated);
   }
 
-  /// Confirms, then permanently removes this person from the roster.
-  Future<void> _delete(BuildContext context) async {
-    final l10n = context.l10n;
-    final confirmed = await showConfirmDialog(
-      context,
-      title: l10n.crewPickerRemoveTitle,
-      body: '${member.name} ${l10n.crewPickerRemoveContent}',
-      confirmLabel: l10n.remove,
-      destructive: true,
-    );
-    if (!context.mounted || !confirmed) return;
+  /// Removes this person from the roster immediately, offering an "undo"
+  /// snackbar action — same policy as crew_roster_screen.dart's delete.
+  void _delete(BuildContext context) {
     repo.deleteRosterMember(member.id!);
+    showUndoDeleteSnackBar(
+      context,
+      message: context.l10n.crewRosterMemberDeleted(member.name),
+      onUndo: () => repo.saveRosterMember(member),
+    );
   }
 
   /// Blood type + allergies preview line, joined with " · " (empty if neither is set).

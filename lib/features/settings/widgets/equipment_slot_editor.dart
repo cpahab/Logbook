@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/theme_extensions.dart';
+import '../../../core/widgets/undo_delete_snackbar.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../home/domain/vessel_equipment.dart';
 
@@ -15,12 +16,8 @@ class EquipmentSlotEditor extends StatefulWidget {
   /// used to phrase the add/delete affordances by what they actually do
   /// ("Segel hinzufügen") instead of a generic "Slot 3".
   final String typeLabel;
-  /// Placeholder for the "add state" field, e.g. "Add state (e.g. 1st reef)"
-  /// for a sail slot vs. "(e.g. On)" for the motor slot — sail's own example
-  /// doesn't fit the motor/keel slots, which have their own hint per category.
-  final String stateHint;
   final ValueChanged<EquipmentSlot> onChanged;
-  const EquipmentSlotEditor({super.key, required this.slot, required this.typeLabel, required this.stateHint, required this.onChanged});
+  const EquipmentSlotEditor({super.key, required this.slot, required this.typeLabel, required this.onChanged});
 
   @override
   State<EquipmentSlotEditor> createState() => _EquipmentSlotEditorState();
@@ -91,18 +88,57 @@ class _EquipmentSlotEditorState extends State<EquipmentSlotEditor> {
     _notify();
   }
 
-  void _removeState(int i) {
-    setState(() => _states.removeAt(i));
+  /// Moves the state at [i] one position toward [i] + [delta] (-1 or +1).
+  /// Reordering is always safe for historical entries — a logged
+  /// TimelineEntry stores the state's label text itself, never a position
+  /// in this list (see timeline_entry.dart's slot*State fields) — so past
+  /// days keep showing whatever string was picked, unaffected by any
+  /// reordering done here later.
+  void _moveState(int i, int delta) {
+    final j = i + delta;
+    if (j < 0 || j >= _states.length) return;
+    setState(() {
+      final moved = _states.removeAt(i);
+      _states.insert(j, moved);
+    });
     _notify();
   }
 
+  void _removeState(int i) {
+    final removed = _states[i];
+    setState(() => _states.removeAt(i));
+    _notify();
+    showUndoDeleteSnackBar(
+      context,
+      message: context.l10n.settingsEquipmentStateDeleted(removed),
+      onUndo: () {
+        setState(() => _states.insert(i.clamp(0, _states.length), removed));
+        _notify();
+      },
+    );
+  }
+
   void _clearSlot() {
+    final removedLabel = _labelCtrl.text;
+    final removedStates = List.of(_states);
     setState(() {
       _labelCtrl.clear();
       _states = [];
       _expanded = false;
     });
     _notify();
+    showUndoDeleteSnackBar(
+      context,
+      message: context.l10n.settingsEquipmentTypeDeleted(widget.typeLabel),
+      onUndo: () {
+        setState(() {
+          _labelCtrl.text = removedLabel;
+          _states = removedStates;
+          _expanded = true;
+        });
+        _notify();
+      },
+    );
   }
 
   @override
@@ -166,7 +202,13 @@ class _EquipmentSlotEditorState extends State<EquipmentSlotEditor> {
                       runSpacing: 8,
                       children: [
                         for (int i = 0; i < _states.length; i++)
-                          _removableStateChip(_states[i], () => _removeState(i), cs),
+                          _removableStateChip(
+                            _states[i],
+                            onRemove: () => _removeState(i),
+                            onMoveLeft: i > 0 ? () => _moveState(i, -1) : null,
+                            onMoveRight: i < _states.length - 1 ? () => _moveState(i, 1) : null,
+                            cs: cs,
+                          ),
                       ],
                     ),
                   ],
@@ -180,7 +222,7 @@ class _EquipmentSlotEditorState extends State<EquipmentSlotEditor> {
                             style: Theme.of(context).textTheme.bodyMedium,
                             decoration: InputDecoration(
                               isDense: true,
-                              hintText: widget.stateHint,
+                              hintText: l10n.settingsEquipmentStateLabel,
                               border: const OutlineInputBorder(),
                             ),
                             onSubmitted: (_) => _addState(),
@@ -220,8 +262,20 @@ class _EquipmentSlotEditorState extends State<EquipmentSlotEditor> {
 
   /// Small removable pill chip — same visual language as the dialog's state
   /// chips, plus a trailing × so the captain sees exactly what a filled-in
-  /// slot will look like when logging an entry.
-  Widget _removableStateChip(String label, VoidCallback onRemove, ColorScheme cs) {
+  /// slot will look like when logging an entry. [onMoveLeft]/[onMoveRight]
+  /// are null at the respective end of the list (nothing to move into).
+  /// Up/down arrows rather than drag-and-drop: with at most
+  /// [EquipmentSlot.maxStates] (5) states per slot, a tap-to-move affordance
+  /// is simpler and just as effective as a full reorderable-list drag
+  /// gesture, and this chip row is a `Wrap`, not a vertical list, so the
+  /// standard `ReorderableListView` used elsewhere in the app doesn't fit.
+  Widget _removableStateChip(
+    String label, {
+    required VoidCallback onRemove,
+    required VoidCallback? onMoveLeft,
+    required VoidCallback? onMoveRight,
+    required ColorScheme cs,
+  }) {
     return Container(
       padding: const EdgeInsets.only(left: 12, right: 6, top: 6, bottom: 6),
       decoration: BoxDecoration(
@@ -231,7 +285,17 @@ class _EquipmentSlotEditorState extends State<EquipmentSlotEditor> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          if (onMoveLeft != null)
+            GestureDetector(
+              onTap: onMoveLeft,
+              child: Icon(Icons.chevron_left, size: 16, color: cs.onPrimary),
+            ),
           Text(label, style: Theme.of(context).textTheme.chipLabel.copyWith(color: cs.onPrimary)),
+          if (onMoveRight != null)
+            GestureDetector(
+              onTap: onMoveRight,
+              child: Icon(Icons.chevron_right, size: 16, color: cs.onPrimary),
+            ),
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onRemove,

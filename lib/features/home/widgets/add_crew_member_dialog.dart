@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/theme_extensions.dart';
+import '../../../core/widgets/danger_outlined_button.dart';
 import '../domain/crew_member.dart';
 import '../../../l10n/l10n_extension.dart';
 
@@ -9,14 +10,23 @@ import '../../../l10n/l10n_extension.dart';
 /// resulting [CrewMember] via `Navigator.pop`, or null if cancelled.
 class AddCrewMemberDialog extends StatefulWidget {
   final CrewMember? initialMember;
-  /// Called when "Remove from crew" is tapped. Must perform (or cancel) the
-  /// deletion itself — e.g. showing its own confirmation dialog — and return
-  /// whether the member was actually deleted. The dialog only closes itself
-  /// if this resolves to `true`, so an in-progress or cancelled confirmation
-  /// doesn't get raced by this dialog popping out from under it.
+  /// Called when the delete button is tapped. Must perform the deletion
+  /// itself (instant delete + undo snackbar — see undo_delete_snackbar.dart)
+  /// and return whether it actually happened; the dialog only closes itself
+  /// if this resolves to `true`.
   final Future<bool> Function()? onDelete;
+  /// Delete button's label — this dialog is shared between two different
+  /// actions (Crew Roster: permanently remove the person; per-day crew
+  /// editing: remove them from just this one day, roster untouched), so the
+  /// label must say which one applies. Defaults to the roster wording.
+  final String? deleteLabel;
 
-  const AddCrewMemberDialog({super.key, this.initialMember, this.onDelete});
+  const AddCrewMemberDialog({
+    super.key,
+    this.initialMember,
+    this.onDelete,
+    this.deleteLabel,
+  });
 
   @override
   State<AddCrewMemberDialog> createState() => _AddCrewMemberDialogState();
@@ -264,28 +274,15 @@ class _AddCrewMemberDialogState extends State<AddCrewMemberDialog> {
                   ),
                   if (isEdit && widget.onDelete != null) ...[
                     const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final deleted = await widget.onDelete!();
-                          if (deleted && context.mounted) {
-                            Navigator.pop(context, null);
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: cs.error,
-                          side: BorderSide(
-                              color: cs.error.withValues(alpha: 0.4)),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          textStyle: Theme.of(context).textTheme.fieldValueCompact,
-                        ),
-                        icon: const Icon(Icons.person_remove_outlined,
-                            size: 20),
-                        label: Text(l10n.crewButtonRemoveFromCrew),
-                      ),
+                    DangerOutlinedButton(
+                      icon: Icons.person_remove_outlined,
+                      label: widget.deleteLabel ?? l10n.crewButtonRemoveFromCrew,
+                      onPressed: () async {
+                        final deleted = await widget.onDelete!();
+                        if (deleted && context.mounted) {
+                          Navigator.pop(context, null);
+                        }
+                      },
                     ),
                   ],
                   // ── end Actions ──

@@ -87,11 +87,48 @@ class HomeRepository extends ChangeNotifier {
   }
 
   /// The persistent crew roster (features/home/presentation/crew_roster_screen.dart),
-  /// sorted alphabetically by name — distinct from any single day's crew list.
-  List<CrewMember> get roster {
-    final members = _rosterBox.values.toList();
-    members.sort((a, b) => a.name.compareTo(b.name));
-    return members;
+  /// in the user's own explicit order (see [reorderRoster]) — distinct from
+  /// any single day's crew list. Used to always force-sort alphabetically;
+  /// now the box's own stored order is the source of truth, seeded once
+  /// from an alphabetical sort by [_migrateRosterOrderOnce] so existing
+  /// users don't see a reshuffle on first upgrade.
+  List<CrewMember> get roster => _rosterBox.values.toList();
+
+  /// Persists [newOrder] as the roster's explicit display order (a drag
+  /// reorder on the roster screen) and pushes it to Firestore. Reordering
+  /// can't use a simple `put` at each member's existing key — Hive's
+  /// iteration order follows insertion order, not key order — so this
+  /// clears the box and re-inserts every member in [newOrder]'s sequence,
+  /// mirroring the same "clear + rewrite in order" idiom
+  /// [_applyRemoteRoster] already uses when a remote sync pulls a list.
+  Future<void> reorderRoster(List<CrewMember> newOrder) async {
+    await _rosterBox.clear();
+    for (final m in newOrder) {
+      if (m.id != null) await _rosterBox.put(m.id!, m);
+    }
+    unawaited(_syncRosterToFirestore());
+    notifyListeners();
+  }
+
+  static const _rosterOrderMigratedKey = 'roster_order_migrated';
+
+  /// One-time migration, run once from [init]: the roster used to always
+  /// be force-sorted alphabetically on every read (no stored order at
+  /// all); now the box's own order is authoritative. Without this, an
+  /// existing user's roster would read back in whatever incidental
+  /// insertion order Hive happens to hold, reshuffling their roster the
+  /// moment they upgrade even though they never touched a drag handle.
+  /// Seeding an explicit alphabetical order once, the first time this runs,
+  /// keeps that upgrade invisible.
+  Future<void> _migrateRosterOrderOnce() async {
+    if (_syncStateBox.get(_rosterOrderMigratedKey) != null) return;
+    final members = _rosterBox.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    await _rosterBox.clear();
+    for (final m in members) {
+      if (m.id != null) await _rosterBox.put(m.id!, m);
+    }
+    await _syncStateBox.put(_rosterOrderMigratedKey, 1);
   }
 
   /// Finds this person's current roster record by [id], if one exists.
@@ -278,6 +315,7 @@ class HomeRepository extends ChangeNotifier {
 
     for (final e in _dayBox.values) { _entries[e.date] = e; }
     for (final t in _trackBox.values) { dailyTracks[t.day] = t; }
+    await _migrateRosterOrderOnce();
 
     notifyListeners();
   }
@@ -334,6 +372,7 @@ class HomeRepository extends ChangeNotifier {
     dailyTracks.clear();
     for (final e in _dayBox.values) { _entries[e.date] = e; }
     for (final t in _trackBox.values) { dailyTracks[t.day] = t; }
+    await _migrateRosterOrderOnce();
 
     notifyListeners();
 
