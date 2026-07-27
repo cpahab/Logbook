@@ -613,11 +613,14 @@
   "backupImportModeReplace": "Ersetzen",
   "backupImportModeReplaceDesc": "Löscht alles in diesem Logbuch und ersetzt es exakt durch dieses Backup — auch Besatzungsliste, Kontakte und Schiffsdaten.",
   "backupImportModeUpdate": "Aktualisieren",
-  "backupImportModeUpdateDesc": "Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts und lässt Besatzungsliste, Kontakte und Schiffsdaten unberührt.",
+  "backupImportModeUpdateDesc": "Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts. Besatzungsliste, Schiffsdaten/Einstellungen und Notfallkontakte können unten optional aus dem Backup übernommen werden.",
+  "backupSyncRosterLabel": "Besatzungsliste ebenfalls aus dem Backup übernehmen",
+  "backupSyncSettingsLabel": "Schiffsdaten/Einstellungen ebenfalls aus dem Backup übernehmen",
+  "backupSyncEmergencyLabel": "Notfallkontakte ebenfalls aus dem Backup übernehmen",
   "backupRestoreConfirmTitle": "Alle Daten ersetzen?",
   "backupRestoreConfirmBody": "Beim Wiederherstellen dieses Backups werden alle Tageseinträge, Tracks, Besatzungsmitglieder und Notfallkontakte in diesem Logbuch dauerhaft ersetzt. Dies kann nicht rückgängig gemacht werden.",
   "backupUpdateConfirmTitle": "Backup importieren?",
-  "backupUpdateConfirmBody": "Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht; Besatzungsliste, Kontakte und Schiffsdaten bleiben unberührt.",
+  "backupUpdateConfirmBody": "Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht. Deine Besatzungsliste, Schiffsdaten/Einstellungen und Notfallkontakte werden nur ersetzt, wenn du dies oben ausgewählt hast.",
   "backupConflictsTitle": "{count, plural, one{1 widersprüchlicher Tag} other{{count} widersprüchliche Tage}}",
   "@backupConflictsTitle": {
     "placeholders": { "count": { "type": "int" } }

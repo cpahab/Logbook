@@ -613,11 +613,14 @@
   "backupImportModeReplace": "Replace",
   "backupImportModeReplaceDesc": "Wipes everything in this logbook and replaces it exactly with this backup — roster, contacts, and vessel info too.",
   "backupImportModeUpdate": "Update",
-  "backupImportModeUpdateDesc": "Only adds or updates day entries found in the backup. Never deletes anything, and never touches the roster, contacts, or vessel info.",
+  "backupImportModeUpdateDesc": "Only adds or updates day entries found in the backup. Never deletes anything. The crew roster, vessel/settings info, and emergency contacts can optionally be synced from the backup below.",
+  "backupSyncRosterLabel": "Also replace the crew roster with the backup's",
+  "backupSyncSettingsLabel": "Also replace vessel/settings info with the backup's",
+  "backupSyncEmergencyLabel": "Also replace emergency contacts with the backup's",
   "backupRestoreConfirmTitle": "Replace all data?",
   "backupRestoreConfirmBody": "Restoring this backup will permanently replace every day entry, track, crew member and emergency contact currently in this logbook. This cannot be undone.",
   "backupUpdateConfirmTitle": "Import backup?",
-  "backupUpdateConfirmBody": "This adds any new day entries from the backup and updates existing ones only if the backup's version is newer. Nothing will be deleted, and your roster, contacts, and vessel info are untouched.",
+  "backupUpdateConfirmBody": "This adds any new day entries from the backup and updates existing ones only if the backup's version is newer. Nothing will be deleted. Your crew roster, vessel/settings info, and emergency contacts are only replaced if you chose to sync them above.",
   "backupConflictsTitle": "{count, plural, one{1 conflicting day} other{{count} conflicting days}}",
   "@backupConflictsTitle": {
     "placeholders": { "count": { "type": "int" } }

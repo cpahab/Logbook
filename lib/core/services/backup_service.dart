@@ -28,14 +28,16 @@ class BackupFormatException implements Exception {
 
 /// How [BackupService.restoreBackup] applies a backup:
 /// - [replace]: today's original, unchanged behavior — wipes all local
-///   data (entries, roster, contacts, vessel/VHF info) and repopulates
+///   data (entries, roster, contacts, vessel/settings info) and repopulates
 ///   from the backup exactly, then tombstones any cloud day/track absent
 ///   from the restored set (scoped to the backup's own export range, if
 ///   it was a partial one — see HomeRepository.datesToTombstone).
-/// - [update]: touches *only* day entries — additions and
-///   newer-wins overwrites (see HomeRepository.backupEntryWins), never
-///   deletions. Roster, emergency contacts, and vessel/VHF info are left
-///   completely untouched — neither merged nor replaced.
+/// - [update]: day entries get additions and newer-wins overwrites (see
+///   HomeRepository.backupEntryWins), never deletions. The crew roster,
+///   vessel/settings info, and emergency contacts are all *optionally*
+///   replaced wholesale from the backup — see BackupScreen's sync-roster/
+///   sync-settings/sync-emergency toggles — each defaulting to "keep the
+///   current logbook's" when not explicitly opted into.
 enum BackupImportMode { replace, update }
 
 /// Inputs to [_buildBackupZip] — plain, isolate-sendable data only (no
@@ -228,7 +230,11 @@ class BackupService {
       'entries': entriesJson,
       'roster': home.roster.map(crewMemberToJson).toList(),
       'emergencyContacts': emergency.contacts.map(emergencyContactToJson).toList(),
-      'vessel': _vesselInfoToJson(theme),
+      // The full settings snapshot (vessel/VHF/safety info *and* track-filter
+      // tuning) — see ThemeProvider.settingsSnapshot's doc comment for why
+      // this is read directly from the live-sync map rather than a
+      // separately maintained field list.
+      'vessel': theme.settingsSnapshot,
     };
 
     // Photo reads are I/O-bound (Storage/disk plugin calls) so they stay on
@@ -307,26 +313,46 @@ Restoring
 Restore this archive from within the Logbook app, under
 Settings > Backup & Restore > Restore from File. Two modes are offered:
 "Replace" wipes all data in whichever logbook is active in the app and
-repopulates it exactly from this archive (roster, contacts, and vessel
-info too). "Update" only adds or updates day entries found here — it
-never deletes anything, and never touches the roster, contacts, or
-vessel info.
+repopulates it exactly from this archive (roster, contacts, and vessel/
+settings info too). "Update" only adds or updates day entries found
+here by default — it never deletes anything — but can optionally also
+replace the crew roster, vessel/settings info, and/or emergency contacts
+wholesale from this archive, if chosen at restore time.
 ''';
   }
 
-  static Map<String, dynamic> _vesselInfoToJson(ThemeProvider p) => {
-        'vesselName': p.vesselName,
-        'vesselMmsi': p.vesselMmsi,
-        'vesselCallSign': p.vesselCallSign,
-        'vesselEquipment': p.vesselEquipment.toJsonString(),
-        'lifeRaftInfo': p.lifeRaftInfo,
-        'epirbInfo': p.epirbInfo,
-        'fireSuppInfo': p.fireSuppInfo,
-        'vhf1Label': p.vhf1Label, 'vhf1Desc': p.vhf1Desc,
-        'vhf2Label': p.vhf2Label, 'vhf2Desc': p.vhf2Desc,
-        'vhf3Label': p.vhf3Label, 'vhf3Desc': p.vhf3Desc,
-        'vhf4Label': p.vhf4Label, 'vhf4Desc': p.vhf4Desc,
-      };
+  /// Legacy backups (schemaVersion 1, before settings became a full
+  /// snapshot) stored vessel/VHF/safety info under camelCase keys distinct
+  /// from the snake_case keys ThemeProvider's live settings sync uses
+  /// internally (see ThemeProvider.settingsSnapshot). Maps those old keys
+  /// onto the new shape so pre-existing backups still restore correctly;
+  /// a map already in the new shape (has e.g. 'vessel_name') passes
+  /// through unchanged. Track-filter keys simply don't exist in an old
+  /// backup — [ThemeProvider.restoreSettings] leaves anything absent
+  /// untouched, so this never needs to invent values for them.
+  static Map<String, String> normalizeSettingsMap(Map<String, dynamic> raw) {
+    if (raw.containsKey('vessel_name')) {
+      return raw.map((k, v) => MapEntry(k, v as String? ?? ''));
+    }
+    const legacyKeyMap = {
+      'vesselName': 'vessel_name',
+      'vesselMmsi': 'vessel_mmsi',
+      'vesselCallSign': 'vessel_call_sign',
+      'vesselEquipment': 'vessel_equipment',
+      'lifeRaftInfo': 'life_raft_info',
+      'epirbInfo': 'epirb_info',
+      'fireSuppInfo': 'fire_supp_info',
+      'vhf1Label': 'vhf_1_label', 'vhf1Desc': 'vhf_1_desc',
+      'vhf2Label': 'vhf_2_label', 'vhf2Desc': 'vhf_2_desc',
+      'vhf3Label': 'vhf_3_label', 'vhf3Desc': 'vhf_3_desc',
+      'vhf4Label': 'vhf_4_label', 'vhf4Desc': 'vhf_4_desc',
+    };
+    return {
+      for (final entry in raw.entries)
+        if (legacyKeyMap[entry.key] != null)
+          legacyKeyMap[entry.key]!: entry.value as String? ?? '',
+    };
+  }
 
   static Future<void> restoreBackup({
     required Uint8List zipBytes,
@@ -371,23 +397,7 @@ vessel info.
 
     final vessel = parsed.vessel;
     if (vessel != null) {
-      await theme.restoreVesselSettings(
-        vesselName:         vessel['vesselName'] as String? ?? '',
-        vesselMmsi:         vessel['vesselMmsi'] as String? ?? '',
-        vesselCallSign:     vessel['vesselCallSign'] as String? ?? '',
-        vesselEquipmentJson: vessel['vesselEquipment'] as String? ?? '',
-        lifeRaftInfo:       vessel['lifeRaftInfo'] as String? ?? '',
-        epirbInfo:          vessel['epirbInfo'] as String? ?? '',
-        fireSuppInfo:       vessel['fireSuppInfo'] as String? ?? '',
-        vhf1Label: vessel['vhf1Label'] as String? ?? 'Channel 16',
-        vhf1Desc:  vessel['vhf1Desc']  as String? ?? 'Distress · 156.800 MHz',
-        vhf2Label: vessel['vhf2Label'] as String? ?? 'Channel 67',
-        vhf2Desc:  vessel['vhf2Desc']  as String? ?? 'Ship to Ship · 156.375 MHz',
-        vhf3Label: vessel['vhf3Label'] as String? ?? 'Channel 06',
-        vhf3Desc:  vessel['vhf3Desc']  as String? ?? 'Search & Rescue · 156.300 MHz',
-        vhf4Label: vessel['vhf4Label'] as String? ?? 'Channel 13',
-        vhf4Desc:  vessel['vhf4Desc']  as String? ?? 'Bridge to Bridge · 156.650 MHz',
-      );
+      await theme.restoreSettings(normalizeSettingsMap(vessel));
     }
 
     for (final p in parsed.entries) {
@@ -464,7 +474,41 @@ vessel info.
       additions: additions,
       conflicts: conflicts,
       photoBytesByFilename: parsed.photoBytesByFilename,
+      vessel: parsed.vessel,
+      contacts: parsed.contacts,
+      roster: parsed.roster,
     );
+  }
+
+  /// Applies the backup's vessel/settings info wholesale — the "update"
+  /// mode opt-in counterpart to [restoreBackup]'s replace-mode vessel
+  /// restore, using the exact same normalization for older backups.
+  /// No-op if [vessel] is null (an old backup predating vessel/settings
+  /// info entirely, vanishingly rare in practice).
+  static Future<void> applyUpdateSettings({
+    required ThemeProvider theme,
+    required Map<String, dynamic>? vessel,
+  }) async {
+    if (vessel == null) return;
+    await theme.restoreSettings(normalizeSettingsMap(vessel));
+  }
+
+  /// Applies the backup's crew roster wholesale — the "update" mode opt-in
+  /// counterpart to [restoreBackup]'s replace-mode roster restore.
+  static Future<void> applyUpdateRoster({
+    required HomeRepository home,
+    required List<CrewMember> roster,
+  }) async {
+    await home.restoreRoster(roster);
+  }
+
+  /// Applies the backup's emergency contacts wholesale — the "update" mode
+  /// opt-in counterpart to [restoreBackup]'s replace-mode contacts restore.
+  static Future<void> applyUpdateContacts({
+    required EmergencyRepository emergency,
+    required List<EmergencyContact> contacts,
+  }) async {
+    await emergency.restoreContacts(contacts);
   }
 
   /// Applies a [previewUpdate] result: every addition is applied
@@ -533,11 +577,20 @@ class UpdateConflict {
   });
 }
 
-/// Result of [BackupService.previewUpdate].
+/// Result of [BackupService.previewUpdate]. [vessel]/[contacts]/[roster]
+/// are the backup's own vessel/settings info, emergency contacts, and crew
+/// roster, carried through unconditionally (parsing them is free) so
+/// BackupScreen can offer them as opt-in "sync from backup" toggles
+/// without needing to re-parse the archive — see
+/// [BackupService.applyUpdateSettings]/[BackupService.applyUpdateContacts]/
+/// [BackupService.applyUpdateRoster].
 typedef UpdatePreview = ({
   List<ParsedDayEntry> additions,
   List<UpdateConflict> conflicts,
   Map<String, List<int>> photoBytesByFilename,
+  Map<String, dynamic>? vessel,
+  List<EmergencyContact> contacts,
+  List<CrewMember> roster,
 });
 
 /// The user's resolution for one [UpdateConflict], produced by

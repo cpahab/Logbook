@@ -1570,7 +1570,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupImportModeUpdateDesc =>
-      'Only adds or updates day entries found in the backup. Never deletes anything, and never touches the roster, contacts, or vessel info.';
+      'Only adds or updates day entries found in the backup. Never deletes anything. The crew roster, vessel/settings info, and emergency contacts can optionally be synced from the backup below.';
+
+  @override
+  String get backupSyncRosterLabel =>
+      'Also replace the crew roster with the backup\'s';
+
+  @override
+  String get backupSyncSettingsLabel =>
+      'Also replace vessel/settings info with the backup\'s';
+
+  @override
+  String get backupSyncEmergencyLabel =>
+      'Also replace emergency contacts with the backup\'s';
 
   @override
   String get backupRestoreConfirmTitle => 'Replace all data?';
@@ -1584,7 +1596,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupUpdateConfirmBody =>
-      'This adds any new day entries from the backup and updates existing ones only if the backup\'s version is newer. Nothing will be deleted, and your roster, contacts, and vessel info are untouched.';
+      'This adds any new day entries from the backup and updates existing ones only if the backup\'s version is newer. Nothing will be deleted. Your crew roster, vessel/settings info, and emergency contacts are only replaced if you chose to sync them above.';
 
   @override
   String backupConflictsTitle(int count) {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:flutter_test/flutter_test.dart';
@@ -74,13 +75,18 @@ void main() {
 
     expect(data.containsKey('vessel'), isTrue,
         reason: 'data.json is missing the "vessel" key entirely');
+    // The full live-sync settings snapshot (ThemeProvider.settingsSnapshot),
+    // snake_case keys — see BackupService.normalizeSettingsMap for why an
+    // *older* backup's camelCase shape is still accepted on restore.
     final vessel = data['vessel'] as Map<String, dynamic>;
-    expect(vessel['vesselName'], 'Sea Breeze');
-    expect(vessel['vesselMmsi'], '123456789');
-    expect(vessel['vesselCallSign'], 'ABCD1');
-    expect(vessel['lifeRaftInfo'], '6-person, aft locker');
-    expect(vessel['epirbInfo'], 'Cat 1, port cockpit locker');
-    expect(vessel['fireSuppInfo'], 'Engine bay, automatic');
+    expect(vessel['vessel_name'], 'Sea Breeze');
+    expect(vessel['vessel_mmsi'], '123456789');
+    expect(vessel['vessel_call_sign'], 'ABCD1');
+    expect(vessel['life_raft_info'], '6-person, aft locker');
+    expect(vessel['epirb_info'], 'Cat 1, port cockpit locker');
+    expect(vessel['fire_supp_info'], 'Engine bay, automatic');
+    expect(vessel.containsKey('filter_stationary_mode'), isTrue,
+        reason: 'track-filter settings must be part of the backup too, not just vessel/VHF fields');
   });
 
   test('restoreBackup round-trips vessel info back into ThemeProvider', () async {
@@ -117,6 +123,232 @@ void main() {
 
     expect(theme.vesselName, 'Sea Breeze');
     expect(theme.vesselMmsi, '123456789');
+  });
+
+  test('restoreBackup round-trips emergency contacts into another logbook\'s '
+      'EmergencyRepository', () async {
+    final home = HomeRepository();
+    await home.init();
+    final emergency = EmergencyRepository();
+    await emergency.init();
+    await emergency.addContact(EmergencyContact(name: 'Jane Doe', role: 'Spouse', phone: '+41791234567'));
+    final theme = ThemeProvider();
+    await theme.init();
+
+    final bytes = await BackupService.exportBackup(
+      home: home,
+      emergency: emergency,
+      theme: theme,
+      logbookId: 'logbook-1',
+      logbookName: 'Logbook',
+      appVersion: '1.0.0+1',
+    );
+
+    // Simulate restoring into a different (or fresh) logbook, which already
+    // has its own, different contact that must not survive a full replace.
+    final target = EmergencyRepository();
+    await target.init();
+    await target.addContact(EmergencyContact(name: 'Someone Else', role: 'Doctor', phone: '000'));
+
+    await BackupService.restoreBackup(
+      zipBytes: bytes,
+      home: home,
+      emergency: target,
+      theme: theme,
+      mode: BackupImportMode.replace,
+    );
+
+    expect(target.contacts, hasLength(1));
+    expect(target.contacts.single.name, 'Jane Doe');
+    expect(target.contacts.single.phone, '+41791234567');
+  });
+
+  test('BackupService.normalizeSettingsMap maps an older backup\'s camelCase '
+      'vessel keys onto the new snake_case settings shape', () {
+    final legacy = {
+      'vesselName': 'Old Format Boat',
+      'vesselMmsi': '999',
+      'vesselCallSign': 'ZZ99',
+      'lifeRaftInfo': 'aft',
+      'epirbInfo': 'nav station',
+      'fireSuppInfo': 'galley',
+      'vhf1Label': 'Ch 16', 'vhf1Desc': 'Distress',
+      'vhf2Label': 'Ch 67', 'vhf2Desc': 'Ship',
+      'vhf3Label': 'Ch 06', 'vhf3Desc': 'SAR',
+      'vhf4Label': 'Ch 13', 'vhf4Desc': 'Bridge',
+    };
+
+    final normalized = BackupService.normalizeSettingsMap(legacy);
+
+    expect(normalized['vessel_name'], 'Old Format Boat');
+    expect(normalized['vessel_mmsi'], '999');
+    expect(normalized['vessel_call_sign'], 'ZZ99');
+    expect(normalized['life_raft_info'], 'aft');
+    expect(normalized['epirb_info'], 'nav station');
+    expect(normalized['fire_supp_info'], 'galley');
+    expect(normalized['vhf_1_label'], 'Ch 16');
+    expect(normalized['vhf_4_desc'], 'Bridge');
+    // Track-filter settings didn't exist in an old backup — must not be
+    // invented, so ThemeProvider.restoreSettings leaves them untouched.
+    expect(normalized.containsKey('filter_stationary_mode'), isFalse);
+  });
+
+  test('a full replace restore using a legacy camelCase vessel JSON still '
+      'restores vessel info correctly', () async {
+    final home = HomeRepository();
+    await home.init();
+    final emergency = EmergencyRepository();
+    await emergency.init();
+    final theme = ThemeProvider();
+    await theme.init();
+    theme.setVesselName('');
+
+    final bytes = await BackupService.exportBackup(
+      home: home, emergency: emergency, theme: theme,
+      logbookId: 'logbook-1', logbookName: 'Logbook', appVersion: '1.0.0+1',
+    );
+
+    // Rewrite data.json in-place to simulate an older, camelCase-shaped
+    // backup archive, then re-zip it.
+    final archive = ZipDecoder().decodeBytes(bytes);
+    final dataFile = archive.findFile('data.json')!;
+    final data = json.decode(utf8.decode(dataFile.content as List<int>)) as Map<String, dynamic>;
+    data['vessel'] = {
+      'vesselName': 'Legacy Boat',
+      'vesselMmsi': '111',
+    };
+    final newDataBytes = utf8.encode(json.encode(data));
+    archive.addFile(ArchiveFile('data.json', newDataBytes.length, newDataBytes));
+    final legacyBytes = Uint8List.fromList(ZipEncoder().encode(archive)!);
+
+    await BackupService.restoreBackup(
+      zipBytes: legacyBytes,
+      home: home,
+      emergency: emergency,
+      theme: theme,
+      mode: BackupImportMode.replace,
+    );
+
+    expect(theme.vesselName, 'Legacy Boat');
+    expect(theme.vesselMmsi, '111');
+  });
+
+  test('previewUpdate carries the backup\'s vessel/settings and emergency '
+      'contacts through for the opt-in "sync from backup" toggles', () async {
+    final home = HomeRepository();
+    await home.init();
+    final emergency = EmergencyRepository();
+    await emergency.init();
+    await emergency.addContact(EmergencyContact(name: 'Jane Doe', role: 'Spouse', phone: '123'));
+    final theme = ThemeProvider();
+    await theme.init();
+    theme.setVesselName('Backup Boat');
+
+    final bytes = await BackupService.exportBackup(
+      home: home, emergency: emergency, theme: theme,
+      logbookId: 'logbook-1', logbookName: 'Logbook', appVersion: '1.0.0+1',
+    );
+
+    final preview = await BackupService.previewUpdate(zipBytes: bytes, home: home);
+
+    expect(preview.vessel, isNotNull);
+    expect(preview.vessel!['vessel_name'], 'Backup Boat');
+    expect(preview.contacts, hasLength(1));
+    expect(preview.contacts.single.name, 'Jane Doe');
+  });
+
+  test('applyUpdateSettings/applyUpdateContacts replace vessel info and '
+      'emergency contacts wholesale, independent of day-entry handling', () async {
+    final home = HomeRepository();
+    await home.init();
+    final emergency = EmergencyRepository();
+    await emergency.init();
+    await emergency.addContact(EmergencyContact(name: 'Backup Contact', role: 'Doctor', phone: '999'));
+    final theme = ThemeProvider();
+    await theme.init();
+    theme.setVesselName('Backup Boat');
+
+    final bytes = await BackupService.exportBackup(
+      home: home, emergency: emergency, theme: theme,
+      logbookId: 'logbook-1', logbookName: 'Logbook', appVersion: '1.0.0+1',
+    );
+
+    // A different logbook, with its own current vessel info and contact.
+    final targetTheme = ThemeProvider();
+    await targetTheme.init();
+    targetTheme.setVesselName('Current Boat');
+    final targetEmergency = EmergencyRepository();
+    await targetEmergency.init();
+    await targetEmergency.addContact(EmergencyContact(name: 'Current Contact', role: 'Friend', phone: '000'));
+
+    final preview = await BackupService.previewUpdate(zipBytes: bytes, home: home);
+
+    await BackupService.applyUpdateSettings(theme: targetTheme, vessel: preview.vessel);
+    await BackupService.applyUpdateContacts(emergency: targetEmergency, contacts: preview.contacts);
+
+    expect(targetTheme.vesselName, 'Backup Boat');
+    expect(targetEmergency.contacts, hasLength(1));
+    expect(targetEmergency.contacts.single.name, 'Backup Contact');
+  });
+
+  test('restoreBackup in update mode leaves the crew roster untouched by '
+      'default, without the opt-in sync toggle', () async {
+    final home = HomeRepository();
+    await home.init();
+    final backupCrew = CrewMember(name: 'Backup Crew');
+    home.saveRosterMember(backupCrew);
+    final emergency = EmergencyRepository();
+    await emergency.init();
+    final theme = ThemeProvider();
+    await theme.init();
+
+    final bytes = await BackupService.exportBackup(
+      home: home, emergency: emergency, theme: theme,
+      logbookId: 'logbook-1', logbookName: 'Logbook', appVersion: '1.0.0+1',
+    );
+
+    // The current roster now differs from what was backed up — "update"
+    // mode must never overwrite this with the backup's, unless opted in.
+    home.deleteRosterMember(backupCrew.id!);
+    home.saveRosterMember(CrewMember(name: 'Current Crew'));
+
+    await BackupService.restoreBackup(
+      zipBytes: bytes,
+      home: home,
+      emergency: emergency,
+      theme: theme,
+      mode: BackupImportMode.update,
+    );
+
+    expect(home.roster.map((m) => m.name), ['Current Crew']);
+  });
+
+  test('previewUpdate carries the backup\'s roster through, and '
+      'applyUpdateRoster replaces the current roster wholesale when opted '
+      'into', () async {
+    final home = HomeRepository();
+    await home.init();
+    final backupCrew = CrewMember(name: 'Backup Crew');
+    home.saveRosterMember(backupCrew);
+    final emergency = EmergencyRepository();
+    await emergency.init();
+    final theme = ThemeProvider();
+    await theme.init();
+
+    final bytes = await BackupService.exportBackup(
+      home: home, emergency: emergency, theme: theme,
+      logbookId: 'logbook-1', logbookName: 'Logbook', appVersion: '1.0.0+1',
+    );
+
+    home.deleteRosterMember(backupCrew.id!);
+    home.saveRosterMember(CrewMember(name: 'Current Crew'));
+
+    final preview = await BackupService.previewUpdate(zipBytes: bytes, home: home);
+    expect(preview.roster.map((m) => m.name), ['Backup Crew']);
+
+    await BackupService.applyUpdateRoster(home: home, roster: preview.roster);
+
+    expect(home.roster.map((m) => m.name), ['Backup Crew']);
   });
 
   test('exportBackup with a dateRange only includes entries inside it, but '

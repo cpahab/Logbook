@@ -741,48 +741,23 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Replaces every vessel/VHF field at once (from a parsed backup archive)
-  /// and pushes the result to Firestore in a single write, rather than the
-  /// per-field debounced pushes the individual setters trigger.
-  Future<void> restoreVesselSettings({
-    required String vesselName,
-    required String vesselMmsi,
-    required String vesselCallSign,
-    required String vesselEquipmentJson,
-    required String lifeRaftInfo,
-    required String epirbInfo,
-    required String fireSuppInfo,
-    required String vhf1Label, required String vhf1Desc,
-    required String vhf2Label, required String vhf2Desc,
-    required String vhf3Label, required String vhf3Desc,
-    required String vhf4Label, required String vhf4Desc,
-  }) async {
-    _vesselName     = vesselName;
-    _vesselMmsi     = vesselMmsi;
-    _vesselCallSign = vesselCallSign;
-    _vesselEquipment = vesselEquipmentJson.isEmpty
-        ? VesselEquipmentConfig.defaultForLocale(_locale.languageCode)
-        : VesselEquipmentConfig.fromJsonString(vesselEquipmentJson, languageCode: _locale.languageCode);
-    _lifeRaftInfo = lifeRaftInfo;
-    _epirbInfo    = epirbInfo;
-    _fireSuppInfo = fireSuppInfo;
-    _vhf1Label = vhf1Label; _vhf1Desc = vhf1Desc;
-    _vhf2Label = vhf2Label; _vhf2Desc = vhf2Desc;
-    _vhf3Label = vhf3Label; _vhf3Desc = vhf3Desc;
-    _vhf4Label = vhf4Label; _vhf4Desc = vhf4Desc;
+  /// The full settings snapshot — vessel/VHF/safety info *and* track-filter
+  /// (stationary-detection) tuning — in the exact key/value shape Firestore
+  /// live-sync already uses ([_toSettingsMap]/[_applyRemoteSettings]).
+  /// [BackupService] exports/restores this directly rather than maintaining
+  /// its own separate, narrower field list, so a backup can never omit a
+  /// field the live sync already considers part of "the settings", and the
+  /// two paths can never drift out of sync with each other.
+  Map<String, String> get settingsSnapshot => _toSettingsMap();
 
-    _box.put(_vesselNameKey, _vesselName);
-    _box.put(_vesselMmsiKey, _vesselMmsi);
-    _box.put(_vesselCallSignKey, _vesselCallSign);
-    _box.put(_vesselEquipmentKey, _vesselEquipment.toJsonString());
-    _box.put(_lifeRaftKey, _lifeRaftInfo);
-    _box.put(_epirbKey, _epirbInfo);
-    _box.put(_fireSuppKey, _fireSuppInfo);
-    _box.put(_vhf1LabelKey, _vhf1Label); _box.put(_vhf1DescKey, _vhf1Desc);
-    _box.put(_vhf2LabelKey, _vhf2Label); _box.put(_vhf2DescKey, _vhf2Desc);
-    _box.put(_vhf3LabelKey, _vhf3Label); _box.put(_vhf3DescKey, _vhf3Desc);
-    _box.put(_vhf4LabelKey, _vhf4Label); _box.put(_vhf4DescKey, _vhf4Desc);
-
+  /// Replaces the full settings snapshot at once (from a parsed backup
+  /// archive) and pushes the result to Firestore in a single write, rather
+  /// than the per-field debounced pushes the individual setters trigger.
+  /// [settings] should be a [settingsSnapshot]-shaped map — any key it
+  /// doesn't contain (e.g. an older backup taken before a field existed)
+  /// simply leaves that field untouched, via [_applyRemoteSettings].
+  Future<void> restoreSettings(Map<String, String> settings) async {
+    _applyRemoteSettings(settings);
     _markSettingsModified();
     notifyListeners();
     await _firestore?.saveSettings(_toSettingsMap());

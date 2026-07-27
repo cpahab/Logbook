@@ -1582,7 +1582,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupImportModeUpdateDesc =>
-      'Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts und lässt Besatzungsliste, Kontakte und Schiffsdaten unberührt.';
+      'Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts. Besatzungsliste, Schiffsdaten/Einstellungen und Notfallkontakte können unten optional aus dem Backup übernommen werden.';
+
+  @override
+  String get backupSyncRosterLabel =>
+      'Besatzungsliste ebenfalls aus dem Backup übernehmen';
+
+  @override
+  String get backupSyncSettingsLabel =>
+      'Schiffsdaten/Einstellungen ebenfalls aus dem Backup übernehmen';
+
+  @override
+  String get backupSyncEmergencyLabel =>
+      'Notfallkontakte ebenfalls aus dem Backup übernehmen';
 
   @override
   String get backupRestoreConfirmTitle => 'Alle Daten ersetzen?';
@@ -1596,7 +1608,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get backupUpdateConfirmBody =>
-      'Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht; Besatzungsliste, Kontakte und Schiffsdaten bleiben unberührt.';
+      'Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht. Deine Besatzungsliste, Schiffsdaten/Einstellungen und Notfallkontakte werden nur ersetzt, wenn du dies oben ausgewählt hast.';
 
   @override
   String backupConflictsTitle(int count) {

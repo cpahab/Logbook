@@ -2975,8 +2975,26 @@ abstract class AppLocalizations {
   /// No description provided for @backupImportModeUpdateDesc.
   ///
   /// In de, this message translates to:
-  /// **'Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts und lässt Besatzungsliste, Kontakte und Schiffsdaten unberührt.'**
+  /// **'Fügt nur Tageseinträge aus dem Backup hinzu oder aktualisiert sie. Löscht nichts. Besatzungsliste, Schiffsdaten/Einstellungen und Notfallkontakte können unten optional aus dem Backup übernommen werden.'**
   String get backupImportModeUpdateDesc;
+
+  /// No description provided for @backupSyncRosterLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Besatzungsliste ebenfalls aus dem Backup übernehmen'**
+  String get backupSyncRosterLabel;
+
+  /// No description provided for @backupSyncSettingsLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Schiffsdaten/Einstellungen ebenfalls aus dem Backup übernehmen'**
+  String get backupSyncSettingsLabel;
+
+  /// No description provided for @backupSyncEmergencyLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Notfallkontakte ebenfalls aus dem Backup übernehmen'**
+  String get backupSyncEmergencyLabel;
 
   /// No description provided for @backupRestoreConfirmTitle.
   ///
@@ -2999,7 +3017,7 @@ abstract class AppLocalizations {
   /// No description provided for @backupUpdateConfirmBody.
   ///
   /// In de, this message translates to:
-  /// **'Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht; Besatzungsliste, Kontakte und Schiffsdaten bleiben unberührt.'**
+  /// **'Neue Tageseinträge aus dem Backup werden hinzugefügt, bestehende nur aktualisiert, wenn die Version im Backup neuer ist. Es wird nichts gelöscht. Deine Besatzungsliste, Schiffsdaten/Einstellungen und Notfallkontakte werden nur ersetzt, wenn du dies oben ausgewählt hast.'**
   String get backupUpdateConfirmBody;
 
   /// No description provided for @backupConflictsTitle.

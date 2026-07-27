@@ -310,9 +310,13 @@ class EmergencyRepository extends ChangeNotifier {
   }
 
   /// Replaces all local contacts with [parsed] (from a parsed backup
-  /// archive) and pushes the restored list to Firestore. Caller must have
-  /// already validated the backup and called [clearLocalData] first.
+  /// archive) and pushes the restored list to Firestore. Clears the box
+  /// itself first (safe even if the caller — e.g. a full-replace restore —
+  /// already called [clearLocalData]), so this also works standalone as an
+  /// "update" mode opt-in ("sync emergency contacts from backup") without
+  /// needing the caller to wipe anything else first.
   Future<void> restoreContacts(List<EmergencyContact> parsed) async {
+    await _box.clear();
     for (final c in parsed) { await _box.add(c); }
     _markModified();
     _syncToFirestore();

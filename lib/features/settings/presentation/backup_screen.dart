@@ -37,6 +37,15 @@ class _BackupScreenState extends State<BackupScreen> {
   DateTimeRange? _exportRange;
   BackupImportMode _importMode = BackupImportMode.replace;
   DateTimeRange? _updateRange;
+  // "Update" mode's day-entry handling (additions/newer-wins/conflict
+  // review) always runs; these three opt-ins additionally replace the crew
+  // roster, vessel/settings info, and/or emergency contacts wholesale from
+  // the backup — off by default, so update mode's existing "never touches
+  // anything but day entries" behavior is unchanged unless explicitly
+  // requested.
+  bool _syncRoster = false;
+  bool _syncSettings = false;
+  bool _syncEmergency = false;
 
   Future<void> _pickExportRange() async {
     final range = await pickDateRange(context, initialRange: _exportRange);
@@ -179,6 +188,8 @@ class _BackupScreenState extends State<BackupScreen> {
     final l10n = context.l10n;
     setState(() => _busy = true);
     final home = context.read<HomeRepository>();
+    final theme = context.read<ThemeProvider>();
+    final emergency = context.read<EmergencyRepository>();
     final messenger = ScaffoldMessenger.of(context);
 
     final UpdatePreview preview;
@@ -231,6 +242,15 @@ class _BackupScreenState extends State<BackupScreen> {
         resolutions: resolutions,
         photoBytesByFilename: preview.photoBytesByFilename,
       );
+      if (_syncRoster) {
+        await BackupService.applyUpdateRoster(home: home, roster: preview.roster);
+      }
+      if (_syncSettings) {
+        await BackupService.applyUpdateSettings(theme: theme, vessel: preview.vessel);
+      }
+      if (_syncEmergency) {
+        await BackupService.applyUpdateContacts(emergency: emergency, contacts: preview.contacts);
+      }
       messenger.hideCurrentSnackBar();
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l10n.backupRestoreSuccess)));
@@ -387,6 +407,33 @@ class _BackupScreenState extends State<BackupScreen> {
                           cs: cs,
                         ),
                       ]),
+                      CheckboxListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _syncRoster,
+                        onChanged: (v) => setState(() => _syncRoster = v ?? false),
+                        title: Text(l10n.backupSyncRosterLabel,
+                            style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                      CheckboxListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _syncSettings,
+                        onChanged: (v) => setState(() => _syncSettings = v ?? false),
+                        title: Text(l10n.backupSyncSettingsLabel,
+                            style: Theme.of(context).textTheme.bodySmall),
+                      ),
+                      CheckboxListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _syncEmergency,
+                        onChanged: (v) => setState(() => _syncEmergency = v ?? false),
+                        title: Text(l10n.backupSyncEmergencyLabel,
+                            style: Theme.of(context).textTheme.bodySmall),
+                      ),
                     ],
                     const SizedBox(height: 14),
                     OutlinedButton.icon(

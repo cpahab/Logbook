@@ -793,6 +793,23 @@ class HomeRepository extends ChangeNotifier {
     _debouncedSync(entry, changedFields);
   }
 
+  /// Replaces the crew roster wholesale with [roster] (from a parsed
+  /// backup archive) and pushes the result to Firestore. Clears the
+  /// roster box itself first (safe even if the caller — e.g.
+  /// [restoreFromBackup] via a prior [clearLocalData] — already emptied
+  /// it), so this also works standalone as an "update" mode opt-in ("sync
+  /// crew roster from backup") without needing the caller to wipe anything
+  /// else first.
+  Future<void> restoreRoster(List<CrewMember> roster) async {
+    await _rosterBox.clear();
+    for (final m in roster) {
+      m.id ??= _newId();
+      await _rosterBox.put(m.id!, m);
+    }
+    notifyListeners();
+    await _syncRosterToFirestore();
+  }
+
   /// Replaces all local entries/roster with [entries]/[roster] (from a
   /// parsed backup archive) and pushes the restored state to Firestore.
   ///
