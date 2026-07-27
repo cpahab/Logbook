@@ -590,6 +590,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsCrewSection => 'Crew roster';
 
   @override
+  String get settingsSyncFromCloud => 'Sync from cloud';
+
+  @override
+  String get settingsSyncFromCloudSubtitle =>
+      'Force a full resync if this logbook seems out of date or missing data';
+
+  @override
+  String get settingsSyncFromCloudInProgress => 'Syncing from cloud…';
+
+  @override
+  String get settingsSyncFromCloudSuccess => 'Sync complete.';
+
+  @override
+  String get settingsSyncFromCloudError => 'Sync failed. Please try again.';
+
+  @override
   String get settingsBackupSection => 'Backup & restore';
 
   @override

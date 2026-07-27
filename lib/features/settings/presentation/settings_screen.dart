@@ -185,6 +185,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _refreshLocalLogbooks();
   }
 
+  /// Manually forces a full resync of the active cloud logbook: pushes any
+  /// local edits, then pulls everything from Firestore (remote wins on
+  /// conflict) — [HomeRepository.forceSync], plus the equivalent one-shot
+  /// refresh for vessel/settings info and emergency contacts. Unlike the
+  /// normal incremental sync this app does automatically, this doesn't
+  /// trust any local "last synced at" bookkeeping at all — a safety net for
+  /// when local data has fallen out of step with the cloud (e.g. this
+  /// account's active logbook changed on another device before this one's
+  /// own incremental sync had a chance to catch up), so recovering doesn't
+  /// require restoring a backup.
+  Future<void> _syncFromCloud() async {
+    if (_syncing) return;
+    final l10n = context.l10n;
+    final repo = context.read<HomeRepository>();
+    final emergencyRepo = context.read<EmergencyRepository>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() => _syncing = true);
+    showProgressSnackBar(context, l10n.settingsSyncFromCloudInProgress);
+
+    try {
+      await repo.forceSync();
+      await _themeProvider.refreshVesselSettings();
+      await emergencyRepo.refreshContacts();
+      messenger.hideCurrentSnackBar();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSyncFromCloudSuccess)));
+    } catch (_) {
+      messenger.hideCurrentSnackBar();
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSyncFromCloudError)));
+    } finally {
+      if (mounted) setState(() => _syncing = false);
+    }
+  }
+
   /// Prompts for a name, creates a new local logbook, and switches to it.
   Future<void> _showNewLocalLogbookDialog() async {
     final ctrl = TextEditingController();
@@ -373,6 +409,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // ── Crew Roster ───────────────────────────────────────────
             _buildCrewRosterSection(cs),
             const SizedBox(height: 16),
+
+            // ── Sync from Cloud (cloud logbooks only) ─────────────────
+            if (!isLocalMode) ...[
+              _buildSyncFromCloudSection(cs),
+              const SizedBox(height: 16),
+            ],
 
             // ── Backup & Restore ──────────────────────────────────────
             _buildBackupSection(isLocalMode, cs),
@@ -1262,6 +1304,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Icon(Icons.archive_outlined, size: 20, color: cs.outlineVariant),
               const SizedBox(width: 4),
               Icon(Icons.chevron_right, color: cs.outlineVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Manual "something's wrong, force a full resync" safety net — see
+  /// [_syncFromCloud]'s doc comment for why this exists as a self-service
+  /// recovery option rather than relying solely on this app's normal
+  /// automatic incremental sync.
+  Widget _buildSyncFromCloudSection(ColorScheme cs) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: (_syncing || _isOffline) ? null : _syncFromCloud,
+      child: CardShell(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 14, 16, 14),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.settingsSyncFromCloud.toUpperCase(),
+                      style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                        color: cs.secondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      context.l10n.settingsSyncFromCloudSubtitle,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_syncing)
+                SizedBox(
+                  width: 20, height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: cs.outlineVariant),
+                )
+              else
+                Icon(Icons.cloud_sync_outlined, size: 20, color: cs.outlineVariant),
             ],
           ),
         ),

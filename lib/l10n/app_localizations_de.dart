@@ -591,6 +591,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsCrewSection => 'Besatzungsliste';
 
   @override
+  String get settingsSyncFromCloud => 'Aus der Cloud synchronisieren';
+
+  @override
+  String get settingsSyncFromCloudSubtitle =>
+      'Vollständige Neusynchronisierung erzwingen, falls dieses Logbuch veraltet wirkt oder Daten fehlen';
+
+  @override
+  String get settingsSyncFromCloudInProgress =>
+      'Synchronisierung mit der Cloud…';
+
+  @override
+  String get settingsSyncFromCloudSuccess => 'Synchronisierung abgeschlossen.';
+
+  @override
+  String get settingsSyncFromCloudError =>
+      'Synchronisierung fehlgeschlagen. Bitte versuche es erneut.';
+
+  @override
   String get settingsBackupSection => 'Backup & Wiederherstellung';
 
   @override

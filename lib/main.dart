@@ -106,16 +106,61 @@ Future<void> _initFirestore(
     }
     final firestore = await FirestoreService.create(logbookId);
     final storage = await StorageService.create(logbookId);
-    final initialSync = themeProvider.needsInitialSync;
-    await Future.wait([
-      repo.attachFirestore(firestore, initialSync: initialSync),
-      repo.attachStorage(storage, initialSync: initialSync),
-      themeProvider.attachFirestore(firestore, initialSync: initialSync),
-      emergencyRepo.attachFirestore(firestore, initialSync: initialSync),
-    ]);
-    if (initialSync) themeProvider.markInitialSyncDone();
+
+    // users/{uid}.activeLogbookId is shared across every device signed into
+    // this account — another device switching logbooks changes it without
+    // this device's local Hive data or last-sync timestamp reflecting that
+    // at all. attachFirestore's non-initial path only ever does an
+    // *incremental* pull ("what changed since last sync"), which would
+    // silently layer a partial slice of the new logbook on top of stale
+    // local data left over from whichever logbook this device actually
+    // attached last — this is the "logbook doesn't have all its data"
+    // failure mode, and it looks like data loss because it is: pull
+    // requests for the new logbook get compared against a last-sync
+    // timestamp that has nothing to do with it. A genuine UID change
+    // already forces this same full-reattach behavior indirectly (via
+    // clearLocalData + resetInitialSync above); this check catches the
+    // same-account, different-device-switched-logbook case that nothing
+    // else here detects at all.
+    final logbookChanged = themeProvider.lastKnownLogbookId != null &&
+        themeProvider.lastKnownLogbookId != logbookId;
+
+    if (logbookChanged) {
+      // Mirrors logbook_switch.dart's reinitFirestore: fetch remote
+      // settings/contacts before touching local state, then fully replace
+      // it — never an incremental pull layered on the previous logbook's
+      // data. Aborts (leaving lastKnownLogbookId unset-for-this-id) on any
+      // failure so the next attempt — the connectivity-restored retry
+      // below, or simply relaunching — tries the same full reattach again
+      // instead of silently falling through to an incremental pull.
+      final Map<String, String>? remoteSettings;
+      final List<Map<String, String>>? remoteContacts;
+      try {
+        final settingsResult = await retryWithBackoff(firestore.fetchSettingsWithMeta);
+        remoteSettings = settingsResult.data;
+        final contactsResult = await retryWithBackoff(firestore.fetchContactsWithMeta);
+        remoteContacts = contactsResult.contacts;
+      } catch (_) {
+        return;
+      }
+      final switched = await repo.reattachAndSync(firestore, storage);
+      if (!switched) return;
+      await themeProvider.applySwitchedLogbookSettings(remoteSettings, firestore);
+      await emergencyRepo.applySwitchedLogbookContacts(remoteContacts, firestore);
+    } else {
+      final initialSync = themeProvider.needsInitialSync;
+      await Future.wait([
+        repo.attachFirestore(firestore, initialSync: initialSync),
+        repo.attachStorage(storage, initialSync: initialSync),
+        themeProvider.attachFirestore(firestore, initialSync: initialSync),
+        emergencyRepo.attachFirestore(firestore, initialSync: initialSync),
+      ]);
+      if (initialSync) themeProvider.markInitialSyncDone();
+    }
+
     themeProvider.setLastKnownUid(user.uid);
     themeProvider.setLastKnownProjectId(currentProjectId);
+    themeProvider.setLastKnownLogbookId(logbookId);
     logbookIdNotifier.value = logbookId;
     // A local-mode user who just registered/signed in has fully upgraded
     // to cloud sync at this point — their local data was already pushed

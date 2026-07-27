@@ -1208,6 +1208,36 @@ abstract class AppLocalizations {
   /// **'Besatzungsliste'**
   String get settingsCrewSection;
 
+  /// No description provided for @settingsSyncFromCloud.
+  ///
+  /// In de, this message translates to:
+  /// **'Aus der Cloud synchronisieren'**
+  String get settingsSyncFromCloud;
+
+  /// No description provided for @settingsSyncFromCloudSubtitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Vollständige Neusynchronisierung erzwingen, falls dieses Logbuch veraltet wirkt oder Daten fehlen'**
+  String get settingsSyncFromCloudSubtitle;
+
+  /// No description provided for @settingsSyncFromCloudInProgress.
+  ///
+  /// In de, this message translates to:
+  /// **'Synchronisierung mit der Cloud…'**
+  String get settingsSyncFromCloudInProgress;
+
+  /// No description provided for @settingsSyncFromCloudSuccess.
+  ///
+  /// In de, this message translates to:
+  /// **'Synchronisierung abgeschlossen.'**
+  String get settingsSyncFromCloudSuccess;
+
+  /// No description provided for @settingsSyncFromCloudError.
+  ///
+  /// In de, this message translates to:
+  /// **'Synchronisierung fehlgeschlagen. Bitte versuche es erneut.'**
+  String get settingsSyncFromCloudError;
+
   /// No description provided for @settingsBackupSection.
   ///
   /// In de, this message translates to:

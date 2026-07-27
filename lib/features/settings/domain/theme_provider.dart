@@ -79,6 +79,7 @@ class ThemeProvider extends ChangeNotifier {
   static const _localeKey                  = 'locale';
   static const _lastUidKey                 = 'last_known_uid';
   static const _lastProjectIdKey           = 'last_known_project_id';
+  static const _lastLogbookIdKey           = 'last_known_logbook_id';
   // Device-local flag: the user chose "Continue without an account" and has
   // never signed in on this device — see [localModeEnabled].
   static const _localModeKey               = 'local_mode_enabled';
@@ -202,6 +203,19 @@ class ThemeProvider extends ChangeNotifier {
 
   String? get lastKnownProjectId          => _deviceBox.get(_lastProjectIdKey);
   void setLastKnownProjectId(String id)   => _deviceBox.put(_lastProjectIdKey, id);
+
+  /// The logbookId this device last actually attached to (pushed/pulled
+  /// data for), independent of whatever `users/{uid}.activeLogbookId`
+  /// currently says server-side. The two can diverge — that field is
+  /// shared across every device signed into this account, so another
+  /// device switching logbooks changes it without this device's local
+  /// data or last-sync timestamp reflecting that at all. Comparing against
+  /// this value is what lets `_initFirestore` (main.dart) tell "the active
+  /// logbook is still the one I attached last time" apart from "it changed
+  /// underneath me" — the latter needs a full reattach, never an
+  /// incremental pull layered on the *previous* logbook's local data.
+  String? get lastKnownLogbookId          => _deviceBox.get(_lastLogbookIdKey);
+  void setLastKnownLogbookId(String id)   => _deviceBox.put(_lastLogbookIdKey, id);
 
   /// Returns whether [monthKey] (format `"yyyy-M"`) is expanded.
   /// Defaults to [defaultOpen] when the user has never explicitly set it.
