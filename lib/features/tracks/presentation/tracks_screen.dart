@@ -25,7 +25,7 @@ import '../../../core/constants/map_config.dart';
 import '../../../core/widgets/date_range_picker.dart';
 import '../../../core/widgets/nav_bar.dart';
 import '../../../core/widgets/stat_inline.dart';
-import '../utils/track_computation_cache.dart';
+import '../data/track_computation_cache.dart';
 
 /// Bearing (radians, clockwise from north) between two LatLng points.
 double _trackBearing(LatLng from, LatLng to) {

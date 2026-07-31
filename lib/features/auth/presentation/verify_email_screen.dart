@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/theme/theme_extensions.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/services/auth_service.dart';
+import '../data/auth_repository.dart';
 import '../../../l10n/l10n_extension.dart';
 
 /// Blocking screen shown to signed-in users with an unverified email, when

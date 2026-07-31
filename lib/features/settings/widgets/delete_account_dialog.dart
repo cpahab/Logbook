@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
-import '../../../core/services/auth_service.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../../core/services/logbook_service.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../l10n/l10n_extension.dart';

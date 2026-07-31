@@ -6,7 +6,7 @@ import 'package:flutter/material.dart' show DateTimeRange;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:archive/archive.dart';
-import 'package:logbook/core/services/backup_service.dart';
+import 'package:logbook/features/settings/data/backup_service.dart';
 import 'package:logbook/features/emergency/data/emergency_repository.dart';
 import 'package:logbook/features/emergency/domain/emergency_contact.dart';
 import 'package:logbook/features/home/data/home_repository.dart';

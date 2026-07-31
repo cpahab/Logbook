@@ -602,8 +602,9 @@ class HomeRepository extends ChangeNotifier {
             await service.uploadTrack(entry.key, bytes);
           } catch (e, st) {
             // One bad track shouldn't stop the rest from uploading.
-            // ignore: avoid_print
-            debugPrint('[attachStorage] upload ${entry.key} failed: $e\n$st');
+            if (kDebugMode) {
+              debugPrint('[attachStorage] upload ${entry.key} failed: $e\n$st');
+            }
           }
         }
       }
@@ -621,13 +622,13 @@ class HomeRepository extends ChangeNotifier {
           await _saveTrack(date, '$date.gpx', points);
         } catch (e, st) {
           // One bad track shouldn't stop the rest from downloading.
-          // ignore: avoid_print
-          debugPrint('[attachStorage] download $date failed: $e\n$st');
+          if (kDebugMode) {
+            debugPrint('[attachStorage] download $date failed: $e\n$st');
+          }
         }
       }
     } catch (e, st) {
-      // ignore: avoid_print
-      debugPrint('[attachStorage] failed: $e\n$st');
+      if (kDebugMode) debugPrint('[attachStorage] failed: $e\n$st');
     }
   }
 
@@ -722,8 +723,9 @@ class HomeRepository extends ChangeNotifier {
       if (_storage != null) {
         final bytes = _trackToGpxBytes(track);
         _storage!.uploadTrack(newNorm, bytes).catchError((e, st) {
-          // ignore: avoid_print
-          debugPrint('[changeEntryDate] track upload $newNorm failed: $e\n$st');
+          if (kDebugMode) {
+            debugPrint('[changeEntryDate] track upload $newNorm failed: $e\n$st');
+          }
         });
       }
     }
@@ -1041,8 +1043,9 @@ class HomeRepository extends ChangeNotifier {
     if (points.isEmpty) return;
     await _saveTrack(normalized, file.uri.pathSegments.last, points);
     _storage?.uploadTrack(normalized, bytes).catchError((e, st) {
-      // ignore: avoid_print
-      debugPrint('[importGpx] track upload $normalized failed: $e\n$st');
+      if (kDebugMode) {
+        debugPrint('[importGpx] track upload $normalized failed: $e\n$st');
+      }
     });
   }
 
@@ -1055,8 +1058,9 @@ class HomeRepository extends ChangeNotifier {
     if (points.isEmpty) return;
     await _saveTrack(normalized, fileName, points);
     _storage?.uploadTrack(normalized, bytes).catchError((e, st) {
-      // ignore: avoid_print
-      debugPrint('[importGpxFromBytes] track upload $normalized failed: $e\n$st');
+      if (kDebugMode) {
+        debugPrint('[importGpxFromBytes] track upload $normalized failed: $e\n$st');
+      }
     });
   }
 
@@ -1068,8 +1072,9 @@ class HomeRepository extends ChangeNotifier {
     final track = dailyTracks[normalized];
     if (track != null) {
       _storage?.uploadTrack(normalized, _trackToGpxBytes(track)).catchError((e, st) {
-        // ignore: avoid_print
-        debugPrint('[replaceTrackPoints] track upload $normalized failed: $e\n$st');
+        if (kDebugMode) {
+          debugPrint('[replaceTrackPoints] track upload $normalized failed: $e\n$st');
+        }
       });
     }
   }
@@ -1195,8 +1200,9 @@ class HomeRepository extends ChangeNotifier {
           await _saveTrack(date, '$date.gpx', points);
         } catch (e, stack) {
           // One bad track shouldn't stop the rest from downloading.
-          // ignore: avoid_print
-          debugPrint('[forceSync] track download $date failed: $e\n$stack');
+          if (kDebugMode) {
+            debugPrint('[forceSync] track download $date failed: $e\n$stack');
+          }
         }
       }
     }

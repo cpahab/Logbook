@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import 'route_names.dart';
 import '../core/config/feature_flags.dart';
-import '../core/services/auth_service.dart';
+import '../features/auth/data/auth_repository.dart';
 import '../features/settings/domain/theme_provider.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';

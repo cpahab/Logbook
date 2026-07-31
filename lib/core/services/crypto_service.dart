@@ -21,6 +21,11 @@ class CryptoService {
   /// directly as a Firestore field value in place of the plain string. `v`
   /// is a format version so a future scheme change could coexist with
   /// entries encrypted under this one.
+  ///
+  /// [AesGcm.encrypt] generates a fresh random nonce for every call (visible
+  /// on the returned [SecretBox]) — never replace this with a fixed or
+  /// derived nonce, since reusing a nonce under the same key breaks AES-GCM's
+  /// security guarantees entirely (key/plaintext recovery becomes possible).
   Future<Map<String, dynamic>> encryptText(String plaintext) async {
     final box = await _algorithm.encrypt(utf8.encode(plaintext), secretKey: _key);
     return {
@@ -49,6 +54,8 @@ class CryptoService {
   /// Encrypts arbitrary bytes (a photo file, a GPX blob) into a single
   /// self-describing blob — nonce + ciphertext + MAC concatenated — so the
   /// stored Firebase Storage object needs no separate metadata to decrypt.
+  /// Nonce handling is the same as [encryptText]: freshly generated per call,
+  /// never fixed or derived.
   Future<Uint8List> encryptBytes(Uint8List plaintext) async {
     final box = await _algorithm.encrypt(plaintext, secretKey: _key);
     return box.concatenation();

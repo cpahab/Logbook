@@ -5,15 +5,15 @@ import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart' show DateTimeRange;
 
-import '../../features/emergency/data/emergency_repository.dart';
-import '../../features/emergency/domain/emergency_contact.dart';
-import '../../features/home/data/home_repository.dart';
-import '../../features/home/domain/crew_member.dart';
-import '../../features/home/domain/day_entry.dart';
-import '../../features/home/domain/timeline_entry.dart';
-import '../../features/home/utils/photo_service.dart';
-import '../../features/settings/domain/theme_provider.dart';
-import 'backup_mapper.dart';
+import '../../emergency/data/emergency_repository.dart';
+import '../../emergency/domain/emergency_contact.dart';
+import '../../home/data/home_repository.dart';
+import '../../home/domain/crew_member.dart';
+import '../../home/domain/day_entry.dart';
+import '../../home/domain/timeline_entry.dart';
+import '../../home/utils/photo_service.dart';
+import '../domain/theme_provider.dart';
+import '../../../core/services/backup_mapper.dart';
 
 /// Bump whenever the JSON shape in [backup_mapper.dart] changes in a way
 /// that would break parsing an older backup.

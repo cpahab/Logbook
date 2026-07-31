@@ -16,7 +16,7 @@ import '../utils/filter_settings.dart';
 import '../utils/pdf_exporter.dart';
 import '../utils/photo_service.dart';
 import '../utils/trim_track.dart' show TimePrecision;
-import '../../tracks/utils/track_computation_cache.dart';
+import '../../tracks/data/track_computation_cache.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/date_range_picker.dart';
 import '../../../core/widgets/nav_bar.dart';

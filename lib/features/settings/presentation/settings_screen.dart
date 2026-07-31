@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/services/auth_service.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../../core/services/local_logbook_service.dart';
 import '../../../core/services/logbook_key_store.dart';
 import '../../../core/services/logbook_service.dart';

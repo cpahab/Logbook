@@ -15,7 +15,7 @@
 // graceful values asserted below.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:logbook/core/services/auth_service.dart';
+import 'package:logbook/features/auth/data/auth_repository.dart';
 
 void main() {
   test('currentUser is null when Firebase was never initialized (not a thrown '

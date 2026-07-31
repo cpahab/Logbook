@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
-import '../../../core/services/auth_service.dart';
+import '../data/auth_repository.dart';
 import '../../../l10n/l10n_extension.dart';
 import 'auth_widgets.dart';
 

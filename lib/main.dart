@@ -9,7 +9,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
-import 'core/services/auth_service.dart';
+import 'features/auth/data/auth_repository.dart';
 import 'core/services/crash_reporter.dart';
 import 'core/services/gpx_share_service.dart';
 import 'core/utils/retry_with_backoff.dart';
@@ -27,7 +27,7 @@ import 'core/services/local_logbook_service.dart';
 import 'core/services/logbook_service.dart';
 import 'core/services/firestore_service.dart';
 import 'core/services/storage_service.dart';
-import 'features/tracks/utils/warm_tracks_cache.dart';
+import 'features/tracks/data/warm_tracks_cache.dart';
 import 'firebase_options.dart';
 
 import 'app/route_names.dart';

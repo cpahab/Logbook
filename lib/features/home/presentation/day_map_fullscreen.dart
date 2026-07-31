@@ -10,7 +10,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/map_config.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../settings/domain/theme_provider.dart';
-import '../../tracks/utils/track_computation_cache.dart';
+import '../../tracks/data/track_computation_cache.dart';
 import '../domain/day_entry.dart';
 import '../domain/daily_track.dart';
 import '../domain/track_point.dart';

@@ -49,7 +49,7 @@ import '../utils/pdf_exporter.dart';
 import '../utils/sail_state_utils.dart';
 import '../utils/photo_service.dart';
 import '../utils/trim_track.dart';
-import '../../tracks/utils/track_computation_cache.dart';
+import '../../tracks/data/track_computation_cache.dart';
 import '../../settings/domain/theme_provider.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../../core/constants/map_config.dart';

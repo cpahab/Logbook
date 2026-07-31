@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app/route_names.dart';
 import '../../../app/theme/theme_extensions.dart';
-import '../../../core/services/auth_service.dart';
+import '../data/auth_repository.dart';
 import '../../../core/services/local_logbook_service.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../settings/domain/theme_provider.dart';
@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       _showError(_localizedError(e));
     } catch (e) {
-      debugPrint('sign-in error: $e');
+      if (kDebugMode) debugPrint('sign-in error: $e');
       if (mounted) _showError(context.l10n.authErrorGeneric);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -83,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       _showError(_localizedError(e));
     } catch (e) {
-      debugPrint('sign-in error: $e');
+      if (kDebugMode) debugPrint('sign-in error: $e');
       _showError(genericError);
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -127,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on FirebaseAuthException catch (e) {
       _showError(_localizedError(e));
     } catch (e) {
-      debugPrint('sign-in error: $e');
+      if (kDebugMode) debugPrint('sign-in error: $e');
       _showError(genericError);
     } finally {
       if (mounted) setState(() => _loading = false);

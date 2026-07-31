@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/theme/theme_extensions.dart';
-import '../../../core/services/backup_service.dart';
+import '../data/backup_service.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../home/domain/timeline_entry.dart';
 import '../domain/theme_provider.dart';
