@@ -60,8 +60,12 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Logbook uses the camera to scan QR codes for joining a shared logbook.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Your position is shown in the MAYDAY radio protocol so you can relay it to the Coast Guard and, optionally if you opt for it, with each logbook entry.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Your position is shown in the MAYDAY radio protocol so you can relay it to the Coast Guard and, optionally if you opt for it, with each logbook entry. </string>
+	<string>Your position is shown in the MAYDAY radio protocol so you can relay it to the Coast Guard and, optionally if you opt for it, with each logbook entry.</string>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSPhotoLibraryAddOnlyUsageDescription</key>
 	<string>Logbook needs access to save files to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
