@@ -17,7 +17,7 @@ Open a fresh terminal (to load `~/.zshrc`), then:
 
 ```bash
 cd ~/development/Logbook
-flutter build apk --release
+flutter build apk --release --dart-define-from-file=.dart_defines
 ```
 
 Output: `build/app/outputs/flutter-apk/app-release.apk`
@@ -72,8 +72,15 @@ Then build:
 
 ```bash
 cd ~/development/Logbook
-flutter build ipa --release
+flutter build ipa --release --dart-define-from-file=.dart_defines
 ```
+
+**Do not omit `--dart-define-from-file=.dart_defines`** — without it, `MAPTILER_KEY`
+(see `lib/core/constants/map_config.dart`) compiles to an empty string, MapTiler
+returns 403 for every tile/style request, and the map screens silently fall back
+to their "no map data" placeholder in release builds (the error is only logged
+when `kDebugMode` is true, so nothing shows up in a TestFlight tester's console
+either).
 
 Output: `build/ios/ipa/`
 
@@ -113,7 +120,7 @@ Create `ios/adhoc_options.plist`:
 
 Then build:
 ```bash
-flutter build ipa --release --export-options-plist=ios/adhoc_options.plist
+flutter build ipa --release --export-options-plist=ios/adhoc_options.plist --dart-define-from-file=.dart_defines
 ```
 
 ### Install (Apple Configurator 2)
