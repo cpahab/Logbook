@@ -696,6 +696,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAlreadyConnected => 'Bereits verbunden.';
 
   @override
+  String get settingsKeyImported =>
+      'Verschlüsselungscode importiert. Wird synchronisiert…';
+
+  @override
   String get settingsConnected => 'Verbunden.';
 
   @override
@@ -724,6 +728,33 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsScanTitle => 'Logbuch-QR-Code scannen';
+
+  @override
+  String get settingsKeyHint =>
+      'Neues Gerät? Jedes Gerät benötigt eine eigene Kopie des Verschlüsselungscodes dieses Logbuchs, bevor es Einträge anzeigen kann. Zeige den QR-Code (oder kopiere den Code) auf einem Gerät mit bestehendem Zugriff und scanne oder füge ihn hier ein.';
+
+  @override
+  String get settingsCopyKey => 'Kopieren';
+
+  @override
+  String get settingsCopyKeyDone => 'Kopiert';
+
+  @override
+  String get settingsPasteCodeButton => 'Stattdessen Code einfügen';
+
+  @override
+  String get settingsPasteCodeTitle => 'Logbuch-Code einfügen';
+
+  @override
+  String get settingsPasteCodeHint =>
+      'Von einem anderen Gerät kopierten Code einfügen';
+
+  @override
+  String get settingsPasteCodeInvalid =>
+      'Das sieht nicht wie ein gültiger Logbuch-Code aus.';
+
+  @override
+  String get settingsPasteCodeSubmit => 'Beitreten';
 
   @override
   String get tracksTitle => 'Fahrtstrecken';

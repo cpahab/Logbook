@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -424,9 +426,9 @@ Future<void> switchLogbook(
 
 /// Looks up [rawCode], confirms with the user, joins as a guest, and
 /// switches this device to the found logbook. If [keyBase64] is given (only
-/// ever true for a QR-scanned code — see connect_bottom_sheet.dart), it's
-/// imported as this device's copy of the logbook's shared encryption key
-/// once the join succeeds, so this device can decrypt existing content
+/// ever true for a scanned or pasted code — see connect_bottom_sheet.dart),
+/// it's imported as this device's copy of the logbook's shared encryption
+/// key once the join succeeds, so this device can decrypt existing content
 /// immediately rather than only gaining bare membership.
 Future<void> joinLogbook(
   BuildContext context, {
@@ -456,9 +458,26 @@ Future<void> joinLogbook(
           await LogbookService().isMember(foundLogbookId, user.uid);
       if (!context.mounted) return;
       if (alreadyMember) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.settingsAlreadyConnected)),
-        );
+        // Already a member (e.g. the owner's own account on a new device)
+        // — a code carrying a key here means this device is missing its
+        // local copy of the logbook's encryption key (see
+        // logbook_key_store.dart), not that it needs to join. Import it and
+        // force a full resync so entries decrypt on the next fetch instead
+        // of staying silently empty forever — see home_repository.dart's
+        // catch blocks around fetchAllEntries/fetchEntriesUpdatedSince.
+        if (keyBase64 != null) {
+          final repo = context.read<HomeRepository>();
+          await LogbookKeyStore.importKeyBase64(foundLogbookId, keyBase64);
+          unawaited(repo.forceSync());
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.settingsKeyImported)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.settingsAlreadyConnected)),
+          );
+        }
         return;
       }
       // The caller is not a member yet, so the logbook document is not

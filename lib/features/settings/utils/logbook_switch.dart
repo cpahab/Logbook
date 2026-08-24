@@ -2,6 +2,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/services/crash_reporter.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/services/storage_service.dart';
 import '../../../core/utils/retry_with_backoff.dart';
@@ -83,11 +84,13 @@ Future<bool> reinitFirestore(
       final contactsResult =
           await retryWithBackoff(firestore.fetchContactsWithMeta);
       remoteContacts = contactsResult.contacts;
-    } catch (_) {
+    } catch (e, st) {
       // Connectivity was already confirmed above, so a failure here (after
       // retrying) is something else — a permission-check lag right after
       // joining/creating a logbook, or a genuine server error — never
       // "offline", which would be actively misleading to show.
+      debugPrint('reinitFirestore: settings/contacts fetch failed: $e\n$st');
+      reportNonFatal(e, st, reason: 'reinitFirestore settings/contacts fetch failed');
       messenger.hideCurrentSnackBar();
       if (context.mounted) {
         messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookError)));
@@ -120,12 +123,14 @@ Future<bool> reinitFirestore(
       messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookComplete)));
     }
     return true;
-  } catch (_) {
+  } catch (e, st) {
     // None of the steps above (unlike the settings/contacts fetch further up)
     // have their own catch — without one here, an exception from any of them
     // would propagate to the caller with this progress snackbar still on
     // screen (its 2-minute duration far outlasting the caller's own error
     // snackbar), looking like a sync that never finishes.
+    debugPrint('reinitFirestore: switch failed: $e\n$st');
+    reportNonFatal(e, st, reason: 'reinitFirestore switch failed');
     messenger.hideCurrentSnackBar();
     if (context.mounted) {
       messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSwitchLogbookError)));

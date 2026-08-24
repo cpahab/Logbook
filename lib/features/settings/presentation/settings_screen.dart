@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 
 import '../../auth/data/auth_repository.dart';
+import '../../../core/services/crash_reporter.dart';
 import '../../../core/services/local_logbook_service.dart';
 import '../../../core/services/logbook_key_store.dart';
 import '../../../core/services/logbook_service.dart';
@@ -212,7 +213,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       messenger.hideCurrentSnackBar();
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSyncFromCloudSuccess)));
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('_syncFromCloud failed: $e\n$st');
+      reportNonFatal(e, st, reason: '_syncFromCloud failed');
       messenger.hideCurrentSnackBar();
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(content: Text(l10n.settingsSyncFromCloudError)));
@@ -1703,9 +1706,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     )
                   else
                     ...(_logbooks.map((logbook) => _buildBoatRow(logbook, activeLogbookId, cs, uid))),
-                  if (activeLogbookId != null && isActiveOwner && activeMeta.isNotEmpty) ...[
+                  if (activeLogbookId != null && activeMeta.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    _buildShareSection(activeMeta, cs, uid),
+                    _buildShareSection(activeMeta, cs, uid, isOwner: isActiveOwner),
                   ],
                 ],
               ),
@@ -1818,10 +1821,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// Owner-only share block for the active logbook: copyable share code, QR
-  /// code button, "join another logbook" shortcut, and the guest-management list.
+  /// Share/connect block for the active logbook. The owner gets the full
+  /// set — copyable share code, QR code button, guest-management list — a
+  /// guest only gets the "scan/paste to import a key" button and its hint:
+  /// sharing/inviting is owner-only, but any role can end up on a device
+  /// that's missing this logbook's encryption key (see settingsKeyHint) and
+  /// needs a way to import it.
   Widget _buildShareSection(
-      Map<String, dynamic> activeMeta, ColorScheme cs, String uid) {
+      Map<String, dynamic> activeMeta, ColorScheme cs, String uid,
+      {required bool isOwner}) {
     final l10n = context.l10n;
     final shareCode = activeMeta['shareCode'] as String? ?? '';
     final logbookId = activeMeta['logbookId'] as String;
@@ -1849,24 +1857,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final keyBase64 = await LogbookKeyStore.exportKeyBase64(logbookId);
-                  if (!mounted) return;
-                  showQrModal(context, shareCode, logbookName, keyBase64: keyBase64);
-                },
-                icon: const Icon(Icons.qr_code, size: 18),
-                label: Text(l10n.settingsShowQrCode),
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: cs.outlineVariant),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  textStyle: Theme.of(context).textTheme.bodySmall,
+            if (isOwner) ...[
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final keyBase64 = await LogbookKeyStore.exportKeyBase64(logbookId);
+                    if (!mounted) return;
+                    showQrModal(context, shareCode, logbookName, keyBase64: keyBase64);
+                  },
+                  icon: const Icon(Icons.qr_code, size: 18),
+                  label: Text(l10n.settingsShowQrCode),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: cs.outlineVariant),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    textStyle: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
+              const SizedBox(width: 8),
+            ],
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _syncing ? null : _showConnectSheet,
@@ -1882,8 +1892,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        _buildManageGuests(logbookId, cs, uid),
+        const SizedBox(height: 8),
+        Text(
+          l10n.settingsKeyHint,
+          style: Theme.of(context)
+              .textTheme
+              .bodySmall!
+              .copyWith(color: cs.onSurfaceVariant),
+        ),
+        if (isOwner) ...[
+          const SizedBox(height: 12),
+          _buildManageGuests(logbookId, cs, uid),
+        ],
       ],
     );
   }

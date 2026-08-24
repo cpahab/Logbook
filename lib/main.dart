@@ -167,6 +167,7 @@ Future<void> _initFirestore(
     // above via initialSync.
     if (themeProvider.localModeEnabled) themeProvider.disableLocalMode();
   } catch (e, st) {
+    debugPrint('_initFirestore failed: $e\n$st');
     reportNonFatal(e, st, reason: '_initFirestore failed');
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../app/theme/theme_extensions.dart';
@@ -104,6 +105,7 @@ void showQrModal(BuildContext context, String shareCode, String logbookName,
     builder: (ctx) {
       final cs = Theme.of(ctx).colorScheme;
       final cl = ctx.l10n;
+      var copied = false;
       return Dialog(
         backgroundColor: cs.surface,
         surfaceTintColor: Colors.transparent,
@@ -134,7 +136,24 @@ void showQrModal(BuildContext context, String shareCode, String logbookName,
                 logbookName,
                 style: Theme.of(ctx).textTheme.shareCode.copyWith(color: cs.onSurface),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
+              // Lets a camera-less device (e.g. a Mac Mini/Studio/Pro) join by
+              // pasting this instead of scanning — see connect_bottom_sheet.dart.
+              StatefulBuilder(
+                builder: (ctx, setState) {
+                  return TextButton.icon(
+                    icon: Icon(copied ? Icons.check : Icons.copy, size: 18),
+                    label: Text(copied ? cl.settingsCopyKeyDone : cl.settingsCopyKey),
+                    onPressed: copied
+                        ? null
+                        : () async {
+                            await Clipboard.setData(ClipboardData(text: qrData));
+                            setState(() => copied = true);
+                          },
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
               TextButton(
                   onPressed: () => Navigator.pop(ctx),
                   child: Text(cl.close)),

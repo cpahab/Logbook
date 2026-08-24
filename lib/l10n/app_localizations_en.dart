@@ -692,6 +692,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAlreadyConnected => 'Already connected.';
 
   @override
+  String get settingsKeyImported => 'Encryption key imported. Syncing…';
+
+  @override
   String get settingsConnected => 'Connected.';
 
   @override
@@ -720,6 +723,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsScanTitle => 'Scan logbook QR code';
+
+  @override
+  String get settingsKeyHint =>
+      'New device? Each device needs its own copy of this logbook\'s encryption key before it can show entries. Show the QR (or copy the code) on a device that already has access, then scan or paste it here.';
+
+  @override
+  String get settingsCopyKey => 'Copy';
+
+  @override
+  String get settingsCopyKeyDone => 'Copied';
+
+  @override
+  String get settingsPasteCodeButton => 'Paste code instead';
+
+  @override
+  String get settingsPasteCodeTitle => 'Paste logbook code';
+
+  @override
+  String get settingsPasteCodeHint =>
+      'Paste the code copied from another device';
+
+  @override
+  String get settingsPasteCodeInvalid =>
+      'That doesn\'t look like a valid logbook code.';
+
+  @override
+  String get settingsPasteCodeSubmit => 'Join';
 
   @override
   String get tracksTitle => 'Voyage Tracks';

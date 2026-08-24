@@ -1382,6 +1382,12 @@ abstract class AppLocalizations {
   /// **'Bereits verbunden.'**
   String get settingsAlreadyConnected;
 
+  /// No description provided for @settingsKeyImported.
+  ///
+  /// In de, this message translates to:
+  /// **'Verschlüsselungscode importiert. Wird synchronisiert…'**
+  String get settingsKeyImported;
+
   /// No description provided for @settingsConnected.
   ///
   /// In de, this message translates to:
@@ -1435,6 +1441,54 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Logbuch-QR-Code scannen'**
   String get settingsScanTitle;
+
+  /// No description provided for @settingsKeyHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Neues Gerät? Jedes Gerät benötigt eine eigene Kopie des Verschlüsselungscodes dieses Logbuchs, bevor es Einträge anzeigen kann. Zeige den QR-Code (oder kopiere den Code) auf einem Gerät mit bestehendem Zugriff und scanne oder füge ihn hier ein.'**
+  String get settingsKeyHint;
+
+  /// No description provided for @settingsCopyKey.
+  ///
+  /// In de, this message translates to:
+  /// **'Kopieren'**
+  String get settingsCopyKey;
+
+  /// No description provided for @settingsCopyKeyDone.
+  ///
+  /// In de, this message translates to:
+  /// **'Kopiert'**
+  String get settingsCopyKeyDone;
+
+  /// No description provided for @settingsPasteCodeButton.
+  ///
+  /// In de, this message translates to:
+  /// **'Stattdessen Code einfügen'**
+  String get settingsPasteCodeButton;
+
+  /// No description provided for @settingsPasteCodeTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Logbuch-Code einfügen'**
+  String get settingsPasteCodeTitle;
+
+  /// No description provided for @settingsPasteCodeHint.
+  ///
+  /// In de, this message translates to:
+  /// **'Von einem anderen Gerät kopierten Code einfügen'**
+  String get settingsPasteCodeHint;
+
+  /// No description provided for @settingsPasteCodeInvalid.
+  ///
+  /// In de, this message translates to:
+  /// **'Das sieht nicht wie ein gültiger Logbuch-Code aus.'**
+  String get settingsPasteCodeInvalid;
+
+  /// No description provided for @settingsPasteCodeSubmit.
+  ///
+  /// In de, this message translates to:
+  /// **'Beitreten'**
+  String get settingsPasteCodeSubmit;
 
   /// No description provided for @tracksTitle.
   ///

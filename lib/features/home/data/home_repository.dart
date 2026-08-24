@@ -426,8 +426,10 @@ class HomeRepository extends ChangeNotifier {
         if (changed) notifyListeners();
 
         _setLastSyncAt();
-      } catch (_) {
+      } catch (e, st) {
         // Offline or timeout — local data remains available.
+        debugPrint('attachFirestore: initial sync failed: $e\n$st');
+        reportNonFatal(e, st, reason: 'attachFirestore initial sync failed');
       }
     } else {
       await _refreshEntriesIncremental(service);
@@ -486,8 +488,10 @@ class HomeRepository extends ChangeNotifier {
       if (changed) notifyListeners();
 
       _setLastSyncAt();
-    } catch (_) {
+    } catch (e, st) {
       // Offline or timeout — local data remains available.
+      debugPrint('_refreshEntriesIncremental failed: $e\n$st');
+      reportNonFatal(e, st, reason: '_refreshEntriesIncremental failed');
     }
   }
 
@@ -1254,11 +1258,13 @@ class HomeRepository extends ChangeNotifier {
     List<DayEntry> newEntries;
     try {
       newEntries = await retryWithBackoff(firestoreService.fetchAllEntries);
-    } catch (_) {
+    } catch (e, st) {
       // Download failed — leave existing local data intact and abort. The
       // caller MUST check this false return and abort its own side of the
       // switch too (see the doc comment above) — this repository is still
       // pointed at whichever logbook it was already on.
+      debugPrint('reattachAndSync: fetchAllEntries failed: $e\n$st');
+      reportNonFatal(e, st, reason: 'reattachAndSync fetchAllEntries failed');
       return false;
     }
 
