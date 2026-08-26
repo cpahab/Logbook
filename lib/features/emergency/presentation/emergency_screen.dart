@@ -144,6 +144,24 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// Opens [assetPath] full-screen, pannable/zoomable, dismissed by tapping
+/// anywhere — same pattern as day_detail_screen.dart's photo viewer.
+void _viewImage(BuildContext context, String assetPath) {
+  showDialog(
+    context: context,
+    builder: (_) => Dialog(
+      backgroundColor: Colors.black,
+      insetPadding: EdgeInsets.zero,
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: InteractiveViewer(
+          child: Image.asset(assetPath),
+        ),
+      ),
+    ),
+  );
+}
+
 /// Flares/rocket-signal reference card (left half of the visual-signals row).
 class _PyrotechnicCard extends StatelessWidget {
   const _PyrotechnicCard();
@@ -163,28 +181,31 @@ class _PyrotechnicCard extends StatelessWidget {
       subtitle: l10n.emergencyPyrotechnicSubtitle,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Stack(
-          children: [
-            Image.asset(
-              'assets/images/distress/pyrotechnic.png',
-              height: 100,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-            Positioned(
-              bottom: 4,
-              right: 6,
-              child: Text(
-                'edtech.com.sg',
-                style: Theme.of(context).textTheme.labelSmall!.copyWith(
-                  fontSize: 7,
-                  letterSpacing: 0,
-                  color: Colors.white.withValues(alpha: 0.75),
-                  shadows: const [Shadow(blurRadius: 2, color: Colors.black54)],
+        child: GestureDetector(
+          onTap: () => _viewImage(context, 'assets/images/distress/pyrotechnic.png'),
+          child: Stack(
+            children: [
+              Image.asset(
+                'assets/images/distress/pyrotechnic.png',
+                height: 100,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+              Positioned(
+                bottom: 4,
+                right: 6,
+                child: Text(
+                  'edtech.com.sg',
+                  style: Theme.of(context).textTheme.labelSmall!.copyWith(
+                    fontSize: 7,
+                    letterSpacing: 0,
+                    color: Colors.white.withValues(alpha: 0.75),
+                    shadows: const [Shadow(blurRadius: 2, color: Colors.black54)],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -208,11 +229,14 @@ class _HandSignalCard extends StatelessWidget {
       subtitle: l10n.emergencyHandSignalSubtitle,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Image.asset(
-          'assets/images/distress/hand_signal.png',
-          height: 100,
-          width: double.infinity,
-          fit: BoxFit.cover,
+        child: GestureDetector(
+          onTap: () => _viewImage(context, 'assets/images/distress/hand_signal.png'),
+          child: Image.asset(
+            'assets/images/distress/hand_signal.png',
+            height: 100,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
         ),
       ),
     );
