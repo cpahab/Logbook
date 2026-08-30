@@ -13,6 +13,7 @@ import '../domain/crew_member.dart';
 import '../domain/timeline_entry.dart';
 import '../domain/daily_track.dart';
 import '../domain/track_point.dart';
+import '../domain/vessel_equipment.dart';
 import '../utils/gpx_parser.dart';
 import '../utils/photo_service.dart';
 import '../../../core/services/crash_reporter.dart';
@@ -992,9 +993,12 @@ class HomeRepository extends ChangeNotifier {
 
   /// Adds [entry] to [day]'s timeline (auto-inserting a crew/vessel-status
   /// snapshot line first, if this is the day's first real timeline entry),
-  /// keeps the timeline sorted by time, and re-derives the day's keel
-  /// position from the updated timeline.
-  void addTimelineEntry(DateTime day, TimelineEntry entry) {
+  /// keeps the timeline sorted by time, and — if [entry] recorded a keel
+  /// (slot12) state and [equipment] is supplied — re-derives the day's
+  /// `keelDown` summary from it, so the "Vessel Status" card reflects a
+  /// keel change logged mid-day, not just one set via its own edit dialog.
+  void addTimelineEntry(DateTime day, TimelineEntry entry,
+      {VesselEquipmentConfig? equipment}) {
     final normalized = DateTime(day.year, day.month, day.day);
     final d = _entries[normalized];
     if (d == null) return;
@@ -1031,9 +1035,17 @@ class HomeRepository extends ChangeNotifier {
 
     d.timeline.add(entry);
     d.timeline.sort((a, b) => a.time.compareTo(b.time));
+
+    final changedFields = {'timeline'};
+    final derivedKeel = equipment?.keelDownFor(entry.slot12State);
+    if (derivedKeel != null && derivedKeel != d.keelDown) {
+      d.keelDown = derivedKeel;
+      changedFields.add('keelDown');
+    }
+
     _dayBox.put(normalized.toIso8601String(), d);
     _recordLocalEdit(normalized);
-    _syncToFirestore(d, {'timeline'});
+    _syncToFirestore(d, changedFields);
     notifyListeners();
   }
 
@@ -1494,7 +1506,14 @@ class HomeRepository extends ChangeNotifier {
   // for genuinely new documents or deliberate full resyncs (see saveEntry's
   // doc comment for why a live edit must always pass an explicit field set).
   void _syncToFirestore(DayEntry entry, [Set<String>? changedFields]) {
-    _firestore?.saveEntry(entry, changedFields: changedFields).catchError((_) {});
+    _firestore?.saveEntry(entry, changedFields: changedFields).catchError((e, st) {
+      // Local write already landed (Hive is authoritative); this is a
+      // best-effort push with no retry, so a failure here means the edit
+      // stays cloud-invisible until something else touches this day again.
+      // Reported rather than swallowed so a real pattern (not a one-off
+      // network blip) is visible instead of looking like silent data loss.
+      reportNonFatal(e, st, reason: '_syncToFirestore failed for ${entry.date}');
+    });
   }
 
   @override

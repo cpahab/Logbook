@@ -25,15 +25,23 @@ class DayEntry extends HiveObject {
 
   // @HiveField(3) hasGpx — retired, do not reuse index
 
+  // Null/empty convention for this and every other nullable free-text field
+  // below (toHarbor, notes, freeText, ...): null means "never set / cleared
+  // by the user"; an empty string is never persisted — every save site trims
+  // input and stores null instead (see day_detail_screen.dart's edit
+  // handlers). Treat null and "" as equivalent when reading.
   @HiveField(4)
   String? fromHarbor;
 
   @HiveField(5)
   String? toHarbor;
 
-  // Statistics — written during GPX import but never read back for UI display.
-  // All on-screen stats are recomputed live from raw track points via computeDailyStats().
-  // These fields exist for Firestore sync compatibility; do not rely on them for display.
+  // Statistics — written during GPX import. On-screen stats normally come
+  // live from raw track points via computeDailyStats(); distanceNm is the
+  // one exception, read back as a fallback when a day has no live track to
+  // recompute from (see home_screen.dart's sailing-days/total-distance
+  // aggregation). The rest exist only for Firestore sync/backup
+  // compatibility — do not rely on them for display.
   @HiveField(6)
   double distanceNm;
 

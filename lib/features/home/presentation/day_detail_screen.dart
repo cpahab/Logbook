@@ -2603,7 +2603,8 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       builder: (_) => AddTimelineEntryDialog(day: day),
     );
     if (!mounted || result == null) return;
-    repo.addTimelineEntry(day, result.entry);
+    repo.addTimelineEntry(day, result.entry,
+        equipment: context.read<ThemeProvider>().vesselEquipment);
     unawaited(_captureEntryPosition(result.entry, day));
   }
 
@@ -2762,7 +2763,18 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       if (index != -1) {
         current.timeline[index] = updated;
         current.timeline.sort((a, b) => a.time.compareTo(b.time));
-        repo.saveEntry(current, changedFields: {'timeline'});
+
+        final changedFields = {'timeline'};
+        final derivedKeel = context
+            .read<ThemeProvider>()
+            .vesselEquipment
+            .keelDownFor(updated.slot12State);
+        if (derivedKeel != null && derivedKeel != current.keelDown) {
+          current.keelDown = derivedKeel;
+          changedFields.add('keelDown');
+        }
+
+        repo.saveEntry(current, changedFields: changedFields);
       }
     });
     ScaffoldMessenger.of(context).showSnackBar(

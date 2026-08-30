@@ -97,6 +97,24 @@ class VesselEquipmentConfig {
         slots.map((s) => s.key == updated.key ? updated : s).toList(),
       );
 
+  /// Maps a recorded slot12 (keel) state label back to true (down) / false
+  /// (up), using its position in the keel slot's configured state list —
+  /// index 0 is always "down", index 1 is always "up", the fixed convention
+  /// set by [defaultForLocale] and preserved even if a user renames the
+  /// labels. Returns null if [state] is null or doesn't match either
+  /// position (e.g. the keel slot was cleared or reconfigured since).
+  bool? keelDownFor(String? state) {
+    if (state == null) return null;
+    final keel = slots.firstWhere(
+      (s) => s.key == 'slot12',
+      orElse: () => EquipmentSlot.empty('slot12'),
+    );
+    final idx = keel.states.indexOf(state);
+    if (idx == 0) return true;
+    if (idx == 1) return false;
+    return null;
+  }
+
   String toJsonString() =>
       jsonEncode({'slots': slots.map((s) => s.toJson()).toList()});
 
