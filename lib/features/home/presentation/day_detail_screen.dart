@@ -112,7 +112,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
     super.initState();
     if (widget.openAddDialog) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _addTimelineEntry(context);
+        if (mounted) _addTimelineEntry();
       });
     }
     // Save as soon as focus leaves both route fields, not just on explicit
@@ -269,7 +269,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
       ),
       bottomNavigationBar: AppBottomNav(
         active: NavTab.journal,
-        onFabTap: () => _addTimelineEntry(context),
+        onFabTap: () => _addTimelineEntry(),
         onSelect: (tab) {
           if (tab == NavTab.journal) context.goNamed(AppRoute.home);
           if (tab == NavTab.map) context.pushNamed(AppRoute.tracks);
@@ -922,7 +922,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
             Tooltip(
               message: context.l10n.dayAddLogEntry,
               child: GestureDetector(
-                onTap: () => _addTimelineEntry(context),
+                onTap: () => _addTimelineEntry(),
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -940,7 +940,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
           _emptyStateButton(
             Icons.add_circle_outline,
             context.l10n.dayFirstLogEntry,
-            () => _addTimelineEntry(context),
+            () => _addTimelineEntry(),
             cs,
           )
         else
@@ -2595,7 +2595,7 @@ class _DayDetailScreenState extends State<DayDetailScreen> {
 
   // ── Timeline mutations ────────────────────────────────────────────
   /// Shows the add-timeline-entry dialog and saves the result.
-  void _addTimelineEntry(BuildContext context) async {
+  void _addTimelineEntry() async {
     final repo = context.read<HomeRepository>();
     final day = DateTime(widget.year, widget.month, widget.day);
     final result = await showDialog<AddTimelineEntryResult>(
