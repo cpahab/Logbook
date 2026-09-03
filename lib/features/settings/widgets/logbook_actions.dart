@@ -461,15 +461,23 @@ Future<void> joinLogbook(
         // Already a member (e.g. the owner's own account on a new device)
         // — a code carrying a key here means this device is missing its
         // local copy of the logbook's encryption key (see
-        // logbook_key_store.dart), not that it needs to join. Import it and
-        // force a full resync so entries decrypt on the next fetch instead
-        // of staying silently empty forever — see home_repository.dart's
-        // catch blocks around fetchAllEntries/fetchEntriesUpdatedSince.
+        // logbook_key_store.dart), not that it needs to join. Import it,
+        // then run it through the same reinitFirestore path switchLogbook
+        // uses — NOT a plain forceSync() on the already-attached repo:
+        // HomeRepository's currently-live FirestoreService/StorageService
+        // were constructed back at startup with whatever (wrong,
+        // auto-generated) key existed then, and that CryptoService is baked
+        // into a `final` field for the instance's lifetime — importing a
+        // corrected key afterward doesn't retroactively fix an
+        // already-constructed instance. reinitFirestore constructs fresh
+        // FirestoreService/StorageService (picking up the just-imported key)
+        // and reattaches them, which a bare forceSync() never does.
         if (keyBase64 != null) {
-          final repo = context.read<HomeRepository>();
           await LogbookKeyStore.importKeyBase64(foundLogbookId, keyBase64);
-          unawaited(repo.forceSync());
           if (!context.mounted) return;
+          final switched = await reinitFirestore(context, foundLogbookId,
+              showCompleteSnackbar: false);
+          if (!switched || !context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l10n.settingsKeyImported)),
           );
