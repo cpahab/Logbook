@@ -49,6 +49,21 @@ AirDrop or email the `app-release.apk` to her phone. She taps it → **Install**
 
 ---
 
+## iOS — Run directly on a device (debug)
+
+```bash
+cd ~/development/Logbook
+flutter devices                       # list connected/paired devices and their IDs
+flutter run -d <device-id>
+```
+
+- Debug builds pick up `.dart_defines` automatically via
+  `ios/Flutter/Debug.xcconfig` — no extra flag needed.
+- Prefer a wired (USB) connection over wireless when possible — wireless
+  debugging is slower and more prone to build-settings glitches.
+
+---
+
 ## iOS — TestFlight (requires $99/year Apple Developer account)
 
 ### Prerequisites (one-time)
@@ -134,6 +149,13 @@ Ad Hoc profiles are valid for **1 year**. Re-register if she gets a new iPhone.
 ---
 
 ## Troubleshooting
+
+### iOS: `Xcode build is missing expected TARGET_BUILD_DIR build setting`
+
+If this appears right after a message like `Upgrading project.pbxproj` during
+`flutter run`, just rerun the same command — the first run completes an Xcode
+project format migration that the tool can't parse mid-build, and the retry
+is fast.
 
 ### Android: `cannot find symbol FilePickerPlugin` build error
 

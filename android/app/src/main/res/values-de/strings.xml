@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="gpx_share_import_failed">Die geteilte GPX-Datei konnte nicht importiert werden</string>
+</resources>

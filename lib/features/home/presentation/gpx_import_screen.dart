@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/route_names.dart';
+import '../../../core/services/gpx_share_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../l10n/l10n_extension.dart';
 import '../../settings/domain/theme_provider.dart';
@@ -42,6 +43,11 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
   @override
   void initState() {
     super.initState();
+    // This screen has now taken ownership of the path — vacate the sticky
+    // slot in GpxShareService so a fresh share of the same file afterward
+    // (e.g. after cancelling this import) isn't blocked by stale dedup
+    // state in main.dart's stream listener.
+    context.read<GpxShareService>().clearPending(widget.filePath);
     _parse();
   }
 
@@ -111,11 +117,19 @@ class _GpxImportScreenState extends State<GpxImportScreen> {
 
   /// Discards the existing track for this day and imports the new one in
   /// its place.
+  ///
+  /// Deliberately does NOT call `repo.removeGpx(date)` first: that fires its
+  /// own fire-and-forget Firestore push tombstoning the track
+  /// (`trackDeletedAt`), racing the reimport's own push that clears it right
+  /// after — if the tombstone push's server-resolved `updatedAt` lands after
+  /// the clear (e.g. network jitter), the live listener re-deletes the track
+  /// it just reimported. `_saveTrack` (via `importGpxFromBytes`) already
+  /// unconditionally overwrites the existing track locally and in Storage,
+  /// so the explicit delete is both unnecessary and unsafe here.
   Future<void> _doReplace(HomeRepository repo) async {
     final date = _selectedDate;
     if (date == null || _bytes == null) return;
     setState(() => _importing = true);
-    await repo.removeGpx(date);
     repo.addEntry(date);
     final fileName = '${date.toIso8601String().substring(0, 10)}.gpx';
     await repo.importGpxFromBytes(date, _bytes!, fileName);

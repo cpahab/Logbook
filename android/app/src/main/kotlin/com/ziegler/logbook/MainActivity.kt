@@ -3,6 +3,8 @@ package com.ziegler.logbook
 import android.content.Intent
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.util.Log
+import android.widget.Toast
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -91,8 +93,9 @@ class MainActivity : FlutterActivity() {
             } else {
                 methodChannel?.invokeMethod("onGpxFile", mapOf("path" to stablePath))
             }
-        } catch (_: Exception) {
-            // Ignore — bad URI or IO error; user will see nothing rather than a crash.
+        } catch (e: Exception) {
+            Log.e("GpxShare", "Failed to handle shared GPX file", e)
+            Toast.makeText(this, R.string.gpx_share_import_failed, Toast.LENGTH_LONG).show()
         }
     }
 }

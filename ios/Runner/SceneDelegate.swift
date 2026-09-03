@@ -18,6 +18,19 @@ class SceneDelegate: FlutterSceneDelegate {
       if handleGpxUrl(context.url, push: false) { break }
     }
 
+    // NOTE: unlike scene(_:openURLContexts:) below, this cannot strip the
+    // handled URL from `connectionOptions` before calling super —
+    // UIScene.ConnectionOptions is an opaque, immutable system type with no
+    // public initializer, so there's no native way to stop
+    // FlutterSceneDelegate from also seeing this same file:// URL and
+    // forwarding it into Dart as a pushed route (racing the explicit
+    // pendingGpxPath pull above). AppDelegate.swift's didFinishLaunchingWithOptions
+    // has an equivalent guard that mutates `launchOptions` instead — that
+    // trick doesn't apply here because Scene lifecycle never even calls
+    // AppDelegate with this URL in the first place. The actual fix for this
+    // race lives in Dart: see lib/app/router.dart's redirect, which turns
+    // that forwarded file:// route into a redirect to /gpx-import instead
+    // of fighting it natively.
     // super creates the FlutterViewController and sets self.window.
     super.scene(scene, willConnectTo: session, options: connectionOptions)
 

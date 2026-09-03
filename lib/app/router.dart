@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 
 import 'route_names.dart';
 import '../core/config/feature_flags.dart';
+import '../core/services/crash_reporter.dart';
+import '../core/services/gpx_share_service.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/settings/domain/theme_provider.dart';
 import '../features/auth/presentation/forgot_password_screen.dart';
@@ -27,17 +29,27 @@ import '../features/tracks/presentation/tracks_screen.dart';
 /// (`refreshListenable`), so a sign-out/sign-in event, or entering/leaving
 /// local mode, immediately bounces the user to/from the auth flow without a
 /// manual nav call.
-GoRouter buildRouter(
-    String initialLocation, AuthService authService, ThemeProvider themeProvider) {
+GoRouter buildRouter(String initialLocation, AuthService authService,
+    ThemeProvider themeProvider, GpxShareService gpxShareService) {
   return GoRouter(
     initialLocation: initialLocation,
     refreshListenable: Listenable.merge([authService, themeProvider]),
     // Auth + (optional) email-verification gate, evaluated on every navigation.
     redirect: (context, state) {
-      // iOS passes the share-intent file:// URI to Flutter as a navigation
-      // route on cold start. Redirect it to home; the GPX import flow runs
-      // independently via the method channel.
-      if (state.uri.scheme == 'file') return '/';
+      // iOS's SceneDelegate can't stop Flutter's own scene delegate from
+      // forwarding a cold-start GPX share as a `file://` route (see
+      // SceneDelegate.swift for why this can't be fixed natively) — instead
+      // of just bouncing it home, route it to the importer so this forwarded
+      // copy of the share and the explicit method-channel one (main.dart's
+      // gpxShareService.gpxFilePaths.listen) converge on the same screen
+      // whichever wins the race.
+      if (state.uri.scheme == 'file') {
+        if (state.uri.path.toLowerCase().endsWith('.gpx')) {
+          logBreadcrumb('gpx: file:// forward redirected to /gpx-import');
+          return GoRouter.of(context).namedLocation(AppRoute.gpxImport);
+        }
+        return '/';
+      }
 
       final signedIn = authService.currentUser != null;
       // A user who chose "Continue without an account" also passes the
@@ -96,11 +108,35 @@ GoRouter buildRouter(
       GoRoute(
         path: '/gpx-import',
         name: AppRoute.gpxImport,
-        // No file path (e.g. a stale/duplicate deep link) — bounce home
-        // instead of showing an import screen with nothing to import.
-        redirect: (context, state) => state.extra == null ? '/' : null,
+        // A `path` query param means this navigation already carries a
+        // resolved file path (from main.dart's explicit goNamed call, or a
+        // previous pass through this same redirect) — pass through as-is.
+        // Otherwise (reached bare, e.g. via the file:// redirect above)
+        // resolve one from GpxShareService's sticky/native-buffered path;
+        // if there genuinely isn't one (stale/duplicate deep link), bounce
+        // home instead of showing an import screen with nothing to import.
+        redirect: (context, state) async {
+          if (state.uri.queryParameters['path'] != null) return null;
+          final resolved = await gpxShareService.resolvePendingPath();
+          if (resolved == null) {
+            reportNonFatal(
+              StateError('gpx-import reached with no pending path'),
+              StackTrace.current,
+              reason: 'router: /gpx-import resolved to nothing',
+            );
+            return '/';
+          }
+          logBreadcrumb('gpx: resolved pending path for /gpx-import');
+          // GoRouter's redirect `context` is the router's own root context,
+          // not a per-widget one — it stays valid across this await for the
+          // lifetime of the redirect call, which is the standard go_router
+          // pattern for async redirects.
+          // ignore: use_build_context_synchronously
+          return GoRouter.of(context).namedLocation(AppRoute.gpxImport,
+              queryParameters: {'path': resolved});
+        },
         builder: (context, state) =>
-            GpxImportScreen(filePath: state.extra! as String),
+            GpxImportScreen(filePath: state.uri.queryParameters['path']!),
       ),
       GoRoute(
         path: '/day/:year/:month/:day',

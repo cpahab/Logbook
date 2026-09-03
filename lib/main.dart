@@ -250,6 +250,13 @@ void main() async {
   await gpxShareService.init();
   WidgetsBinding.instance.addObserver(_GpxResumeObserver(gpxShareService));
 
+  // Built here (rather than after the Firebase block below) so the
+  // authStateChanges listener in that block can retry a GPX import
+  // navigation once a restored session settles — see the auth-gate race
+  // note there.
+  final router = buildRouter(
+      themeProvider.lastRouteToday, authService, themeProvider, gpxShareService);
+
   final logbookIdNotifier = ValueNotifier<String?>(null);
   // True while reinitFirestore (logbook_switch.dart) is downloading a new
   // logbook's data — read by AppBottomNav to block navigating to another
@@ -290,6 +297,17 @@ void main() async {
       if (lastAuthUser == null && user != null) {
         unawaited(_initFirestore(
             user, themeProvider, repo, emergencyRepo, logbookIdNotifier));
+        // A pending GPX import may have been bounced to /auth/login by the
+        // router's auth gate if this session restore hadn't settled yet
+        // when the import navigation first ran — AuthService doesn't
+        // notifyListeners() for this transition (only its own explicit
+        // sign-in methods do), so refreshListenable won't retry it on its
+        // own; do it explicitly here instead.
+        final pending = gpxShareService.lastKnownPendingPath;
+        if (pending != null) {
+          logBreadcrumb('gpx: retrying import navigation after auth settled');
+          router.goNamed(AppRoute.gpxImport, queryParameters: {'path': pending});
+        }
       }
       lastAuthUser = user;
     });
@@ -309,12 +327,18 @@ void main() async {
   }
 
   // --- Router and root widget ---
-  final router = buildRouter(themeProvider.lastRouteToday, authService, themeProvider);
 
   // Navigate to the import screen from anywhere in the app — using the router
   // directly avoids the issue of calling context.go from a non-top-level screen.
+  // Guarded against router.dart's own file:// → /gpx-import redirect having
+  // already landed on this exact path (whichever of the two racing triggers
+  // resolves first), so this doesn't fire a second, redundant navigation.
   gpxShareService.gpxFilePaths.listen((path) {
-    router.goNamed(AppRoute.gpxImport, extra: path);
+    final current = router.routerDelegate.currentConfiguration.uri;
+    if (current.path == '/gpx-import' && current.queryParameters['path'] == path) {
+      return;
+    }
+    router.goNamed(AppRoute.gpxImport, queryParameters: {'path': path});
   });
 
   // Check for a GPX file that arrived before the engine was ready. Done here
@@ -326,7 +350,12 @@ void main() async {
   router.routerDelegate.addListener(() {
     final location =
         router.routerDelegate.currentConfiguration.uri.toString();
-    themeProvider.saveLastRoute(location);
+    // Never persist the GPX import screen as "last route" — restoring
+    // straight into it on a later cold start (with nothing actually
+    // pending) would just immediately bounce back to home.
+    if (!location.startsWith('/gpx-import')) {
+      themeProvider.saveLastRoute(location);
+    }
   });
 
   runApp(

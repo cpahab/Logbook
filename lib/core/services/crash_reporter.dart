@@ -11,3 +11,10 @@ void reportNonFatal(Object error, StackTrace stack, {String? reason}) {
   FirebaseCrashlytics.instance
       .recordError(error, stack, reason: reason, fatal: false);
 }
+
+/// Logs [message] as a Crashlytics breadcrumb, if Firebase is available.
+/// Same no-op-when-unavailable guarantee as [reportNonFatal].
+void logBreadcrumb(String message) {
+  if (Firebase.apps.isEmpty) return;
+  FirebaseCrashlytics.instance.log(message);
+}
